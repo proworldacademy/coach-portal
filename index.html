@@ -344,7 +344,8 @@ kbd{font:600 11px/1 var(--body);border:1px solid var(--line2);border-bottom-widt
 
 /* website edition: the door, the account menu, the staff page */
 .gate{max-width:520px;margin:6vh auto 0;display:grid;gap:18px}
-.gate .title{font-size:clamp(40px,8vw,68px)}
+.gate .title{font-size:clamp(30px,11vw,64px)}
+.gate .title em{display:block}   /* two-part phrase: one sentence per line, each sized to fit on its line */
 .signin .btn.big,.btn.big{padding:13px 16px;font-size:14px;width:100%}
 .or{display:flex;align-items:center;gap:12px;color:var(--faint);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line2)}
@@ -1635,7 +1636,7 @@ const PW_CONFIG = {
   }
   function gateShell(inner) {
     const m = $('main'); if (!m) return; const d = $('#dock'); if (d) d.hidden = true; const sb = $('.search'); if (sb) sb.hidden = true;
-    m.innerHTML = `<div class="wrap"><div class="gate"><div class="lbl">ProWorld High Performance Academy · coaching staff</div><h1 class="title">Where champions <em>are made.</em></h1>${inner}</div></div>`;
+    m.innerHTML = `<div class="wrap"><div class="gate"><div class="lbl">ProWorld High Performance Academy · coaching staff</div><h1 class="title">Individually built. <em>Fully connected.</em></h1>${inner}</div></div>`;
   }
   function renderGate() {
     const note = WEB.note ? `<div class="notice" role="alert">${esc(WEB.note)}</div>` : ''; const st = WEB.stage;
