@@ -123,7 +123,6 @@ button.rowb:hover{background:var(--raised)}
 .chip.done{background:var(--lime);border-color:var(--lime);color:#000}
 .chip.draft{border-style:dashed;color:var(--text)}
 .chip.tier{border-color:var(--line2);color:var(--text)}
-.chip.warn{border-color:var(--pink);color:var(--text)}
 .dot{width:8px;height:8px;border-radius:50%;flex:none}
 @media (max-width:700px){.rowb{grid-template-columns:minmax(0,1fr);gap:8px}.rowb .mid{display:none}.rowb .chips{justify-content:flex-start;padding-left:46px}}
 @media (max-width:700px){.rowb .who:has(.dot)+.mid+.chips{padding-left:20px}}
@@ -362,12 +361,32 @@ kbd{font:600 11px/1 var(--body);border:1px solid var(--line2);border-bottom-widt
 @media (max-width:700px){.srow{grid-template-columns:minmax(0,1fr)}}
 
 
+/* sent to parents */
+.chip.sent{border-color:var(--lime);color:var(--text)}
+.chip.warn{border-color:var(--warn);color:var(--warn-ink);background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.follow{border:1px solid var(--line2);border-radius:10px;margin:0 0 18px;overflow:hidden}
+.furow{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;background:color-mix(in srgb,var(--warn) 10%,transparent);box-shadow:inset 3px 0 0 var(--warn)}
+.furow+.furow{border-top:1px solid var(--line2)}
+.furow.ok,.furow.calm{background:transparent;box-shadow:inset 3px 0 0 var(--lime)}
+.furow.calm{box-shadow:inset 3px 0 0 var(--line2)}
+.furow .hint{margin-top:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+button.notice.remind.calm{border-color:var(--line2);background:transparent}
+button.notice.remind{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;font:inherit;font-size:13px;color:var(--text);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+button.notice.remind span{font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.signin .notice{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0;color:var(--text);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+.signin .notice span{flex:1 1 220px}
+.fupill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--text);border-radius:999px;padding:5px 10px 5px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.fupill b{background:var(--text);color:var(--bg);border-radius:999px;min-width:20px;padding:1px 6px;text-align:center;font-size:11px}
+.fupill:hover{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+
 </style>
 </head><body>
 <header class="bar"><div class="wrap">
   <button class="brand" data-act="home" aria-label="ProWorld Coach Portal, home"><img src="data:image/png;base64,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" alt="PROWORLD" width="520" height="64"><span class="sep"></span><span class="name">Coach Portal</span></button>
   <div class="grow"></div>
   <div class="search"><input id="q" type="text" placeholder="Find a player" aria-label="Find a player" autocomplete="off"><div class="results" id="results" hidden></div></div>
+  <button class="fupill" id="fupill" data-go='{"view":"followup"}' hidden></button>
   <span class="live" id="live" role="status"></span>
   <div class="userbox" id="userbox"></div>
 </div></header>
@@ -442,7 +461,7 @@ const FORMS = {
   quarterly_hp: {
     title: 'Quarterly Player Assessment', short: 'Quarterly · HP', tag: 'High Performance',
     sub: 'Tennis · Fitness · Mental Performance', period: 'quarter', pillar: 'tennis', scale: SCALE_HP,
-    time: '15–20 min', signatures: ['Head Coach', 'Tennis Coach', 'Fitness Coach', 'Mental Coach', 'Parent / Guardian'],
+    time: '15–20 min',
     meta: [X('m_level', 'Level / Group'), X('m_weeks', 'Weeks Trained')],
     parts: QUARTERLY_PARTS,
     sections: [
@@ -591,7 +610,7 @@ const FORMS = {
   quarterly_u12: {
     title: 'Under 12 Player Assessment', short: 'Quarterly · U12', tag: 'Under 12',
     sub: 'Technical · Tactical · Fitness · Mental Performance · Competition', period: 'quarter', pillar: 'tennis', scale: SCALE_AGE,
-    time: '15 min', signatures: ['Tennis Coach', 'Fitness Coach', 'Parent / Guardian'],
+    time: '15 min',
     about: 'Under 12 is the critical window where technique becomes habit and competition begins to matter. This assessment mirrors the structure of the High Performance quarterly — same pillars, same professional standard — with benchmarks calibrated to a well-developing U12 player. Ratings are age-relative (1–5 vs. peers at this level, not adult standards).',
     meta: [X('m_utr', 'UTR / Level'), X('m_tourn', 'Tournaments This Season')],
     parts: QUARTERLY_PARTS,
@@ -718,7 +737,7 @@ const FORMS = {
   progress_u10: {
     title: 'Under 10 Player Progress Update', short: 'Progress · U10', tag: 'Under 10',
     sub: 'Ball stage development · Skills · Love of the game', period: 'quarter', pillar: 'fitness', scale: SCALE_CAMP,
-    time: '10 min', signatures: ['Coach', 'Parent / Guardian'],
+    time: '10 min',
     about: 'Progress at this level is based on skill readiness and confidence, not age. Every child develops at their own pace — this report is a snapshot of where your child is right now, not a verdict on where they will be. We use three stages throughout: Still Developing (the skill is just beginning), Making Progress (they are working on it consistently), and Consistent & Confident (reliably shown in practice and play). The most important things you can encourage at home are effort, positive attitude, and love of the game.',
     meta: [X('m_racquet', 'Racquet Size')],
     sections: [
@@ -804,7 +823,7 @@ const FORMS = {
   monthly: {
     title: 'Monthly Player Report', short: 'Monthly', tag: 'Monthly',
     sub: 'Player Progress Update', period: 'month', pillar: 'fitness', scale: SCALE_HP,
-    time: '5 min', signatures: ['Coach', 'Parent / Guardian'],
+    time: '5 min',
     sections: [
       { id: 'monthly', label: 'Monthly Update', pillar: 'overall', sub: 'Answer by typing or dictating — about five minutes per player.', fields: [
         O(X('m_goalref', 'Quarterly Goal Reference', 'Which quarterly focus areas is this month measured against?')),
@@ -826,9 +845,9 @@ const FORMS = {
 
   /* ═══════════════════ 06 · CAMP WEEK SNAPSHOT ═══════════════════ */
   camp_snapshot: {
-    title: 'Camp Week Snapshot', short: 'Camp Snapshot', tag: 'Camp',
+    title: 'Camp Week Snapshot', meeting: false, short: 'Camp Snapshot', tag: 'Camp',
     sub: 'Your coach’s notes from a great week on court', period: 'camp', pillar: 'mental', scale: SCALE_CAMP,
-    time: '5 min', signatures: ['Camp Coach'],
+    time: '5 min',
     meta: [X('m_days', 'Days Attended'), X('m_age', 'Age'), X('m_sport', 'Sport / Activity')],
     sections: [
       { id: 'week', label: 'The Week', pillar: 'mental', sub: 'Camp · Clinics · Holiday Programs', fields: [
@@ -848,9 +867,9 @@ const FORMS = {
 
   /* ═══════════════════ 07 · CAMP PERFORMANCE REPORT ═══════════════════ */
   camp_performance: {
-    title: 'Camp Performance Report', short: 'Camp Performance', tag: 'Camp',
+    title: 'Camp Performance Report', meeting: false, short: 'Camp Performance', tag: 'Camp',
     sub: 'Technical observations from your week at ProWorld', period: 'camp', pillar: 'overall', scale: SCALE_CAMP,
-    time: '10 min', signatures: ['Camp Coach'],
+    time: '10 min',
     meta: [X('m_days', 'Days Attended'), X('m_level', 'Player Level')],
     sections: [
       { id: 'profile', label: 'Player Profile', pillar: 'overall', sub: 'Intensive Camp · Advanced Training', fields: [
@@ -1218,14 +1237,6 @@ const PDF = (() => {
       y += 12;
     }
 
-    // Signatures
-    const sigs = def.signatures || [];
-    if (sigs.length) {
-      ensure(64); y += 18; const sw = (W - (sigs.length - 1) * 12) / sigs.length;
-      sigs.forEach((s, i) => { const sx = MX + i * (sw + 12); doc.line(sx, y + 18, sx + sw, y + 18, '333333', 0.6); doc.text(s, sx, y + 28, { font: 'F2', size: 6.2, cs: 0.7, upper: true, color: '666666' }); doc.text('Signature / Date', sx, y + 37, { size: 6.2, color: '999999' }); });
-      y += 46;
-    }
-
     // Footers
     const total = doc.pageCount();
     for (let i = 0; i < total; i++) doc.onPage(i, () => {
@@ -1371,16 +1382,38 @@ const PW_CONFIG = {
     const done = new Set(S.assess.filter((a) => a.status === 'final' && a.period === period && types.includes(a.type)).map((a) => a.playerId));
     return [list.filter((p) => done.has(p.id)).length, list.length];
   }
+  // "Sent to parents": every final report carries a yes/no, so a finished report can't quietly go unsent
+  // Follow-up on a finished report: did it go to the family, and did the parent meeting get set and held? Nothing here talks to a
+  // calendar or to email; it is a shared checklist, so a finished report can't quietly go unsent or a meeting quietly never happen.
+  // "tracked" = finished since the portal started keeping this checklist. Older finals are left alone unless a coach ticks something on them.
+  const tracked = (a) => !!a && a.status === 'final' && typeof a.sentToParents === 'boolean';
+  const isSent = (a) => tracked(a) && a.sentToParents === true;
+  const needsMeeting = (a) => { const d = a && FORMS[a.type]; return !!d && d.meeting !== false; };
+  const meetingOf = (a) => Object.assign({ state: 'none', date: '', by: '', at: null }, (a && a.meeting) || {});
+  const meetingLate = (a) => { const m = meetingOf(a); return m.state === 'set' && !!m.date && m.date < todayISO(); };
+  const meetingOpen = (a) => tracked(a) && needsMeeting(a) && meetingOf(a).state !== 'held';
+  const followUpOpen = (a) => tracked(a) && (!isSent(a) || meetingOpen(a));
+  const byFinal = (a, b) => (a.finalAt || a.updatedAt || 0) - (b.finalAt || b.updatedAt || 0);
+  const followUps = () => { const fin = S.assess.filter(tracked);
+    return { unsent: fin.filter((a) => !isSent(a)).sort(byFinal), noMeeting: fin.filter((a) => needsMeeting(a) && meetingOf(a).state === 'none').sort(byFinal),
+      late: fin.filter(meetingLate).sort((a, b) => meetingOf(a).date.localeCompare(meetingOf(b).date)), upcoming: fin.filter((a) => needsMeeting(a) && meetingOf(a).state === 'set' && !meetingLate(a)).sort((a, b) => String(meetingOf(a).date).localeCompare(String(meetingOf(b).date))) }; };
+  const dayLabel = (iso) => { const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const sentChip = (a) => (!tracked(a) ? '' : isSent(a) ? '<span class="chip sent">Sent to parents</span>' : '<span class="chip warn">Not sent</span>');
+  const meetChip = (a) => { if (!tracked(a) || !needsMeeting(a)) return ''; const m = meetingOf(a);
+    return m.state === 'held' ? '<span class="chip sent">Meeting held</span>' : m.state === 'set' ? (meetingLate(a) ? '<span class="chip warn">Confirm meeting</span>' : `<span class="chip">Meeting ${esc(dayLabel(m.date))}</span>`) : '<span class="chip warn">No meeting set</span>'; };
+  // one chip for crowded rows: the first thing still open
+  const followChip = (a) => (!tracked(a) ? '' : !isSent(a) ? sentChip(a) : meetingOpen(a) ? meetChip(a) : '');
+  const openCount = () => { const fu = followUps(); return new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size; };
   function draftChip(a, def, short) { return multi(def) && allDone(a, def) ? `<span class="chip ready">${esc(short)}Ready to finalize</span>` : `<span class="chip draft">${esc(short)}Draft ${a.progress || 0}%</span>`; }
   function statusChips(p) {
     const q = curQ(), m = mLabel(new Date()); const mine = playerAssess(p.id); const out = [];
     if (p.group !== 'camp') {
       const fq = quarterlyFor(p.id, q); const qs = q.split(' ')[0] + ' '; const def = fq ? FORMS[fq.type] : FORMS[group(p.group).form];
-      if (fq && fq.status === 'final') out.push(`<span class="chip done">${esc(qs)}done</span>`);
+      if (fq && fq.status === 'final') out.push(tracked(fq) && !followUpOpen(fq) ? `<span class="chip done">${esc(qs)}complete</span>` : `<span class="chip done">${esc(qs)}done</span>${followChip(fq)}`);
       else if (fq) out.push(partChips(fq, def) + draftChip(fq, def, qs));
       else out.push(partChips(null, def) + `<span class="chip">${esc(qs)}due</span>`);
       const fm = mine.find((a) => a.period === m && a.type === 'monthly'); const ms = m.split(' ')[0];
-      out.push(fm ? (fm.status === 'final' ? `<span class="chip done">${esc(ms)} done</span>` : `<span class="chip draft">${esc(ms)} draft</span>`) : `<span class="chip">${esc(ms)} due</span>`);
+      out.push(fm ? (fm.status === 'final' ? (tracked(fm) && !followUpOpen(fm) ? `<span class="chip done">${esc(ms)} complete</span>` : `<span class="chip done">${esc(ms)} done</span>${followChip(fm)}`) : `<span class="chip draft">${esc(ms)} draft</span>`) : `<span class="chip">${esc(ms)} due</span>`);
     } else {
       const n = mine.filter((a) => a.status === 'final').length; out.push(`<span class="chip${n ? ' done' : ''}">${n} report${n === 1 ? '' : 's'}</span>`);
     }
@@ -1394,11 +1427,12 @@ const PW_CONFIG = {
     if (p[0] === 'p' && p[1]) return { view: 'player', pid: p[1], tab: ['videos', 'journal'].includes(p[2]) ? p[2] : 'assessments' };
     if (p[0] === 'a' && p[1]) return p[2] === 'edit' ? { view: 'edit', id: p[1], part: p[3] || undefined } : { view: 'report', id: p[1] };
     if (p[0] === 'staff') return { view: 'staff' };
+    if (p[0] === 'followup' || p[0] === 'unsent') return { view: 'followup' };
     return { view: 'home' };
   }
   const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part]);
   const enc = encodeURIComponent;
-  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : '#/');
+  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : '#/');
   async function go(r, fromHistory) {
     if (E) { try { await flushEd(E, true); } catch (e) { /* keep navigating */ } }
     S.route = r; saveRoute();
@@ -1435,7 +1469,13 @@ const PW_CONFIG = {
     db.collection('players').onSnapshot((s) => { S.players = rows(s); S.loaded.players = true; changed(); }, snapErr);
     db.collection('assessments').orderBy('updatedAt', 'desc').limit(1000).onSnapshot((s) => { S.assess = rows(s); S.loaded.assess = true; changed(); }, snapErr);
   }
+  // header pill, on every screen: how many finished reports still need something from a coach
+  function paintFollow() {
+    const el = $('#fupill'); if (!el) return; const on = !!S.db && (EDITION !== 'web' || WEB.stage === 'in'); const n = on ? openCount() : 0;
+    el.hidden = !n; if (n) { el.innerHTML = `Follow-up <b>${n}</b>`; el.setAttribute('aria-label', `Follow-up: ${n} finished report${n === 1 ? '' : 's'} with something still open`); }
+  }
   function changed() {
+    paintFollow();
     if (S.route.view === 'edit') { syncHead(); return; }
     if (S.route.view === 'report') { if (RPT && RPT.ready) renderReport(); return; }
     if (busy()) { S.pendingRender = true; return; }
@@ -1552,6 +1592,7 @@ const PW_CONFIG = {
     watch('period', periods.join('|'), (put) => S.db.collection('assessments').where('period', 'in', periods).onSnapshot((s) => put(rowsOf(s)), () => {}));
     watch('player', r.view === 'player' ? r.pid : '', (put) => S.db.collection('assessments').where('playerId', '==', r.pid).onSnapshot((s) => put(rowsOf(s)), () => {}));
     watch('camp', r.view === 'group' && r.gid === 'camp' ? 'camp' : '', (put) => S.db.collection('assessments').where('group', '==', 'camp').onSnapshot((s) => put(rowsOf(s)), () => {}));
+    watch('followup', 'on', (put) => S.db.collection('assessments').where('followUp', '==', true).onSnapshot((s) => put(rowsOf(s)), () => {}));   // finished reports with something still open, whatever the quarter
     const one = r.view === 'edit' || r.view === 'report' ? r.id : '';
     watch('one', one, (put) => S.db.doc('assessments/' + one).onSnapshot((d) => put(d.exists ? [Object.assign({ id: d.id }, d.data())] : []), () => {}));
     if (r.view === 'staff' && WEB.isAdmin) { if (!WEB.admin.length) {
@@ -1655,16 +1696,24 @@ const PW_CONFIG = {
         <button class="btn big" type="submit" ${WEB.busy === 'link' ? 'disabled' : ''}>Email me a sign-in link</button></form>` : '';
     return gateShell(`<div class="panel stack signin">${note}
       <button class="btn pri big" data-wact="google" ${WEB.busy === 'google' ? 'disabled' : ''}>Continue with Google</button>${link}
-      <p class="hint">For ProWorld coaching staff. ${EMAIL_LINK ? '' : 'Sign in with your Google account (Gmail or Google Workspace). '}The first time you sign in, an administrator approves your email; after that you come straight in. No new password, and no other account needed.</p></div>`);
+      <p class="hint">For ProWorld coaching staff. ${EMAIL_LINK ? '' : 'Sign in with your Google account (Gmail or Google Workspace). '}The first time you sign in, an administrator approves your email; after that you come straight in. No new password, and no other account needed.</p>
+      ${IN_APP ? `<div class="notice" role="note"><span><b>This page is open inside another app.</b> Google sign-in usually fails here. Open it in Safari or Chrome itself: use the compass or “Open in browser” button, or copy the link and paste it there.</span><button class="btn sm" data-wact="copy-link">Copy link</button></div>`
+        : finePointer() ? '' : `<p class="hint"><b>On a phone:</b> open this page in Safari or Chrome itself, not inside WhatsApp or another app. That is what lets Google sign you in, and keeps you signed in.</p>`}</div>`);
   }
+  // Google's sign-in window can't hand its answer back when this page is shown inside another app (WhatsApp, Instagram, Gmail…)
+  const PHONE_TIP = 'If Google’s window showed an error, this page is probably open inside another app. Open it in Safari or Chrome itself (in WhatsApp: the compass or “Open in browser” button), then sign in there. You’ll also stay signed in.';
+  const UA = navigator.userAgent || '';
+  // named in-app browsers, Android web views, iPhone web views (they leave out the "Safari/" token), and iPhone home-screen mode
+  const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|LinkedInApp|TikTok|Snapchat|Twitter|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA)) || navigator.standalone === true;
   function authMsg(e) {
-    const c = e && e.code; if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return '';
-    if (c === 'auth/popup-blocked') return 'Your browser blocked the Google window. Allow pop-ups for this site and try again, or use the emailed link.';
+    const c = e && e.code; if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return finePointer() ? '' : PHONE_TIP;
+    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') return PHONE_TIP;
+    if (c === 'auth/popup-blocked') return `Your browser blocked the Google window. Allow pop-ups for this site and try again${EMAIL_LINK ? ', or use the emailed link' : ''}.`;
     if (c === 'auth/unauthorized-domain') return 'This web address isn’t on the project’s list of authorized domains yet (Firebase → Authentication → Settings).';
     if (c === 'auth/operation-not-allowed') return 'That sign-in method isn’t switched on for this project yet (Firebase → Authentication → Sign-in method).';
     if (c === 'auth/invalid-email') return 'That doesn’t look like an email address.';
     if (c === 'auth/network-request-failed') return 'No connection. Check the internet and try again.';
-    if (c === 'auth/quota-exceeded' || c === 'auth/too-many-requests') return 'Too many sign-in emails for now. Try again later or use Google.';
+    if (c === 'auth/quota-exceeded' || c === 'auth/too-many-requests') return EMAIL_LINK ? 'Too many sign-in emails for now. Try again later or use Google.' : 'Too many sign-in attempts for now. Wait a few minutes and try again.';
     return 'Sign-in didn’t work. Try again.';
   }
   function paintUser() {
@@ -1687,7 +1736,7 @@ const PW_CONFIG = {
       <div class="chips"><select aria-label="Role for ${esc(s.id)}" data-wchange="role" data-id="${esc(s.id)}" style="width:auto"><option value="coach" ${s.role === 'admin' ? '' : 'selected'}>Coach</option><option value="admin" ${s.role === 'admin' ? 'selected' : ''}>Administrator</option></select>
       <button class="btn sm ghost" data-wact="toggle-staff" data-id="${esc(s.id)}">${s.active === true ? 'Turn access off' : 'Turn access on'}</button><button class="btn sm ghost danger" data-wact="remove-staff" data-id="${esc(s.id)}">Remove</button></div></div>`).join('');
     return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Staff & access' }])}
-      <div class="head"><div><div class="lbl">Administrators only</div><h1 class="title">Staff &amp; access</h1><div class="sub">Coaches sign in with their own Google account or an emailed link. Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
+      <div class="head"><div><div class="lbl">Administrators only</div><h1 class="title">Staff &amp; access</h1><div class="sub">Coaches sign in with their own Google account${EMAIL_LINK ? ' or an emailed link' : ''}. Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
       <div class="sect"><h2>Waiting for approval</h2><span class="muted" style="font-size:12px">${reqs.length}</span></div>
       ${reqRows ? `<div class="list" style="margin-bottom:26px">${reqRows}</div>` : '<div class="empty" style="margin-bottom:26px">Nobody is waiting. When a coach signs in for the first time they appear here.</div>'}
       <div class="sect"><h2>Add someone before they sign in</h2></div>
@@ -1741,6 +1790,9 @@ const PW_CONFIG = {
     try {
       if (act === 'menu') { if (menu) { menu.hidden = !menu.hidden; b.setAttribute('aria-expanded', String(!menu.hidden)); } }
       else if (act === 'google') { if (WEB.dead) { location.reload(); return; } WEB.note = ''; WEB.busy = 'google'; renderGate(); try { await WEB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; if (!WEB.user) renderGate(); }
+      else if (act === 'copy-link') { const url = location.href.split('#')[0]; let ok = false;
+        try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { try { const t = document.createElement('textarea'); t.value = url; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;left:-99px;top:0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch (e2) { ok = false; } }
+        toast(ok ? 'Link copied. Open Safari or Chrome and paste it there.' : 'Couldn’t copy. The address is ' + url); }
       else if (act === 'signout') { if (menu) menu.hidden = true; b.disabled = true; await signOutHere(); }
       else if (act === 'back-signin') { WEB.stage = 'out'; renderGate(); }
       else if (act === 'staff') { if (menu) menu.hidden = true; go({ view: 'staff' }); }
@@ -1767,9 +1819,9 @@ const PW_CONFIG = {
 
   /* ───────────── render: shell ───────────── */
   function render() {
-    const m = $('main'); if (!m) return; const r = S.route;
+    const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
-    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : viewHome()}</div>`;
+    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
   }
   const notice = () => S.dbState === 'none' && EDITION !== 'web' ? `<div class="notice">This view can’t reach the shared database, so nothing is loaded and nothing will save. Open the portal from your Claude artifacts while signed in to work with live data.</div>` : '';
@@ -1796,7 +1848,10 @@ const PW_CONFIG = {
       </button>`;
     }).join('');
     const recent = S.assess.slice(0, 8).map((a) => rowAssess(a, true, false)).join('');
-    return `${notice()}${empty}
+    const fu = followUps(); const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const bits = [fu.unsent.length ? plural(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents') : '', fu.noMeeting.length ? plural(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set') : '', fu.late.length ? plural(fu.late.length, 'meeting to confirm', 'meetings to confirm') : ''].filter(Boolean);
+    const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><b>${bits.length ? 'Follow-up: ' + esc(bits.join(' · ')) + '.' : esc(plural(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')) + '.'}</b><span>Open the list</span></button>` : '';
+    return `${notice()}${empty}${remind}
       <div class="head"><div><div class="lbl">High Performance Academy · ${esc(q)} · ${esc(MONTHS[now.getMonth()])}</div><h1 class="title">Every player. <em>Assessed.</em></h1>
       <div class="sub">Pick a group, pick a player, fill in your part. Everything saves to the shared academy database, so every coach sees the same record on any device.</div></div></div>
       <div class="stats">
@@ -1810,12 +1865,26 @@ const PW_CONFIG = {
       <div class="sect"><h2>Latest activity</h2></div>
       ${recent ? `<div class="list">${recent}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'No assessments yet. Open a group, choose a player and start the first one.' : 'Loading…'}</div>`}`;
   }
+  function viewFollowUp() {
+    const fu = followUps(); const meetRow = (a) => { const p = player(a.playerId); const def = FORMS[a.type] || { short: a.type }; const m = meetingOf(a);
+      return `<button class="rowb" ${goAttr({ view: 'report', id: a.id })}><div class="who"><span class="ava" style="width:auto;padding:0 10px;border-radius:8px">${esc(dayLabel(m.date))}</span><div style="min-width:0"><div class="nm">${esc(p ? p.name : a.playerName || 'Player')}</div><small>${esc(def.short)} · ${esc(a.period || '')}${m.by ? ' · set by ' + esc(m.by) : ''}</small></div></div><div class="mid muted" style="font-size:12px">${esc(a.coach ? 'Coach: ' + a.coach : '')}</div><div class="chips">${meetChip(a)}</div></button>`; };
+    const block = (title, hint, list, row) => (list.length ? `<div class="sect"><h2>${esc(title)}</h2><span class="muted" style="font-size:12px">${list.length}</span></div><p class="hint" style="margin:-6px 0 10px">${esc(hint)}</p><div class="list" style="margin-bottom:26px">${list.map(row).join('')}</div>` : '');
+    const any = fu.unsent.length + fu.noMeeting.length + fu.late.length + fu.upcoming.length;
+    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Follow-up' }])}
+      <div class="head"><div><div class="lbl">After the report is final</div><h1 class="title">Follow-<em>up.</em></h1>
+      <div class="sub">Every finished report gets sent to the family and gets a parent meeting. This is what is still open, oldest first. Open a report to tick things off.</div></div></div>
+      ${block('Not sent to the parents', 'Send the PDF, then press “Mark as sent to parents” on the report.', fu.unsent, (a) => rowAssess(a, true, false))}
+      ${block('Parent meeting not set', 'Agree a date with the family and record it on the report.', fu.noMeeting, (a) => rowAssess(a, true, false))}
+      ${block('Meeting date has passed', 'Did it happen? Mark it as held, or set a new date.', fu.late, meetRow)}
+      ${block('Parent meetings coming up', 'In date order. Mark each one as held once it has happened.', fu.upcoming, meetRow)}
+      ${any ? '' : `<div class="empty">${S.loaded.assess ? 'Nothing is open. Every finished report has been sent and its parent meeting held.' : 'Loading…'}</div>`}`;
+  }
   function partStrip(a, def) {
     return `<div class="pstrip" role="group" aria-label="Open one part directly">${partState(a, def).map((x) => `<button class="pbtn${x.done ? ' done' : ''}" style="--pc:${PILLAR[x.part.pillar]}" ${goAttr({ view: 'edit', id: a.id, part: x.part.id })}><b>${esc(x.part.label)}</b><small>${esc(partNote(x))}</small></button>`).join('')}</div>`;
   }
   function rowAssess(a, withPlayer, withParts) {
     const def = FORMS[a.type] || { short: a.type, pillar: 'tennis' }; const p = player(a.playerId); const nm = p ? p.name : (a.playerName || 'Player');
-    const st = a.status === 'final' ? '<span class="chip done">Final</span>' : partChips(a, def) + draftChip(a, def, '');
+    const st = a.status === 'final' ? '<span class="chip done">Final</span>' + sentChip(a) + meetChip(a) : partChips(a, def) + draftChip(a, def, '');
     const r = a.status === 'final' || !writable() ? { view: 'report', id: a.id } : { view: 'edit', id: a.id };
     const row = `<button class="rowb" ${goAttr(r)}>
       <div class="who"><span class="dot" style="background:${PILLAR[def.pillar]}"></span><div style="min-width:0"><div class="nm">${esc(withPlayer ? nm : def.title)}</div><small>${esc(withPlayer ? def.short + ' · ' : '')}${esc(a.period || '')}${a.coach ? ' · ' + esc(a.coach) : ''}</small></div></div>
@@ -2094,7 +2163,7 @@ const PW_CONFIG = {
       bits.push('<kbd>Shift</kbd> + <kbd>Enter</kbd> goes back');
     }
     const kb = bits.length ? `<div class="kbhint"><b>Fast entry</b>${bits.join(' · ')}</div>` : '';
-    const voice = texty ? `<div class="kbhint"><b>Voice</b>${S.voice === 'native' ? 'press Dictate on a box and talk, then Stop' : 'press Dictate on a box, then start your device’s dictation — it types into the box'} · the AI tidies it up afterwards, with Undo</div>` : '';
+    const voice = texty ? `<div class="kbhint"><b>Voice</b>${S.voice === 'native' ? 'press Dictate on a box and talk, then Stop' : 'press Dictate on a box, then start your device’s dictation — it types into the box'}${S.sample ? ' · the AI tidies it up afterwards, with Undo' : ''}</div>` : '';
     return kb + voice;
   }
   function renderSection(focus, keepFocus) {
@@ -2187,7 +2256,7 @@ const PW_CONFIG = {
           catch (e) { ed.headExtra = mergeExtra(extra, ed.headExtra); touched.forEach((x) => ed.touched.add(x)); ed.headDirty = true; ed.byDirty = wasBy; throw e; }
           ed.bodyChanged = false; ed.lastHead = now; h.hv = patch.hv; h.updatedAt = now;
           if (patch.parts) Object.keys(patch.parts).forEach((pid) => { h.parts[pid] = Object.assign({}, h.parts[pid], patch.parts[pid]); });
-          ['status', 'finalAt', 'scores'].forEach((k) => { if (patch[k] !== undefined) h[k] = patch[k]; });
+          ['status', 'finalAt', 'scores', 'sentToParents', 'sent', 'meeting', 'followUp'].forEach((k) => { if (patch[k] !== undefined) h[k] = patch[k]; });
         }
         ed.savedAt = now; ed.state = ed.dirty.size ? 'dirty' : 'saved';
       } catch (e) { ed.state = 'error'; dbFail(e); }
@@ -2277,9 +2346,9 @@ const PW_CONFIG = {
     if (bad >= 0) { showMissing(bad); return; }
     btn.disabled = true; ed.finalizing = true; stopDictation(true);
     const sc = {}; ['sc_tennis', 'sc_fitness', 'sc_mental', 'sc_overall'].forEach((k) => { if (has(ed.values[k])) sc[k.slice(3)] = +ed.values[k]; });
-    await queueHead(ed, { status: 'final', finalAt: Date.now(), scores: sc, progress: 100 });
+    await queueHead(ed, { status: 'final', finalAt: Date.now(), scores: sc, progress: 100, sentToParents: false, sent: null, meeting: meetingOf(ed.head), followUp: true });
     if (ed.head.status !== 'final') { ed.finalizing = false; if (btn.isConnected) btn.disabled = false; return; }
-    toast('Marked final. The PDF is ready to download.'); go({ view: 'report', id: ed.id });
+    toast('Marked final. Next: send the PDF to the family and set the parent meeting.'); go({ view: 'report', id: ed.id });
   }
   function primaryAction(btn) { if (!E) return; if (multi(E.def) && !partInfo(E.part).done) completePart(btn); else finalize(btn); }
 
@@ -2540,10 +2609,23 @@ const PW_CONFIG = {
       return html ? `<section class="rsec" style="--pc:${pc}"><div class="banner" style="margin-bottom:8px"><h2>${esc(sec.label)}</h2>${sec.sub ? `<p>${esc(sec.sub)}</p>` : ''}</div>${html}</section>` : '';
     }).join('');
     const state = !draft ? 'Final' : multi(def) && allDone(head, def) ? 'Ready to finalize' : 'Draft ' + (head.progress || 0) + '%';
+    const mt = meetingOf(head); const editing = S.ui.meetEdit === head.id;
+    const sentRow = isSent(head)
+      ? `<div class="furow ok"><div><b>Sent to parents</b><div class="hint">Confirmed${head.sent && head.sent.by ? ' by ' + esc(head.sent.by) : ''}${head.sent && head.sent.at ? ' · ' + esc(fmtDate(head.sent.at)) : ''}</div></div>${w ? '<button class="btn sm ghost" data-act="unsend">Undo</button>' : ''}</div>`
+      : tracked(head) ? `<div class="furow"><div><b>Not sent to the parents yet</b><div class="hint">${PDF_SHARE ? 'Share' : 'Download'} the PDF, send it to the family, then confirm it here so it isn’t forgotten.</div></div>${w ? '<button class="btn" data-act="mark-sent">Mark as sent to parents</button>' : ''}</div>`
+        : `<div class="furow calm"><div><b>Sent to the parents?</b><div class="hint">This report was finished before the portal kept track of this. Confirm it here if you want it on record.</div></div>${w ? '<button class="btn" data-act="mark-sent">Mark as sent to parents</button>' : ''}</div>`;
+    const dateBox = `<div class="rowx"><label class="sr" for="mt_date">Meeting date</label><input id="mt_date" type="date" value="${esc(mt.date || '')}" style="width:auto"><button class="btn" data-act="meet-set">${mt.state === 'set' ? 'Save new date' : 'Save meeting date'}</button>${editing ? '<button class="btn ghost" data-act="meet-cancel">Cancel</button>' : ''}</div>`;
+    const meetRow = !needsMeeting(head) ? '' : mt.state === 'held'
+      ? `<div class="furow ok"><div><b>Parent meeting held</b><div class="hint">${mt.date ? esc(dayLabel(mt.date)) + ' · ' : ''}confirmed${mt.by ? ' by ' + esc(mt.by) : ''}</div></div>${w ? '<button class="btn sm ghost" data-act="meet-undo">Undo</button>' : ''}</div>`
+      : mt.state === 'set' && !editing
+        ? `<div class="furow${meetingLate(head) ? '' : ' calm'}"><div><b>Parent meeting ${meetingLate(head) ? 'was set for' : 'set for'} ${esc(dayLabel(mt.date))}</b><div class="hint">${meetingLate(head) ? 'That date has passed. Did it happen? Mark it as held, or set a new date.' : 'Mark it as held once it has happened.'}${mt.by ? ' Set by ' + esc(mt.by) + '.' : ''}</div></div>${w ? '<div class="rowx"><button class="btn" data-act="meet-held">Mark as held</button><button class="btn ghost" data-act="meet-change">Change date</button></div>' : ''}</div>`
+        : `<div class="furow${tracked(head) ? '' : ' calm'}"><div><b>${mt.state === 'set' ? 'Change the parent meeting date' : 'No parent meeting set yet'}</b><div class="hint">Agree a day with the family to talk this report through, then record it here. It stays on the follow-up list until it is marked as held.</div></div>${w ? dateBox : ''}</div>`;
+    const sentBar = draft ? '' : `<div class="follow" role="group" aria-label="Follow-up">${sentRow}${meetRow}</div>`;
     $('main').innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label, r: { view: 'group', gid: g.id } }, { t: p.name, r: { view: 'player', pid: head.playerId } }, { t: def.short }])}
       <div class="head"><div><div class="lbl">${esc(def.tag)} · ${esc(state)}</div><h1 class="title">${esc(def.title)}</h1><div class="sub">${esc(def.sub)}</div></div>
-        <div class="rowx"><button class="btn pri" data-act="pdf">Download PDF</button>${w ? (draft ? '<button class="btn" data-act="edit">Continue editing</button>' : '<button class="btn" data-act="reopen">Reopen to edit</button>') : ''}${w && canDelete() ? '<button class="btn ghost danger" data-act="del-assess">Delete</button>' : ''}</div></div>
+        <div class="rowx"><button class="btn pri" data-act="pdf">${PDF_SHARE ? 'Share PDF' : 'Download PDF'}</button>${w ? (draft ? '<button class="btn" data-act="edit">Continue editing</button>' : '<button class="btn" data-act="reopen">Reopen to edit</button>') : ''}${w && canDelete() ? '<button class="btn ghost danger" data-act="del-assess">Delete</button>' : ''}</div></div>
       ${draft && w && multi(def) ? `<div class="list" style="margin-bottom:20px"><div class="arow" style="padding-top:12px">${partStrip(head, def)}</div></div>` : ''}
+      ${sentBar}
       <div class="report"><div class="rbox">${info.map((i) => `<div><span class="lbl">${esc(i[0])}</span><b>${esc(i[1])}</b></div>`).join('')}</div>
       ${scores.length ? `<div class="rscores">${scores.map((s) => `<div style="background:${s[2]}"><span class="lbl" style="color:#000;opacity:.7">${s[1]}</span><b>${esc(v[s[0]])}</b></div>`).join('')}</div>` : ''}
       ${secs || '<div class="empty">Nothing has been filled in yet.</div>'}</div></div>`;
@@ -2554,12 +2636,32 @@ const PW_CONFIG = {
     try {
       const bytes = PDF.report({ def, values, prev, player: p, groupLabel: group(p.group || head.group).label, head: Object.assign({}, head, { evalDate: fmtISO(head.evalDate) }) });
       const filename = `ProWorld_${def.short.replace(/[^A-Za-z0-9]+/g, '-')}_${String(p.name).replace(/[^A-Za-z0-9]+/g, '-')}_${String(head.period || '').replace(/[^A-Za-z0-9]+/g, '-')}.pdf`.replace(/-+/g, '-').replace(/-_|_-/g, '_');
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      if (S.downloads) { await S.downloads.save({ filename, data: blob }); toast('PDF saved.'); }
-      else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); }
+      const blob = new Blob([bytes], { type: 'application/pdf' }); let handled = false;
+      const nudge = head.status === 'final' && !isSent(head) && writable() ? 'Once it has gone to the family, press “Mark as sent to parents”.' : '';
+      if (S.downloads) { await S.downloads.save({ filename, data: blob }); toast(nudge ? 'PDF saved. ' + nudge : 'PDF saved.'); handled = true; }
+      else if (PDF_SHARE) {
+        try { await navigator.share({ files: [new File([blob], filename, { type: 'application/pdf' })] }); handled = true; }
+        catch (e) { handled = !!e && e.name === 'AbortError'; }   // closed the share sheet: fine. Anything else: fall back to a normal download
+      }
+      if (!handled) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+      if (nudge && !S.downloads) toast(nudge);
     } catch (e) { const c = e && e.code; if (c !== 'declined') toast(c === 'rate_limited' ? 'A save prompt is already open.' : 'Couldn’t save the PDF in this view.'); }
     btn.disabled = false; btn.textContent = old;
   }
+
+  // phones and tablets: share the PDF file through the device's own share sheet
+  const PDF_SHARE = (() => { try { return EDITION === 'web' && !finePointer() && typeof File === 'function' && !!navigator.canShare && navigator.canShare({ files: [new File([''], 'a.pdf', { type: 'application/pdf' })] }); } catch (e) { return false; } })();
+  const signedName = () => (EDITION === 'web' && WEB.user && WEB.user.displayName) || lsGet('pw_coach') || 'Coach';
+  // one place writes every follow-up change, so the "still open" flag the reminders rely on can never drift from the facts
+  async function setFollow(change, said) {
+    if (!RPT || RPT.head.status !== 'final' || !S.db) return;
+    if (!tracked(RPT.head) && !('sentToParents' in change)) change = Object.assign({ sentToParents: false, sent: null }, change);   // an older final joins the checklist the moment someone ticks anything on it
+    const next = Object.assign({}, RPT.head, change); const patch = Object.assign({}, change, { followUp: followUpOpen(next), hv: (RPT.head.hv || 0) + 1 });
+    try { await S.db.doc('assessments/' + RPT.id).update(patch); Object.assign(RPT.head, patch); const row = S.assess.find((a) => a.id === RPT.id); if (row) Object.assign(row, patch); S.ui.meetEdit = null; renderReport(); paintFollow(); if (said) toast(said); }
+    catch (e) { dbFail(e); }
+  }
+  const setSent = (yes) => setFollow({ sentToParents: !!yes, sent: yes ? { at: Date.now(), by: String(signedName()).slice(0, 80) } : null }, yes ? 'Marked as sent to parents.' : 'Back to “not sent”.');
+  const setMeeting = (state, date, said) => setFollow({ meeting: { state, date: date || '', by: state === 'none' ? '' : String(signedName()).slice(0, 80), at: state === 'none' ? null : Date.now() } }, said);
 
   /* ───────────── actions ───────────── */
   async function startAssessment(pid, type, part, back) {
@@ -2619,7 +2721,14 @@ const PW_CONFIG = {
     else if (act === 'reopen-part' && E) reopenPart();
     else if (act === 'pdf') downloadPdf(b);
     else if (act === 'edit' && RPT) go({ view: 'edit', id: RPT.id });
-    else if (act === 'reopen' && RPT) { try { await S.db.doc('assessments/' + RPT.id).update({ status: 'draft', updatedAt: Date.now(), hv: (RPT.head.hv || 0) + 1 }); go({ view: 'edit', id: RPT.id }); } catch (e) { dbFail(e); } }
+    else if (act === 'mark-sent') { b.disabled = true; await setSent(true); }
+    else if (act === 'unsend') { b.disabled = true; await setSent(false); }
+    else if (act === 'meet-set') { const el = $('#mt_date'); const d = el && el.value; if (!d) { toast('Pick the meeting date first.'); if (el) el.focus(); return; } b.disabled = true; await setMeeting('set', d, `Parent meeting set for ${dayLabel(d)}.`); }
+    else if (act === 'meet-held' && RPT) { b.disabled = true; await setMeeting('held', meetingOf(RPT.head).date, 'Parent meeting marked as held.'); }
+    else if (act === 'meet-undo' && RPT) { b.disabled = true; const d = meetingOf(RPT.head).date; await setMeeting(d ? 'set' : 'none', d, 'Meeting is open again.'); }
+    else if (act === 'meet-change' && RPT) { S.ui.meetEdit = RPT.id; renderReport(); const el = $('#mt_date'); if (el) el.focus(); }
+    else if (act === 'meet-cancel') { S.ui.meetEdit = null; renderReport(); }
+    else if (act === 'reopen' && RPT) { try { await S.db.doc('assessments/' + RPT.id).update({ status: 'draft', updatedAt: Date.now(), hv: (RPT.head.hv || 0) + 1, sentToParents: null, sent: null, followUp: null }); go({ view: 'edit', id: RPT.id }); } catch (e) { dbFail(e); } }
     else if (act === 'del-assess' && RPT) twoStep(b, 'da' + RPT.id, async () => { const id = RPT.id, pid = RPT.head.playerId; try { await S.db.doc(`assessments/${id}/body/values`).delete(); await S.db.doc('assessments/' + id).delete(); toast('Assessment deleted.'); go({ view: 'player', pid }); } catch (e) { dbFail(e); } });
     else if (act === 'cmp') { const id = b.getAttribute('data-id'); const i = S.ui.compare.indexOf(id); if (i >= 0) S.ui.compare.splice(i, 1); else { S.ui.compare.push(id); if (S.ui.compare.length > 2) S.ui.compare.shift(); } render(); }
     else if (act === 'cmp-clear') { S.ui.compare = []; render(); }
