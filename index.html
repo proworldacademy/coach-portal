@@ -5,6 +5,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark light">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23050505'/%3E%3Cpath d='M22 48 30 16h14c7 0 10 4 9 10s-6 10-13 10h-6l-3 12z' fill='%23E2FE78'/%3E%3C/svg%3E">
+<script>(function(){var s="https://proworld-coach-portal.web.app";if(s&&location.hostname==='proworldacademy.github.io'){location.replace(s+(/tryout/.test(location.pathname)?'/tryout':'/')+location.search+location.hash)}})();</script>
 <title>ProWorld Coach Portal</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
 <style>
@@ -379,6 +380,16 @@ button.notice.remind span{font-weight:700;text-decoration:underline;text-underli
 .fupill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--text);border-radius:999px;padding:5px 10px 5px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .fupill b{background:var(--text);color:var(--bg);border-radius:999px;min-width:20px;padding:1px 6px;text-align:center;font-size:11px}
 .fupill:hover{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+/* try-outs */
+.ava.when{width:auto;min-width:92px;height:auto;padding:6px 10px;border-radius:8px;font-size:12px;line-height:1.2;display:grid;place-items:center;text-align:center}
+.ava.when small{display:block;font-weight:600;color:var(--muted);font-size:11px}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px 18px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:16px 18px}
+.kv .lbl{display:block;margin-bottom:3px}
+.kv b{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.kv b.miss{color:var(--warn-ink);font-weight:600;font-style:italic}
+.kv a{text-decoration:underline;text-underline-offset:3px}
+@media (max-width:700px){.rowb .ava.when{min-width:0}}
+@media (max-width:560px){.sect.wrapb{flex-wrap:wrap}.sect.wrapb .rowx{flex-basis:100%}}
 
 </style>
 </head><body>
@@ -1266,7 +1277,7 @@ const PDF = (() => {
 const PW_CONFIG = {
   firebase: {
     apiKey: 'AIzaSyBauu-JZZKCzex-PpTjBpD4QuTSWIkVEs4',
-    authDomain: 'proworld-coach-portal.firebaseapp.com',
+    authDomain: 'proworld-coach-portal.web.app',
     projectId: 'proworld-coach-portal',
     appId: '1:999676464496:web:fa726be60d8da0112393b5',
   },
@@ -1276,6 +1287,10 @@ const PW_CONFIG = {
   //   1. Firebase → Authentication → Sign-in method → Email/Password ON, and "Email link (passwordless sign-in)" ON
   //   2. in firestore.rules, add 'password' to the list inside okProvider()
   emailLink: false,
+  // Required lines. true = a coach can't move past a blank line, complete a part or mark a report final until every line
+  // is filled (or marked N/T). false = blanks are allowed and only counted in the progress figures. Off while the coaches
+  // are getting used to the portal (Sept 2026).
+  requireAll: false,
   // Optional. Address of the AI clean-up service (see ai-worker.js). Leave empty and the portal simply hides the AI buttons.
   aiEndpoint: '',
 };
@@ -1307,12 +1322,16 @@ const PW_CONFIG = {
 
   const S = {
     db: null, sample: null, downloads: null, canWrite: null, dbState: 'connecting',
-    players: [], groups: [], assess: [], loaded: {},
+    players: [], groups: [], assess: [], tryouts: [], loaded: {},
     route: { view: 'home' },
-    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null },
+    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null },
     pendingRender: false, voice: 'none',
   };
+  // Required lines. With STRICT on, a coach can't move past a blank line, complete a part or mark a report final with blanks.
+  // OFF for now (Sept 2026): the coaches are trying the portal out and need to move around freely. Blanks are still counted
+  // in the progress figures. Turn it back on with requireAll: true in the site settings.
+  const STRICT = (() => { try { if (window.__strict !== undefined) return !!window.__strict; } catch (e) { /* noop */ } return typeof PW_CONFIG !== 'undefined' && !!PW_CONFIG && PW_CONFIG.requireAll === true; })();
   let E = null;   // editor state
   let RPT = null; // report state
 
@@ -1428,11 +1447,13 @@ const PW_CONFIG = {
     if (p[0] === 'a' && p[1]) return p[2] === 'edit' ? { view: 'edit', id: p[1], part: p[3] || undefined } : { view: 'report', id: p[1] };
     if (p[0] === 'staff') return { view: 'staff' };
     if (p[0] === 'followup' || p[0] === 'unsent') return { view: 'followup' };
+    if (p[0] === 'tryouts') return p[1] === 'new' ? { view: 'tryouts', add: true } : { view: 'tryouts' };
+    if (p[0] === 't' && p[1]) return { view: 'tryout', id: p[1] };
     return { view: 'home' };
   }
   const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part]);
   const enc = encodeURIComponent;
-  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : '#/');
+  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : '#/');
   async function go(r, fromHistory) {
     if (E) { try { await flushEd(E, true); } catch (e) { /* keep navigating */ } }
     S.route = r; saveRoute();
@@ -1468,6 +1489,7 @@ const PW_CONFIG = {
     db.collection('groups').onSnapshot((s) => { S.groups = rows(s); S.loaded.groups = true; changed(); }, snapErr);
     db.collection('players').onSnapshot((s) => { S.players = rows(s); S.loaded.players = true; changed(); }, snapErr);
     db.collection('assessments').orderBy('updatedAt', 'desc').limit(1000).onSnapshot((s) => { S.assess = rows(s); S.loaded.assess = true; changed(); }, snapErr);
+    db.collection('tryouts').onSnapshot((s) => { S.tryouts = rows(s); S.loaded.tryouts = true; changed(); }, snapErr);
   }
   // header pill, on every screen: how many finished reports still need something from a coach
   function paintFollow() {
@@ -1618,6 +1640,8 @@ const PW_CONFIG = {
         if (em) { await WEB.auth.signInWithEmailLink(em, location.href); lsSet('pw_signin_email', ''); cleanUrl(); } else { WEB.stage = 'confirm'; renderGate(); }
       }
     } catch (e) { WEB.note = 'That sign-in link has expired or was already used. Ask for a new one below.'; cleanUrl(); }
+    // phones sign in through a full-page hand-off to Google (no pop-up window); this collects the answer when the page comes back
+    try { if (typeof WEB.auth.getRedirectResult === 'function') await WEB.auth.getRedirectResult(); } catch (e) { WEB.note = authMsg(e); }
     WEB.auth.onAuthStateChanged((u) => { onUser(u); });
     window.addEventListener('online', paintLive); window.addEventListener('offline', paintLive);
   }
@@ -1638,7 +1662,7 @@ const PW_CONFIG = {
     WEB.dead = true; if (navigator.onLine === false) window.addEventListener('online', () => location.reload(), { once: true }); else location.reload();
   }
   const cleanUrl = () => { try { history.replaceState(null, '', location.pathname); } catch (e) { /* noop */ } };
-  function leaveApp() { closeEditor(); unsubscribePlayer(); off(WEB.core); off(WEB.admin); Object.keys(AQ.stop).forEach((k) => { try { AQ.stop[k](); } catch (e) { /* noop */ } }); AQ.sets = {}; AQ.stop = {}; AQ.key = {}; S.db = null; S.players = []; S.groups = []; S.assess = []; S.loaded = {}; S.dbState = 'none'; S.sample = null; const d = $('#dock'); if (d) d.hidden = true; }
+  function leaveApp() { closeEditor(); unsubscribePlayer(); off(WEB.core); off(WEB.admin); Object.keys(AQ.stop).forEach((k) => { try { AQ.stop[k](); } catch (e) { /* noop */ } }); AQ.sets = {}; AQ.stop = {}; AQ.key = {}; S.db = null; S.players = []; S.groups = []; S.assess = []; S.tryouts = []; S.loaded = {}; S.dbState = 'none'; S.sample = null; const d = $('#dock'); if (d) d.hidden = true; }
   function onUser(u) {
     off(WEB.gate); if (WEB.stage === 'in') leaveApp();
     WEB.user = u || null; WEB.email = u ? String(u.email || '').trim().toLowerCase() : ''; WEB.isAdmin = false; WEB.staff = null; WEB.asked = false;
@@ -1672,6 +1696,7 @@ const PW_CONFIG = {
     WEB.stage = 'in'; S.db = webDb(WEB.fs); S.canWrite = true; S.dbState = 'live'; S.sample = webSample(); paintLive(); paintUser();
     WEB.core.push(S.db.collection('groups').onSnapshot((s) => { S.groups = rowsOf(s); S.loaded.groups = true; changed(); }, () => {}));
     WEB.core.push(S.db.collection('players').onSnapshot((s) => { S.players = rowsOf(s); S.loaded.players = true; changed(); }, () => {}));
+    WEB.core.push(S.db.collection('tryouts').onSnapshot((s) => { S.tryouts = rowsOf(s); S.loaded.tryouts = true; changed(); }, () => {}));
     S.route = parseHash(); if (S.route.view === 'staff' && !WEB.isAdmin) S.route = { view: 'home' };
     fitBar(); onRoute(false);
   }
@@ -1697,17 +1722,19 @@ const PW_CONFIG = {
     return gateShell(`<div class="panel stack signin">${note}
       <button class="btn pri big" data-wact="google" ${WEB.busy === 'google' ? 'disabled' : ''}>Continue with Google</button>${link}
       <p class="hint">For ProWorld coaching staff. ${EMAIL_LINK ? '' : 'Sign in with your Google account (Gmail or Google Workspace). '}The first time you sign in, an administrator approves your email; after that you come straight in. No new password, and no other account needed.</p>
-      ${IN_APP ? `<div class="notice" role="note"><span><b>This page is open inside another app.</b> Google sign-in usually fails here. Open it in Safari or Chrome itself: use the compass or “Open in browser” button, or copy the link and paste it there.</span><button class="btn sm" data-wact="copy-link">Copy link</button></div>`
-        : finePointer() ? '' : `<p class="hint"><b>On a phone:</b> open this page in Safari or Chrome itself, not inside WhatsApp or another app. That is what lets Google sign you in, and keeps you signed in.</p>`}</div>`);
+      ${IN_APP ? `<div class="notice" role="note"><span><b>This page is open inside another app.</b> If Google sign-in doesn’t work here, open it in Safari or Chrome itself: use the compass or “Open in browser” button, or copy the link and paste it there. You also stay signed in that way.</span><button class="btn sm" data-wact="copy-link">Copy link</button></div>`
+        : finePointer() ? '' : `<p class="hint"><b>On a phone:</b> the page hands you over to Google and brings you straight back. Bookmark it in Safari or Chrome and you stay signed in.</p>`}</div>`);
   }
   // Google's sign-in window can't hand its answer back when this page is shown inside another app (WhatsApp, Instagram, Gmail…)
-  const PHONE_TIP = 'If Google’s window showed an error, this page is probably open inside another app. Open it in Safari or Chrome itself (in WhatsApp: the compass or “Open in browser” button), then sign in there. You’ll also stay signed in.';
+  const PHONE_TIP = 'Google couldn’t finish signing you in here. If this page is open inside another app (WhatsApp, Instagram…), open it in Safari or Chrome itself: the compass or “Open in browser” button, or copy the link. You’ll also stay signed in.';
+  // full-page hand-off on touch devices: no pop-up window to lose, and it works in iPhone home-screen mode. Needs the sign-in helper on the same site as the page (Firebase Hosting), which is where the site lives.
+  const REDIRECT_SIGNIN = !finePointer() || navigator.standalone === true;
   const UA = navigator.userAgent || '';
   // named in-app browsers, Android web views, iPhone web views (they leave out the "Safari/" token), and iPhone home-screen mode
   const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|LinkedInApp|TikTok|Snapchat|Twitter|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA)) || navigator.standalone === true;
   function authMsg(e) {
     const c = e && e.code; if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return finePointer() ? '' : PHONE_TIP;
-    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') return PHONE_TIP;
+    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment' || c === 'auth/missing-initial-state' || c === 'auth/missing-or-invalid-nonce') return PHONE_TIP;
     if (c === 'auth/popup-blocked') return `Your browser blocked the Google window. Allow pop-ups for this site and try again${EMAIL_LINK ? ', or use the emailed link' : ''}.`;
     if (c === 'auth/unauthorized-domain') return 'This web address isn’t on the project’s list of authorized domains yet (Firebase → Authentication → Settings).';
     if (c === 'auth/operation-not-allowed') return 'That sign-in method isn’t switched on for this project yet (Firebase → Authentication → Sign-in method).';
@@ -1789,7 +1816,9 @@ const PW_CONFIG = {
     const act = b.getAttribute('data-wact'); if (b.disabled) return;
     try {
       if (act === 'menu') { if (menu) { menu.hidden = !menu.hidden; b.setAttribute('aria-expanded', String(!menu.hidden)); } }
-      else if (act === 'google') { if (WEB.dead) { location.reload(); return; } WEB.note = ''; WEB.busy = 'google'; renderGate(); try { await WEB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; if (!WEB.user) renderGate(); }
+      else if (act === 'google') { if (WEB.dead) { location.reload(); return; } WEB.note = ''; WEB.busy = 'google'; renderGate();
+        try { if (REDIRECT_SIGNIN) { await WEB.auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); return; } await WEB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; if (!WEB.user) renderGate(); }
       else if (act === 'copy-link') { const url = location.href.split('#')[0]; let ok = false;
         try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { try { const t = document.createElement('textarea'); t.value = url; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;left:-99px;top:0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch (e2) { ok = false; } }
         toast(ok ? 'Link copied. Open Safari or Chrome and paste it there.' : 'Couldn’t copy. The address is ' + url); }
@@ -1821,7 +1850,7 @@ const PW_CONFIG = {
   function render() {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
-    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : viewHome()}</div>`;
+    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
   }
   const notice = () => S.dbState === 'none' && EDITION !== 'web' ? `<div class="notice">This view can’t reach the shared database, so nothing is loaded and nothing will save. Open the portal from your Claude artifacts while signed in to work with live data.</div>` : '';
@@ -1854,6 +1883,7 @@ const PW_CONFIG = {
     return `${notice()}${empty}${remind}
       <div class="head"><div><div class="lbl">High Performance Academy · ${esc(q)} · ${esc(MONTHS[now.getMonth()])}</div><h1 class="title">Every player. <em>Assessed.</em></h1>
       <div class="sub">Pick a group, pick a player, fill in your part. Everything saves to the shared academy database, so every coach sees the same record on any device.</div></div></div>
+      ${homeTryouts()}
       <div class="stats">
         <div class="stat lead"><div class="lbl">${esc(q)} quarterlies</div><b>${qd}<span class="of">of ${qt} players</span></b></div>
         <div class="stat"><div class="lbl">Active players</div><b>${act.length}</b></div>
@@ -2314,7 +2344,7 @@ const PW_CONFIG = {
   }
   function gotoSec(i, focus) {
     if (!E || i < 0 || i >= E.def.sections.length) return false; const idxs = partIdx(curPart()); const from = idxs.indexOf(E.sec), to = idxs.indexOf(i); if (to < 0) return false;
-    if (to > from && !isLocked()) { normalizeMetrics(); for (let k = from; k < to; k++) { if (missingIn(E.def.sections[idxs[k]], E.values).length) { showMissing(idxs[k]); return false; } } }
+    if (to > from && !isLocked()) { normalizeMetrics(); if (STRICT) for (let k = from; k < to; k++) { if (missingIn(E.def.sections[idxs[k]], E.values).length) { showMissing(idxs[k]); return false; } } }
     stopDictation(false); E.sec = i; E.flag = false; renderSection(!!focus);
     if (!focus) { const t = $('#sectabs:not([hidden])') || $('#secbody'); if (t) { try { t.scrollIntoView({ block: 'start' }); window.scrollBy(0, -90); } catch (e) { /* noop */ } } }
     return true;
@@ -2326,15 +2356,15 @@ const PW_CONFIG = {
   }
   async function completePart(btn) {
     const ed = E, def = ed.def, part = curPart(); normalizeMetrics();
-    const bad = partIdx(part).find((k) => missingIn(def.sections[k], ed.values).length);
-    if (bad !== undefined) { showMissing(bad); return; }
+    const blanks = partIdx(part).reduce((n, k) => n + missingIn(def.sections[k], ed.values).length, 0);
+    if (STRICT && blanks) { showMissing(partIdx(part).find((k) => missingIn(def.sections[k], ed.values).length)); return; }
     const byEl = $('#e_by'); const by = ((byEl && byEl.value) || partInfo(part.id).by || '').trim();
     if (!has(by)) { toast(`Add your name under “Coach completing the ${part.label} part” first.`); if (byEl) { byEl.classList.add('need'); byEl.focus(); try { byEl.scrollIntoView({ block: 'center' }); } catch (e) { /* noop */ } } return; }
     btn.disabled = true; lsSet('pw_coach', by); stopDictation(true);
     await queueHead(ed, { parts: { [part.id]: { done: true, by, at: Date.now(), pct: 100 } } });
     if (E !== ed) return; if (!partInfo(part.id).done) { btn.disabled = false; return; }
     const waiting = partState(ed.head, def).filter((x) => !x.done).map((x) => x.part.label);
-    toast(waiting.length ? `${part.label} part complete. Still to do: ${waiting.join(', ')}.` : 'All parts are complete. Mark final when you’re ready.');
+    toast((waiting.length ? `${part.label} part complete. Still to do: ${waiting.join(', ')}.` : 'All parts are complete. Mark final when you’re ready.') + (blanks ? ` (${blanks} line${blanks === 1 ? '' : 's'} left blank.)` : ''));
     if (S.ui.back && S.ui.back.view === 'group') { const back = S.ui.back; S.ui.back = null; saveUi(); go(back); return; }
     repaintChrome(); try { window.scrollTo(0, 0); } catch (e) { /* noop */ }
   }
@@ -2342,7 +2372,7 @@ const PW_CONFIG = {
   async function finalize(btn) {
     const ed = E, def = ed.def; normalizeMetrics();
     if (multi(def)) { const waiting = partState(ed.head, def).filter((x) => !x.done).map((x) => x.part.label); if (waiting.length) { toast(`Still waiting on: ${waiting.join(', ')}.`); return; } }
-    const bad = def.sections.findIndex((sec) => missingIn(sec, ed.values).length);
+    const bad = STRICT ? def.sections.findIndex((sec) => missingIn(sec, ed.values).length) : -1;
     if (bad >= 0) { showMissing(bad); return; }
     btn.disabled = true; ed.finalizing = true; stopDictation(true);
     const sc = {}; ['sc_tennis', 'sc_fitness', 'sc_mental', 'sc_overall'].forEach((k) => { if (has(ed.values[k])) sc[k.slice(3)] = +ed.values[k]; });
@@ -2378,7 +2408,7 @@ const PW_CONFIG = {
   function advance(stop, dir) {
     const fid = stop.getAttribute('data-stop'); const f = E.fmap[fid];
     if (f && f.t === 'metric') { const i = $('#f_' + fid); if (i && isNT(i.value) && i.value !== NT) { i.value = NT; setVal(fid, NT); paintField(fid); } }
-    if (dir > 0 && f && required(f) && !filled(f, E.values)) { flagStop(stop, f); return; }
+    if (STRICT && dir > 0 && f && required(f) && !filled(f, E.values)) { flagStop(stop, f); return; }
     const list = stopsIn(); const nx = list[list.indexOf(stop) + dir];
     if (nx) { focusStop(nx); return; }
     const idxs = partIdx(curPart()), pos = idxs.indexOf(E.sec);
@@ -2696,6 +2726,12 @@ const PW_CONFIG = {
     const goEl = ev.target.closest('[data-go]'); if (goEl) { ev.preventDefault(); let r; try { r = JSON.parse(goEl.getAttribute('data-go')); } catch (e) { return; } S.ui.adding = false; S.ui.editing = false; if (r.view !== 'edit') { S.ui.back = null; saveUi(); } closeResults(); go(r); return; }
     const b = ev.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT' || b.disabled) return; const act = b.getAttribute('data-act');
     if (act === 'toggle-add') { S.ui.adding = !S.ui.adding; render(); const i = $('#ap_name'); if (i) i.focus(); }
+    else if (act === 'toggle-addtry') { S.ui.addingTry = !S.ui.addingTry; S.route.add = false; render(); const i = $('#ty_name'); if (i) i.focus(); }
+    else if (act === 'try-edit') { S.ui.editingTry = S.ui.editingTry === S.route.id ? null : S.route.id; render(); const i = $('#ty_name'); if (i) i.focus(); }
+    else if (act === 'try-check' && S.route.id) { b.disabled = true; await tryPatch(S.route.id, { checks: { [b.getAttribute('data-c')]: { done: true, by: String(tryName()).slice(0, 80), at: Date.now() } } }); }
+    else if (act === 'try-uncheck' && S.route.id) { b.disabled = true; await tryPatch(S.route.id, { checks: { [b.getAttribute('data-c')]: { done: false, by: '', at: null } } }); }
+    else if (act === 'try-status' && S.route.id) { const v = b.getAttribute('data-v'); b.disabled = true; await tryPatch(S.route.id, { status: v, statusBy: String(tryName()).slice(0, 80), statusAt: Date.now() }); toast(v === 'came' ? 'Recorded. Next: feedback to the family, then the decision.' : v === 'planned' ? 'Back to planned.' : `Recorded as ${TRY_STATUS[v].toLowerCase()}.`); }
+    else if (act === 'del-try' && S.route.id) twoStep(b, 'dt' + S.route.id, async () => { try { await S.db.doc('tryouts/' + S.route.id).delete(); toast('Try-out deleted.'); go({ view: 'tryouts' }); } catch (e) { dbFail(e); } });
     else if (act === 'toggle-edit') { S.ui.editing = !S.ui.editing; render(); }
     else if (act === 'fcoach') { const v = b.getAttribute('data-v'); S.ui.coachFilter = v === '__all' ? null : v; S.ui.coachFilterGroup = S.route.gid; render(); }
     else if (act === 'pfilter') { const v = b.getAttribute('data-v'); S.ui.partFilter = v && !(S.ui.partFilter === v && S.ui.partFilterGroup === S.route.gid) ? v : null; S.ui.partFilterGroup = S.route.gid; saveUi(); render(); }
@@ -2784,11 +2820,19 @@ const PW_CONFIG = {
         if (!['feeling', 'working', 'tournament', 'proud'].some((k) => val(k))) { toast('Write something in at least one box.'); return; }
         await S.db.collection('journal').add({ playerId: f.getAttribute('data-pid'), kind: val('kind') === 'coach' ? 'coach' : 'player', by: val('by'), date: val('date') || todayISO(), feeling: val('feeling'), working: val('working'), tournament: val('tournament'), proud: val('proud'), comments: [], createdAt: t });
         f.reset(); toast('Entry saved.');
+      } else if (kind === 'add-tryout' || kind === 'edit-tryout') {
+        const name = val('name'); if (!name) return;
+        const fields = { name, born: val('born'), group: val('group'), coach: val('coach'), date: val('date'), time: val('time'), parent: val('parent'), phone: val('phone'), email: val('email'), level: val('level'), source: val('source'), notes: val('notes'), updatedAt: t };
+        if (kind === 'add-tryout') { await S.db.collection('tryouts').add(Object.assign(fields, { status: 'planned', outcome: '', checks: {}, createdAt: t, by: String(tryName()).slice(0, 80) })); S.ui.addingTry = false; S.route.add = false; toast(`${name} added. The coaches will see it on the home screen.`); }
+        else { await S.db.doc('tryouts/' + f.getAttribute('data-id')).update(fields); S.ui.editingTry = null; toast('Try-out updated.'); }
+        render();
+      } else if (kind === 'tryout-result') {
+        const id = f.getAttribute('data-id'); await S.db.doc('tryouts/' + id).update({ outcome: val('outcome'), joinGroup: val('joinGroup'), seen: val('seen'), updatedAt: t }); toast('Result saved.');
       } else if (kind === 'comment') {
         const id = f.getAttribute('data-id'); const e = S.pdata.journal.find((x) => x.id === id); if (!e) return;
         const comments = (e.comments || []).concat([{ text: val('text'), by: lsGet('pw_coach') || 'Coach', at: t }]); await S.db.doc('journal/' + id).update({ comments }); f.reset();
       }
-      S.pendingRender = false; if (!['edit', 'report'].includes(S.route.view) && kind !== 'add-player' && kind !== 'edit-player') render();
+      S.pendingRender = false; if (!['edit', 'report'].includes(S.route.view) && !['add-player', 'edit-player', 'add-tryout', 'edit-tryout'].includes(kind)) render();
     } catch (e) { dbFail(e); }
   });
 
@@ -2816,6 +2860,144 @@ const PW_CONFIG = {
     if (['edit', 'report'].includes(S.route.view)) $('main').innerHTML = '<div class="wrap"><div class="empty">Opening…</div></div>'; else render();
     connect().then(() => { fitBar(); if (S.route.view === 'edit' || S.route.view === 'report' || S.route.view === 'player') onRoute(false); });
   }
+
+  /* ───────────── try-outs: prospective players coming for a session ─────────────
+     A try-out is a child who is not on the roster yet. The front desk or a director books it; the coaches see it on the
+     home screen the moment they open the portal: who, when, which group, who runs it, and what is still missing. Every
+     step before and after the session is a tick with a name and a date on it, so nothing depends on memory. */
+  const TRY_CHECKS = [
+    { id: 'contacted', label: 'Parents contacted', hint: 'First conversation done: who they are, what they are looking for, current level.' },
+    { id: 'confirmed', label: 'Date and time confirmed with the family', hint: 'They have the day, the time, where to park and what to bring.' },
+    { id: 'director', label: 'Introduced to the director', hint: 'The family knows who runs the group and has spoken to them.' },
+    { id: 'forms', label: 'Registration form and waiver received', hint: 'Signed waiver, medical notes, emergency contact.' },
+    { id: 'coach', label: 'Coach assigned and briefed', hint: 'Who runs the session, and what to look at.' },
+  ];
+  const TRY_AFTER = [
+    { id: 'feedback', label: 'Feedback given to the family', hint: 'Same day if possible: what we saw, what we recommend.' },
+    { id: 'decision', label: 'Decision communicated', hint: 'A place offered, waitlist, or not the right fit — and the next step.' },
+  ];
+  const TRY_INFO = [['name', 'player name'], ['born', 'birth year'], ['group', 'group'], ['date', 'date'], ['time', 'time'], ['parent', 'parent name'], ['phone', 'phone']];
+  const TRY_SOURCES = ['Referral', 'Website', 'Instagram', 'Tournament', 'Walk-in', 'School', 'Other'];
+  const TRY_OUTCOMES = [['', '—'], ['offered', 'Place offered'], ['joined', 'Joined'], ['waitlist', 'Waitlist'], ['not-fit', 'Not the right fit'], ['declined', 'Family declined']];
+  const TRY_STATUS = { planned: 'Planned', came: 'Came', 'no-show': 'No-show', cancelled: 'Cancelled' };
+  const tryMissing = (t) => TRY_INFO.filter(([k]) => !has(t[k])).map(([, l]) => l);
+  const tryCheck = (t, id) => !!(t && t.checks && t.checks[id] && t.checks[id].done);
+  const tryOpen = (t) => TRY_CHECKS.filter((c) => !tryCheck(t, c.id));
+  const tryStatus = (t) => (t && TRY_STATUS[t.status] ? t.status : 'planned');
+  const tryDone = (t) => tryStatus(t) === 'no-show' || tryStatus(t) === 'cancelled' || (tryStatus(t) === 'came' && tryCheck(t, 'decision'));
+  const timeLabel = (hhmm) => { const p = String(hhmm || '').split(':'); const h = +p[0], m = +p[1]; if (isNaN(h)) return String(hhmm || ''); return `${((h + 11) % 12) + 1}:${String(isNaN(m) ? 0 : m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`; };
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const tryWhen = (t) => (t.date ? `${t.date === todayISO() ? 'Today' : dayLabel(t.date)}${t.time ? ' · ' + timeLabel(t.time) : ''}` : 'No date yet');
+  const tryGroupLabel = (t) => (t.group ? group(t.group).label : '');
+  const trySorted = () => S.tryouts.slice().sort((a, b) => String(a.date || '9999').localeCompare(String(b.date || '9999')) || String(a.time || '').localeCompare(String(b.time || '')) || String(a.name || '').localeCompare(String(b.name || '')));
+  function tryouts() {
+    const list = trySorted(); const today = todayISO(), week = addDays(today, 7);
+    const planned = list.filter((t) => tryStatus(t) === 'planned');
+    return {
+      today: planned.filter((t) => t.date === today),
+      week: planned.filter((t) => t.date > today && t.date <= week),
+      later: planned.filter((t) => !t.date || t.date > week),
+      result: planned.filter((t) => !!t.date && t.date < today),
+      followup: list.filter((t) => tryStatus(t) === 'came' && !tryCheck(t, 'decision')),
+      done: list.filter(tryDone).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 30),
+    };
+  }
+  // what a coach needs to know at a glance: the first things still open on this try-out
+  function tryChips(t, max) {
+    const out = []; const st = tryStatus(t);
+    if (st === 'planned' && t.date && t.date < todayISO()) out.push('<span class="chip warn">How did it go?</span>');
+    if (st === 'came' && !tryCheck(t, 'decision')) out.push(`<span class="chip warn">${tryCheck(t, 'feedback') ? 'Decision pending' : 'Feedback pending'}</span>`);
+    if (st === 'no-show' || st === 'cancelled') out.push(`<span class="chip">${TRY_STATUS[st]}</span>`);
+    if (st === 'came' && tryCheck(t, 'decision')) out.push(`<span class="chip sent">${(TRY_OUTCOMES.find((o) => o[0] === t.outcome) || ['', 'Done'])[1]}</span>`);
+    if (st === 'planned') {
+      const miss = tryMissing(t); if (miss.length) out.push(`<span class="chip warn">Missing: ${esc(miss.slice(0, 2).join(', '))}${miss.length > 2 ? ` +${miss.length - 2}` : ''}</span>`);
+      const open = tryOpen(t); const short = { contacted: 'Parents not contacted', confirmed: 'Not confirmed', director: 'Meet the director', forms: 'Forms missing', coach: 'No coach' };
+      open.forEach((c) => out.push(`<span class="chip warn">${short[c.id]}</span>`));
+      if (!miss.length && !open.length) out.push('<span class="chip sent">Ready</span>');
+    }
+    const lim = max || 3; return out.length > lim ? out.slice(0, lim).join('') + `<span class="chip">+${out.length - lim}</span>` : out.join('');
+  }
+  function rowTry(t) {
+    const who = `<div class="who"><span class="ava when">${esc(t.date ? (t.date === todayISO() ? 'Today' : dayLabel(t.date)) : 'No date')}${t.time ? `<small>${esc(timeLabel(t.time))}</small>` : ''}</span><div style="min-width:0"><div class="nm">${esc(t.name || 'Unnamed')}</div><small>${esc([t.born ? 'Born ' + t.born : '', tryGroupLabel(t), t.coach ? 'Coach ' + t.coach : ''].filter(Boolean).join(' · ') || 'Details to add')}</small></div></div>`;
+    return `<button class="rowb" ${goAttr({ view: 'tryout', id: t.id })}>${who}<div class="mid muted" style="font-size:12px">${esc(t.parent ? t.parent + (t.phone ? ' · ' + t.phone : '') : '')}</div><div class="chips">${tryChips(t)}</div></button>`;
+  }
+  // the block on the home screen: today, the next seven days, and anything waiting for a result
+  function homeTryouts() {
+    if (!S.loaded.tryouts && S.dbState !== 'none') return '';
+    const ty = tryouts(); const show = ty.today.concat(ty.week, ty.result, ty.followup); const more = ty.later.length;
+    const title = ty.today.length ? `${ty.today.length} today` : ty.week.length ? `${ty.week.length} this week` : ty.result.length + ty.followup.length ? 'waiting for a result' : more ? `${more} coming up` : 'none booked';
+    return `<div class="sect wrapb"><h2>Try-outs · ${esc(title)}</h2><div class="rowx" style="gap:6px">${writable() ? `<button class="btn sm" ${goAttr({ view: 'tryouts', add: 1 })}>Add a try-out</button>` : ''}<button class="btn sm ghost" ${goAttr({ view: 'tryouts' })}>All try-outs</button></div></div>
+      ${show.length ? `<div class="list" style="margin-bottom:34px">${show.map(rowTry).join('')}</div>` : `<div class="empty" style="margin-bottom:34px;padding:16px 20px">${more ? `Nothing in the next seven days. ${more} booked later on.` : 'No try-outs booked. When a family books a session, add it here so every coach sees it.'}</div>`}`;
+  }
+  const tryForm = (t) => {
+    const v = (k) => esc((t && t[k]) || ''); const isEdit = !!t;
+    return `<form class="panel stack" data-form="${isEdit ? 'edit-tryout' : 'add-tryout'}" ${isEdit ? `data-id="${esc(t.id)}"` : ''} style="margin-bottom:18px">
+      <div class="grid2">
+        <div class="field"><label for="ty_name">Player name</label><input id="ty_name" name="name" type="text" required autocomplete="off" value="${v('name')}" placeholder="First name + last name"></div>
+        <div class="field"><label for="ty_born">Birth year</label><input id="ty_born" name="born" type="number" inputmode="numeric" min="2000" max="2025" value="${v('born')}" placeholder="2014"></div>
+        <div class="field"><label for="ty_group">Group to try</label><select id="ty_group" name="group"><option value="">—</option>${groups().map((g) => `<option value="${esc(g.id)}" ${t && t.group === g.id ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div>
+        <div class="field"><label for="ty_coach">Coach running it</label><input id="ty_coach" name="coach" type="text" list="coachlist" autocomplete="off" value="${v('coach')}"></div>
+        <div class="field"><label for="ty_date">Date</label><input id="ty_date" name="date" type="date" value="${v('date')}"></div>
+        <div class="field"><label for="ty_time">Time</label><input id="ty_time" name="time" type="time" value="${v('time')}"></div>
+        <div class="field"><label for="ty_parent">Parent name</label><input id="ty_parent" name="parent" type="text" autocomplete="off" value="${v('parent')}"></div>
+        <div class="field"><label for="ty_phone">Parent phone</label><input id="ty_phone" name="phone" type="tel" autocomplete="off" value="${v('phone')}"></div>
+        <div class="field"><label for="ty_email">Parent email</label><input id="ty_email" name="email" type="email" autocomplete="off" value="${v('email')}"></div>
+        <div class="field"><label for="ty_level">Level</label><input id="ty_level" name="level" type="text" autocomplete="off" value="${v('level')}" placeholder="UTR, years playing, current club…"></div>
+        <div class="field"><label for="ty_source">How they found us</label><select id="ty_source" name="source"><option value="">—</option>${TRY_SOURCES.map((x) => `<option ${t && t.source === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <datalist id="coachlist">${coachList().map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
+      <div class="field"><label for="ty_notes">Notes for the coaches</label><textarea id="ty_notes" name="notes" rows="3" placeholder="What the family said, what to look at, anything to know.">${v('notes')}</textarea></div>
+      <div class="rowx"><button class="btn pri" type="submit">${isEdit ? 'Save changes' : 'Save try-out'}</button><button class="btn ghost" type="button" data-act="${isEdit ? 'try-edit' : 'toggle-addtry'}">Cancel</button></div></form>`;
+  };
+  function viewTryouts() {
+    if (S.route.add && writable()) { S.ui.addingTry = true; S.route.add = false; }
+    const ty = tryouts(); const block = (title, hint, list) => (list.length ? `<div class="sect"><h2>${esc(title)}</h2><span class="muted" style="font-size:12px">${list.length}</span></div>${hint ? `<p class="hint" style="margin:-6px 0 10px">${esc(hint)}</p>` : ''}<div class="list" style="margin-bottom:26px">${list.map(rowTry).join('')}</div>` : '');
+    const any = S.tryouts.length;
+    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Try-outs' }])}
+      <div class="head"><div><div class="lbl">Prospective players</div><h1 class="title">Try-<em>outs.</em></h1>
+      <div class="sub">Every family that books a session, from the first call to the decision. Open one to tick off the steps; the home screen shows what is coming up and what is still missing.</div></div>
+        <div class="rowx">${writable() ? '<button class="btn pri" data-act="toggle-addtry">Add a try-out</button>' : ''}</div></div>
+      <div id="addtry" ${S.ui.addingTry ? '' : 'hidden'}>${S.ui.addingTry ? tryForm(null) : ''}</div>
+      ${block('Today', '', ty.today)}
+      ${block('This week', '', ty.week)}
+      ${block('Coming up', '', ty.later)}
+      ${block('Waiting for a result', 'The date has passed. Open it and say whether the player came.', ty.result)}
+      ${block('Feedback and decision pending', 'The player came. Give the family feedback and communicate the decision.', ty.followup)}
+      ${block('Recently finished', '', ty.done)}
+      ${any ? '' : `<div class="empty">${S.loaded.tryouts || S.dbState === 'none' ? 'No try-outs yet. Add the first one when a family books a session.' : 'Loading…'}</div>`}`;
+  }
+  function viewTryout(id) {
+    const t = S.tryouts.find((x) => x.id === id);
+    if (!t) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }])}<div class="empty">${S.loaded.tryouts ? 'This try-out is no longer here.' : 'Loading…'}</div>`;
+    const w = writable(); const st = tryStatus(t); const miss = tryMissing(t); const late = st === 'planned' && !!t.date && t.date < todayISO();
+    // required details say "missing" in the warning colour; optional ones just show a dash
+    const kv = (label, val, opts) => { const o = opts || {}; return `<div><span class="lbl">${esc(label)}</span><b${has(val) ? '' : o.opt ? ' class="muted"' : ' class="miss"'}>${has(val) ? (o.href ? `<a href="${esc(o.href)}">${esc(val)}</a>` : esc(val)) : o.opt ? '—' : 'missing'}</b></div>`; };
+    const details = S.ui.editingTry === id ? tryForm(t) : `<div class="kv">
+        ${kv('When', t.date ? tryWhen(t) : '')}${kv('Group', tryGroupLabel(t))}${kv('Coach', t.coach, { opt: true })}${kv('Born', t.born)}${kv('Level', t.level, { opt: true })}${kv('Parent', t.parent)}${kv('Phone', t.phone, { href: 'tel:' + String(t.phone || '').replace(/[^+\d]/g, '') })}${kv('Email', t.email, { href: 'mailto:' + (t.email || ''), opt: true })}${kv('How they found us', t.source, { opt: true })}
+      </div>${has(t.notes) ? `<div class="rtext" style="border:0;padding-top:12px"><div class="lbl">Notes for the coaches</div><p>${esc(t.notes)}</p></div>` : ''}`;
+    const tick = (c, done) => (done
+      ? `<div class="furow ok"><div><b>${esc(c.label)}</b><div class="hint">Done${done.by ? ' by ' + esc(done.by) : ''}${done.at ? ' · ' + esc(fmtDate(done.at)) : ''}</div></div>${w ? `<button class="btn sm ghost" data-act="try-uncheck" data-c="${c.id}">Undo</button>` : ''}</div>`
+      : `<div class="furow"><div><b>${esc(c.label)}</b><div class="hint">${esc(c.hint)}</div></div>${w ? `<button class="btn" data-act="try-check" data-c="${c.id}">Done</button>` : ''}</div>`);
+    const before = TRY_CHECKS.map((c) => tick(c, tryCheck(t, c.id) ? t.checks[c.id] : null)).join('');
+    const after = TRY_AFTER.map((c) => tick(c, tryCheck(t, c.id) ? t.checks[c.id] : null)).join('');
+    const statusBtns = w ? `<div class="rowx">${st === 'planned' ? `<button class="btn pri" data-act="try-status" data-v="came">Came</button><button class="btn" data-act="try-status" data-v="no-show">No-show</button><button class="btn ghost" data-act="try-status" data-v="cancelled">Cancelled</button>` : `<button class="btn ghost" data-act="try-status" data-v="planned">Back to planned</button>`}</div>` : '';
+    const session = `<div class="furow${late ? '' : ' calm'}"><div><b>${st === 'planned' ? (late ? 'Did the player come?' : 'The session') : TRY_STATUS[st]}</b><div class="hint">${st === 'planned' ? (late ? 'The date has passed. Record what happened so the family gets an answer.' : 'After the session, record whether the player came.') : st === 'came' ? 'Now give the family feedback and communicate the decision below.' : 'Nothing more to do here unless it gets rebooked.'}</div></div>${statusBtns}</div>`;
+    const result = st === 'came' ? `<form class="panel stack" data-form="tryout-result" data-id="${esc(t.id)}"><div class="grid2">
+        <div class="field"><label for="tr_outcome">Decision</label><select id="tr_outcome" name="outcome">${TRY_OUTCOMES.map((o) => `<option value="${o[0]}" ${(t.outcome || '') === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></div>
+        <div class="field"><label for="tr_grp">Group offered</label><select id="tr_grp" name="joinGroup"><option value="">—</option>${groups().map((g) => `<option value="${esc(g.id)}" ${t.joinGroup === g.id ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div></div>
+        <div class="field"><label for="tr_seen">What we saw</label><textarea id="tr_seen" name="seen" rows="3" placeholder="Level, attitude, what stood out, what we recommend.">${esc(t.seen || '')}</textarea></div>
+        <div class="rowx"><button class="btn pri" type="submit">Save result</button></div></form>` : '';
+    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }, { t: t.name || 'Try-out' }])}
+      <div class="head"><div><div class="lbl">Try-out · ${esc(tryGroupLabel(t) || 'group to decide')} · ${esc(tryWhen(t))}</div><h1 class="title">${esc(t.name || 'Unnamed')}</h1>
+        <div class="sub">${miss.length ? `<span class="chip warn">Missing: ${esc(miss.join(', '))}</span>` : tryOpen(t).length && st === 'planned' ? `${tryOpen(t).length} step${tryOpen(t).length === 1 ? '' : 's'} still to do before the session.` : st === 'planned' ? 'Everything is ready for the session.' : ''}</div></div>
+        <div class="rowx">${w ? `<button class="btn" data-act="try-edit">${S.ui.editingTry === id ? 'Close' : 'Edit details'}</button>` : ''}${w && canDelete() ? '<button class="btn ghost danger" data-act="del-try">Delete</button>' : ''}</div></div>
+      <div class="sect"><h2>Details</h2></div>${details}
+      <div class="sect" style="margin-top:26px"><h2>Before the session</h2><span class="muted" style="font-size:12px">${TRY_CHECKS.length - tryOpen(t).length} of ${TRY_CHECKS.length}</span></div><div class="follow" role="group" aria-label="Before the session">${before}</div>
+      <div class="sect" style="margin-top:26px"><h2>The session</h2></div><div class="follow" role="group" aria-label="The session">${session}</div>
+      ${st === 'came' ? `<div class="sect" style="margin-top:26px"><h2>After the session</h2></div><div class="follow" role="group" aria-label="After the session" style="margin-bottom:14px">${after}</div>${result}` : ''}`;
+  }
+  const tryPatch = async (id, patch) => { try { await S.db.doc('tryouts/' + id).update(Object.assign({ updatedAt: Date.now() }, patch)); } catch (e) { dbFail(e); } };
+  const tryName = () => (EDITION === 'web' && WEB.user && WEB.user.displayName) || lsGet('pw_coach') || 'Coach';
 
 })();
 

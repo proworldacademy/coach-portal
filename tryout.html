@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>(function(){var s="https://proworld-coach-portal.web.app";if(s&&location.hostname==='proworldacademy.github.io'){location.replace(s+'/tryout'+location.search+location.hash)}})();</script>
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark light">
@@ -283,13 +284,14 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
    staff entry) and writes nothing. */
 (() => {
   'use strict';
-  const CFG = { apiKey: 'AIzaSyBauu-JZZKCzex-PpTjBpD4QuTSWIkVEs4', authDomain: 'proworld-coach-portal.firebaseapp.com', projectId: 'proworld-coach-portal', appId: '1:999676464496:web:fa726be60d8da0112393b5' };
+  const CFG = { apiKey: 'AIzaSyBauu-JZZKCzex-PpTjBpD4QuTSWIkVEs4', authDomain: 'proworld-coach-portal.web.app', projectId: 'proworld-coach-portal', appId: '1:999676464496:web:fa726be60d8da0112393b5' };
   const $ = (s, r) => (r || document).querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const finePointer = () => { try { return window.matchMedia('(pointer:fine)').matches; } catch (e) { return true; } };
   const UA = navigator.userAgent || '';
   const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|LinkedInApp|TikTok|Snapchat|Twitter|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA)) || navigator.standalone === true;
-  const PHONE_TIP = 'If Google’s window showed an error, this page is probably open inside another app. Open it in Safari or Chrome itself (in WhatsApp: the compass or “Open in browser” button), then sign in there.';
+  const PHONE_TIP = 'Google couldn’t finish signing you in here. If this page is open inside another app (WhatsApp, Instagram…), open it in Safari or Chrome itself: the compass or “Open in browser” button, or copy the link.';
+  const REDIRECT_SIGNIN = !finePointer() || navigator.standalone === true;   // phones: full-page hand-off to Google, no pop-up
   let toastTimer = null;
   function toast(msg) { let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 4200); }
   const initials = (n) => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
@@ -309,8 +311,8 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
     return shell(`<div class="panel stack signin">${note}
       <button class="btn pri big" data-g="google" ${G.busy ? 'disabled' : ''}>Continue with Google</button>
       <p class="hint">For ProWorld coaching staff. Sign in with the same Google account you use for the Coach Portal. If you are already signed in to the portal on this device, this page opens by itself.</p>
-      ${IN_APP ? `<div class="notice" role="note"><span><b>This page is open inside another app.</b> Google sign-in usually fails here. Open it in Safari or Chrome itself: use the compass or “Open in browser” button, or copy the link and paste it there.</span><button class="btn sm" data-g="copy-link">Copy link</button></div>`
-        : finePointer() ? '' : `<p class="hint"><b>On a phone:</b> open this page in Safari or Chrome itself, not inside WhatsApp or another app.</p>`}</div>`);
+      ${IN_APP ? `<div class="notice" role="note"><span><b>This page is open inside another app.</b> If Google sign-in doesn’t work here, open it in Safari or Chrome itself: use the compass or “Open in browser” button, or copy the link and paste it there.</span><button class="btn sm" data-g="copy-link">Copy link</button></div>`
+        : finePointer() ? '' : `<p class="hint"><b>On a phone:</b> the page hands you over to Google and brings you straight back.</p>`}</div>`);
   }
   function paintUser() {
     const el = $('#userbox'); if (!el) return; const u = G.user; el.hidden = !u || G.stage !== 'in';
@@ -318,13 +320,14 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
   }
   function authMsg(e) {
     const c = e && e.code; if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return finePointer() ? '' : PHONE_TIP;
-    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') return PHONE_TIP;
+    if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment' || c === 'auth/missing-initial-state' || c === 'auth/missing-or-invalid-nonce') return PHONE_TIP;
     if (c === 'auth/popup-blocked') return 'Your browser blocked the Google window. Allow pop-ups for this site and try again.';
     if (c === 'auth/network-request-failed') return 'No connection. Check the internet and try again.';
     if (c === 'auth/too-many-requests') return 'Too many sign-in attempts for now. Wait a few minutes and try again.';
     return 'Sign-in didn’t work. Try again.';
   }
   let seq = 0;
+  (async () => { try { if (typeof auth.getRedirectResult === 'function') await auth.getRedirectResult(); } catch (e) { G.note = authMsg(e); renderGate(); } })();
   auth.onAuthStateChanged(async (u) => {
     const my = ++seq; G.user = u;
     if (!u) { G.stage = 'out'; paintUser(); renderGate(); return; }
@@ -339,7 +342,7 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
   });
   document.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-g]'); if (!b || b.disabled) return; const act = b.getAttribute('data-g');
-    if (act === 'google') { G.note = ''; G.busy = true; renderGate(); try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { G.note = authMsg(e); } G.busy = false; if (!auth.currentUser) renderGate(); }
+    if (act === 'google') { G.note = ''; G.busy = true; renderGate(); try { if (REDIRECT_SIGNIN) { await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); return; } await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { G.note = authMsg(e); } G.busy = false; if (!auth.currentUser) renderGate(); }
     else if (act === 'signout') { b.disabled = true; try { await auth.signOut(); } catch (e) { /* noop */ } try { await fs.terminate(); await fs.clearPersistence(); } catch (e) { /* the portal may hold it open in another tab; fine */ } location.reload(); }
     else if (act === 'copy-link') { const url = location.href.split('#')[0]; let ok = false;
       try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { try { const t = document.createElement('textarea'); t.value = url; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;left:-99px;top:0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch (e2) { ok = false; } }
