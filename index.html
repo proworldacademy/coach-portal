@@ -2019,8 +2019,6 @@ const PW_CONFIG = {
     const bits = [fu.unsent.length ? plural(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents') : '', fu.noMeeting.length ? plural(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set') : '', fu.late.length ? plural(fu.late.length, 'meeting to confirm', 'meetings to confirm') : ''].filter(Boolean);
     const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><b>${bits.length ? 'Follow-up: ' + esc(bits.join(' · ')) + '.' : esc(plural(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')) + '.'}</b><span>Open the list</span></button>` : '';
     return `${notice()}${empty}${remind}
-      <div class="head"><div><div class="lbl">High Performance Academy · ${esc(q)} · ${esc(MONTHS[now.getMonth()])}</div><h1 class="title">Every player. <em>Assessed.</em></h1>
-      <div class="sub">Pick a group, pick a player, fill in your part. Everything saves to the shared academy database, so every coach sees the same record on any device.</div></div></div>
       ${homeTryouts()}
       <div class="stats">
         <div class="stat lead"><div class="lbl">${esc(q)} quarterlies</div><b>${qd}<span class="of">of ${qt} players</span></b></div>
