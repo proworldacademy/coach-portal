@@ -391,6 +391,36 @@ button.notice.remind span{font-weight:700;text-decoration:underline;text-underli
 @media (max-width:700px){.rowb .ava.when{min-width:0}}
 @media (max-width:560px){.sect.wrapb{flex-wrap:wrap}.sect.wrapb .rowx{flex-basis:100%}}
 
+/* ── talking boxes (Tennis part, Oct 2026): one box per stroke, reminders, one level in words ── */
+.talk{display:grid;gap:12px;padding:14px 0 18px;border-bottom:1px solid var(--line)}
+.talk:last-of-type{border-bottom:0}
+.talk .tbox textarea{min-height:104px}
+.talk .cover{display:grid;gap:6px}
+.talk .cover .lbl{margin:0}
+.tp{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.tpc{display:inline-flex;align-items:center;gap:7px;border-radius:999px;border:1.5px dashed var(--line2);background:none;padding:6px 12px 6px 9px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer}
+.tpc[disabled]{cursor:default}
+.tpc i{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;flex:none}
+.tpc[aria-pressed="true"]{border-style:solid;border-color:color-mix(in srgb,var(--lime) 70%,var(--text));background:color-mix(in srgb,var(--lime) 16%,transparent);color:var(--text)}
+.tpc[aria-pressed="true"] i{background:var(--lime);border-color:var(--lime)}
+.tpc[aria-pressed="true"] i::after{content:"";width:7px;height:4px;border-left:2px solid #000;border-bottom:2px solid #000;transform:rotate(-45deg) translate(1px,-1px)}
+.left{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:5px}
+.left li{font-size:12.5px;color:var(--muted);padding-left:12px;border-left:3px solid var(--warn)}
+.left li b{color:var(--text);font-weight:600}
+.alldone{margin:6px 0 0;font-size:12.5px;color:var(--muted);font-weight:600}
+.lvl .seg.lvl{gap:6px}
+.lvl .sg{padding:8px 12px}
+.dstate.busy{color:var(--muted)}
+.dstate.busy::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--muted);border-top-color:transparent;margin-right:6px;vertical-align:-1px;animation:spin .9s linear infinite}
+.dstate.ok{color:var(--text);font-weight:700}
+.dstate.ok::before{content:"✓";margin-right:4px}
+.dstate.warn{color:var(--warn)}
+.ai.undo{margin-left:auto}
+.rtext.talkr .lbl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rtext.talkr .pill.lv{font-size:11px;padding:3px 9px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:640px){.lvl .sg{flex:1 1 44%;text-align:left}.ai.undo{margin-left:0}}
+
 </style>
 </head><body>
 <header class="bar"><div class="wrap">
@@ -423,6 +453,75 @@ const SC = (id, label, hint) => ({ t: 'score', id, label, hint });
 const O = (f) => Object.assign(f, { opt: true });            // optional: never blocks a coach from moving on
 const RC = () => ({ t: 'recap' });                            // read-only recap of what each coach wrote (summary part)
 const NT = 'N/T';                                             // a fitness test that was not run this period
+
+/* ───────────── talking boxes (the Tennis part since Oct 2026) ─────────────
+   One box per stroke: the coach talks or types in their own words. Under the box, reminders tick themselves off as the
+   words come up (English, plus the Spanish most of the staff use on court) and can be ticked or unticked by hand; what is
+   left stays in view. One level in words per stroke, saved as the same 1–5 the portal has always used, so the suggested
+   0–100 score and older reports still line up. `from` lists the numbered lines a stroke replaced, so the first report after
+   the change can still show last quarter's level, worked out from those numbers. */
+const TK = (id, label, points, from, hint) => ({ t: 'talk', id: 'w_' + id, level: 'lv_' + id, label, points, from: from || [], hint: hint || 'Say what you see, in your own words — talk or type. The reminders below tick themselves off as you cover them.' });
+const LV = (id, label) => ({ t: 'level', id: 'lv_' + id, talk: 'w_' + id, label: label + ' — level' });
+const TP = (id, label, ask, kw) => ({ id, label, ask, kw });
+const P_PRESS = TP('press', 'Under pressure', 'does it hold up in matches and on the big points?', /pressure|\bmatch(es)?\b|tournament|big points?|\btight\b|nerv|compet|clutch|presi[oó]n|partidos?\b|torneo/i);
+const P_NEXT = TP('next', 'Next step', 'what are we working on next quarter?', /\bnext\b|work(ing)? on|focus|priorit|\bgoals?\b|improv|develop|drill|homework|pr[oó]xim|trabajar|objetivo|mejorar|enfocar/i);
+const P_CONS = TP('cons', 'Consistency', 'does it hold up in long rallies, cross-court and down the line?', /consisten|rall(y|ies)|stead(y|ier)|reliab|unforced|\berrors?\b|\bmiss(es|ing)?\b|breaks? down|in play|\bsolid\b|consistencia|errores|regular|s[oó]lid/i);
+const P_DIR = TP('dir', 'Direction & depth', 'changing direction, inside-out, depth and targets.', /direction|depth|\bdeep\b|\bshort\b|cross-?court|down[- ]the[- ]line|inside[- ](out|in)|target|angle|redirect|placement|profund|direcci[oó]n|cruzad|paralel|[aá]ngulo|colocaci/i);
+const P_TECH = TP('tech', 'Technique', 'grip, swing path, contact point, finish.', /techni|\bgrip\b|swing|contact|prep|take ?back|follow[- ]through|finish|racqu?et|t[eé]cnica|empu[nñ]adura|golpeo|contacto|terminaci/i);
+const P_SLICE = TP('slice', 'Slice', 'neutralising, approaching and defending with the slice.', /slice|\bchip\b|underspin|backspin|cortad/i);
+const P_SPLIT = TP('split', 'Split step', 'early and before every ball.', /split|\bhop\b|timing|salto|a tiempo/i);
+const P_RECOV = TP('recov', 'Recovery', 'back to base after each shot.', /recover|\bbase\b|back to (the )?(middle|cent(er|re))|reset position|recuper|centro/i);
+const P_LAT = TP('lat', 'Side to side', 'wide balls, cross-over steps, balance along the baseline.', /lateral|side[- ]to[- ]side|wide balls?|out wide|cross-?over|shuffle|slide|sideways|desplaz/i);
+const P_FB = TP('fb', 'Forward & back', 'short balls, lobs, depth adjustment.', /forward|backward|up and back|short balls?|\blobs?\b|deep balls?|drop shots?|in and out|adelante|atr[aá]s/i);
+const P_STANCE = TP('stance', 'Stances', 'open, neutral and closed — used on purpose.', /stances?\b|\b(open|closed|neutral)\b|balance|\bload(s|ing)?\b|\bhips?\b|apoyos|abierta|cerrada|equilibrio/i);
+const P_APPR = TP('appr', 'Approach decision', 'when, and on which ball, to come in.', /approach|short ball|com(e|es|ing) (in|forward)|mov(e|es|ing) (in|forward)|transition|when to|clos(e|es|ing)( the)? net|subir|aproximaci|bola corta|acercar/i);
+const P_FHV = TP('fhv', 'Forehand volley', 'punch, depth, angle.', /forehand|\bfh\b|derecha/i);
+const P_BHV = TP('bhv', 'Backhand volley', 'stability, direction, touch.', /backhand|\bbh\b|rev[eé]s/i);
+const P_OH = TP('oh', 'Overhead', 'positioning, footwork, clean execution.', /overhead|smash|\blobs?\b|remate|globo/i);
+const P_RFH = TP('rfh', 'Forehand return', 'early prep, aggressive or neutralising reply.', /forehand|\bfh\b|derecha/i);
+const P_RBH = TP('rbh', 'Backhand return', 'block, chip and charge, redirect.', /backhand|\bbh\b|rev[eé]s|\bchip\b|block/i);
+const P_RREAD = TP('rread', 'Reading the serve', 'early preparation, reading the toss, position on the baseline.', /\bread|anticipat|early|prep|react|position|stance|split|\btoss\b|\blee\b|anticip|posici[oó]n|preparaci/i);
+const P_PLACE = TP('place', 'First serve placement', 'T, body, wide — hitting targets in both boxes.', /placement|target|\bwide\b|\bbody\b|\bthe t\b|down the t|\bt serve|spots?\b|location|corner|both boxes|deuce|\bad side|colocaci|direcci|[aá]ngulo|esquina/i);
+const P_SECOND = TP('second', 'Second serve', 'a reliable kick or topspin second serve; double faults under pressure.', /second|2nd|double ?faults?|segundo|dobles? faltas?/i);
+const P_DEF = TP('def', 'Defence', 'moonball, lob, neutralising when stretched.', /defen|moonball|\blobs?\b|neutraliz|reset|high ball|scramble|counter|defensa|globo/i);
+const P_READ = TP('read', 'Reading the opponent', 'spotting weaknesses and adjusting mid-match.', /opponent|\breads?\b|reading|weakness|adjust|adapt|exploit|scout|rival|debilidad|ajust/i);
+const P_PAT = TP('pat', 'Patterns', 'cross-court to open court, inside-out, down-the-line attack.', /pattern|cross-?court|inside[- ]out|down[- ]the[- ]line|plays? the|play (to|the)|patr[oó]n|esquema|jugada/i);
+const TALK_HP = {
+  fh: [P_CONS, TP('power', 'Power & spin', 'pace, racquet speed, topspin, slice.', /power|\bpace\b|\bspin|slice|heavy|\brpm\b|\bflat\b|racqu?et (head )?speed|weight of shot|accelerat|\bbig\b|weapon|potencia|efecto|liftad|cortad|velocidad|pesad/i), P_DIR, P_PRESS, P_NEXT],
+  bh: [P_CONS, TP('power', 'Power & spin', 'pace, racquet speed, topspin.', /power|\bpace\b|topspin|\bspin\b|heavy|\brpm\b|\bflat\b|racqu?et (head )?speed|weight of shot|accelerat|weapon|potencia|efecto|liftad|velocidad|pesad/i), P_DIR, P_SLICE, P_PRESS, P_NEXT],
+  sv: [P_PLACE, TP('power', 'First serve power & spin', 'pace, kick, slice, variation.', /power|\bpace\b|\bkick\b|slice|\bspin|speed|\bmph\b|\bflat\b|variation|variety|bomb|potencia|efecto|velocidad|variaci/i), P_SECOND, P_PRESS, P_NEXT],
+  rt: [P_RFH, P_RBH, P_RREAD, P_PRESS, P_NEXT],
+  net: [P_APPR, P_FHV, P_BHV, P_OH, TP('pres', 'Net presence', 'poaching, intercepting, reflexes, doubles.', /poach|presence|intercept|reflex|reaction|doubles|\bcover|willing|confiden|instinct|dobles|reflejo/i), P_NEXT],
+  mv: [P_SPLIT, P_RECOV, P_LAT, P_FB, P_STANCE, P_NEXT],
+  tc: [P_PAT, TP('build', 'Point construction', 'building the point and setting up the winner.', /construct|build|set(s|ting)? up|neutral ball|rally ball|first strike|construcc|arma el punto|construye/i),
+    TP('trans', 'Transition & serve + 1', 'baseline to net, the ball after the serve.', /serve ?(plus|\+) ?(one|1)|serve and|transition|come forward|first ball after|net rush|saque y|transici/i),
+    P_DEF, P_READ, TP('press', 'Shot selection under pressure', 'high-percentage choices at 30-40, deuce, ad-in, ad-out.', /pressure|big points?|deuce|break points?|30-40|tie-?break|\btight\b|shot selection|selection|decision|high[- ]percentage|low[- ]percentage|elecci|presi[oó]n|decisi/i),
+    TP('drop', 'Drop shot & variety', 'touch, disguise, change of pace.', /drop ?shot|dropper|variety|touch|disguise|change of pace|dejada|variedad|toque/i), P_NEXT],
+};
+const TALK_U12 = {
+  fh: [P_CONS, P_TECH, TP('dir', 'Direction', 'directing the ball with intention, not just hitting it.', /direction|\baim|target|cross-?court|down[- ]the[- ]line|intention|placement|direcci[oó]n|cruzad|paralel/i), P_NEXT],
+  bh: [P_CONS, P_TECH, TP('dir', 'Direction', 'directing the ball with intention.', /direction|\baim|target|cross-?court|down[- ]the[- ]line|intention|placement|direcci[oó]n|cruzad|paralel/i), P_SLICE, P_NEXT],
+  sv: [TP('motion', 'Motion & technique', 'continental grip, trophy position, toss and swing.', /motion|techni|continental|\bgrip\b|trophy|\btoss|swing|rhythm|t[eé]cnica|lanzamiento|empu[nñ]adura/i), P_PLACE, P_SECOND, P_NEXT],
+  rt: [P_RFH, P_RBH, P_NEXT],
+  net: [P_APPR, P_FHV, P_BHV, P_OH, P_NEXT],
+  mv: [P_SPLIT, P_RECOV, P_LAT, P_FB, P_STANCE, P_NEXT],
+  tc: [TP('consf', 'Consistency first', 'keeping the ball in play is the priority at this level.', /consisten|in play|keep(s|ing)? the ball|rall(y|ies)|patien|\berrors?\b|margin|consistencia|paciencia/i),
+    TP('cdir', 'Changing direction', 'cross-court vs down the line, with purpose.', /direction|cross-?court|down[- ]the[- ]line|chang(e|es|ing)|redirect|direcci[oó]n|cruzad|paralel|cambi/i),
+    TP('pat', 'Patterns', 'forehand cross-court to the open court; using the backhand to build.', /pattern|inside[- ]out|open court|plays? the|patr[oó]n|esquema|jugada/i),
+    TP('sv1', 'Serve + 1', 'an idea of what to do after a good serve.', /serve ?(plus|\+) ?(one|1)|after (the|a|a good) serve|serve and|first ball|saque y/i),
+    P_DEF, P_READ, P_NEXT],
+};
+const TENNIS_TALK = (P, from) => [
+  TK('fh', 'Forehand', P.fh, from.fh), LV('fh', 'Forehand'),
+  TK('bh', 'Backhand', P.bh, from.bh), LV('bh', 'Backhand'),
+  TK('sv', 'Serve', P.sv, from.sv), LV('sv', 'Serve'),
+  TK('rt', 'Return', P.rt, from.rt), LV('rt', 'Return'),
+  TK('net', 'Net game', P.net, from.net), LV('net', 'Net game'),
+  TK('mv', 'Movement & footwork', P.mv, from.mv), LV('mv', 'Movement & footwork'),
+  TK('tc', 'Tactics & game intelligence', P.tc, from.tc), LV('tc', 'Tactics & game intelligence'),
+];
+const FROM_HP = { fh: ['fh_cons', 'fh_power', 'fh_dir'], bh: ['bh_cons', 'bh_power', 'bh_dir', 'bh_slice'], sv: ['sv1_place', 'sv1_power', 'sv2'], rt: ['ret_fh', 'ret_bh'], net: ['net_appr', 'net_fhv', 'net_bhv', 'net_oh', 'net_poach'], mv: ['mv_split', 'mv_recov', 'mv_lat', 'mv_fb', 'mv_stance'], tc: ['tc_pfh', 'tc_pbh', 'tc_point', 'tc_trans', 'tc_def', 'tc_read', 'tc_press', 'drop'] };
+const FROM_U12 = { fh: ['fh_cons', 'fh_tech', 'fh_dir'], bh: ['bh_cons', 'bh_tech', 'bh_dir', 'bh_slice'], sv: ['sv_motion', 'sv1_place', 'sv2'], rt: ['ret_fh', 'ret_bh'], net: ['net_appr', 'net_fhv', 'net_bhv', 'net_oh'], mv: ['mv_split', 'mv_recov', 'mv_lat', 'mv_fb', 'mv_stance'], tc: ['tc_cons', 'tc_dir', 'tc_pfh', 'tc_pbh', 'tc_sv1', 'tc_def', 'tc_read'] };
 const GOAL = (pillar, label) => [
   Object.assign(H(`${label} Goal — Next Quarter`, 'One specific action, how we measure it, and a target date. Printed in the Summary & Action Plan.'), { goal: true }),
   Object.assign(T('g_' + pillar, `${label} Goal`, 'Specific action / how we measure it', 2), { goal: true }),
@@ -459,6 +558,104 @@ const SUMMARY_FIELDS = () => [
   T('s_parents', 'Message to Parents', 'Write directly to the family — personal, specific, and encouraging.', 6),
 ];
 
+/* The Tennis part as it was until Oct 2026 — 30 (HP) and 28 (U12) numbered lines. Kept so that reports finished before the
+   change still open and print exactly as they were written (see FORMS_LEGACY below). */
+const TENNIS_HP_V1 = [
+  H('Groundstrokes & Shot Making'),
+  R('fh_cons', 'Forehand — Consistency', 'Ability to rally cross-court and down-the-line under pressure'),
+  R('fh_power', 'Forehand — Power & Spin', 'RPM, pace generation, and use of topspin / slice'),
+  R('fh_dir', 'Forehand — Direction & Depth', 'Redirect, go inside-out, control depth and targets'),
+  R('bh_cons', 'Backhand — Consistency', 'Two-hand or one-hand stability under pressure'),
+  R('bh_power', 'Backhand — Power & Spin', 'RPM, pace generation, and use of topspin / slice'),
+  R('bh_dir', 'Backhand — Direction & Depth', 'Redirect, go down-the-line, control depth'),
+  R('bh_slice', 'Slice Backhand', 'Neutralizing shot, approach ball, and defensive use'),
+  R('drop', 'Drop Shot', 'Touch, disguise, and situational awareness'),
+  H('Serve & Return'),
+  R('sv1_place', 'First Serve — Placement', 'Hit targets: T, Body, Wide in both boxes consistently'),
+  R('sv1_power', 'First Serve — Power & Spin', 'Pace, kick/slice variation, and spin quality'),
+  R('sv2', 'Second Serve — Reliability', 'Kick/topspin second serve; avoids double faults under pressure'),
+  R('ret_fh', 'Return of Serve — Forehand', 'Reading the serve, early prep, and aggressive or neutralizing reply'),
+  R('ret_bh', 'Return of Serve — Backhand', 'Block return, chip & charge, and redirect ability'),
+  H('Net Game & Volleys'),
+  R('net_appr', 'Approach Shot Decision', 'Choosing when and where to come to net'),
+  R('net_fhv', 'Forehand Volley', 'Punch volley, depth, and angle'),
+  R('net_bhv', 'Backhand Volley', 'Stability, direction, and touch'),
+  R('net_oh', 'Overhead / Smash', 'Positioning, footwork, and clean execution'),
+  R('net_poach', 'Poaching / Net Presence', 'Reading the play and willingness to intercept'),
+  H('Movement & Footwork'),
+  R('mv_split', 'Split Step Timing', 'Consistent and early split step before every shot'),
+  R('mv_recov', 'Recovery Speed', 'Getting back to base position efficiently after each shot'),
+  R('mv_lat', 'Lateral Movement', 'Side-to-side quickness and balance on the baseline'),
+  R('mv_fb', 'Forward / Backward Movement', 'Handling short balls and lobs; depth adjustment'),
+  R('mv_stance', 'Open vs. Closed Stance', 'Tactical use of stances based on ball position and time'),
+  H('Tactical & Game Intelligence'),
+  R('tc_pfh', 'Pattern Play — Forehand', 'FH cross-court → open court; FH-FH-inside-out pattern'),
+  R('tc_pbh', 'Pattern Play — Backhand', 'BH cross → redirect FH; BH down-the-line attack'),
+  R('tc_point', 'Point Construction', 'Awareness of how to build a point and set up a winner'),
+  R('tc_trans', 'Transition Game', 'Handling baseline-to-net transitions; serve + 1'),
+  R('tc_def', 'Defensive Skills', 'Moonball, lob, and neutralizing shot selection under pressure'),
+  R('tc_read', 'Reading Opponent', 'Identifying opponent weaknesses and adjusting strategy mid-match'),
+  R('tc_press', 'Shot Selection Under Pressure', 'Choosing high-% shots at 30-40, deuce, ad-in/out'),
+  H('Tennis Coach — Overall'),
+  T('tennis_overall', 'Overall Assessment & Focus Areas for Next Quarter', 'The tennis coach’s summary: where the player is, and what comes next.', 5),
+  ...GOAL('tennis', 'Tennis'),
+      
+];
+const TENNIS_U12_V1 = [
+  H('Groundstrokes & Shot Making'),
+  R('fh_cons', 'Forehand — Consistency', 'Rally cross-court and down-the-line under pressure'),
+  R('fh_tech', 'Forehand — Technique', 'Grip, swing path, contact point forming correctly'),
+  R('fh_dir', 'Forehand — Direction', 'Can direct the ball with intention, not just hit it'),
+  R('bh_cons', 'Backhand — Consistency', 'Stability on the backhand under pressure'),
+  R('bh_tech', 'Backhand — Technique', 'Grip (1H or 2H), swing path, contact forming correctly'),
+  R('bh_dir', 'Backhand — Direction', 'Can direct the ball with intention'),
+  R('bh_slice', 'Slice Backhand', 'Basic slice introduced — can use defensively or as approach'),
+  H('Serve & Return'),
+  R('sv_motion', 'Serve Motion & Technique', 'Continental grip, trophy position, toss and swing developing correctly'),
+  R('sv1_place', 'First Serve — Placement', 'Can hit targets (T, body, wide) from the baseline consistently'),
+  R('sv2', 'Second Serve — Reliability', 'Reliable second serve — avoids double faults under pressure'),
+  R('ret_fh', 'Return — Forehand', 'Reading the serve, early prep, and controlled reply'),
+  R('ret_bh', 'Return — Backhand', 'Block return and redirect on the backhand side'),
+  H('Net Game & Volleys'),
+  R('net_appr', 'Approach Shot', 'Recognizes short balls and comes forward with intention'),
+  R('net_fhv', 'Forehand Volley', 'Can punch a forehand volley with direction and control'),
+  R('net_bhv', 'Backhand Volley', 'Stability and direction on the backhand volley'),
+  R('net_oh', 'Overhead', 'Can execute a smash when the opportunity is there'),
+  H('Movement & Footwork'),
+  R('mv_split', 'Split Step Timing', 'Consistent split step before every ball'),
+  R('mv_recov', 'Recovery to Base', 'Gets back to base position after each shot'),
+  R('mv_lat', 'Lateral Movement', 'Smooth side-to-side movement along the baseline'),
+  R('mv_fb', 'Forward / Backward', 'Handles short balls and lobs effectively'),
+  R('mv_stance', 'Open vs. Closed Stance', 'Begins to use stances tactically based on ball position'),
+  H('Tactical & Game Intelligence'),
+  R('tc_cons', 'Consistency First', 'Understands keeping the ball in play is the priority at this level'),
+  R('tc_dir', 'Cross-Court vs. Down-the-Line', 'Knows when and how to change direction with purpose'),
+  R('tc_pfh', 'Pattern Play — Forehand', 'FH cross-court to open court — basic inside-out pattern emerging'),
+  R('tc_pbh', 'Pattern Play — Backhand', 'BH cross-court to redirect — beginning to use the backhand to build'),
+  R('tc_sv1', 'Serve + 1', 'Has an idea of what to do after a good serve'),
+  R('tc_def', 'Defensive Skills', 'Uses high ball or moonball to reset under pressure'),
+  R('tc_read', 'Reading Opponent', 'Beginning to notice patterns and weaknesses in opponents'),
+  H('Tennis Coach — Overall'),
+  T('tennis_overall', 'Overall Assessment & Focus Areas for Next Quarter', '', 5),
+  ...GOAL('tennis', 'Tennis'),
+      
+];
+/* The Tennis part since Oct 2026 — option C from the coaches' try-out: words first, plus one level per stroke. */
+const TENNIS_HP = [
+  N('One box per stroke. Say what you see — talk or type — and the reminders under each box tick themselves off as you cover them. Then pick where the stroke is right now, in words.'),
+  ...TENNIS_TALK(TALK_HP, FROM_HP),
+  H('Tennis Coach — Overall'),
+  T('tennis_overall', 'Overall Assessment & Focus Areas for Next Quarter', 'The tennis coach’s summary: where the player is, and what comes next.', 5),
+  ...GOAL('tennis', 'Tennis'),
+];
+const TENNIS_U12 = [
+  N('One box per stroke. Say what you see — talk or type — and the reminders under each box tick themselves off as you cover them. Then pick where the stroke is right now, in words (age-relative: against well-developing players at this level).'),
+  ...TENNIS_TALK(TALK_U12, FROM_U12),
+  H('Tennis Coach — Overall'),
+  T('tennis_overall', 'Overall Assessment & Focus Areas for Next Quarter', '', 5),
+  ...GOAL('tennis', 'Tennis'),
+];
+
 /* Who fills in what. One assessment, one PDF — but each coach opens their own part directly. */
 const QUARTERLY_PARTS = [
   { id: 'tennis', label: 'Tennis', pillar: 'tennis', role: 'Tennis Coach', sections: ['profile', 'tennis', 'competition'], blurb: 'Player profile · ratings · competition · tennis goal' },
@@ -477,46 +674,7 @@ const FORMS = {
     parts: QUARTERLY_PARTS,
     sections: [
       { id: 'profile', label: 'Player Profile', pillar: 'tennis', sub: 'Who is this player?', fields: PROFILE_PROMPTS_HP },
-      { id: 'tennis', label: 'Tennis', pillar: 'tennis', sub: 'Technical · Tactical · Game Intelligence', fields: [
-        H('Groundstrokes & Shot Making'),
-        R('fh_cons', 'Forehand — Consistency', 'Ability to rally cross-court and down-the-line under pressure'),
-        R('fh_power', 'Forehand — Power & Spin', 'RPM, pace generation, and use of topspin / slice'),
-        R('fh_dir', 'Forehand — Direction & Depth', 'Redirect, go inside-out, control depth and targets'),
-        R('bh_cons', 'Backhand — Consistency', 'Two-hand or one-hand stability under pressure'),
-        R('bh_power', 'Backhand — Power & Spin', 'RPM, pace generation, and use of topspin / slice'),
-        R('bh_dir', 'Backhand — Direction & Depth', 'Redirect, go down-the-line, control depth'),
-        R('bh_slice', 'Slice Backhand', 'Neutralizing shot, approach ball, and defensive use'),
-        R('drop', 'Drop Shot', 'Touch, disguise, and situational awareness'),
-        H('Serve & Return'),
-        R('sv1_place', 'First Serve — Placement', 'Hit targets: T, Body, Wide in both boxes consistently'),
-        R('sv1_power', 'First Serve — Power & Spin', 'Pace, kick/slice variation, and spin quality'),
-        R('sv2', 'Second Serve — Reliability', 'Kick/topspin second serve; avoids double faults under pressure'),
-        R('ret_fh', 'Return of Serve — Forehand', 'Reading the serve, early prep, and aggressive or neutralizing reply'),
-        R('ret_bh', 'Return of Serve — Backhand', 'Block return, chip & charge, and redirect ability'),
-        H('Net Game & Volleys'),
-        R('net_appr', 'Approach Shot Decision', 'Choosing when and where to come to net'),
-        R('net_fhv', 'Forehand Volley', 'Punch volley, depth, and angle'),
-        R('net_bhv', 'Backhand Volley', 'Stability, direction, and touch'),
-        R('net_oh', 'Overhead / Smash', 'Positioning, footwork, and clean execution'),
-        R('net_poach', 'Poaching / Net Presence', 'Reading the play and willingness to intercept'),
-        H('Movement & Footwork'),
-        R('mv_split', 'Split Step Timing', 'Consistent and early split step before every shot'),
-        R('mv_recov', 'Recovery Speed', 'Getting back to base position efficiently after each shot'),
-        R('mv_lat', 'Lateral Movement', 'Side-to-side quickness and balance on the baseline'),
-        R('mv_fb', 'Forward / Backward Movement', 'Handling short balls and lobs; depth adjustment'),
-        R('mv_stance', 'Open vs. Closed Stance', 'Tactical use of stances based on ball position and time'),
-        H('Tactical & Game Intelligence'),
-        R('tc_pfh', 'Pattern Play — Forehand', 'FH cross-court → open court; FH-FH-inside-out pattern'),
-        R('tc_pbh', 'Pattern Play — Backhand', 'BH cross → redirect FH; BH down-the-line attack'),
-        R('tc_point', 'Point Construction', 'Awareness of how to build a point and set up a winner'),
-        R('tc_trans', 'Transition Game', 'Handling baseline-to-net transitions; serve + 1'),
-        R('tc_def', 'Defensive Skills', 'Moonball, lob, and neutralizing shot selection under pressure'),
-        R('tc_read', 'Reading Opponent', 'Identifying opponent weaknesses and adjusting strategy mid-match'),
-        R('tc_press', 'Shot Selection Under Pressure', 'Choosing high-% shots at 30-40, deuce, ad-in/out'),
-        H('Tennis Coach — Overall'),
-        T('tennis_overall', 'Overall Assessment & Focus Areas for Next Quarter', 'The tennis coach’s summary: where the player is, and what comes next.', 5),
-        ...GOAL('tennis', 'Tennis'),
-      ] },
+      { id: 'tennis', label: 'Tennis', pillar: 'tennis', sub: 'Technical · Tactical · Game Intelligence', fields: TENNIS_HP },
       { id: 'competition', label: 'Competition', pillar: 'tennis', sub: 'What we see when it counts', fields: [
         X('cp_entered', 'Tournaments Entered This Quarter'),
         X('cp_played', 'Tournaments Completed (matches played)'),
@@ -634,44 +792,7 @@ const FORMS = {
         T('p_develop', 'Main Areas to Develop', 'What 1–2 things are holding them back the most right now?'),
         T('p_character', 'Competitive Character', 'How do they compete under pressure? Fight, nerves, mentality on court.'),
       ] },
-      { id: 'tennis', label: 'Tennis', pillar: 'tennis', sub: 'Technical · Tactical', fields: [
-        H('Groundstrokes & Shot Making'),
-        R('fh_cons', 'Forehand — Consistency', 'Rally cross-court and down-the-line under pressure'),
-        R('fh_tech', 'Forehand — Technique', 'Grip, swing path, contact point forming correctly'),
-        R('fh_dir', 'Forehand — Direction', 'Can direct the ball with intention, not just hit it'),
-        R('bh_cons', 'Backhand — Consistency', 'Stability on the backhand under pressure'),
-        R('bh_tech', 'Backhand — Technique', 'Grip (1H or 2H), swing path, contact forming correctly'),
-        R('bh_dir', 'Backhand — Direction', 'Can direct the ball with intention'),
-        R('bh_slice', 'Slice Backhand', 'Basic slice introduced — can use defensively or as approach'),
-        H('Serve & Return'),
-        R('sv_motion', 'Serve Motion & Technique', 'Continental grip, trophy position, toss and swing developing correctly'),
-        R('sv1_place', 'First Serve — Placement', 'Can hit targets (T, body, wide) from the baseline consistently'),
-        R('sv2', 'Second Serve — Reliability', 'Reliable second serve — avoids double faults under pressure'),
-        R('ret_fh', 'Return — Forehand', 'Reading the serve, early prep, and controlled reply'),
-        R('ret_bh', 'Return — Backhand', 'Block return and redirect on the backhand side'),
-        H('Net Game & Volleys'),
-        R('net_appr', 'Approach Shot', 'Recognizes short balls and comes forward with intention'),
-        R('net_fhv', 'Forehand Volley', 'Can punch a forehand volley with direction and control'),
-        R('net_bhv', 'Backhand Volley', 'Stability and direction on the backhand volley'),
-        R('net_oh', 'Overhead', 'Can execute a smash when the opportunity is there'),
-        H('Movement & Footwork'),
-        R('mv_split', 'Split Step Timing', 'Consistent split step before every ball'),
-        R('mv_recov', 'Recovery to Base', 'Gets back to base position after each shot'),
-        R('mv_lat', 'Lateral Movement', 'Smooth side-to-side movement along the baseline'),
-        R('mv_fb', 'Forward / Backward', 'Handles short balls and lobs effectively'),
-        R('mv_stance', 'Open vs. Closed Stance', 'Begins to use stances tactically based on ball position'),
-        H('Tactical & Game Intelligence'),
-        R('tc_cons', 'Consistency First', 'Understands keeping the ball in play is the priority at this level'),
-        R('tc_dir', 'Cross-Court vs. Down-the-Line', 'Knows when and how to change direction with purpose'),
-        R('tc_pfh', 'Pattern Play — Forehand', 'FH cross-court to open court — basic inside-out pattern emerging'),
-        R('tc_pbh', 'Pattern Play — Backhand', 'BH cross-court to redirect — beginning to use the backhand to build'),
-        R('tc_sv1', 'Serve + 1', 'Has an idea of what to do after a good serve'),
-        R('tc_def', 'Defensive Skills', 'Uses high ball or moonball to reset under pressure'),
-        R('tc_read', 'Reading Opponent', 'Beginning to notice patterns and weaknesses in opponents'),
-        H('Tennis Coach — Overall'),
-        T('tennis_overall', 'Overall Assessment & Focus Areas for Next Quarter', '', 5),
-        ...GOAL('tennis', 'Tennis'),
-      ] },
+      { id: 'tennis', label: 'Tennis', pillar: 'tennis', sub: 'Technical · Tactical', fields: TENNIS_U12 },
       { id: 'competition', label: 'Competition', pillar: 'tennis', sub: 'Beginning to compete', fields: [
         X('cp_entered', 'Tournaments Entered This Quarter'),
         X('cp_played', 'Tournaments Completed (matches played)'),
@@ -911,6 +1032,14 @@ const FORMS = {
     ],
   },
 };
+
+/* Form revisions. New quarterly drafts carry rev 2 (talking boxes in the Tennis part). Anything older — drafts started before
+   the change and every finished report — keeps rev 1 and is shown, edited and printed with the numbered lines it was written with. */
+const FORM_REV = 2;
+const withTennis = (def, fields) => Object.assign({}, def, { sections: def.sections.map((s) => (s.id === 'tennis' ? Object.assign({}, s, { fields }) : s)) });
+const FORMS_LEGACY = { quarterly_hp: withTennis(FORMS.quarterly_hp, TENNIS_HP_V1), quarterly_u12: withTennis(FORMS.quarterly_u12, TENNIS_U12_V1) };
+const defOf = (head) => { const t = head && head.type; if (!t || !FORMS[t]) return null; return (head.rev || 1) >= FORM_REV ? FORMS[t] : (FORMS_LEGACY[t] || FORMS[t]); };
+const SCALE_WORDS = (def) => (def && def.scale) || SCALE_HP;
 
 const FORM_ORDER = ['quarterly_hp', 'quarterly_u12', 'progress_u10', 'monthly', 'camp_snapshot', 'camp_performance'];
 const QUARTERLY_TYPES = ['quarterly_hp', 'quarterly_u12', 'progress_u10'];
@@ -1171,17 +1300,25 @@ const PDF = (() => {
 
     SECTIONS.forEach((sec) => {
       const fields = sec.fields; const c = COLORS[sec.pillar] || 'E2FE78';
-      const filled = fields.some((f) => f.t !== 'head' && f.t !== 'note' && f.t !== 'score' && f.t !== 'recap' && (has(valOf(f)) || has(v[f.id + '__n'])));
+      const filled = fields.some((f) => f.t !== 'head' && f.t !== 'note' && f.t !== 'score' && f.t !== 'recap' && (has(valOf(f)) || has(v[f.id + '__n']) || (f.t === 'talk' && has(v[f.level]))));
       if (!filled) return;
       banner(sec);
       let pendingHead = null, inMetrics = false;
       fields.forEach((f, idx) => {
         if (f.t === 'head') { pendingHead = f; inMetrics = false; return; }
-        if (f.t === 'note' || f.t === 'score' || f.t === 'recap') return;
-        const val = valOf(f), note = v[f.id + '__n'];
-        if (!has(val) && !has(note)) return;
+        if (f.t === 'note' || f.t === 'score' || f.t === 'recap' || f.t === 'level') return;   // a level prints inside its talking box
+        const val = valOf(f), note = v[f.id + '__n']; const lvl = f.t === 'talk' ? (+v[f.level] || 0) : 0;
+        if (!has(val) && !has(note) && !lvl) return;
         if (pendingHead) { head(pendingHead, c); pendingHead = null; }
-        if (f.t === 'rating') {
+        if (f.t === 'talk') { // one stroke: its name, the level in words, then the coach's paragraph
+          inMetrics = false; const word = lvl ? (def.scale[lvl - 1] || '') : '';
+          ensure(34);
+          doc.text(f.label, MX, y + 10, { font: 'F2', size: 9.4, color: '111111' });
+          if (word) { const tw = textWidth(word, 'F2', 7.4) + 18; doc.rect(MX + W - tw, y, tw, 15, c, '000000', 0.7); doc.text(word, MX + W - tw / 2, y + 10.4, { font: 'F2', size: 7.4, align: 'center', color: '000000' }); }
+          y += 19;
+          if (has(val)) para(String(val), { size: 9.6, color: '222222', lh: 13.6 });
+          y += 9; doc.line(MX, y - 4, MX + W, y - 4, 'EBEBE6', 0.4);
+        } else if (f.t === 'rating') {
           inMetrics = false;
           const hintLines = f.hint ? wrap(f.hint, 'F1', 7.2, W - 130) : [];
           const noteLines = has(note) ? wrap('Coach note: ' + note, 'F1', 8, W - 16) : [];
@@ -1292,7 +1429,7 @@ const PW_CONFIG = {
   // are getting used to the portal (Sept 2026).
   requireAll: false,
   // Optional. Address of the AI clean-up service (see ai-worker.js). Leave empty and the portal simply hides the AI buttons.
-  aiEndpoint: '',
+  aiEndpoint: 'https://proworld.pythonanywhere.com/ai/clean',
 };
 </script>
 <script>
@@ -1407,7 +1544,7 @@ const PW_CONFIG = {
   // "tracked" = finished since the portal started keeping this checklist. Older finals are left alone unless a coach ticks something on them.
   const tracked = (a) => !!a && a.status === 'final' && typeof a.sentToParents === 'boolean';
   const isSent = (a) => tracked(a) && a.sentToParents === true;
-  const needsMeeting = (a) => { const d = a && FORMS[a.type]; return !!d && d.meeting !== false; };
+  const needsMeeting = (a) => { const d = a && defOf(a); return !!d && d.meeting !== false; };
   const meetingOf = (a) => Object.assign({ state: 'none', date: '', by: '', at: null }, (a && a.meeting) || {});
   const meetingLate = (a) => { const m = meetingOf(a); return m.state === 'set' && !!m.date && m.date < todayISO(); };
   const meetingOpen = (a) => tracked(a) && needsMeeting(a) && meetingOf(a).state !== 'held';
@@ -1427,7 +1564,7 @@ const PW_CONFIG = {
   function statusChips(p) {
     const q = curQ(), m = mLabel(new Date()); const mine = playerAssess(p.id); const out = [];
     if (p.group !== 'camp') {
-      const fq = quarterlyFor(p.id, q); const qs = q.split(' ')[0] + ' '; const def = fq ? FORMS[fq.type] : FORMS[group(p.group).form];
+      const fq = quarterlyFor(p.id, q); const qs = q.split(' ')[0] + ' '; const def = fq ? defOf(fq) : FORMS[group(p.group).form];
       if (fq && fq.status === 'final') out.push(tracked(fq) && !followUpOpen(fq) ? `<span class="chip done">${esc(qs)}complete</span>` : `<span class="chip done">${esc(qs)}done</span>${followChip(fq)}`);
       else if (fq) out.push(partChips(fq, def) + draftChip(fq, def, qs));
       else out.push(partChips(null, def) + `<span class="chip">${esc(qs)}due</span>`);
@@ -1592,7 +1729,8 @@ const PW_CONFIG = {
       const tok = await WEB.auth.currentUser.getIdToken(); let r;
       try { r = await fetch(CFG.aiEndpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok }, body: JSON.stringify({ input: String(input).slice(0, 24000), tier: (opts && opts.modelTier) || 'quick' }) }); }
       catch (e) { const err = new Error('network'); err.code = 'unavailable'; throw err; }
-      if (!r.ok) { const err = new Error('ai ' + r.status); err.code = r.status === 429 ? 'rate_limited' : (r.status === 401 || r.status === 403) ? 'not_granted' : 'unavailable'; throw err; }
+      if (!r.ok) { let why = ''; try { why = String(((await r.json()) || {}).error || ''); } catch (e) { /* no body */ }
+        const err = new Error('ai ' + r.status + ' ' + why); err.code = r.status === 429 ? 'rate_limited' : (r.status === 401 || r.status === 403) ? 'not_granted' : (r.status === 500 && /not configured/.test(why)) ? 'not_configured' : 'unavailable'; throw err; }
       const j = await r.json(); return { text: String(j.text || ''), truncated: !!j.truncated };
     };
     call.json = async (input, opts) => { const { text } = await call(input, opts); const m = text.match(/\{[\s\S]*\}/); return JSON.parse(m ? m[0] : text); };
@@ -1896,7 +2034,7 @@ const PW_CONFIG = {
       ${recent ? `<div class="list">${recent}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'No assessments yet. Open a group, choose a player and start the first one.' : 'Loading…'}</div>`}`;
   }
   function viewFollowUp() {
-    const fu = followUps(); const meetRow = (a) => { const p = player(a.playerId); const def = FORMS[a.type] || { short: a.type }; const m = meetingOf(a);
+    const fu = followUps(); const meetRow = (a) => { const p = player(a.playerId); const def = defOf(a) || { short: a.type }; const m = meetingOf(a);
       return `<button class="rowb" ${goAttr({ view: 'report', id: a.id })}><div class="who"><span class="ava" style="width:auto;padding:0 10px;border-radius:8px">${esc(dayLabel(m.date))}</span><div style="min-width:0"><div class="nm">${esc(p ? p.name : a.playerName || 'Player')}</div><small>${esc(def.short)} · ${esc(a.period || '')}${m.by ? ' · set by ' + esc(m.by) : ''}</small></div></div><div class="mid muted" style="font-size:12px">${esc(a.coach ? 'Coach: ' + a.coach : '')}</div><div class="chips">${meetChip(a)}</div></button>`; };
     const block = (title, hint, list, row) => (list.length ? `<div class="sect"><h2>${esc(title)}</h2><span class="muted" style="font-size:12px">${list.length}</span></div><p class="hint" style="margin:-6px 0 10px">${esc(hint)}</p><div class="list" style="margin-bottom:26px">${list.map(row).join('')}</div>` : '');
     const any = fu.unsent.length + fu.noMeeting.length + fu.late.length + fu.upcoming.length;
@@ -1913,7 +2051,7 @@ const PW_CONFIG = {
     return `<div class="pstrip" role="group" aria-label="Open one part directly">${partState(a, def).map((x) => `<button class="pbtn${x.done ? ' done' : ''}" style="--pc:${PILLAR[x.part.pillar]}" ${goAttr({ view: 'edit', id: a.id, part: x.part.id })}><b>${esc(x.part.label)}</b><small>${esc(partNote(x))}</small></button>`).join('')}</div>`;
   }
   function rowAssess(a, withPlayer, withParts) {
-    const def = FORMS[a.type] || { short: a.type, pillar: 'tennis' }; const p = player(a.playerId); const nm = p ? p.name : (a.playerName || 'Player');
+    const def = defOf(a) || { short: a.type, pillar: 'tennis' }; const p = player(a.playerId); const nm = p ? p.name : (a.playerName || 'Player');
     const st = a.status === 'final' ? '<span class="chip done">Final</span>' + sentChip(a) + meetChip(a) : partChips(a, def) + draftChip(a, def, '');
     const r = a.status === 'final' || !writable() ? { view: 'report', id: a.id } : { view: 'edit', id: a.id };
     const row = `<button class="rowb" ${goAttr(r)}>
@@ -2070,7 +2208,7 @@ const PW_CONFIG = {
     try {
       const hs = await S.db.doc('assessments/' + id).get();
       if (!hs.exists) { m.innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">This assessment no longer exists.</div></div>`; return; }
-      const head = Object.assign({ id }, clone(hs.data())); head.parts = head.parts || {}; const def = FORMS[head.type];
+      const head = Object.assign({ id }, clone(hs.data())); head.parts = head.parts || {}; const def = defOf(head);
       if (!def) { m.innerHTML = '<div class="wrap"><div class="empty">Unknown assessment type.</div></div>'; return; }
       if (head.status === 'final' || !writable()) { S.route = { view: 'report', id }; saveRoute(); onRoute(); return; }
       const bs = await S.db.doc(`assessments/${id}/body/values`).get(); const values = Object.assign({}, (bs.exists && bs.data().v) || {});
@@ -2080,7 +2218,7 @@ const PW_CONFIG = {
       (def.meta || []).forEach((f) => { fmap[f.id] = f; pof[f.id] = parts[0].id; });
       E = { id, head, def, values, fmap, pof, dirty: new Set(), inflight: new Set(), sent: {}, touched: new Set(), headDirty: false, byDirty: false, headExtra: null, bodyChanged: false,
         saving: false, again: false, againForce: false, pending: null, timer: null, state: 'saved', savedAt: head.updatedAt, lastHead: Date.now(),
-        part: null, sec: 0, flag: false, prev: null, undo: {}, unsub: null, repaint: false, finalizing: false };
+        part: null, sec: 0, flag: false, prev: null, undo: {}, cleaned: {}, cleaning: {}, cleanJobs: {}, unsub: null, repaint: false, finalizing: false };
       const st = partState(head, def); let part = parts.find((x) => x.id === want) || null;
       if (!part) { const last = lsGet('pw_part'); part = parts.find((x) => x.id === last && !st.find((y) => y.part.id === x.id).done) || (st.find((y) => !y.done) || st[0]).part; }
       E.part = part.id; E.sec = firstOpenSec(part); S.route.part = part.id; saveRoute(); if (multi(def)) lsSet('pw_part', part.id);
@@ -2154,8 +2292,24 @@ const PW_CONFIG = {
     }).join('');
     return `<div class="recap"><div class="lbl">What each coach wrote</div>${rows}<div class="hint">Each coach sets their own goal in their part. All three print together here in the Summary &amp; Action Plan.</div></div>`;
   }
+  /* ───────────── talking boxes: one box per stroke, reminders that tick themselves, one level in words ───────────── */
+  const talkManual = (fid) => { const m = E && E.values[fid + '__m']; return m && typeof m === 'object' ? m : {}; };
+  const covered = (p, text, manual) => (manual[p.id] === true || manual[p.id] === false ? manual[p.id] : p.kw.test(String(text || '')));
+  function talkChips(f) {
+    const text = E.values[f.id], manual = talkManual(f.id); const left = f.points.filter((p) => !covered(p, text, manual)); const lock = isLocked();
+    return `<div class="tp" role="group" aria-label="Talking points for ${esc(f.label)}">${f.points.map((p) => `<button type="button" class="tpc" data-act="tp" data-f="${f.id}" data-tp="${p.id}" tabindex="-1" aria-pressed="${covered(p, text, manual)}" title="${lock ? '' : 'Tap to tick or untick by hand'}"${lock ? ' disabled' : ''}><i></i>${esc(p.label)}</button>`).join('')}</div>
+      ${left.length ? `<ul class="left" aria-live="polite">${left.map((p) => `<li><b>${esc(p.label)}:</b> ${esc(p.ask)}</li>`).join('')}</ul>` : '<p class="alldone" aria-live="polite">Everything on the list is covered.</p>'}`;
+  }
+  function paintTalk(fid) { const f = E && E.fmap[fid]; const box = $('#tp_' + fid); if (f && f.t === 'talk' && box) box.innerHTML = talkChips(f); }
+  function prevLevel(f) { // last quarter's level for this stroke: saved as a level, or worked out from the numbered lines it replaced
+    const pv = E.prev; if (!pv) return 0; if (has(pv[f.level])) return +pv[f.level] || 0;
+    const nums = (f.from || []).map((k) => +pv[k]).filter((n) => n >= 1 && n <= 5); return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
+  }
+  const ASK = { w_mv: 'Where is the movement right now?', w_tc: 'Where is the tactical game right now?' };
+  const cleanUi = (f) => `<span class="dstate" id="ds_${f.id}" role="status"></span><button class="ai undo" data-act="undo-clean" data-f="${f.id}" ${E.undo[f.id] !== undefined ? '' : 'hidden'}>Undo clean-up</button>`;
   function fieldHtml(f, lock) {
     const v = E.values[f.id], note = E.values[f.id + '__n']; const id = 'f_' + f.id;
+    if (f.t === 'level') return '';   // drawn inside its talking box
     if (f.t === 'head') return `<div class="fhead"><b>${esc(f.label)}</b>${f.note ? `<span class="hint">${esc(f.note)}</span>` : ''}</div>`;
     if (f.t === 'note') return `<div class="fnote">${esc(f.text)}</div>`;
     if (f.t === 'recap') return recapHtml();
@@ -2178,22 +2332,33 @@ const PW_CONFIG = {
       const textual = /pass|yes|test|level/i.test(f.unit || '');
       return `<div class="${cls('metric')}"${stop}><div><b>${esc(f.label)}${tag}</b></div><div class="bench">${esc(f.bench || '')}</div><div class="val"><input id="${id}" data-f="${f.id}" data-metric="1" type="text" inputmode="${textual ? 'text' : 'decimal'}" autocomplete="off" value="${esc(v || '')}" aria-label="${esc(f.label)} result"${dis}><span>${esc(f.unit || '')}</span>${lock ? '' : `<button class="ntb" data-act="nt" data-f="${f.id}" tabindex="-1" aria-pressed="${isNT(v)}" title="Not tested this period">N/T</button>`}${noteBtn}</div>${pv}${noteIn}</div>`;
     }
+    if (f.t === 'talk') {
+      const lf = E.fmap[f.level] || { id: f.level }; const lv = +E.values[f.level] || 0; const missL = E.flag && !lock && required(lf) && !filled(lf, E.values); const pl = prevLevel(f); const words = SCALE_WORDS(E.def);
+      return `<div class="talk" data-talk="${f.id}">
+        <div class="${cls('field tbox')}"${stop}><label for="${id}">${esc(f.label)}${tag}</label>${hint}<textarea id="${id}" data-f="${f.id}" data-talk="${f.id}" rows="${f.rows || 4}"${dis}>${esc(v || '')}</textarea>
+          ${lock ? '' : `<div class="tfoot">${micBtn(f, false)}${cleanUi(f)}</div>${dictCoach(f, false)}`}</div>
+        <div class="cover"><span class="flabel lbl">Have you covered</span><div id="tp_${f.id}">${talkChips(f)}</div></div>
+        <div class="field lvl${missL ? ' missing' : ''}" ${lock ? '' : `data-stop="${f.level}"`}><span class="flabel" id="lb_${f.level}">${esc(ASK[f.id] || `Where is the ${f.label.toLowerCase()} right now?`)}${lf.opt ? '<span class="opt">Optional</span>' : ''}</span>
+          <div class="grp seg lvl" role="radiogroup" aria-labelledby="lb_${f.level}" ${lock ? '' : 'tabindex="0"'} data-grp="rate" data-f="${f.level}">${words.map((w, i) => `<button class="sg" role="radio" tabindex="-1" data-act="pick" data-v="${i + 1}" aria-checked="${lv === i + 1}"${dis}><span class="k">${i + 1}</span>${esc(w)}</button>`).join('')}</div>
+          <span class="hint">${pl ? `Last quarter: <b>${esc(words[pl - 1] || '')}</b> · ` : ''}Saved as 1–5, so the suggested score and older reports still line up.</span></div></div>`;
+    }
     if (f.t === 'text') return `<div class="${cls('field')}"${stop}><label for="${id}">${esc(f.label)}${tag}</label>${hint}<div class="inrow"><input id="${id}" data-f="${f.id}" type="text" autocomplete="off" value="${esc(v || '')}"${dis}>${lock ? '' : micBtn(f, true)}</div>${lock ? '' : dictCoach(f, true)}</div>`;
     return `<div class="${cls('field')}"${stop}><label for="${id}">${esc(f.label)}${tag}</label>${hint}<textarea id="${id}" data-f="${f.id}" rows="${f.rows || 3}"${dis}>${esc(v || '')}</textarea>
-      ${lock ? '' : `<div class="tfoot">${micBtn(f, false)}${S.sample ? `<button class="ai" data-act="polish" data-f="${f.id}">Polish with AI</button><button class="ai" data-act="undo-polish" data-f="${f.id}" ${E.undo[f.id] !== undefined ? '' : 'hidden'}>Undo</button>` : ''}<span class="dstate" id="ds_${f.id}" role="status"></span></div>${dictCoach(f, false)}`}</div>`;
+      ${lock ? '' : `<div class="tfoot">${micBtn(f, false)}${cleanUi(f)}</div>${dictCoach(f, false)}`}</div>`;
   }
   function hintFor(sec, lock) {
-    if (lock) return ''; const types = new Set(sec.fields.map((f) => f.t)); const bits = []; const texty = types.has('textarea') || types.has('text');
+    if (lock) return ''; const types = new Set(sec.fields.map((f) => f.t)); const bits = []; const texty = types.has('textarea') || types.has('text') || types.has('talk');
     if (finePointer()) {
       if (types.has('rating')) bits.push('press <kbd>1</kbd>–<kbd>5</kbd>, then <kbd>Enter</kbd> for the next line');
+      if (types.has('talk')) bits.push('<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> leaves a box · press <kbd>1</kbd>–<kbd>5</kbd> for the level, then <kbd>Enter</kbd> for the next stroke');
       if (types.has('stage') || types.has('choice')) bits.push('press the option’s number, then <kbd>Enter</kbd>');
       if (types.has('metric')) bits.push('type the result, then <kbd>Enter</kbd> · type <kbd>NT</kbd> if a test wasn’t run');
-      if (types.has('textarea')) bits.push('<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> leaves a text box');
+      if (types.has('textarea') && !types.has('talk')) bits.push('<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> leaves a text box');
       if (types.has('rating') || types.has('metric')) bits.push('<kbd>N</kbd> adds a note');
       bits.push('<kbd>Shift</kbd> + <kbd>Enter</kbd> goes back');
     }
     const kb = bits.length ? `<div class="kbhint"><b>Fast entry</b>${bits.join(' · ')}</div>` : '';
-    const voice = texty ? `<div class="kbhint"><b>Voice</b>${S.voice === 'native' ? 'press Dictate on a box and talk, then Stop' : 'press Dictate on a box, then start your device’s dictation — it types into the box'}${S.sample ? ' · the AI tidies it up afterwards, with Undo' : ''}</div>` : '';
+    const voice = texty ? `<div class="kbhint"><b>Voice</b>${S.voice === 'native' ? 'press Dictate on a box and talk, then Stop' : 'press Dictate on a box, then start your device’s dictation — it types into the box'}${S.sample ? ' · spelling, grammar and speech slips are tidied up by themselves when you leave a box, with Undo' : ''}</div>` : '';
     return kb + voice;
   }
   function renderSection(focus, keepFocus) {
@@ -2225,7 +2390,7 @@ const PW_CONFIG = {
   function paintDock() {
     const dock = $('#dock'); if (!dock || !E) return; dock.hidden = false; const lab = primaryLabel();
     dock.innerHTML = `<div class="wrap"><div class="state" id="savestate"></div>
-      ${S.sample && !isLocked() ? `<button class="btn" data-act="polish-all" id="polishall" title="${multi(E.def) ? 'Cleans up the written notes in this part' : 'Cleans up every written note'}">Polish notes with AI</button>` : ''}
+      ${S.sample && !isLocked() ? `<button class="btn" data-act="clean-all" id="polishall" title="${multi(E.def) ? 'Tidies up any written note in this part that has not been tidied yet' : 'Tidies up any written note not tidied yet'}">Tidy up notes</button>` : ''}
       <button class="btn" data-act="close-draft">Save draft &amp; close</button><button class="btn pri" data-act="primary" id="primary" ${/^Waiting/.test(lab) ? 'disabled' : ''}>${esc(lab)}</button></div>`;
     paintSaveState();
   }
@@ -2240,7 +2405,7 @@ const PW_CONFIG = {
   const schedule = () => { clearTimeout(E.timer); const ed = E; E.timer = setTimeout(() => flushEd(ed, false), 1800); };
   function setVal(fid, val) {
     if (!E) return; E.values[fid] = val; E.dirty.add(fid);
-    const pid = E.pof[fid.replace(/__n$/, '')];
+    const pid = E.pof[fid.replace(/__[nm]$/, '')];
     if (pid) { E.touched.add(pid); if (multi(E.def) && !has(partInfo(pid).by)) { const el = $('#e_by'); const me = (pid === E.part && el && el.value.trim()) || lsGet('pw_coach'); if (has(me)) { E.head.parts[pid] = Object.assign({}, partInfo(pid), { by: me }); E.headDirty = true; } } }   // first edit in a part: lists show who has started it
     E.state = 'dirty'; paintSaveState(); schedule();
   }
@@ -2300,12 +2465,14 @@ const PW_CONFIG = {
   /* ───────────── live merge: two coaches in the same assessment ───────────── */
   function paintField(k) {
     const isNote = /__n$/.test(k); const fid = isNote ? k.slice(0, -3) : k; const val = E.values[k];
+    if (/__m$/.test(k)) { paintTalk(k.slice(0, -3)); return; }
     if (isNote) { const i = $('#f_' + k); if (i && document.activeElement !== i) { i.value = val || ''; const box = $('#n_' + fid); if (box && has(val)) box.hidden = false; const nb = $(`[data-act="note"][data-f="${fid}"]`); if (nb) { nb.classList.toggle('has', has(val)); nb.textContent = has(val) ? 'Note added' : 'Add note'; } } return; }
     const grp = $(`#secbody [data-grp][data-f="${fid}"]`);
     if (grp) { const kind = grp.getAttribute('data-grp'); $$('[data-v]', grp).forEach((b) => b.setAttribute('aria-checked', String(kind === 'choose' ? b.getAttribute('data-v') === val : +b.getAttribute('data-v') === +val && has(val)))); }
     const el = $('#f_' + fid); if (el && document.activeElement !== el) el.value = val == null ? '' : val;
     const nt = $(`[data-act="nt"][data-f="${fid}"]`); if (nt) nt.setAttribute('aria-pressed', String(isNT(val)));
     if (has(val)) unflag(fid);
+    if (/__m$/.test(k)) paintTalk(k.slice(0, -3)); else paintTalk(fid);
   }
   function onBody(snap) {
     if (!E || !snap || !snap.exists) return; const remote = (snap.data() || {}).v || {}; const ch = []; const now = Date.now();
@@ -2361,6 +2528,7 @@ const PW_CONFIG = {
     const byEl = $('#e_by'); const by = ((byEl && byEl.value) || partInfo(part.id).by || '').trim();
     if (!has(by)) { toast(`Add your name under “Coach completing the ${part.label} part” first.`); if (byEl) { byEl.classList.add('need'); byEl.focus(); try { byEl.scrollIntoView({ block: 'center' }); } catch (e) { /* noop */ } } return; }
     btn.disabled = true; lsSet('pw_coach', by); stopDictation(true);
+    const oldLabel = btn.textContent; if (S.sample) { btn.textContent = 'Tidying up notes…'; await cleanSweep(partSections(def, part), 9000); if (E !== ed) return; btn.textContent = oldLabel; }
     await queueHead(ed, { parts: { [part.id]: { done: true, by, at: Date.now(), pct: 100 } } });
     if (E !== ed) return; if (!partInfo(part.id).done) { btn.disabled = false; return; }
     const waiting = partState(ed.head, def).filter((x) => !x.done).map((x) => x.part.label);
@@ -2375,6 +2543,7 @@ const PW_CONFIG = {
     const bad = STRICT ? def.sections.findIndex((sec) => missingIn(sec, ed.values).length) : -1;
     if (bad >= 0) { showMissing(bad); return; }
     btn.disabled = true; ed.finalizing = true; stopDictation(true);
+    if (S.sample) { const oldLabel = btn.textContent; btn.textContent = 'Tidying up notes…'; await cleanSweep(def.sections, 9000); if (E !== ed) return; if (btn.isConnected) btn.textContent = oldLabel; }
     const sc = {}; ['sc_tennis', 'sc_fitness', 'sc_mental', 'sc_overall'].forEach((k) => { if (has(ed.values[k])) sc[k.slice(3)] = +ed.values[k]; });
     await queueHead(ed, { status: 'final', finalAt: Date.now(), scores: sc, progress: 100, sentToParents: false, sent: null, meeting: meetingOf(ed.head), followUp: true });
     if (ed.head.status !== 'final') { ed.finalizing = false; if (btn.isConnected) btn.disabled = false; return; }
@@ -2403,7 +2572,7 @@ const PW_CONFIG = {
   }
   function flagStop(stop, f) {
     stop.classList.add('missing'); stop.classList.remove('nudge'); void stop.offsetWidth; stop.classList.add('nudge');
-    toast(f.t === 'rating' ? 'Pick 1–5 first, then press Enter.' : f.t === 'stage' || f.t === 'choice' ? 'Pick an option first, then press Enter.' : f.t === 'metric' ? 'Type the result first — or NT if the test wasn’t run.' : f.t === 'score' ? 'Type a score out of 100 first.' : 'This one can’t be left blank.');
+    toast(f.t === 'rating' ? 'Pick 1–5 first, then press Enter.' : f.t === 'level' ? 'Pick where the stroke is right now, then press Enter.' : f.t === 'stage' || f.t === 'choice' ? 'Pick an option first, then press Enter.' : f.t === 'metric' ? 'Type the result first — or NT if the test wasn’t run.' : f.t === 'score' ? 'Type a score out of 100 first.' : 'This one can’t be left blank.');
   }
   function advance(stop, dir) {
     const fid = stop.getAttribute('data-stop'); const f = E.fmap[fid];
@@ -2448,49 +2617,78 @@ const PW_CONFIG = {
 
   function suggestScores() {
     const out = {}; const from = E.def.scoreFrom || {};
-    Object.keys(from).forEach((k) => { const ids = []; E.def.sections.filter((s) => from[k].includes(s.id)).forEach((s) => s.fields.forEach((f) => { if (f.t === 'rating' && has(E.values[f.id])) ids.push(+E.values[f.id]); })); if (ids.length) out[k] = Math.round(ids.reduce((a, b) => a + b, 0) / ids.length / 5 * 100); });
+    Object.keys(from).forEach((k) => { const ids = []; E.def.sections.filter((s) => from[k].includes(s.id)).forEach((s) => s.fields.forEach((f) => { if ((f.t === 'rating' || f.t === 'level') && has(E.values[f.id])) ids.push(+E.values[f.id]); })); if (ids.length) out[k] = Math.round(ids.reduce((a, b) => a + b, 0) / ids.length / 5 * 100); });
     const parts = ['sc_tennis', 'sc_fitness', 'sc_mental'].map((k) => out[k] !== undefined ? out[k] : (has(E.values[k]) ? +E.values[k] : null)).filter((x) => x !== null);
     if (parts.length) out.sc_overall = Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
     if (!Object.keys(out).length) { toast('Add some ratings first, then suggest scores.'); return; }
     Object.keys(out).forEach((k) => { setVal(k, out[k]); const el = $('#f_' + k); if (el) el.value = out[k]; unflag(k); }); paintTabs(); paintParts();
   }
 
-  /* ───────────── AI polish ───────────── */
-  const POLISH_RULES = 'You are editing a tennis coach’s assessment notes for ProWorld High Performance Academy. Rewrite so the note is clear, warm and professional, in the coach’s own voice, for parents and players to read. Rules: keep every observation and fact exactly as given; never add anything that is not in the note; keep roughly the same length; fix grammar and spelling; say "mental", never "psychological"; never use the phrase "honest assessment"; no emojis; plain text only.';
-  const DICTATED = ' This note was dictated by voice, so also fix speech-to-text mistakes (tennis words such as forehand, backhand, split step, serve plus one, UTR), drop filler words, repeats and false starts, and add punctuation and paragraph breaks where they belong.';
-  function aiFail(e) {
+  /* ───────────── AI clean-up: automatic, light touch ─────────────
+     Runs by itself when the coach leaves a written box (clicking elsewhere, Ctrl+Enter, Next section, the keyboard's Done
+     on a phone) and once more over anything not tidied yet when a part is completed or a report marked final. It never
+     blocks: the coach moves on and the tidied text drops in when the service answers, with Undo under the box. The same
+     text is never sent twice, a box the coach is back inside is left alone, and an answer that looks wrong (far longer or
+     shorter, or chatter instead of the note) is thrown away so the original stays. */
+  const CLEAN_RULES = 'You are the copy editor for a tennis coach’s notes at ProWorld Academy. Return the note corrected and nothing else. Fix spelling, grammar, capitalisation and punctuation; fix speech-to-text mistakes (tennis words such as forehand, backhand, split step, serve plus one, UTR — player names stay as written); remove filler words, repeats and false starts; add a paragraph break only where one clearly belongs. Keep the coach’s own words, voice, meaning, language and length: do not add, remove or soften any observation, do not turn a short note into a long one, do not explain or comment. Say "mental", never "psychological". No emojis, plain text only. A note that is already clean comes back exactly as it is.';
+  const cleanable = (f) => !!f && (f.t === 'talk' || f.t === 'textarea' || (f.t === 'text' && f.clean !== false && !/^m_|^cp_(entered|played)$|_d$/.test(f.id)));
+  function sane(text, out) { // the service's answer, or '' when it should not be trusted
+    let s = String(out || '').trim().replace(/^"+|"+$/g, '').trim(); if (!s) return '';
+    if (/^(here('s| is| are)\b|sure\b|certainly\b|i('m| am) sorry|as an ai|i can(not|'t)\b)/i.test(s)) return '';
+    const a = text.length, b = s.length; if (a >= 40 && (b > a * 1.6 || b < a * 0.5)) return ''; if (a < 40 && b > a * 3 + 24) return '';
+    return s;
+  }
+  function aiFail(e, quiet) {
     const c = e && e.code; if (c === 'cancelled') return;
-    if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c)) { S.sample = null; $$('[data-act="polish"],[data-act="undo-polish"],#polishall').forEach((b) => { b.hidden = true; }); toast('AI polish isn’t available in this session. Your text is unchanged.'); }
-    else if (c === 'rate_limited') toast('Claude is busy or at its usage limit. Try again in a bit.');
-    else if (c === 'session_expired') toast('Sign in again to use AI polish.');
-    else toast('Couldn’t polish that note. Your original text is unchanged.');
+    if (c === 'not_configured') { S.sample = null; $$('#polishall').forEach((b) => { b.hidden = true; }); $$('.dstate').forEach((x) => { x.textContent = ''; x.className = 'dstate'; }); return; }   // the service has no key yet: nothing is wrong from the coach's side, so stay quiet
+    if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c)) { S.sample = null; $$('#polishall').forEach((b) => { b.hidden = true; }); toast('The AI clean-up isn’t available right now. Your text is unchanged.'); return; }
+    if (quiet) return;
+    if (c === 'rate_limited') toast('The AI service is busy. Your text is unchanged — it will try again when you leave the box next.');
+    else if (c === 'session_expired') toast('Sign in again to use the AI clean-up.');
+    else toast('Couldn’t tidy that note. Your original text is unchanged.');
   }
-  async function polishOne(fid, btn, dictated) {
-    const ed = E; const el = $('#f_' + fid); const text = (el && el.value || '').trim();
-    if (text.length < 15) { if (!dictated) toast('Write a little more first.'); return; }
-    btn = btn || $(`[data-act="polish"][data-f="${fid}"]`); const st = $('#ds_' + fid); const f = ed.fmap[fid]; let old = '';
-    if (btn) { btn.disabled = true; old = btn.textContent; btn.textContent = 'Polishing…'; } if (st && dictated) st.textContent = 'Cleaning up with AI…';
-    try {
-      const { text: out } = await S.sample(`${POLISH_RULES}${dictated ? DICTATED : ''}\n\nSection of the report: ${f ? f.label : ''}\n\nCoach’s note:\n"""\n${text.slice(0, 6000)}\n"""\n\nReply with only the rewritten note.`, { modelTier: 'quick' });
-      if (E === ed && out && out.trim()) {
-        const cur = $('#f_' + fid); const clean = out.trim().replace(/^"+|"+$/g, '');
-        if (!cur || cur.value.trim() === text) { ed.undo[fid] = text; if (cur) cur.value = clean; setVal(fid, clean); const u = $(`[data-act="undo-polish"][data-f="${fid}"]`); if (u) u.hidden = false; }
-      }
-    } catch (e) { aiFail(e); }
-    if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = old; } const st2 = $('#ds_' + fid); if (st2 && !DICT) st2.textContent = '';
+  function cleanState(fid, text, cls) { const st = $('#ds_' + fid); if (!st) return; st.textContent = text; st.className = 'dstate' + (cls ? ' ' + cls : ''); }
+  function cleanField(fid) {
+    const ed = E; if (!ed || !S.sample || isLocked()) return null; const f = ed.fmap[fid]; if (!cleanable(f)) return null;
+    const text = String(ed.values[fid] || '').trim(); if (text.length < 2 || !/[A-Za-zÀ-ÿ]/.test(text)) return null;
+    if (ed.cleaned[fid] === text) return null; if (ed.cleaning[fid] === text) return ed.cleanJobs[fid] || null;   // already tidy, or on its way
+    if (DICT && DICT.fid === fid) return null;   // still listening: the dictation's own stop will send it
+    ed.cleaning[fid] = text; cleanState(fid, 'Tidying up…', 'busy');
+    const job = (async () => {
+      let out = '';
+      try { const r = await S.sample(`${CLEAN_RULES}\n\nSection of the report: ${f.label}\n\nCoach’s note:\n"""\n${text.slice(0, 6000)}\n"""\n\nReply with only the corrected note.`, { modelTier: 'quick' }); out = sane(text, r && r.text); }
+      catch (e) { aiFail(e, true); out = ''; }
+      if (ed.cleaning[fid] === text) delete ed.cleaning[fid];
+      if (E !== ed) return false;
+      const cur = String(ed.values[fid] || '').trim(); const el = $('#f_' + fid);
+      if (cur !== text) { cleanState(fid, ''); return false; }                       // the coach kept writing: this answer is stale, the next leave sends the new text
+      if (!out) { if (S.sample) cleanState(fid, 'Couldn’t tidy this one — left as written', 'warn'); else cleanState(fid, ''); return false; }
+      if (el && document.activeElement === el) { cleanState(fid, ''); return false; }   // they are back inside the box: never change text under the cursor
+      ed.cleaned[fid] = out;
+      if (out === text) { cleanState(fid, ''); return true; }
+      ed.undo[fid] = text; if (el) el.value = out; setVal(fid, out); if (f.t === 'talk') paintTalk(fid);
+      const u = $(`[data-act="undo-clean"][data-f="${fid}"]`); if (u) u.hidden = false; cleanState(fid, 'Tidied up', 'ok');
+      return true;
+    })();
+    ed.cleanJobs[fid] = job; return job;
   }
-  async function polishAll(btn) {
-    const ed = E; const scope = partSections(ed.def, curPart()); const notes = {};
-    scope.forEach((sec) => sec.fields.forEach((f) => { if (f.t === 'textarea' && has(ed.values[f.id]) && String(ed.values[f.id]).trim().length >= 15) notes[f.id] = String(ed.values[f.id]).slice(0, 4000); }));
-    const keys = Object.keys(notes); if (!keys.length) { toast('No written notes to polish yet.'); return; }
-    btn.disabled = true; const old = btn.textContent; btn.textContent = `Polishing ${keys.length} note${keys.length === 1 ? '' : 's'}…`;
-    try {
-      const res = await S.sample.json(`${POLISH_RULES}\n\nBelow is a JSON object of notes keyed by field id. Reply with only a JSON object with exactly the same keys, each value the rewritten note.\n\n${JSON.stringify(notes)}`, { modelTier: 'default' });
-      let n = 0; if (E === ed && !isLocked() && res && typeof res === 'object') keys.forEach((k) => { if (typeof res[k] === 'string' && res[k].trim() && ed.values[k] === notes[k]) { ed.undo[k] = ed.values[k]; setVal(k, res[k].trim()); n++; } });
-      if (E === ed) { renderSection(false, true); toast(n ? `Polished ${n} note${n === 1 ? '' : 's'}. Use Undo under any note to revert it.` : 'Nothing changed.'); }
-    } catch (e) { aiFail(e); }
+  async function cleanSweep(secs, limitMs) { // everything written but not yet tidied, with a time limit so nobody waits on a slow service
+    if (!E || !S.sample) return 0; const jobs = []; secs.forEach((sec) => sec.fields.forEach((f) => { if (cleanable(f)) { const j = cleanField(f.id); if (j) jobs.push(j); } }));
+    if (!jobs.length) return 0; await Promise.race([Promise.all(jobs), new Promise((res) => setTimeout(res, limitMs || 8000))]); return jobs.length;
+  }
+  function undoClean(fid, btn) { const ed = E; if (!ed || ed.undo[fid] === undefined) return; const orig = ed.undo[fid]; delete ed.undo[fid]; const el = $('#f_' + fid); if (el) el.value = orig; setVal(fid, orig); ed.cleaned[fid] = orig.trim(); const f = ed.fmap[fid]; if (f && f.t === 'talk') paintTalk(fid); if (btn) btn.hidden = true; cleanState(fid, 'Original restored'); }
+  async function cleanAll(btn) {
+    const ed = E; btn.disabled = true; const old = btn.textContent; btn.textContent = 'Tidying up…';
+    const n = await cleanSweep(partSections(ed.def, curPart()), 12000);
+    if (E === ed) toast(n ? `${n} note${n === 1 ? '' : 's'} checked. Anything changed shows “Tidied up” with Undo under the box.` : 'Nothing new to tidy — every note is either clean or empty.');
     if (btn.isConnected) { btn.disabled = false; btn.textContent = old; }
   }
+  document.addEventListener('focusout', (ev) => { // leaving a written box is the trigger: no button to press
+    const t = ev.target; if (!E || !S.sample || !t || !t.hasAttribute || !t.hasAttribute('data-f') || t.hasAttribute('data-note')) return;
+    const fid = t.getAttribute('data-f'); const f = E.fmap[fid]; if (!cleanable(f)) return;
+    if (ASSIST && ASSIST.fid === fid) return;   // the device-dictation flow has its own Done, which sends it
+    setTimeout(() => { if (E && document.activeElement !== t) cleanField(fid); }, 60);
+  });
 
   /* ───────────── dictation ─────────────
      Checked on the live page (Sept 2026): Claude hosts the portal in a frame whose permission list is
@@ -2513,11 +2711,9 @@ const PW_CONFIG = {
     other: ['Now start your device’s dictation and talk — it types straight into this box.', 'On a Mac press the microphone key (F5); on Windows press Windows + H; on a phone or tablet tap the microphone on the keyboard.'],
   };
   const WHY = EDITION === 'web' ? 'This browser can’t turn speech into text by itself (Chrome, Edge and Safari can). Your device’s dictation types into the box instead, and it works in every box here.' : 'Pages hosted inside Claude aren’t given microphone access, so the portal can’t listen by itself. Your device’s dictation types into the box instead, and it works in every box here.';
-  const autoPolish = () => lsGet('pw_autopolish') !== 'off';
   function dictCoach(f, single) { // rendered hidden under every written box; shown while that box is ready for dictation
     const how = HOW[DEVICE] || HOW.other;
-    return `<div class="dcoach" id="dc_${f.id}" hidden><div><b>Box ready.</b> ${how[0]} Then press <b>Done</b>.</div>
-      ${!single && S.sample ? `<label class="dauto"><input type="checkbox" data-act="autopolish" ${autoPolish() ? 'checked' : ''}> Clean it up with AI when I press Done</label>` : ''}
+    return `<div class="dcoach" id="dc_${f.id}" hidden><div><b>Box ready.</b> ${how[0]} Then press <b>Done</b>.${S.sample ? ' Spelling and speech slips are tidied up by themselves.' : ''}</div>
       <details class="dhelp"><summary>It didn’t start?</summary><p>${how[1]}</p><p class="muted">${WHY}</p></details></div>`;
   }
   function paintVoiceUi(fid, el, on, mode) {
@@ -2552,7 +2748,7 @@ const PW_CONFIG = {
     const a = ASSIST; if (!a) return; ASSIST = null; paintVoiceUi(a.fid, a.el, false, 'assist');
     if (silent || !E) return; const now = a.el.isConnected ? a.el.value : String(E.values[a.fid] || '');
     if (now.trim() === a.before.trim()) return;
-    if (!a.single && S.sample && autoPolish()) polishOne(a.fid, null, true);
+    if (S.sample) cleanField(a.fid);
   }
   document.addEventListener('focusout', (ev) => { // leaving the box (clicking elsewhere, Ctrl+Enter to the next one) counts as Done
     const a = ASSIST; if (!a || ev.target !== a.el) return; const to = ev.relatedTarget;
@@ -2572,7 +2768,7 @@ const PW_CONFIG = {
     if (DICT === d) DICT = null; paintVoiceUi(d.fid, d.el, false, 'native');
     if (d.err) { voiceErr(d.err, d); return; }
     if (!d.got) { toast('Didn’t catch anything. Check the microphone and try again.'); return; }
-    if (E && !d.single && S.sample && autoPolish()) polishOne(d.fid, null, true);
+    if (E && S.sample) cleanField(d.fid);
   }
   function startDictation(fid) {
     if (DICT) { const same = DICT.fid === fid; stopDictation(false); if (same) return; }
@@ -2609,7 +2805,7 @@ const PW_CONFIG = {
       if (!hs.exists) { m.innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">This assessment no longer exists.</div></div>`; return; }
       const head = Object.assign({ id }, clone(hs.data())); const bs = await S.db.doc(`assessments/${id}/body/values`).get();
       if (S.route.view !== 'report' || S.route.id !== id) return;
-      RPT = { id, head, def: FORMS[head.type], values: (bs.exists && bs.data().v) || {}, prev: null, ready: true };
+      RPT = { id, head, def: defOf(head), values: (bs.exists && bs.data().v) || {}, prev: null, ready: true };
       RPT.prev = await loadPrev(head, id); if (RPT && RPT.id === id) renderReport();
     } catch (e) { dbFail(e); m.innerHTML = '<div class="wrap"><div class="empty">Couldn’t open this report.</div></div>'; }
   }
@@ -2627,10 +2823,11 @@ const PW_CONFIG = {
     const secs = printSections(def).map((sec) => {
       let html = '', pend = null; const pc = PILLAR[sec.pillar];
       sec.fields.forEach((f) => {
-        if (f.t === 'head') { pend = f; return; } if (f.t === 'note' || f.t === 'score' || f.t === 'recap') return;
-        const val = f.t === 'metric' && isNT(v[f.id]) ? '' : v[f.id], note = v[f.id + '__n']; if (!has(val) && !has(note)) return;
+        if (f.t === 'head') { pend = f; return; } if (f.t === 'note' || f.t === 'score' || f.t === 'recap' || f.t === 'level') return;
+        const val = f.t === 'metric' && isNT(v[f.id]) ? '' : v[f.id], note = v[f.id + '__n']; const lvl = f.t === 'talk' ? +v[f.level] : 0; if (!has(val) && !has(note) && !lvl) return;
         if (pend) { html += `<div class="fhead" style="margin:14px 0 4px"><b>${esc(pend.label)}</b></div>`; pend = null; }
-        if (f.t === 'rating') html += `<div class="rline"><div><b style="font-weight:600">${esc(f.label)}</b>${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}</div><div class="pips" aria-label="Rated ${esc(val)} of 5">${[1, 2, 3, 4, 5].map((n) => `<span class="pip${+val === n ? ' on' : ''}">${n}</span>`).join('')}</div>${has(note) ? `<div class="cn">Coach note: ${esc(note)}</div>` : ''}</div>`;
+        if (f.t === 'talk') html += `<div class="rtext talkr"><div class="lbl">${esc(f.label)}${lvl ? `<span class="pill lv">${esc(SCALE_WORDS(def)[lvl - 1] || '')}</span>` : ''}</div>${has(val) ? `<p>${esc(val)}</p>` : '<p class="muted">Nothing written for this stroke.</p>'}</div>`;
+        else if (f.t === 'rating') html += `<div class="rline"><div><b style="font-weight:600">${esc(f.label)}</b>${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}</div><div class="pips" aria-label="Rated ${esc(val)} of 5">${[1, 2, 3, 4, 5].map((n) => `<span class="pip${+val === n ? ' on' : ''}">${n}</span>`).join('')}</div>${has(note) ? `<div class="cn">Coach note: ${esc(note)}</div>` : ''}</div>`;
         else if (f.t === 'stage') html += `<div class="rline"><div><b style="font-weight:600">${esc(f.label)}</b>${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ''}</div><span class="pill">${esc(STAGES[+val - 1] || '')}</span></div>`;
         else if (f.t === 'choice') html += `<div class="rline"><b style="font-weight:600">${esc(f.label)}</b><span class="pill">${esc(val)}</span></div>`;
         else if (f.t === 'metric') html += `<div class="rline"><div><b style="font-weight:600">${esc(f.label)}</b><div class="hint">Benchmark ${esc(f.bench || '')}${prev && has(prev[f.id]) && !isNT(prev[f.id]) ? ' · previous ' + esc(prev[f.id]) : ''}</div></div><div><b>${esc(val || '—')}</b> <span class="muted" style="font-size:12px">${esc(f.unit || '')}</span></div>${has(note) ? `<div class="cn">Note: ${esc(note)}</div>` : ''}</div>`;
@@ -2709,7 +2906,7 @@ const PW_CONFIG = {
           if (d.playerId === pid && d.period === period) { if (d.status === 'final') { toast(`${period} is already final for this player. Reopen it to make changes.`); go({ view: 'report', id: ref.id }); } else go({ view: 'edit', id: ref.id, part: part || undefined }); return; }
           ref = S.db.collection('assessments').doc(); }
       }
-      const t = Date.now(); const headDoc = { playerId: pid, playerName: p.name, group: p.group, type, status: 'draft', period, coach: multi(def) ? '' : lsGet('pw_coach'), evalDate: todayISO(), progress: 0, createdAt: t, updatedAt: t, hv: 1 };
+      const t = Date.now(); const headDoc = { playerId: pid, playerName: p.name, group: p.group, type, rev: FORM_REV, status: 'draft', period, coach: multi(def) ? '' : lsGet('pw_coach'), evalDate: todayISO(), progress: 0, createdAt: t, updatedAt: t, hv: 1 };
       if (multi(def)) headDoc.parts = {};
       await ref.set(headDoc); await S.db.doc(`assessments/${ref.id}/body/values`).set({ v: {} });
       go({ view: 'edit', id: ref.id, part: part || undefined });
@@ -2739,7 +2936,7 @@ const PW_CONFIG = {
     else if (act === 'start') startAssessment(S.route.pid, b.getAttribute('data-type'), b.getAttribute('data-part') || null, null);
     else if (act === 'open-part') {
       const pid = b.getAttribute('data-pid'), part = b.getAttribute('data-part'); const back = { view: 'group', gid: S.route.gid }; const a = quarterlyFor(pid, curQ());
-      if (a && a.status !== 'final' && multi(FORMS[a.type])) { S.ui.back = back; saveUi(); go({ view: 'edit', id: a.id, part }); } else startAssessment(pid, group(S.route.gid).form, part, back);
+      if (a && a.status !== 'final' && multi(defOf(a))) { S.ui.back = back; saveUi(); go({ view: 'edit', id: a.id, part }); } else startAssessment(pid, group(S.route.gid).form, part, back);
     }
     else if (act === 'sec' && E) gotoSec(+b.getAttribute('data-i'), false);
     else if (act === 'part' && E) switchPart(b.getAttribute('data-part'));
@@ -2749,10 +2946,10 @@ const PW_CONFIG = {
     else if (act === 'nt-all' && E) { let n = 0; E.def.sections[E.sec].fields.forEach((f) => { if (f.t === 'metric' && !has(E.values[f.id])) { setVal(f.id, NT); paintField(f.id); n++; } }); paintTabs(); paintParts(); toast(n ? `${n} test${n === 1 ? '' : 's'} marked not tested. They stay off the parent PDF.` : 'No blank tests left in this section.'); }
     else if (act === 'suggest' && E) suggestScores();
     else if (act === 'dictate' && E) dictate(b.getAttribute('data-f'));
-    else if (act === 'polish' && E && S.sample) polishOne(b.getAttribute('data-f'), b, false);
-    else if (act === 'undo-polish' && E) { const f = b.getAttribute('data-f'); if (E.undo[f] !== undefined) { const el = $('#f_' + f); if (el) el.value = E.undo[f]; setVal(f, E.undo[f]); delete E.undo[f]; b.hidden = true; } }
-    else if (act === 'polish-all' && E && S.sample) polishAll(b);
-    else if (act === 'close-draft' && E) { const back = S.ui.back || { view: 'player', pid: E.head.playerId }; S.ui.back = null; saveUi(); stopDictation(true); await flush(true); toast('Draft saved.'); go(back); }
+    else if (act === 'tp' && E && !isLocked()) { const fid = b.getAttribute('data-f'), pid = b.getAttribute('data-tp'); const f = E.fmap[fid]; const p = f && f.points.find((x) => x.id === pid); if (!p) return; const m = Object.assign({}, talkManual(fid)); m[pid] = !covered(p, E.values[fid], m); setVal(fid + '__m', m); paintTalk(fid); }
+    else if (act === 'undo-clean' && E) undoClean(b.getAttribute('data-f'), b);
+    else if (act === 'clean-all' && E && S.sample) cleanAll(b);
+    else if (act === 'close-draft' && E) { const ed = E; const back = S.ui.back || { view: 'player', pid: E.head.playerId }; S.ui.back = null; saveUi(); stopDictation(true); if (S.sample) { b.disabled = true; b.textContent = 'Tidying up…'; await cleanSweep(ed.def.sections, 6000); if (E !== ed) return; } await flush(true); toast('Draft saved.'); go(back); }
     else if (act === 'primary' && E) primaryAction(b);
     else if (act === 'reopen-part' && E) reopenPart();
     else if (act === 'pdf') downloadPdf(b);
@@ -2778,7 +2975,7 @@ const PW_CONFIG = {
     if (E && t.hasAttribute('data-f')) {
       const f = t.getAttribute('data-f'); let val = t.value; if (t.type === 'number' && val !== '') val = Math.max(0, Math.min(100, Math.round(+val))); setVal(f, val);
       if (f.endsWith('__n')) { const nb = $(`[data-act="note"][data-f="${f.slice(0, -3)}"]`); if (nb) { nb.classList.toggle('has', has(val)); nb.textContent = has(val) ? 'Note added' : 'Add note'; } }
-      else { if (has(val)) unflag(f); const nt = $(`[data-act="nt"][data-f="${f}"]`); if (nt) nt.setAttribute('aria-pressed', String(isNT(val))); }
+      else { if (has(val)) unflag(f); const nt = $(`[data-act="nt"][data-f="${f}"]`); if (nt) nt.setAttribute('aria-pressed', String(isNT(val))); if (t.hasAttribute('data-talk')) paintTalk(f); }
       return;
     }
     if (E && t.hasAttribute('data-by')) { t.classList.remove('need'); setBy(t.value.trim()); return; }
@@ -2789,7 +2986,6 @@ const PW_CONFIG = {
     const t = ev.target; if (!t.getAttribute) return; const act = t.getAttribute('data-act');
     if (act === 'vf') { S.ui[t.getAttribute('data-k')] = t.value; render(); }
     if (act === 'setq') { S.ui.q = t.value === qLabel(new Date()) ? null : t.value; saveUi(); scopeWeb(); render(); }
-    if (act === 'autopolish') { lsSet('pw_autopolish', t.checked ? 'on' : 'off'); $$('[data-act="autopolish"]').forEach((x) => { x.checked = t.checked; }); if (ASSIST) { try { ASSIST.el.focus({ preventScroll: true }); } catch (e) { /* noop */ } } }
     if (E && t.hasAttribute('data-f')) {
       const f = t.getAttribute('data-f');
       if (t.type === 'number' && t.value !== '') t.value = E.values[f];
