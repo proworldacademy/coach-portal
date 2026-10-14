@@ -338,6 +338,8 @@ kbd{font:600 11px/1 var(--body);border:1px solid var(--line2);border-bottom-widt
 .umenu .who2 small{color:var(--muted);font-size:12px;word-break:break-all}
 .umenu button{background:none;border:0;border-radius:5px;padding:9px 10px;text-align:left;font-weight:600;font-size:13px}
 .umenu button:hover,.umenu button:focus-visible{background:var(--raised)}
+.umenu a.mitem{display:block;text-decoration:none;color:inherit;border-radius:5px;padding:9px 10px;font-weight:600;font-size:13px}.umenu a.mitem:hover,.umenu a.mitem:focus-visible{background:var(--raised)}
+.gate .hublink{margin-top:18px;font-size:12.5px}.gate .hublink a{color:inherit;font-weight:700}
 .srow{grid-template-columns:minmax(0,1fr) auto;cursor:default}
 .srow .chips{align-items:center}
 .srow select{padding:6px 8px;font-size:12px}
@@ -1820,9 +1822,10 @@ const PW_CONFIG = {
     S.route = parseHash(); if (S.route.view === 'staff' && !WEB.isAdmin) S.route = { view: 'home' };
     fitBar(); onRoute(false);
   }
+  const HUB = 'https://proworldacademy.github.io/proworld-marketing-dashboard/';   // PROWORLD Dashboard — every team page in one place
   function gateShell(inner) {
     const m = $('main'); if (!m) return; const d = $('#dock'); if (d) d.hidden = true; const sb = $('.search'); if (sb) sb.hidden = true;
-    m.innerHTML = `<div class="wrap"><div class="gate"><div class="lbl">ProWorld High Performance Academy · coaching staff</div><h1 class="title">Individually built. <em>Fully connected.</em></h1>${inner}</div></div>`;
+    m.innerHTML = `<div class="wrap"><div class="gate"><div class="lbl">ProWorld High Performance Academy · coaching staff</div><h1 class="title">Individually built. <em>Fully connected.</em></h1>${inner}<p class="hint hublink"><a href="${HUB}">PROWORLD Dashboard</a> — every team page in one place.</p></div></div>`;
   }
   function renderGate() {
     const note = WEB.note ? `<div class="notice" role="alert">${esc(WEB.note)}</div>` : ''; const st = WEB.stage;
@@ -1868,7 +1871,7 @@ const PW_CONFIG = {
     if (!WEB.user) { el.innerHTML = ''; return; } const nm = WEB.user.displayName || WEB.email;
     el.innerHTML = `<button class="ubtn" data-wact="menu" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(nm)}"><span class="ava">${esc(initials(nm))}</span></button>
       <div class="umenu" id="umenu" hidden><div class="who2"><b>${esc(WEB.user.displayName || 'Signed in')}</b><small>${esc(WEB.email)}${WEB.isAdmin ? ' · administrator' : ''}</small></div>
-      ${WEB.stage === 'in' && WEB.isAdmin ? `<button data-wact="staff">Staff &amp; access</button>` : ''}<button data-wact="signout">Sign out</button></div>`;
+      <a class="mitem" href="${HUB}" target="_blank" rel="noopener">PROWORLD Dashboard ↗</a>${WEB.stage === 'in' && WEB.isAdmin ? `<button data-wact="staff">Staff &amp; access</button>` : ''}<button data-wact="signout">Sign out</button></div>`;
   }
 
   /* ───────────── administrators: staff list, requests, import, backup ───────────── */
