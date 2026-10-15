@@ -186,20 +186,22 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
   }
 
   // ── people & access (owners and administrators) ──
-  const pagesOf = (s) => (s.owner === true ? P.ALL.slice() : Array.isArray(s.pages) ? s.pages : P.LEGACY.slice());
+  // a page that comes with another (the Coach Board comes with the Coach Portal) has no tick box and is never written to anyone's list
+  const real = (ids) => ids.filter((id) => !(PAGES.find((p) => p.id === id) || {}).with);
+  const pagesOf = (s) => real(s.owner === true ? P.ALL.slice() : Array.isArray(s.pages) ? s.pages : P.LEGACY.slice());
   // Owners change anyone. An administrator changes other people only — never an owner, never their own entry — and only
   // hands out pages they hold themselves (the database rules say the same thing).
   const mine = () => (ctx.owner ? P.ALL : ctx.pages || []);
   const canEdit = (s) => ctx.owner || (s.owner !== true && s.id !== ctx.email && pagesOf(s).every((id) => mine().includes(id)));
   function renderPeople() {
     const rows = staff.slice().sort((a, b) => (b.owner === true) - (a.owner === true) || String(a.name || a.id).localeCompare(String(b.name || b.id)));
-    let h = '<thead><tr><th></th><th></th>' + SECTIONS.map((s) => '<th class="grp" colspan="' + PAGES.filter((p) => p.section === s.id).length + '">' + esc(s.label) + "</th>").join("") + "<th></th></tr>"
-      + '<tr><th>Person</th><th class="c">Admin</th>' + SECTIONS.map((s) => PAGES.filter((p) => p.section === s.id).map((p) => '<th class="pg"><span>' + esc(p.short || p.name) + "</span></th>").join("")).join("") + "<th></th></tr></thead><tbody>";
+    let h = '<thead><tr><th></th><th></th>' + SECTIONS.map((s) => '<th class="grp" colspan="' + PAGES.filter((p) => p.section === s.id && !p.with).length + '">' + esc(s.label) + "</th>").join("") + "<th></th></tr>"
+      + '<tr><th>Person</th><th class="c">Admin</th>' + SECTIONS.map((s) => PAGES.filter((p) => p.section === s.id && !p.with).map((p) => '<th class="pg"><span>' + esc(p.short || p.name) + "</span></th>").join("")).join("") + "<th></th></tr></thead><tbody>";
     rows.forEach((s) => {
       const owner = s.owner === true, on = s.active === true, ids = pagesOf(s), legacy = !owner && !Array.isArray(s.pages), self = s.id === ctx.email, edit = canEdit(s) && !owner && !self;
       h += '<tr class="' + (on || owner ? "" : "off") + '"><td><div class="uname">' + esc(s.name || s.id) + (owner ? '<span class="utag owner">Owner</span>' : "") + (!on && !owner ? '<span class="utag off">Access off</span>' : "") + '</div><div class="uemail">' + esc(s.id) + (legacy ? " · from the Coach Portal list" : "") + "</div></td>";
       h += '<td class="c"><div class="chk' + (owner || s.role === "admin" ? " on" : "") + (edit ? "" : " lock") + '" role="checkbox" aria-checked="' + (owner || s.role === "admin") + '" tabindex="0" title="Can manage this list"' + (edit ? ' data-admin="' + esc(s.id) + '"' : "") + ">✓</div></td>";
-      SECTIONS.forEach((sec) => PAGES.filter((p) => p.section === sec.id).forEach((p) => {
+      SECTIONS.forEach((sec) => PAGES.filter((p) => p.section === sec.id && !p.with).forEach((p) => {
         const has = owner || ids.includes(p.id), can = edit && mine().includes(p.id);
         h += '<td class="c"><div class="chk' + (has ? " on" : "") + (can ? "" : " lock") + '" role="checkbox" aria-checked="' + has + '" tabindex="0" title="' + esc(p.name) + (can || owner || self ? "" : " — only an owner can change this") + '"' + (can ? ' data-u="' + esc(s.id) + '" data-p="' + esc(p.id) + '"' : "") + ">✓</div></td>";
       }));

@@ -14,8 +14,9 @@
 //   • Owners (by account id, below) see and unlock everything. Administrators manage other people but can only hand out
 //     pages they hold themselves, and never touch an owner or their own entry. Deleting players, assessments, try-outs
 //     or groups needs an administrator who also has the Coach Portal.
-//   • The scheduled marketing runs sign in as ONE dedicated account (made by the owner in Authentication → Users)
-//     and can only read and write the marketing record.
+//   • The scheduled runs sign in as ONE dedicated account (made by the owner in Authentication → Users). It can read and
+//     write the marketing record and, for the morning Monday sync, read the players and write only Monday's fields on them,
+//     the parent details, the Coach Board and the change log. It cannot read assessments or delete anything.
 //   • A person who is not staff can do exactly one thing: leave a request, under their own id, containing only their
 //     own email, a name and a time.
 //   • Anything not listed here is refused.
@@ -56,7 +57,7 @@ service cloud.firestore {
     function portal() { return hasPage('coach-portal'); }
     function tryoutsOk() { return hasPage('coach-portal') || hasPage('tryouts'); }
 
-    // The scheduled marketing runs (Sunday engine, Monday review, morning numbers): one email/password account,
+    // The scheduled runs (Sunday engine, Monday review, morning numbers, morning Monday sync): one email/password account,
     // runs@proworldacademy.com — its User UID from Authentication → Users.
     function runs() { return request.auth != null && request.auth.uid == '6Gg4rULeUnZa7wT6ueO5KLgwvcZ2'; }
 
@@ -95,9 +96,53 @@ service cloud.firestore {
       allow read: if tryoutsOk();
       allow write: if portal() && admin();
     }
+    // Players. The morning Monday sync (the runs account) reads them and writes only Monday's fields; it never deletes.
     match /players/{id} {
-      allow read, create, update: if portal();
+      // (the runs account is checked first everywhere, so its sign-in never has to pass the staff checks)
+      allow read: if runs() || portal();
+      allow create: if (runs()
+        && request.resource.data.keys().hasOnly(['name', 'shortName', 'group', 'tier', 'coach', 'coach2', 'fitness', 'status', 'source',
+                                                 'mondayId', 'monday', 'createdAt', 'updatedAt', 'createdBy'])) || (!runs() && portal());
+      allow update: if (runs()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'mondayId', 'monday', 'updatedAt'])) || (!runs() && portal());
       allow delete: if portal() && admin();
+      // Parent name, email and phone, copied from Monday by the sync. Opened behind a button on the player's page;
+      // nobody edits them in the portal (Monday is where they change).
+      match /private/{doc} {
+        allow read: if runs() || portal();
+        allow write: if runs();
+      }
+    }
+    // Changes made in the portal that Monday must get with the next morning sync: a coach-added player (it goes to the
+    // front desk's New Requests on the LEADS board) or a player marked away / finished / active. Anyone with the Coach
+    // Portal files one in their own name; only the sync moves it on.
+    match /outbox/{id} {
+      allow read: if runs() || portal();
+      allow create: if !runs() && portal()
+        && request.resource.data.keys().hasOnly(['type', 'pid', 'name', 'first', 'last', 'group', 'coach', 'note', 'mondayId', 'from', 'to',
+                                                 'by', 'byName', 'at', 'state'])
+        && request.resource.data.type in ['add', 'status']
+        && request.resource.data.state == 'queued'
+        && request.resource.data.by == me()
+        && request.resource.data.get('note', '') is string
+        && request.resource.data.get('note', '').size() < 1000;
+      allow update: if runs()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'result', 'sentAt', 'placedAt', 'doneAt', 'note']);
+      allow delete: if !runs() && portal() && admin();
+    }
+    // The Coach Board (one document) and the change log of every sync: everyone with the Coach Portal reads them.
+    match /board/{doc} {
+      allow read: if runs() || portal();
+      allow write: if runs();
+    }
+    match /syncLog/{id} {
+      allow read: if portal();
+      allow create, update: if runs();
+    }
+    // Sync settings: preview or live. Owners only.
+    match /syncCfg/{doc} {
+      allow read: if runs() || portal();
+      allow write: if !runs() && owner();
     }
     match /assessments/{id} {
       allow read, create, update: if portal();
@@ -118,8 +163,8 @@ service cloud.firestore {
     // ── Marketing — the Marketing Command Center and its scheduled runs ──
     // apps/marketing/<collection>/<id>: state, ideaBank, weeks, archive, reports, numbers. Each holds { json, at, by }.
     match /apps/marketing/{col}/{id} {
-      allow read: if hasPage('mkt') || runs();
-      allow create, update: if (hasPage('mkt') || runs())
+      allow read: if runs() || hasPage('mkt');
+      allow create, update: if (runs() || hasPage('mkt'))
         && request.resource.data.keys().hasOnly(['json', 'at', 'by'])
         && request.resource.data.json is string
         && request.resource.data.json.size() < 900000;
