@@ -11,8 +11,9 @@
 //       Try-outs         → "tryouts" or "coach-portal"
 //     People added before the Dashboard had sign-in carry no `pages` list: they keep exactly what they had —
 //     the Coach Portal and Try-outs.
-//   • Only owners and administrators change the staff list. Deleting players, assessments, try-outs or groups needs
-//     an administrator who also has the Coach Portal.
+//   • Owners (by account id, below) see and unlock everything. Administrators manage other people but can only hand out
+//     pages they hold themselves, and never touch an owner or their own entry. Deleting players, assessments, try-outs
+//     or groups needs an administrator who also has the Coach Portal.
 //   • The scheduled marketing runs sign in as ONE dedicated account (made by the owner in Authentication → Users)
 //     and can only read and write the marketing record.
 //   • A person who is not staff can do exactly one thing: leave a request, under their own id, containing only their
@@ -34,9 +35,10 @@ service cloud.firestore {
     // The staff list is keyed by the lower-case email address.
     function me() { return request.auth.token.email.lower(); }
 
-    // Owners: always everything, even before any staff list exists. Listed by User UID (Authentication → Users):
-    // PDKJkouns6g6zA1jrABJijEr3oq2 = the operations account.
-    function owner() { return verified() && request.auth.uid in ['PDKJkouns6g6zA1jrABJijEr3oq2']; }
+    // Owners: always everything, even before any staff list exists, and the only ones who can unlock any page for anyone.
+    // Listed by User UID (Authentication → Users): PDKJkouns6g6zA1jrABJijEr3oq2 = the operations account (Antonio),
+    // OLWbZu29WVUWUbN8W9HdPpOZgmj2 = Lorenzo. Changing this list means deploying these rules — nothing on a page can.
+    function owner() { return verified() && request.auth.uid in ['PDKJkouns6g6zA1jrABJijEr3oq2', 'OLWbZu29WVUWUbN8W9HdPpOZgmj2']; }
 
     function staffRec() { return get(/databases/$(database)/documents/staff/$(me())).data; }
     function onStaff() {
@@ -49,6 +51,8 @@ service cloud.firestore {
     function hasPage(p) {
       return owner() || (onStaff() && (('pages' in staffRec()) ? (p in staffRec().pages) : (p in ['coach-portal', 'tryouts'])));
     }
+    // The pages this person holds (an older record with no page list: the Coach Portal and Try-outs).
+    function myPages() { return ('pages' in staffRec()) ? staffRec().pages : ['coach-portal', 'tryouts']; }
     function portal() { return hasPage('coach-portal'); }
     function tryoutsOk() { return hasPage('coach-portal') || hasPage('tryouts'); }
 
@@ -58,11 +62,21 @@ service cloud.firestore {
 
     // ── People ──
     // A signed-in person may read their OWN entry (that is how every page knows what to show them);
-    // owners and administrators see and change the whole list.
+    // owners and administrators see the whole list. Owners change anyone. An administrator (a director) changes other
+    // people only — never their own entry, never an owner, never makes anyone an owner — and hands out only pages they
+    // hold themselves, so nobody but an owner can unlock Marketing, Finance or anything else they don't have.
     match /staff/{email} {
       allow get: if admin() || (verified() && me() == email);
       allow list: if admin();
-      allow write: if admin();
+      allow create, update: if owner() || (admin()
+        && email != me()
+        && request.resource.data.get('owner', false) != true
+        && (resource == null || resource.data.get('owner', false) != true)
+        && request.resource.data.get('pages', []).toSet().difference(myPages().toSet()).size() == 0);
+      allow delete: if owner() || (admin()
+        && email != me()
+        && resource.data.get('owner', false) != true
+        && resource.data.get('pages', []).toSet().difference(myPages().toSet()).size() == 0);
     }
     // "Please let me in" notes from people who signed in but are not on the list yet.
     match /requests/{uid} {

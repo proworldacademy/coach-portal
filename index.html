@@ -187,19 +187,23 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
 
   // ── people & access (owners and administrators) ──
   const pagesOf = (s) => (s.owner === true ? P.ALL.slice() : Array.isArray(s.pages) ? s.pages : P.LEGACY.slice());
+  // Owners change anyone. An administrator changes other people only — never an owner, never their own entry — and only
+  // hands out pages they hold themselves (the database rules say the same thing).
+  const mine = () => (ctx.owner ? P.ALL : ctx.pages || []);
+  const canEdit = (s) => ctx.owner || (s.owner !== true && s.id !== ctx.email && pagesOf(s).every((id) => mine().includes(id)));
   function renderPeople() {
     const rows = staff.slice().sort((a, b) => (b.owner === true) - (a.owner === true) || String(a.name || a.id).localeCompare(String(b.name || b.id)));
     let h = '<thead><tr><th></th><th></th>' + SECTIONS.map((s) => '<th class="grp" colspan="' + PAGES.filter((p) => p.section === s.id).length + '">' + esc(s.label) + "</th>").join("") + "<th></th></tr>"
       + '<tr><th>Person</th><th class="c">Admin</th>' + SECTIONS.map((s) => PAGES.filter((p) => p.section === s.id).map((p) => '<th class="pg"><span>' + esc(p.short || p.name) + "</span></th>").join("")).join("") + "<th></th></tr></thead><tbody>";
     rows.forEach((s) => {
-      const owner = s.owner === true, on = s.active === true, ids = pagesOf(s), legacy = !owner && !Array.isArray(s.pages), self = s.id === ctx.email;
+      const owner = s.owner === true, on = s.active === true, ids = pagesOf(s), legacy = !owner && !Array.isArray(s.pages), self = s.id === ctx.email, edit = canEdit(s) && !owner && !self;
       h += '<tr class="' + (on || owner ? "" : "off") + '"><td><div class="uname">' + esc(s.name || s.id) + (owner ? '<span class="utag owner">Owner</span>' : "") + (!on && !owner ? '<span class="utag off">Access off</span>' : "") + '</div><div class="uemail">' + esc(s.id) + (legacy ? " · from the Coach Portal list" : "") + "</div></td>";
-      h += '<td class="c"><div class="chk' + (owner || s.role === "admin" ? " on" : "") + (owner || self ? " lock" : "") + '" role="checkbox" aria-checked="' + (owner || s.role === "admin") + '" tabindex="0" title="Can manage this list"' + (owner || self ? "" : ' data-admin="' + esc(s.id) + '"') + ">✓</div></td>";
+      h += '<td class="c"><div class="chk' + (owner || s.role === "admin" ? " on" : "") + (edit ? "" : " lock") + '" role="checkbox" aria-checked="' + (owner || s.role === "admin") + '" tabindex="0" title="Can manage this list"' + (edit ? ' data-admin="' + esc(s.id) + '"' : "") + ">✓</div></td>";
       SECTIONS.forEach((sec) => PAGES.filter((p) => p.section === sec.id).forEach((p) => {
-        const has = owner || ids.includes(p.id);
-        h += '<td class="c"><div class="chk' + (has ? " on" : "") + (owner ? " lock" : "") + '" role="checkbox" aria-checked="' + has + '" tabindex="0" title="' + esc(p.name) + '"' + (owner ? "" : ' data-u="' + esc(s.id) + '" data-p="' + esc(p.id) + '"') + ">✓</div></td>";
+        const has = owner || ids.includes(p.id), can = edit && mine().includes(p.id);
+        h += '<td class="c"><div class="chk' + (has ? " on" : "") + (can ? "" : " lock") + '" role="checkbox" aria-checked="' + has + '" tabindex="0" title="' + esc(p.name) + (can || owner || self ? "" : " — only an owner can change this") + '"' + (can ? ' data-u="' + esc(s.id) + '" data-p="' + esc(p.id) + '"' : "") + ">✓</div></td>";
       }));
-      h += '<td class="c" style="white-space:nowrap">' + (owner || self ? "" : '<button class="btn ghost muted xs" data-onoff="' + esc(s.id) + '">' + (on ? "Turn off" : "Turn on") + '</button> <button class="btn ghost muted xs" data-rm="' + esc(s.id) + '" title="Remove from the list">✕</button>') + "</td></tr>";
+      h += '<td class="c" style="white-space:nowrap">' + (!edit ? "" : '<button class="btn ghost muted xs" data-onoff="' + esc(s.id) + '">' + (on ? "Turn off" : "Turn on") + '</button> <button class="btn ghost muted xs" data-rm="' + esc(s.id) + '" title="Remove from the list">✕</button>') + "</td></tr>";
     });
     $("acl").innerHTML = h + "</tbody>";
     $("acl").querySelectorAll("[data-p]").forEach((el) => { const go = () => togglePage(el.getAttribute("data-u"), el.getAttribute("data-p")); el.addEventListener("click", go); el.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); go(); } }); });
@@ -232,7 +236,8 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
     const pr = P.PRESETS[preset] || P.PRESETS.none;
     const existing = staff.find((s) => s.id === email);
     if (existing) { toast(email + " is already on the list — tick their pages below", true); return Promise.resolve(false); }
-    return fs.doc("staff/" + email).set({ email, name: name || email.split("@")[0], role: pr.admin ? "admin" : "coach", active: true, pages: pr.pages.slice(), addedBy: ctx.email, addedAt: Date.now() })
+    const pages = pr.pages.filter((id) => mine().includes(id));   // an administrator hands out only what they hold
+    return fs.doc("staff/" + email).set({ email, name: name || email.split("@")[0], role: pr.admin ? "admin" : "coach", active: true, pages, addedBy: ctx.email, addedAt: Date.now() })
       .then(() => { toast((name || email) + " added — they can sign in now"); return true; }).catch((e) => { fail(e); return false; });
   }
   function approve(rid) {
@@ -246,7 +251,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
     ctx = c; fs = window.PWAuth.fs();
     tiles();
     if (ctx.owner) $("hero-p").textContent = "Everything the team uses, in one place. You own it: below, choose who sees what.";
-    else if (ctx.admin) $("hero-p").textContent = "Everything the team uses, in one place. As an administrator you manage who sees what, below.";
+    else if (ctx.admin) $("hero-p").textContent = "Everything the team uses, in one place. As an administrator you can give the people below the pages you have yourself; only an owner unlocks anything else.";
     if (ctx.admin) {
       $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
       $("outside").innerHTML = P.OUTSIDE.map((o) => '<a href="' + esc(o.url) + '" target="_blank" rel="noopener">' + esc(o.name) + "</a>").join("");
