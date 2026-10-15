@@ -1,0 +1,115 @@
+// PROWORLD — database security rules for the whole site: the Dashboard, Marketing and the Coach Portal.
+// Published with the site from Cloud Shell (firebase deploy --only firestore:rules,hosting), or paste this whole file
+// into Firebase console → Firestore Database → Rules → Publish.
+//
+// What it guarantees, whatever a web page does or whoever finds its address:
+//   • Nobody reads or writes anything without signing in with a CONFIRMED Google account.
+//   • Signing in is not enough: the email must be on the staff list with access switched on (or be an owner below),
+//     and each part of the site needs its page ticked for that person on the Dashboard (staff/<email>.pages):
+//       Marketing        → "mkt"
+//       Coach Portal     → "coach-portal"   (players, assessments, videos, journal, goals)
+//       Try-outs         → "tryouts" or "coach-portal"
+//     People added before the Dashboard had sign-in carry no `pages` list: they keep exactly what they had —
+//     the Coach Portal and Try-outs.
+//   • Only owners and administrators change the staff list. Deleting players, assessments, try-outs or groups needs
+//     an administrator who also has the Coach Portal.
+//   • The scheduled marketing runs sign in as ONE dedicated account (made by the owner in Authentication → Users)
+//     and can only read and write the marketing record.
+//   • A person who is not staff can do exactly one thing: leave a request, under their own id, containing only their
+//     own email, a name and a time.
+//   • Anything not listed here is refused.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function okProvider() {
+      return request.auth.token.firebase.sign_in_provider in ['google.com'];
+    }
+    function verified() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && okProvider();
+    }
+    // The staff list is keyed by the lower-case email address.
+    function me() { return request.auth.token.email.lower(); }
+
+    // Owners: always everything, even before any staff list exists. Listed by User UID (Authentication → Users):
+    // PDKJkouns6g6zA1jrABJijEr3oq2 = the operations account.
+    function owner() { return verified() && request.auth.uid in ['PDKJkouns6g6zA1jrABJijEr3oq2']; }
+
+    function staffRec() { return get(/databases/$(database)/documents/staff/$(me())).data; }
+    function onStaff() {
+      return verified()
+        && exists(/databases/$(database)/documents/staff/$(me()))
+        && staffRec().active == true;
+    }
+    function admin() { return owner() || (onStaff() && staffRec().role == 'admin'); }
+    // A page ticked for this person on the Dashboard (or, for an older record with no page list, the Coach Portal and Try-outs).
+    function hasPage(p) {
+      return owner() || (onStaff() && (('pages' in staffRec()) ? (p in staffRec().pages) : (p in ['coach-portal', 'tryouts'])));
+    }
+    function portal() { return hasPage('coach-portal'); }
+    function tryoutsOk() { return hasPage('coach-portal') || hasPage('tryouts'); }
+
+    // The scheduled marketing runs (Sunday engine, Monday review, morning numbers): one email/password account,
+    // runs@proworldacademy.com — its User UID from Authentication → Users.
+    function runs() { return request.auth != null && request.auth.uid == '6Gg4rULeUnZa7wT6ueO5KLgwvcZ2'; }
+
+    // ── People ──
+    // A signed-in person may read their OWN entry (that is how every page knows what to show them);
+    // owners and administrators see and change the whole list.
+    match /staff/{email} {
+      allow get: if admin() || (verified() && me() == email);
+      allow list: if admin();
+      allow write: if admin();
+    }
+    // "Please let me in" notes from people who signed in but are not on the list yet.
+    match /requests/{uid} {
+      allow get: if admin() || (verified() && request.auth.uid == uid);
+      allow list, delete: if admin();
+      allow create, update: if verified()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'at'])
+        && request.resource.data.email == me()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() < 120;
+    }
+
+    // ── Coach Portal ──
+    match /groups/{id} {
+      allow read: if tryoutsOk();
+      allow write: if portal() && admin();
+    }
+    match /players/{id} {
+      allow read, create, update: if portal();
+      allow delete: if portal() && admin();
+    }
+    match /assessments/{id} {
+      allow read, create, update: if portal();
+      allow delete: if portal() && admin();
+      match /body/{doc} {
+        allow read, create, update: if portal();
+        allow delete: if portal() && admin();
+      }
+    }
+    match /tryouts/{id} {
+      allow read, create, update: if tryoutsOk();
+      allow delete: if tryoutsOk() && admin();
+    }
+    match /videos/{id}  { allow read, write: if portal(); }
+    match /journal/{id} { allow read, write: if portal(); }
+    match /goals/{id}   { allow read, write: if portal(); }
+
+    // ── Marketing — the Marketing Command Center and its scheduled runs ──
+    // apps/marketing/<collection>/<id>: state, ideaBank, weeks, archive, reports, numbers. Each holds { json, at, by }.
+    match /apps/marketing/{col}/{id} {
+      allow read: if hasPage('mkt') || runs();
+      allow create, update: if (hasPage('mkt') || runs())
+        && request.resource.data.keys().hasOnly(['json', 'at', 'by'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 900000;
+      allow delete: if hasPage('mkt');
+    }
+  }
+}
