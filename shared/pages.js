@@ -5,6 +5,7 @@
 // status:  here = part of this site · live = in daily use · proto = clickable prototype · plan = written plan
 //          page = reference page · report = a dated report · archive = kept for the record
 // opens:   site = on this site, with your PROWORLD sign-in · claude = a page hosted on claude.ai (needs a Claude account)
+// with:    a page that comes with another one (no tick box of its own): whoever has that page has this one too
 // section: tools = what we use every day · proto = prototypes & plans · library = playbooks, pages & reports
 (function () {
   "use strict";
@@ -16,8 +17,8 @@
       desc: "Every player's quarterly assessment (tennis, fitness, mental, summary), monthly and camp reports, videos, the journal and the follow-up checklist, with the branded PDF for parents." },
     { id: "tryouts", section: "tools", name: "Try-outs", short: "Try-outs", color: "mint", status: "here", opens: "site", menu: true, url: "/portal#/tryouts", owner: "Front desk · Coaches",
       desc: "Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered." },
-    { id: "coach-board", section: "tools", name: "Coach Board", short: "Coach Board", color: "cyan", status: "live", opens: "claude", menu: true, url: "https://claude.ai/artifact/SDZwaHXrDmDPVvbPqMjK9g", owner: "Operations",
-      desc: "Rosters by program, unassigned players, the cadence standard and the quarter commits — refreshed from the coach assignment sheet every weekday morning." },
+    { id: "coach-board", section: "tools", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: true, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
+      desc: "Rosters by coach, players with no coach yet, try-outs, the Proworld Standard and the quarter commit — from Monday every morning, with a log of every change. Comes with the Coach Portal." },
     // ── Prototypes & plans ──
     { id: "be-owner", section: "proto", name: "Backend · Owner view", color: "cyan", status: "proto", opens: "claude", url: "https://claude.ai/artifact/KqbuRtaSV7tHhjyLkTKjQt#owner", owner: "Operations",
       desc: "The full backend we are building: front desk, enrollment, court control, attendance, players & billing, privates, books with revenue by class. Demo data only." },
@@ -73,13 +74,13 @@
     { name: "QuickBooks", url: "https://qbo.intuit.com" },
     { name: "Google Drive", url: "https://drive.google.com" }
   ];
-  const all = PAGES.map((p) => p.id);
+  const all = PAGES.filter((p) => !p.with).map((p) => p.id);
   // Starting points when you add a person. After that, tick or untick any page for that person.
   const PRESETS = {
     marketing: { label: "Marketing", pages: ["mkt", "leads", "soccer", "pipeline", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
     editor: { label: "Video editor", pages: ["mkt"] },
-    coach: { label: "Coach", pages: ["coach-portal", "tryouts", "coach-board", "be-coach"] },
-    desk: { label: "Front desk", pages: ["tryouts", "coach-board", "be-desk", "attendance", "leads"] },
+    coach: { label: "Coach", pages: ["coach-portal", "tryouts", "be-coach"] },
+    desk: { label: "Front desk", pages: ["tryouts", "be-desk", "attendance", "leads"] },
     admin: { label: "Administrator", pages: all, admin: true },
     none: { label: "Nothing yet", pages: [] }
   };
