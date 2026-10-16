@@ -3367,8 +3367,9 @@ const PW_CONFIG = {
     const pv = (last && last.mode === 'preview') || (!!B && B.mode === 'preview');
     const bits = last ? summaryBits(last.counts) : [];
     const head = !last ? 'Monday sync' : bad ? `Monday sync didn’t finish · ${fmtWhen(last.at)}` : `Monday sync · ${fmtWhen(last.at)}`;
-    const text = !last ? '' : bad ? String((last.errors || [])[0] || '') : (bits.length ? bits.join(' · ') : 'No changes') + (pv ? ' — preview, nothing applied yet' : '');
-    return `<button class="notice sync${bad || stale ? '' : ' calm'}" ${goAttr({ view: 'board' })}><span class="sx"><b>${esc(head)}</b> ${esc(text)}${stale ? ' · the board is more than a day old' : ''}</span><span class="go">Coach Board</span></button>`;
+    const warns = last && !bad ? (last.errors || []).length : 0;
+    const text = !last ? '' : bad ? String((last.errors || [])[0] || '') : (bits.length ? bits.join(' · ') : 'No changes') + (warns ? ` · ${warns} to check` : '') + (pv ? ' — preview, nothing applied yet' : '');
+    return `<button class="notice sync${bad || stale || warns ? '' : ' calm'}" ${goAttr({ view: 'board' })}><span class="sx"><b>${esc(head)}</b> ${esc(text)}${stale ? ' · the board is more than a day old' : ''}</span><span class="go">Coach Board</span></button>`;
   }
   function notPlacedPanel() {
     const list = S.players.filter((p) => active(p) && !p.group).sort((a, b) => String(a.name).localeCompare(String(b.name))); if (!list.length) return '';
@@ -3379,7 +3380,8 @@ const PW_CONFIG = {
   /* the change log: every morning sync, newest first; the newest is open */
   function logRun(l, open, newest) {
     const pv = l.mode === 'preview', bad = l.ok === false, bits = summaryBits(l.counts);
-    const label = `<b>${esc(fmtWhen(l.at))}</b>${pv ? '<span class="chip">Preview</span>' : ''}${bad ? '<span class="chip warn">Didn’t finish</span>' : ''}<span class="lsum">${esc(bad ? String((l.errors || [])[0] || '') : bits.join(' · ') || 'No changes')}</span>`;
+    const warns = bad ? 0 : (l.errors || []).length;
+    const label = `<b>${esc(fmtWhen(l.at))}</b>${pv ? '<span class="chip">Preview</span>' : ''}${bad ? '<span class="chip warn">Didn’t finish</span>' : ''}${warns ? `<span class="chip warn">${warns} to check</span>` : ''}<span class="lsum">${esc(bad ? String((l.errors || [])[0] || '') : bits.join(' · ') || 'No changes')}</span>`;
     const head = newest ? `<div class="lhead">${label}</div>` : `<button class="lhead" data-act="log-open" data-id="${esc(l.id)}" aria-expanded="${!!open}">${label}</button>`;
     if (!open) return `<div class="lrun">${head}</div>`;
     const entries = l.entries || []; const shown = S.ui.logAll ? entries : entries.slice(0, 40);
@@ -3460,7 +3462,7 @@ const PW_CONFIG = {
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs</div><b>${tries.length}</b></div></div>
       ${logSection()}
       <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">lead coach on Monday · players with their daily schedule</span></div>
-      ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps">${list.slice().sort(sortP).map((x) => boardPlayer(x, x.asst ? ['with ' + x.asst] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No lead coaches on Monday yet.</div>'}
+      ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps">${list.slice().sort(sortP).map((x) => boardPlayer(x, x.asst && x.asst !== x.lead ? ['with ' + x.asst] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No lead coaches on Monday yet.</div>'}
       <div class="sect"><h2>No coach yet</h2><span class="muted" style="font-size:12px">${un.length} active on Monday with no lead coach · by daily schedule</span></div>
       ${un.length ? `<div class="buckets">${BUCKETS.map((k) => { const l = un.filter((x) => bucket(x.sch) === k).sort(sortP); return l.length ? `<div class="bucket"><div class="bh"><b>${esc(k)}</b><span>${l.length}</span></div><div class="bps">${l.map((x) => boardPlayer(x)).join('')}</div></div>` : ''; }).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">Every active player has a lead coach.</div>'}
       <div class="sect"><h2>Try-outs on Monday</h2><span class="muted" style="font-size:12px">${tries.length}</span></div>
