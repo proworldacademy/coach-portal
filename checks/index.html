@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<title>AI &amp; Comms Check · PROWORLD</title>
+<link rel="icon" href="data:,">
+<script>if (location.hostname === "proworldacademy.github.io") location.replace("https://proworld-coach-portal.web.app/checks" + location.search + location.hash);</script>
+<link rel="stylesheet" href="/shared/brand.css">
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="/shared/pages.js"></script>
+<script src="/shared/pwauth.js"></script>
+<script src="/shared/menu.js"></script>
+<style>
+/* PROWORLD — the AI & comms check: every AI and every channel that answers families or the team, how to test it,
+   and when someone last did. Results are saved in the database (checks/<item>, checkLog/<id>) with who and when. */
+:root{--ink:#000;--panel:#0e0e0e;--panel-2:#151515;--line:#222;--line-2:#333;--text:#fff;--text-2:#c9cbc2;--muted:#8f9288;
+--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;--cyan:#A9F3F7;--bad:#ff8a8a;
+--display:"Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;--body:"Aeonik Pro","Helvetica Neue",Arial,sans-serif;color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#000;--text:#fff}}
+:root[data-theme="dark"]{--ink:#000;--text:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1100px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 64px max(16px,env(safe-area-inset-left,0px))}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid var(--line)}
+.top .lbl{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.pw-user{font-size:12px;color:var(--text-2);display:flex;gap:10px;align-items:center}
+.pw-user .pw-user-out{background:none;border:1px solid var(--line-2);color:var(--text-2);border-radius:5px;padding:6px 10px;font-size:11px;cursor:pointer}
+.hero{padding:28px 0 6px}
+.hero h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;line-height:.95;font-size:52px}
+.hero h1 em{font-style:inherit;color:var(--lime)}
+.hero p{color:var(--muted);margin-top:10px;max-width:70ch}
+@media(max-width:640px){.hero h1{font-size:38px}}
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0 6px}
+@media(max-width:760px){.sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.tile b{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:34px;line-height:1}
+.tile span{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.tile.bad b{color:var(--bad)}.tile.due b{color:var(--lime)}.tile.ok b{color:var(--mint)}
+.sec{margin-top:34px}
+.sec-label{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:20px;color:var(--lime);display:flex;align-items:center;gap:10px}
+.sec-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec-label.cyan{color:var(--cyan)}.sec-label.orchid{color:var(--orchid)}.sec-label.mint{color:var(--mint)}
+.sec-note{color:var(--muted);font-size:12.5px;margin:6px 0 14px}
+.items{display:grid;gap:12px}
+.item{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line-2);border-radius:6px;padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px}
+.item.ok{border-left-color:var(--mint)}.item.bad{border-left-color:var(--bad)}.item.due{border-left-color:var(--lime)}
+@media(max-width:820px){.item{grid-template-columns:minmax(0,1fr)}}
+.item h3{font-size:15.5px;font-weight:700;margin-bottom:4px}
+.item .what{color:var(--text-2);font-size:13px;margin-bottom:10px}
+.item ol{margin:0 0 8px 1.2em;color:var(--text-2);font-size:13px}
+.item ol li{margin:3px 0}
+.item q{color:#fff;quotes:"“" "”"}
+.item .exp{font-size:12.5px;color:var(--text-2);background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 10px}
+.item .exp b{color:var(--mint);font-weight:700;letter-spacing:.6px;text-transform:uppercase;font-size:10.5px;margin-right:6px}
+.item .warn{font-size:12px;color:var(--orchid);margin-top:8px}
+.st{display:flex;flex-direction:column;gap:8px}
+.st .last{font-size:12px;color:var(--muted);line-height:1.45}
+.st .last strong{display:inline-block;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-right:6px;color:#000}
+.st .last strong.ok{background:var(--mint)}.st .last strong.bad{background:var(--bad)}.st .last strong.due{background:var(--lime)}.st .last strong.never{background:var(--line-2);color:var(--text-2)}
+.st .last .n{display:block;color:var(--text-2);margin-top:3px;word-break:break-word}
+.st input{width:100%;background:#000;border:1px solid var(--line-2);color:var(--text);border-radius:5px;padding:8px 10px;font:12.5px var(--body)}
+.st input:focus{outline:2px solid var(--lime);outline-offset:1px}
+.st .btns{display:flex;gap:8px}
+.btn{flex:1;background:var(--lime);color:#000;border:1px solid var(--lime);padding:9px 10px;font-family:var(--display);font-style:italic;font-weight:800;font-size:14px;letter-spacing:.8px;text-transform:uppercase;border-radius:5px;cursor:pointer;line-height:1}
+.btn:hover{background:#eeffa0}
+.btn.bad{background:transparent;color:var(--bad);border-color:#5a2c2c}
+.btn.bad:hover{background:#2a1414}
+.btn:disabled{opacity:.45;cursor:default}
+.miss{display:grid;gap:8px}
+.miss div{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:11px 14px;font-size:13px;color:var(--text-2)}
+.miss b{color:#fff}
+.log{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+.log th{text-align:left;color:var(--muted);font-weight:700;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line)}
+.log td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--text-2);vertical-align:top}
+.log td.r-ok{color:var(--mint)}.log td.r-bad{color:var(--bad)}
+.tw{overflow-x:auto}
+footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11.5px;margin-top:40px;padding-top:16px;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#111;border:1px solid var(--lime);color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:50;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.err{border-color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="lbl">PROWORLD · AI &amp; comms check</span><span class="pw-user" id="pw-user"></span></div>
+  <div class="hero">
+    <h1>Is everything <em>answering?</em></h1>
+    <p>Every AI and every channel that answers families or the team, how to test it, and when someone last did. Tick what you checked — it is saved with your name and the time, so a silent failure can't hide for weeks.</p>
+  </div>
+  <div class="sum" id="sum"></div>
+  <div id="groups"></div>
+  <section class="sec">
+    <div class="sec-label orchid">What's missing</div>
+    <p class="sec-note">Not built, or not proven yet. Nothing to tick — these are the gaps to close.</p>
+    <div class="miss" id="miss"></div>
+  </section>
+  <section class="sec">
+    <div class="sec-label mint">Recent checks</div>
+    <div class="tw"><table class="log" id="log"><thead><tr><th>When</th><th>Who</th><th>Check</th><th>Result</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <footer><span>PROWORLD Academy · Individually built. Fully connected.</span><span>Results: checks · checkLog</span></footer>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let toastT; function toast(m, err) { const t = $("toast"); t.textContent = m; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 2800); }
+  const NUM = "(561) 403-0008";
+  // every: how often it should be checked (hours). Steps are plain HTML written here, never data from anyone.
+  const GROUPS = [
+    { id: "day", label: "Every morning · 2 minutes", color: "", every: 24, note: "The automatic reports. If one didn't arrive, the thing behind it has stopped.", items: [
+      { id: "concierge-watchdog", title: "Concierge morning check — Slack, 7 AM ET", what: "The concierge reports what's actually true every morning: the roster it knows families from, and each channel's last conversation.",
+        steps: ["Open this morning's <q>Concierge check</q> post in Slack."],
+        expect: "“✅ all clear”, or someone is on every 🔴 line.",
+        warn: "The Instagram line counts replies written, not delivered. Only the weekly Instagram test proves families get them." },
+      { id: "coach-digest", title: "Coach communication digest — Slack, 8 AM ET", what: "Families contacted on schedule, overdue families and messages unanswered for a day, per coach.",
+        steps: ["Find this morning's <q>PROWORLD — COACH COMMUNICATION · daily update</q>."],
+        expect: "It arrived today. Missing = the coverage engine on PythonAnywhere has stopped." },
+      { id: "monday-sync", title: "Monday → Coach Portal sync — 6:22 AM ET", what: "Copies Monday's roster into the Coach Portal and carries the portal's changes back.",
+        steps: ["Open the Coach Board and look at the change log."],
+        expect: "A run from this morning. No run, or “Didn't finish” = the sync didn't happen." },
+      { id: "mkt-numbers", title: "Marketing numbers — 7 AM ET", what: "Instagram and Meta ads numbers for the Marketing page.",
+        steps: ["Open Marketing → Home."],
+        expect: "Numbers dated today." }
+    ] },
+    { id: "week", label: "Every week · 20 minutes", color: "cyan", every: 24 * 7, note: "Real test messages, end to end. Use a phone that isn't on file as a family, plus one that is.", items: [
+      { id: "text-new", title: "Text from a new family", what: "The core: a parent texts the academy number and gets a real answer.",
+        steps: ["From a phone that isn't on file, text " + NUM + ": <q>Hi, do you have tennis for my daughter? She's 8 and has never played.</q>", "Reply: <q>How much is it?</q>", "Reply: <q>Yes, I'd like to enroll her.</q>"],
+        expect: "A short answer within seconds that points to 10 &amp; Under. Only a confirmed price, or “the academy will confirm” — a made-up number is a fail. On enrolling it hands over to admissions and never sends them to call or message somewhere else." },
+      { id: "pipedrive-lead", title: "The lead lands in Pipedrive", what: "Every ready-to-enrol family becomes a deal the front desk works.",
+        steps: ["Right after the test above, open Pipedrive → Deals, then Activities."],
+        expect: "A new deal named with the parent, child and program, owned by the front desk, with the whole conversation as a note, and a call task due today." },
+      { id: "human-takeover", title: "A person takes over — the AI steps back", what: "The rule the front desk has to trust.",
+        steps: ["The front desk replies to that same number from JustCall (or the JustCall panel in Pipedrive).", "From the test phone, text again: <q>What time does it start?</q>"],
+        expect: "The AI stays silent — the conversation is the front desk's now. Nobody had to switch anything off." },
+      { id: "text-known", title: "Text from a family we know", what: "Enrolled families are treated as ours, not as leads.",
+        steps: ["From a phone on file for an enrolled family, text: <q>Hi</q>", "Then: <q>How much do I owe for this month?</q>"],
+        expect: "Greets them by name, no sales pitch. Never quotes or guesses a balance — billing goes to a person." },
+      { id: "website-chat", title: "Website chat — Ask ProWorld", what: "The chat on every page of proworldacademy.com.",
+        steps: ["Open Ask ProWorld on proworldacademy.com: <q>I want to register my son for tennis.</q>", "Give a phone number when it asks.", "Then: <q>Also my daughter for soccer.</q>"],
+        expect: "It asks for a phone or email before promising a callback. A deal with a task appears in Pipedrive; the second child is a note on the same deal, not a second deal." },
+      { id: "whatsapp", title: "WhatsApp", what: "Same number, same brain, any language.",
+        steps: ["WhatsApp " + NUM + ": <q>Hola, tienen fútbol para niños de 7 años?</q>", "Say you want to sign up."],
+        expect: "Answers in Spanish and points to the right soccer program; a deal and task in Pipedrive, like the text." },
+      { id: "instagram", title: "Instagram DM — through ManyChat", what: "Instagram replies go out through ManyChat, which never tells us if they were delivered.",
+        steps: ["DM the ProWorld Instagram from a personal account.", "Open the ManyChat inbox and that thread.", "Glance at ManyChat → Settings → Logs."],
+        expect: "The reply actually arrives in the Instagram DM. No Dynamic Block or External Request errors in the logs.",
+        warn: "This test is the only proof Instagram works: in September and early October replies were written but never delivered for three weeks." },
+      { id: "messenger", title: "Facebook Messenger", what: "The ProWorld Facebook page answers in our voice.",
+        steps: ["Message the ProWorld Facebook page from a personal account that isn't a page admin."],
+        expect: "An answer within a minute, in our voice.",
+        warn: "Not yet proven with someone outside the page — write the first real pass in the note." },
+      { id: "portal-ai", title: "Coach Portal — the AI tidy-up", what: "Coaches write a few words per stroke and the AI tidies them for the parents' report.",
+        steps: ["In the Coach Portal, open a draft assessment and write a few words in a stroke's box.", "Let it tidy them up."],
+        expect: "The tidied version comes back within seconds." },
+      { id: "live-pages", title: "Attendance and Directors pages", what: "The two live pages on PythonAnywhere.",
+        steps: ["Open Front Desk · Daily Attendance and the Directors Dashboard from the Dashboard."],
+        expect: "Both load with today's date and session times — no error page." }
+    ] },
+    { id: "month", label: "Every month · 5 minutes", color: "mint", every: 24 * 31, note: "The accounts that switch everything off when they run out. No report watches these.", items: [
+      { id: "justcall-account", title: "JustCall credit and numbers", what: "Every text and WhatsApp goes through JustCall.",
+        steps: ["JustCall → Billing: the credit balance.", "JustCall → Phone numbers."],
+        expect: "Credit topped up — texts fail when it runs out. Every number Verified (the nightly number watch posts in Slack only when one isn't)." },
+      { id: "ai-credit", title: "AI credit for the concierge", what: "The concierge runs on an Anthropic API key with its own billing.",
+        steps: ["Anthropic console → Billing: the balance and the spend limit."],
+        expect: "Money left and a sensible limit — when it runs out, every channel stops answering at once." },
+      { id: "manychat-account", title: "ManyChat plan and Instagram flow", what: "Instagram answering depends on a paid ManyChat plan and one Live flow.",
+        steps: ["ManyChat → Settings → Billing.", "ManyChat → Automations → the Instagram flow."],
+        expect: "Pro still active. The flow is Live, its trigger is on, Runs isn't n/a, and the Default Reply is set to every time — not once per 24 hours." }
+    ] }
+  ];
+  const MISSING = [
+    "<b>Email</b> — no AI reads or answers email; it is all by hand.",
+    "<b>Phone calls</b> — no AI on calls. A voice agent script was written in August and never switched on.",
+    "<b>Instagram delivery</b> — nothing confirms it automatically; the morning check counts replies written, not delivered.",
+    "<b>Messenger</b> — hasn't yet answered someone outside the page.",
+    "<b>Second parent's phone</b> — as of August, a family was recognised on one parent's number only.",
+    "<b>Duplicate contacts in Pipedrive</b> — as of August, some families had several person records; worth a merge pass.",
+    "<b>Messages inside Pipedrive</b> — deals and texts arrive; the full messaging inbox wasn't registering its channels in August.",
+    "<b>Families with no phone and no email on Monday</b> — they can't be recognised; the morning check gives the count.",
+    "<b>The scheduled runs</b> (numbers, Sunday engine, Monday review, Monday sync) — nothing alarms when one stops; the morning list above is the alarm."
+  ];
+  const ALL = []; GROUPS.forEach((g) => g.items.forEach((it) => ALL.push(Object.assign({ every: g.every, group: g.id }, it))));
+  let ctx = null, fs = null, results = {}, log = [], busy = {};
+
+  function ago(ms) {
+    const m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+    const h = Math.round(m / 60); if (h < 24) return h + " h ago";
+    const d = Math.round(h / 24); return d === 1 ? "yesterday" : d + " days ago";
+  }
+  const when = (ms) => new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  function state(it) {
+    const r = results[it.id];
+    if (!r) return "never";
+    if (r.ok === false) return "bad";
+    return Date.now() - r.at > it.every * 3600000 ? "due" : "ok";
+  }
+  function render() {
+    // keep any note someone is typing when a result arrives from somebody else
+    const typed = {}; let focus = null;
+    $("groups").querySelectorAll("[data-item]").forEach((el) => { const i = el.querySelector("input"); if (i) { typed[el.getAttribute("data-item")] = i.value; if (document.activeElement === i) focus = el.getAttribute("data-item"); } });
+    const st = ALL.map(state);
+    const bad = st.filter((s) => s === "bad").length, due = st.filter((s) => s === "due" || s === "never").length, ok = st.filter((s) => s === "ok").length;
+    const lastAt = Math.max(0, ...Object.values(results).map((r) => r.at || 0));
+    $("sum").innerHTML = '<div class="tile ok"><b>' + ok + "/" + ALL.length + '</b><span>Checked on time</span></div><div class="tile due"><b>' + due + '</b><span>Due now</span></div><div class="tile bad"><b>' + bad + '</b><span>Problems open</span></div><div class="tile"><b>' + (lastAt ? esc(ago(lastAt)) : "—") + "</b><span>Last check</span></div>";
+    $("groups").innerHTML = GROUPS.map((g) => '<section class="sec"><div class="sec-label ' + g.color + '">' + esc(g.label) + '</div><p class="sec-note">' + esc(g.note) + '</p><div class="items">' + g.items.map((it0) => {
+      const it = ALL.find((x) => x.id === it0.id), s = state(it), r = results[it.id];
+      const tag = { ok: "Works", bad: "Problem", due: "Due", never: "Never checked" }[s];
+      const last = r ? '<strong class="' + s + '">' + tag + "</strong>" + esc(r.ok ? "Checked " : "Problem found ") + esc(ago(r.at)) + " by " + esc(r.who || r.by) + (r.note ? '<span class="n">“' + esc(r.note) + "”</span>" : "") : '<strong class="never">' + tag + "</strong>";
+      return '<div class="item ' + s + '" data-item="' + esc(it.id) + '"><div><h3>' + esc(it.title) + '</h3><p class="what">' + esc(it.what) + "</p><ol>" + it.steps.map((x) => "<li>" + x + "</li>").join("") + '</ol><div class="exp"><b>Should happen</b>' + it.expect + "</div>" + (it.warn ? '<p class="warn">' + esc(it.warn) + "</p>" : "") +
+        '</div><div class="st"><div class="last">' + last + '</div><input type="text" maxlength="500" placeholder="Note (needed for a problem)" aria-label="Note for ' + esc(it.title) + '"><div class="btns"><button class="btn" data-a="ok"' + (busy[it.id] ? " disabled" : "") + '>Works</button><button class="btn bad" data-a="bad"' + (busy[it.id] ? " disabled" : "") + ">Problem</button></div></div></div>";
+    }).join("") + "</div></section>").join("");
+    $("groups").querySelectorAll("[data-item]").forEach((el) => {
+      const id = el.getAttribute("data-item");
+      const inp = el.querySelector("input"); if (typed[id]) inp.value = typed[id]; if (focus === id) inp.focus();
+      el.querySelectorAll("[data-a]").forEach((b) => b.addEventListener("click", () => save(id, b.getAttribute("data-a") === "ok", inp.value)));
+    });
+    $("miss").innerHTML = MISSING.map((m) => "<div>" + m + "</div>").join("");
+    const name = (id) => (ALL.find((x) => x.id === id) || { title: id }).title;
+    $("log").querySelector("tbody").innerHTML = log.length ? log.map((e) => "<tr><td>" + esc(when(e.at)) + "</td><td>" + esc(e.who || e.by) + "</td><td>" + esc(name(e.item)) + '</td><td class="' + (e.ok ? "r-ok" : "r-bad") + '">' + (e.ok ? "Works" : "Problem") + (e.note ? " — " + esc(e.note) : "") + "</td></tr>").join("")
+      : '<tr><td colspan="4">No checks saved yet.</td></tr>';
+  }
+  async function save(id, ok, note) {
+    note = String(note || "").trim().slice(0, 500);
+    if (!ok && !note) { toast("Say what's wrong in the note first.", true); return; }
+    busy[id] = true; render();
+    const rec = { ok, note, at: Date.now(), by: ctx.email, who: String(ctx.name || ctx.email).slice(0, 80) };
+    try {
+      const b = fs.batch();
+      b.set(fs.doc("checks/" + id), rec);
+      b.set(fs.collection("checkLog").doc(), Object.assign({ item: id }, rec));
+      await b.commit();
+      const el = document.querySelector('[data-item="' + id + '"] input'); if (el) el.value = "";
+      toast(ok ? "Saved — works." : "Saved — problem logged.");
+    } catch (e) { toast("Couldn't save (" + (e.code || e.message) + ")", true); }
+    busy[id] = false; render();
+  }
+  window.PWAuth.start({ need: "ai-check" }).then((c) => {
+    ctx = c; fs = window.PWAuth.fs();
+    render();
+    fs.collection("checks").onSnapshot((s) => { results = {}; s.docs.forEach((d) => { results[d.id] = d.data(); }); render(); }, (e) => toast("Couldn't read the results (" + (e.code || e.message) + ")", true));
+    fs.collection("checkLog").orderBy("at", "desc").limit(25).onSnapshot((s) => { log = s.docs.map((d) => d.data()); render(); }, () => {});
+  });
+})();
+</script>
+</body>
+</html>
