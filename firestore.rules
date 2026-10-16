@@ -177,6 +177,31 @@ service cloud.firestore {
         && request.resource.data.url.matches('https://[^ ]+');
     }
 
+    // ── The AI & comms check (/checks): the latest result per item, and a log of every tick, in the person's own name ──
+    match /checks/{id} {
+      allow read: if hasPage('ai-check');
+      allow create, update: if !runs() && hasPage('ai-check')
+        && id.matches('[a-z0-9-]{1,40}')
+        && request.resource.data.keys().hasOnly(['ok', 'note', 'at', 'by', 'who'])
+        && request.resource.data.ok is bool
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.who is string && request.resource.data.who.size() <= 80
+        && request.resource.data.at is number
+        && request.resource.data.by == me();
+    }
+    match /checkLog/{id} {
+      allow read: if hasPage('ai-check');
+      allow create: if !runs() && hasPage('ai-check')
+        && request.resource.data.keys().hasOnly(['item', 'ok', 'note', 'at', 'by', 'who'])
+        && request.resource.data.item is string && request.resource.data.item.size() <= 40
+        && request.resource.data.ok is bool
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.who is string && request.resource.data.who.size() <= 80
+        && request.resource.data.at is number
+        && request.resource.data.by == me();
+      allow delete: if owner();
+    }
+
     // ── Marketing — the Marketing Command Center and its scheduled runs ──
     // apps/marketing/<collection>/<id>: state, ideaBank, weeks, archive, reports, numbers. Each holds { json, at, by }.
     match /apps/marketing/{col}/{id} {
