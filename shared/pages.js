@@ -22,6 +22,8 @@
       desc: "Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered." },
     { id: "coach-board", section: "tools", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: true, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
       desc: "Rosters by coach, players with no coach yet, try-outs, the Proworld Standard and the quarter commit — from Monday every morning, with a log of every change. Comes with the Coach Portal." },
+    { id: "ai-check", section: "tools", name: "AI & Comms Check", short: "AI check", color: "orchid", status: "here", opens: "site", menu: true, url: "/checks", owner: "Owners · Front desk",
+      desc: "Is everything answering? The 2-minute morning glance at the automatic reports, the weekly test messages on every channel (text, WhatsApp, website, Instagram, Messenger), the monthly accounts that switch it all off, and what’s still missing. Every tick is saved with who and when." },
     { id: "desk-live", section: "tools", name: "Front Desk · Daily Attendance", short: "Attendance", color: "cyan", status: "live", opens: "link", owner: "Front desk",
       desc: "Today's expected players by session from Monday and the roster, what needs fixing, and the Play by Point check-in compare. Refreshes every 5 minutes. Its own page, opened with a saved link." },
     { id: "directors-live", section: "tools", name: "Directors Dashboard", short: "Directors", color: "cyan", status: "live", opens: "link", owner: "Directors",
@@ -35,6 +37,10 @@
       desc: "Attendance by court, private lessons that charge the family automatically, and court availability." },
     { id: "be-parent", section: "proto", name: "Player & family portal", color: "mint", status: "proto", opens: "site", url: "/p?id=be-parent", file: "backend", hash: "parent", owner: "Families",
       desc: "Pick a program and pay online, see enrollment and schedule, book a court. The family side of the backend." },
+    { id: "comms-plan", section: "proto", name: "Coach Comms Plan", color: "gray", status: "plan", opens: "site", url: "/p?id=comms-plan", file: "comms-plan", owner: "Leadership · Directors",
+      desc: "Aug 18, 2026 — how coaches talk to families: JustCall for calls and texts on one number per coach, Pipedrive as the family record, WhatsApp for video, the six-week rollout with owners, the running cost and the open items. Since then: the whole team went live on JustCall (Sept 24) and the coverage engine nudges coaches and posts the 8 AM digest." },
+    { id: "inbox-brief", section: "proto", name: "One Inbox Brief", color: "gray", status: "plan", opens: "site", url: "/p?id=inbox-brief", file: "inbox-brief", owner: "Leadership · Front desk",
+      desc: "Aug 13, 2026 — where the AI concierge stood, why the ready-made WhatsApp connections from JustCall and Pipedrive would break it, and the plan to make Pipedrive the one inbox for every message from a family." },
     { id: "pipeline", section: "proto", name: "Player Pipeline Playbook", color: "orchid", status: "plan", opens: "site", url: "/p?id=pipeline", file: "pipeline", owner: "Marketing · Leadership",
       desc: "Our own Meta ads, fast follow-up and trial offers for tennis and soccer: what we copy, what we already have, the four-week build, the offer, the targets and the next steps (Oct 9, 2026)." },
     { id: "player-system", section: "proto", name: "Player System · team briefing", color: "gray", status: "plan", opens: "site", url: "/p?id=player-system", file: "player-system", owner: "Leadership",
@@ -91,7 +97,7 @@
     marketing: { label: "Marketing", pages: ["mkt", "leads", "soccer", "pipeline", "thanksgiving", "sunday-preview", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
     editor: { label: "Video editor", pages: ["mkt"] },
     coach: { label: "Coach", pages: ["coach-portal", "tryouts", "be-coach"] },
-    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "be-desk", "attendance", "leads"] },
+    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "ai-check", "be-desk", "attendance", "leads", "inbox-brief"] },
     admin: { label: "Administrator", pages: all, admin: true },
     none: { label: "Nothing yet", pages: [] }
   };
