@@ -62,6 +62,10 @@ a{color:var(--lime)}
 .who{font-size:11px;color:var(--muted)}
 .opens{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--cyan);border:1px solid #234a4d;padding:2px 6px;border-radius:3px;white-space:nowrap;margin-left:6px}
 .mod.archive{opacity:.75}
+.lk{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.lkf{display:flex;gap:6px;width:100%;margin-top:2px}
+.lkf input{flex:1;min-width:0;background:#000;border:1px solid var(--line-2);color:var(--text);border-radius:5px;padding:7px 9px;font:12px var(--body)}
+.lkf input:focus{outline:2px solid var(--lime);outline-offset:1px}
 .btn{background:var(--lime);color:#000;border:1px solid var(--lime);padding:9px 16px;font-family:var(--display);font-style:italic;font-weight:800;font-size:14px;letter-spacing:1px;text-transform:uppercase;border-radius:5px;cursor:pointer;text-decoration:none;display:inline-block;line-height:1}
 .btn:hover{background:#eeffa0}
 .btn.ghost{background:transparent;color:var(--lime)}
@@ -179,10 +183,42 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
     const mine = PAGES.filter((p) => ctx.has(p.id));
     const tile = (p) => {
       const internal = p.opens === "site";
-      return '<div class="mod ' + esc(p.color) + (p.status === "archive" ? " archive" : "") + '"><div class="mod-top"><h3>' + esc(p.name) + '</h3><span class="badge ' + esc(p.status) + '">' + esc(P.STATUS_LABEL[p.status] || p.status) + "</span></div><p>" + esc(p.desc) + '</p><div class="mod-foot"><span class="who">' + esc(p.owner) + (P.OPENS_LABEL[p.opens] ? '<span class="opens">' + esc(P.OPENS_LABEL[p.opens]) + "</span>" : "") + '</span><a class="btn" href="' + esc(p.url) + '"' + (internal ? "" : ' target="_blank" rel="noopener"') + ">Open →</a></div></div>";
+      // a page that lives elsewhere: its link (with its own key) is kept in the database, not in this public page
+      const open = p.opens === "link" ? '<span class="lk" data-link="' + esc(p.id) + '"><span class="who">Checking the link…</span></span>'
+        : '<a class="btn" href="' + esc(p.url) + '"' + (internal ? "" : ' target="_blank" rel="noopener"') + ">Open →</a>";
+      return '<div class="mod ' + esc(p.color) + (p.status === "archive" ? " archive" : "") + '"><div class="mod-top"><h3>' + esc(p.name) + '</h3><span class="badge ' + esc(p.status) + '">' + esc(P.STATUS_LABEL[p.status] || p.status) + "</span></div><p>" + esc(p.desc) + '</p><div class="mod-foot"><span class="who">' + esc(p.owner) + (P.OPENS_LABEL[p.opens] ? '<span class="opens">' + esc(P.OPENS_LABEL[p.opens]) + "</span>" : "") + "</span>" + open + "</div></div>";
     };
     $("sections").innerHTML = mine.length ? SECTIONS.map((s) => { const ps = mine.filter((p) => p.section === s.id); return ps.length ? '<section class="sec"><div class="sec-label ' + esc(s.color) + '">' + esc(s.label) + '</div><div class="grid">' + ps.map(tile).join("") + "</div></section>" : ""; }).join("")
       : '<section class="sec"><div class="empty">No pages are ticked for you yet. Ask an administrator.</div></section>';
+    paintLinks();
+  }
+
+  // ── pages that live elsewhere (the live attendance and directors pages): the link an owner saved, pageLinks/<id> ──
+  const links = {};
+  function paintLinks() {
+    document.querySelectorAll("[data-link]").forEach((el) => {
+      const id = el.getAttribute("data-link");
+      const draw = (editing) => {
+        const url = links[id] || "";
+        if (url && !editing) {
+          el.innerHTML = '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Open →</a>' + (ctx.owner ? '<button type="button" class="btn ghost xs" data-a="edit">Change link</button>' : "");
+        } else if (ctx.owner) {
+          el.innerHTML = '<form class="lkf"><input type="url" required placeholder="Paste the page’s full link (https://…)" aria-label="The page’s full link"><button class="btn xs">Save</button></form>';
+          const inp = el.querySelector("input"); inp.value = url;
+          el.querySelector("form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const v = inp.value.trim();
+            if (!/^https:\/\/[^\s]+$/.test(v) || v.length > 1900) { toast("Paste the whole link, starting with https://", true); return; }
+            fs.doc("pageLinks/" + id).set({ url: v, at: Date.now(), by: ctx.email }).then(() => { links[id] = v; draw(false); toast("Link saved — everyone with this page can open it now."); }, (e2) => toast("Couldn't save the link (" + (e2.code || e2.message) + ")", true));
+          });
+        } else {
+          el.innerHTML = '<span class="who">Not connected yet — an owner adds its link.</span>';
+        }
+        const b = el.querySelector('[data-a="edit"]'); if (b) b.addEventListener("click", () => draw(true));
+      };
+      if (id in links) { draw(false); return; }
+      fs.doc("pageLinks/" + id).get().then((d) => { links[id] = d.exists ? String(d.data().url || "") : ""; draw(false); }, () => { links[id] = ""; draw(false); });
+    });
   }
 
   // ── people & access (owners and administrators) ──

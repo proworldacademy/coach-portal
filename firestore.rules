@@ -9,6 +9,7 @@
 //       Marketing        → "mkt"
 //       Coach Portal     → "coach-portal"   (players, assessments, videos, journal, goals)
 //       Try-outs         → "tryouts" or "coach-portal"
+//       Every other page → its own id (a copied page's key in pageKeys/<id>, an outside page's link in pageLinks/<id>)
 //     People added before the Dashboard had sign-in carry no `pages` list: they keep exactly what they had —
 //     the Coach Portal and Try-outs.
 //   • Owners (by account id, below) see and unlock everything. Administrators manage other people but can only hand out
@@ -159,6 +160,22 @@ service cloud.firestore {
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }
     match /goals/{id}   { allow read, write: if portal(); }
+
+    // ── Pages copied onto this site (/p?id=<page>): the reports, plans and prototypes that used to open on claude.ai ──
+    // Each is a locked file on the public site; its key is here and opens only for someone who holds that page.
+    match /pageKeys/{id} {
+      allow read: if hasPage(id);
+      allow write: if !runs() && owner();
+    }
+    // ── Pages that live elsewhere (the live attendance and directors pages): the link an owner saved, with its key ──
+    match /pageLinks/{id} {
+      allow read: if hasPage(id);
+      allow write: if !runs() && owner()
+        && request.resource.data.keys().hasOnly(['url', 'at', 'by'])
+        && request.resource.data.url is string
+        && request.resource.data.url.size() < 2000
+        && request.resource.data.url.matches('https://[^ ]+');
+    }
 
     // ── Marketing — the Marketing Command Center and its scheduled runs ──
     // apps/marketing/<collection>/<id>: state, ideaBank, weeks, archive, reports, numbers. Each holds { json, at, by }.
