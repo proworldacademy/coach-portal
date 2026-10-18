@@ -22,6 +22,8 @@
       desc: "Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered." },
     { id: "coach-board", section: "tools", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: true, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
       desc: "Rosters by coach, players with no coach yet, try-outs, the Proworld Standard and the quarter commit — from Monday every morning, with a log of every change. Comes with the Coach Portal." },
+    { id: "backend", section: "tools", name: "ProWorld backend", short: "Backend", color: "", status: "here", opens: "site", menu: true, url: "/backend", owner: "Owners · Front desk · Coaches · Families",
+      desc: "The academy's own system, replacing Play by Point: front desk, enroll, courts, attendance, players & billing, privates, books and the family's account. One player record drives everything. Demo data until Stripe is connected; the view switches by role." },
     { id: "ai-check", section: "tools", name: "AI & Comms Check", short: "AI check", color: "orchid", status: "here", opens: "site", menu: true, url: "/checks", owner: "Owners · Front desk",
       desc: "Is everything answering? The 2-minute morning glance at the automatic reports, the weekly test messages on every channel (text, WhatsApp, website, Instagram, Messenger), the monthly accounts that switch it all off, and what’s still missing. Every tick is saved with who and when." },
     { id: "desk-live", section: "tools", name: "Front Desk · Daily Attendance", short: "Attendance", color: "cyan", status: "live", opens: "link", owner: "Front desk",
@@ -29,14 +31,6 @@
     { id: "directors-live", section: "tools", name: "Directors Dashboard", short: "Directors", color: "cyan", status: "live", opens: "link", owner: "Directors",
       desc: "The roster by director, group and coach, family-contact coverage and the overnight Monday check. Refreshes every 5 minutes. Its own page, opened with a saved link." },
     // ── Prototypes & plans ──
-    { id: "be-owner", section: "proto", name: "Backend · Owner view", color: "cyan", status: "proto", opens: "site", url: "/p?id=be-owner", file: "backend", hash: "owner", owner: "Operations",
-      desc: "The full backend we are building: front desk, enrollment, court control, attendance, players & billing, privates, books with revenue by class. Demo data only." },
-    { id: "be-desk", section: "proto", name: "Backend · Front desk", color: "cyan", status: "proto", opens: "site", url: "/p?id=be-desk", file: "backend", hash: "desk", owner: "Front desk",
-      desc: "Today's sessions, walk-ins, enrollment, court bookings, attendance reconciliation and billing exceptions." },
-    { id: "be-coach", section: "proto", name: "Backend · Coach view", color: "cyan", status: "proto", opens: "site", url: "/p?id=be-coach", file: "backend", hash: "coach", owner: "Coaches",
-      desc: "Attendance by court, private lessons that charge the family automatically, and court availability." },
-    { id: "be-parent", section: "proto", name: "Player & family portal", color: "mint", status: "proto", opens: "site", url: "/p?id=be-parent", file: "backend", hash: "parent", owner: "Families",
-      desc: "Pick a program and pay online, see enrollment and schedule, book a court. The family side of the backend." },
     { id: "comms-plan", section: "proto", name: "Coach Comms Plan", color: "gray", status: "plan", opens: "site", url: "/p?id=comms-plan", file: "comms-plan", owner: "Leadership · Directors",
       desc: "Aug 18, 2026 — how coaches talk to families: JustCall for calls and texts on one number per coach, Pipedrive as the family record, WhatsApp for video, the six-week rollout with owners, the running cost and the open items. Since then: the whole team went live on JustCall (Sept 24) and the coverage engine nudges coaches and posts the 8 AM digest." },
     { id: "inbox-brief", section: "proto", name: "One Inbox Brief", color: "gray", status: "plan", opens: "site", url: "/p?id=inbox-brief", file: "inbox-brief", owner: "Leadership · Front desk",
@@ -96,15 +90,17 @@
   const PRESETS = {
     marketing: { label: "Marketing", pages: ["mkt", "leads", "soccer", "pipeline", "thanksgiving", "sunday-preview", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
     editor: { label: "Video editor", pages: ["mkt"] },
-    coach: { label: "Coach", pages: ["coach-portal", "tryouts", "be-coach"] },
-    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "ai-check", "be-desk", "attendance", "leads", "inbox-brief"] },
+    coach: { label: "Coach", pages: ["coach-portal", "tryouts", "backend"] },
+    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "ai-check", "backend", "attendance", "leads", "inbox-brief"] },
     admin: { label: "Administrator", pages: all, admin: true },
     none: { label: "Nothing yet", pages: [] }
   };
   // People on the staff list from before the Dashboard had sign-in (added in the Coach Portal) carry no page list:
   // they keep exactly what they had. The database rules say the same thing.
   const LEGACY = ["coach-portal", "tryouts"];
+  // Pages that used to exist under another id: whoever had the old one has the new one.
+  const ALIAS = { "be-owner": "backend", "be-desk": "backend", "be-coach": "backend", "be-parent": "backend" };
   const STATUS_LABEL = { here: "Live", live: "Live", proto: "Prototype", plan: "Plan", page: "Page", report: "Report", archive: "Archive" };
   const OPENS_LABEL = { site: "", claude: "Opens in Claude", link: "Its own page" };
-  window.PW_PAGES = { PAGES, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALL: all, STATUS_LABEL, OPENS_LABEL };
+  window.PW_PAGES = { PAGES, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL };
 })();
