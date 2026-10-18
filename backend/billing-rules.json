@@ -1,0 +1,74 @@
+{
+  "$comment": "ProWorld Academy billing rules — the single source of truth for the backend page (BILLING constant in backend/index.html mirrors this) and for the Stripe functions. Dates are the School District of Palm Beach County 2026–27 calendar; the academy follows the school year.",
+  "version": "2026-10-18",
+  "currency": "usd",
+  "bill_day": 1,
+  "monthly_plans": {
+    "charge": "On the 1st of each month, for that month, to the card on file (Stripe subscription anchored to the 1st).",
+    "mid_month_start": "Charged at sign-up for the remaining training days of the month only: price × remaining_training_days ÷ weekdays_in_month, rounded to the dollar. Full price from the next 1st.",
+    "break_months": "A month touched by a break is billed price × training_days_in_month ÷ weekdays_in_month (same formula). A month with no training days (June, July) is not billed.",
+    "plan_change": "Prorated the same way for the rest of the month; the new price applies from the next 1st.",
+    "cancel": "Any time before the 1st, from the family account (Customer Portal) or the front desk; takes effect at the end of the month already billed; no refund of the current month."
+  },
+  "late_policy": {
+    "due_day": 1,
+    "retries": "Stripe Smart Retries plus 'update your card' emails run automatically after a failed charge.",
+    "grace_until_day": 5,
+    "late_fee_usd": 50,
+    "late_fee_day": 6,
+    "suspend_day": 10,
+    "suspend": "Player cannot train until the balance is paid; attendance shows the hold.",
+    "remove_day": 15,
+    "remove": "Enrollment cancelled and the spot released; returning = pay the balance including the late fee and re-enroll (prorated from the return date)."
+  },
+  "one_time_items": "Drop-ins, flex packs, lesson packages, private lessons, camps, court reservations and weekly plans are charged when booked, never on the 1st. Weekly plans (Full Time CORE / INTENSIVE weekly) are sold per week booked.",
+  "existing_policies_kept": {
+    "unbooked_attendance": "Charged at the program's drop-in rate to the card on file.",
+    "flex_packages": "Only for Full Time and Afterschool / U12.",
+    "private_lessons": "Paid in advance; 12-hour cancellation.",
+    "late_pickup_usd_per_30_min": 30
+  },
+  "training_days": "Monday–Friday inside a term, excluding break weeks and any day listed in closed_days.",
+  "terms": [
+    {"label": "Fall 2026", "from": "2026-08-10", "to": "2026-12-18"},
+    {"label": "Spring 2027", "from": "2027-01-05", "to": "2027-05-27"}
+  ],
+  "breaks": [
+    {"label": "Thanksgiving break", "from": "2026-11-23", "to": "2026-11-27", "camps": "Thanksgiving camps (sold separately)"},
+    {"label": "Winter break", "from": "2026-12-21", "to": "2027-01-04", "camps": "Winter break camp (sold separately)"},
+    {"label": "Spring break", "from": "2027-03-22", "to": "2027-03-26", "camps": "Spring break camp (sold separately)"},
+    {"label": "Summer", "from": "2027-05-28", "to": "2027-08-08", "camps": "Summer camps (sold separately)"}
+  ],
+  "closed_days": [],
+  "school_single_holidays_2026_27": {
+    "$comment": "Regular training days unless added to closed_days.",
+    "dates": ["2026-09-07 Labor Day", "2026-09-21 Fall Holiday", "2026-10-12 teacher day", "2026-11-03 teacher day", "2026-11-11 Veterans Day", "2027-01-18 MLK Day", "2027-02-15 Presidents' Day", "2027-03-10 Spring Holiday", "2027-03-29 teacher day"]
+  },
+  "months_2026_27": [
+    {"month": "2026-10", "training_days": 22, "weekdays": 22, "factor": 1.0},
+    {"month": "2026-11", "training_days": 16, "weekdays": 21, "factor": 0.762, "break": "Thanksgiving break Nov 23–27"},
+    {"month": "2026-12", "training_days": 14, "weekdays": 23, "factor": 0.609, "break": "Winter break from Dec 21 (last training day Dec 18)"},
+    {"month": "2027-01", "training_days": 19, "weekdays": 21, "factor": 0.905, "break": "Winter break through Jan 4 (first training day Jan 5)"},
+    {"month": "2027-02", "training_days": 20, "weekdays": 20, "factor": 1.0},
+    {"month": "2027-03", "training_days": 18, "weekdays": 23, "factor": 0.783, "break": "Spring break Mar 22–26"},
+    {"month": "2027-04", "training_days": 22, "weekdays": 22, "factor": 1.0},
+    {"month": "2027-05", "training_days": 19, "weekdays": 21, "factor": 0.905, "break": "Summer from May 28 (last training day May 27)"},
+    {"month": "2027-06", "training_days": 0, "weekdays": 22, "factor": 0, "break": "Summer — no regular tuition; summer camps separate"},
+    {"month": "2027-07", "training_days": 0, "weekdays": 22, "factor": 0, "break": "Summer — no regular tuition; summer camps separate"},
+    {"month": "2027-08", "training_days": null, "weekdays": 22, "factor": null, "break": "Fall 2027 start to be set from the 2027–28 school calendar"}
+  ],
+  "notifications": {
+    "break_month_notice": {"when": "the 25th of the month before a break month", "channels": ["email", "sms"], "template": "break-month-notice"},
+    "monthly_receipt": {"when": "the 1st, after the charge", "channels": ["email"], "template": "stripe receipt"},
+    "payment_failed": {"when": "immediately, then with each retry", "channels": ["email", "sms"], "template": "payment-failed"},
+    "late_fee": {"when": "the 6th", "channels": ["email", "sms"], "template": "late-fee"},
+    "suspended": {"when": "the 10th", "channels": ["email", "sms", "slack #front-desk"], "template": "suspended"},
+    "removed": {"when": "the 15th", "channels": ["email", "sms", "slack #front-desk"], "template": "removed"}
+  },
+  "stripe_implementation": {
+    "subscription": "billing_cycle_anchor_config.day_of_month = 1, proration_behavior = none; the first partial month is added as a one-time invoice item computed with the formula above and charged at sign-up.",
+    "break_month": "On the 25th a job adds a negative invoice item ('Winter break credit — Dec 21–31') to the customer's pending items so the Dec 1 invoice shows the full price and the credit; months with factor 0 get the subscription paused for collection.",
+    "late_fee": "On the 6th, if the month's invoice is still open: create and charge a one-off invoice 'Late fee — <month> tuition' ($50); on the 10th flag the player on hold; on the 15th cancel the subscription and release the spot.",
+    "weekly_and_one_time": "One-time prices charged via Checkout or the card on file."
+  }
+}
