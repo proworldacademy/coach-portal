@@ -118,7 +118,8 @@
       const pages = owner ? P.ALL.slice() : active ? (Array.isArray(rec.pages) ? rec.pages.slice() : P.LEGACY.slice()) : [];
       const was = stage;
       const withOf = (id) => { const pg = (P.PAGES || []).find((x) => x.id === id); return pg && pg.with ? pg.with : null; };   // a page that comes with another one
-      ctx = { user: u, email, name: (rec && rec.name) || u.displayName || email, rec: rec || null, owner, admin, active: active || owner, pages, has: (id) => owner || (withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) };
+      const aliased = (id) => Object.keys(P.ALIAS || {}).some((old) => P.ALIAS[old] === id && pages.includes(old));   // an old id for the same page
+      ctx = { user: u, email, name: (rec && rec.name) || u.displayName || email, rec: rec || null, owner, admin, active: active || owner, pages, has: (id) => owner || (withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) || aliased(id) };
       if (!ctx.active) { stage = "pending"; fileRequest(u, email); paint(); if (was === "in") location.reload(); return; }
       if (need && !ctx.has(need)) { stage = "noaccess"; paint(); if (was === "in") location.reload(); return; }
       stage = "in"; paint(); paintUser();
