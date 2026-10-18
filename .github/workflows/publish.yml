@@ -1,0 +1,35 @@
+# PROWORLD — publish the site to Firebase Hosting (proworld-coach-portal.web.app) on every change to main.
+# Needs one repository secret: FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL — the JSON key of a service
+# account in the proworld-coach-portal Google Cloud project with the "Firebase Hosting Admin" role.
+# Until that secret exists the workflow runs and does nothing (the GitHub Pages mirror still updates on its own).
+name: Publish to Firebase Hosting
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: publish-live
+  cancel-in-progress: false
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the Firebase key in place?
+        id: key
+        run: echo "present=${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL != '' }}" >> "$GITHUB_OUTPUT"
+      - name: Deploy to the live channel
+        if: steps.key.outputs.present == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL }}
+          projectId: proworld-coach-portal
+          channelId: live
+      - name: No key yet
+        if: steps.key.outputs.present != 'true'
+        run: echo "FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL is not set — nothing published. Add the secret and re-run."
