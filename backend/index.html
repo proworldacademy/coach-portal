@@ -731,7 +731,7 @@ function renderBillingRules(){
   const progOpts=PROGRAMS.filter(p=>p.plans&&p.plans.length).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   return `<section class="section" id="billing-rules"><h2>Billing rules.</h2>
   <ul class="facts" style="max-width:none;margin-top:14px">
-    <li><b>Bill day</b>Every monthly plan is charged on the <b>1st</b> for that month, to the card on file. One date for everyone.</li>
+    <li><b>Bill day</b>Every monthly plan is charged on the 1st for that month, to the card on file. One date for everyone.</li>
     <li><b>Mid-month start</b>Pays only the remaining training days of the month, then the full amount from the next 1st. No human proration.</li>
     <li><b>School breaks</b>Thanksgiving, winter, spring and summer weeks are not program weeks. A month touched by a break is prorated by training days and the family is told before the 1st. Camps those weeks are sold separately.</li>
     <li><b>Late</b>Not paid by the ${ordinal(BILLING.graceUntil)}: ${money(BILLING.lateFee)} late fee. By the ${ordinal(BILLING.suspendOn)}: training pauses. By the ${ordinal(BILLING.removeOn)}: the spot is released. Card retries and reminders run automatically in between.</li>
