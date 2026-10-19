@@ -71,12 +71,12 @@ async function findOrCreateCustomer(stripe, parent) {
 }
 
 /* ── the family's self-service portal (card, invoices, cancel at month end) ── */
-let portalConfigId = null;
+const portalIds = new WeakMap();                    // per Stripe client, like the price cache
 async function portalConfiguration(stripe) {
-  if (portalConfigId) return portalConfigId;
+  if (portalIds.has(stripe)) return portalIds.get(stripe);
   const list = await stripe.billingPortal.configurations.list({ active: true, limit: 10 });
   const ours = list.data.find((c) => c.metadata && c.metadata.proworld === 'family') || list.data.find((c) => c.is_default) || list.data[0];
-  if (ours) { portalConfigId = ours.id; return ours.id; }
+  if (ours) { portalIds.set(stripe, ours.id); return ours.id; }
   const made = await stripe.billingPortal.configurations.create({
     business_profile: { headline: 'ProWorld Academy — your account', privacy_policy_url: 'https://proworldacademy.com/privacy-policy', terms_of_service_url: 'https://proworldacademy.com/privacy-policy' },
     features: {
@@ -88,7 +88,7 @@ async function portalConfiguration(stripe) {
     },
     metadata: { proworld: 'family' }
   });
-  portalConfigId = made.id; return made.id;
+  portalIds.set(stripe, made.id); return made.id;
 }
 async function portalUrl(stripe, customerId, returnUrl) {
   const configuration = await portalConfiguration(stripe);
