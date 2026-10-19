@@ -59,16 +59,25 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'POST /admin/hold') { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); const on = b.hold === true; await stripe.subscriptions.update(id, { metadata: { hold: on ? 'true' : '', hold_since: on ? CAL.todayET() : '', hold_by: who.email } }); logger.info('hold', { id, on, by: who.email }); return send(res, 200, { ok: true }); }
       if (route === 'POST /admin/cancel') { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); if (b.now === true) await stripe.subscriptions.cancel(id, { cancellation_details: { comment: 'Cancelled by ' + who.email } }); else await stripe.subscriptions.update(id, { cancel_at_period_end: true, metadata: { cancel_by: who.email } }); logger.info('cancel', { id, now: b.now === true, by: who.email }); return send(res, 200, { ok: true }); }
       if (route === 'POST /admin/resume') { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); await stripe.subscriptions.update(id, { cancel_at_period_end: false, metadata: { cancel_by: '' } }); return send(res, 200, { ok: true }); }
+      if (route === 'POST /admin/plan') {
+        // A paid start month whose plan is missing (the family never reached the thank-you page): create it now.
+        const sid = S.clean(b.session, 80); if (!/^cs_/.test(sid)) throw S.err(400, 'session', 'session id required');
+        const session = await stripe.checkout.sessions.retrieve(sid, { expand: ['payment_intent'] });
+        const sub = await CHECKOUT.ensureEnrollment(stripe, session, (l) => logger.info('plan: ' + l));
+        if (!sub) throw S.err(409, 'not_paid', 'That session is not a paid start-month payment.');
+        return send(res, 200, { ok: true, subscription: sub.id });
+      }
       if (route === 'POST /admin/charge') { const out = await ADMIN.chargeOnFile(stripe, b, who); logger.info('charge on file', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       if (route === 'POST /admin/enroll-link') { const out = await CHECKOUT.createMonthlySession(stripe, Object.assign({}, b, { by: 'staff:' + who.email })); return send(res, 200, out); }
       if (route === 'POST /admin/run-jobs') {
         if (!who.owner) throw S.err(403, 'owner', 'Only an owner can run the jobs by hand.');
         const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today || '') ? b.today : CAL.todayET();
         const lines = []; const log = (l) => lines.push(l);
-        const credits = b.which === 'late' ? null : await JOBS.applyBreakCredits(stripe, today, log);
-        const late = b.which === 'credits' ? null : await JOBS.applyLatePolicy(stripe, today, log);
+        const plans = !b.which || b.which === 'plans' ? await JOBS.convertPaidEnrollments(stripe, today, log) : null;
+        const credits = !b.which || b.which === 'credits' ? await JOBS.applyBreakCredits(stripe, today, log) : null;
+        const late = !b.which || b.which === 'late' ? await JOBS.applyLatePolicy(stripe, today, log) : null;
         logger.info('jobs run by hand', { by: who.email, today, lines });
-        return send(res, 200, { today, credits, late, log: lines });
+        return send(res, 200, { today, plans, credits, late, log: lines });
       }
       if (route === 'GET /admin/notices') {
         const ov = await ADMIN.overview(stripe); const out = [];
@@ -85,8 +94,10 @@ exports.dailyBilling = onSchedule({ schedule: '5 5 * * *', timeZone: CAL.TZ, reg
   const stripe = S.stripeFor(STRIPE_SECRET_KEY.value());
   const today = CAL.todayET();
   const log = (l) => logger.info('billing: ' + l);
+  const plans = await JOBS.convertPaidEnrollments(stripe, today, log);
   const credits = await JOBS.applyBreakCredits(stripe, today, log);
   const late = await JOBS.applyLatePolicy(stripe, today, log);
-  logger.info('dailyBilling done', { today, mode: mode(STRIPE_SECRET_KEY.value()), credits: { checked: credits.checked, credited: credits.credited.length, paused: credits.paused.length, errors: credits.errors.length }, late: { checked: late.checked, lateFees: late.lateFees.length, holds: late.holds.length, cancelled: late.cancelled.length, errors: late.errors.length } });
-  if (credits.errors.length || late.errors.length) logger.error('dailyBilling errors', { credits: credits.errors, late: late.errors });
+  if (plans.created.length || plans.errors.length) logger.info('dailyBilling plans', plans);
+  logger.info('dailyBilling done', { today, mode: mode(STRIPE_SECRET_KEY.value()), plans: { checked: plans.checked, created: plans.created.length, errors: plans.errors.length }, credits: { checked: credits.checked, credited: credits.credited.length, paused: credits.paused.length, errors: credits.errors.length }, late: { checked: late.checked, lateFees: late.lateFees.length, holds: late.holds.length, cancelled: late.cancelled.length, errors: late.errors.length } });
+  if (plans.errors.length || credits.errors.length || late.errors.length) logger.error('dailyBilling errors', { plans: plans.errors, credits: credits.errors, late: late.errors });
 });
