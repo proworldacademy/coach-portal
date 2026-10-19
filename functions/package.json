@@ -1,0 +1,20 @@
+{
+  "name": "proworld-billing",
+  "description": "ProWorld Academy billing engine — Stripe subscriptions anchored to the 1st, prorated first month by training days, break-month credits, the late-fee timeline, the enrollment checkout and the staff API.",
+  "private": true,
+  "version": "1.0.0",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0",
+    "stripe": "^18.0.0"
+  }
+}
