@@ -20,7 +20,7 @@ async function applyBreakCredits(stripe, today, log) {
   today = today || CAL.todayET(); log = log || (() => {});
   const plans = monthlyLookups();
   const report = { checked: 0, credited: [], paused: [], skipped: 0, errors: [] };
-  for (const status of ['active', 'past_due']) {
+  for (const status of ['active', 'trialing', 'past_due']) {                               // 'trialing' = enrolled, first 1st still ahead
     for await (const sub of stripe.subscriptions.list({ status, limit: 100, expand: ['data.items.data.price'] })) {
       report.checked++;
       try {
