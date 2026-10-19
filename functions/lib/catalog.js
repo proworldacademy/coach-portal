@@ -4,7 +4,7 @@
 'use strict';
 
 const PROGRAMS = [
-  { id: 'fulltime', name: 'Full Time Program | Fall 2026', short: 'Full Time', product: 'prod_VSwdkFe4BriwDa', qbo: 'Full Time', sport: 'Tennis + Fitness + Mental performance', ages: 'Ages 10–18', time: '7:45 AM–7:00 PM',
+  { id: 'fulltime', name: 'Full Time Program | Fall 2026', short: 'Full Time', product: 'prod_VSwdkFe4BriwDa', firstMonth: 'pw_firstmonth_fulltime', qbo: 'Full Time', sport: 'Tennis + Fitness + Mental performance', ages: 'Ages 10–18', time: '7:45 AM–7:00 PM',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'The complete four-pillar system, every day: technical training, athletic fitness, mental performance and individual player assessments.',
     plans: [
       { id: 'core', label: 'CORE Program (Half Day – 5 Days/week)', sub: 'Monthly · half day, 5 days a week', days: 5, monthly: 2950, lookup: 'fulltime_fall26_core_monthly' },
@@ -14,7 +14,7 @@ const PROGRAMS = [
       { id: 'intensive_w', label: 'INTENSIVE Program | Weekly', price: 1100, lookup: 'fulltime_fall26_intensive_weekly' }],
     packs: [{ id: 'flex10', sessions: 10, label: '10 FLEX Sessions | Tennis Only', price: 995, lookup: 'fulltime_fall26_flex10' }],
     dropin: { label: 'Drop in (Tennis Only)', price: 115, lookup: 'fulltime_fall26_dropin' } },
-  { id: 'afterschool', name: 'Afterschool | Fall 2026', short: 'Afterschool', product: 'prod_VSweKxrlHVGGqf', qbo: 'Afterschool', sport: 'Tennis + Fitness', ages: 'Ages 10–18', time: '4:00–7:00 PM',
+  { id: 'afterschool', name: 'Afterschool | Fall 2026', short: 'Afterschool', product: 'prod_VSweKxrlHVGGqf', firstMonth: 'pw_firstmonth_afterschool', qbo: 'Afterschool', sport: 'Tennis + Fitness', ages: 'Ages 10–18', time: '4:00–7:00 PM',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'Three hours a day: technical training, athletic fitness and match play.',
     plans: [
       { id: '2', label: '2 Days per week', days: 2, monthly: 695, lookup: 'afterschool_fall26_2d_monthly' },
@@ -23,21 +23,21 @@ const PROGRAMS = [
     weekly: null,
     packs: [{ id: 'flex10', sessions: 10, label: '10 FLEX Sessions | Tennis Only', price: 995, lookup: 'afterschool_fall26_flex10' }],
     dropin: { label: 'Drop in (Tennis Only)', price: 115, lookup: 'afterschool_fall26_dropin' } },
-  { id: 'u10adv', name: '10 & Under Advanced | Fall 2026', short: '10U Advanced', product: 'prod_VSwfSjJ9qNDzc9', qbo: 'U10', sport: 'Tennis', ages: '10 & under', time: '4:30–6:00 PM',
+  { id: 'u10adv', name: '10 & Under Advanced | Fall 2026', short: '10U Advanced', product: 'prod_VSwfSjJ9qNDzc9', firstMonth: 'pw_firstmonth_u10adv', qbo: 'U10', sport: 'Tennis', ages: '10 & under', time: '4:30–6:00 PM',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'The competitive 10 & under group: orange and green ball, match play every week.',
     plans: [
       { id: '2', label: '2 Days per Week', days: 2, monthly: 525, lookup: 'u10adv_fall26_2d_monthly' },
       { id: '3', label: '3 Days per Week', days: 3, monthly: 745, lookup: 'u10adv_fall26_3d_monthly' },
       { id: '5', label: '5 Days per Week', days: 5, monthly: 1125, lookup: 'u10adv_fall26_5d_monthly' }],
     weekly: null, packs: null, dropin: { label: '1 Session', price: 75, lookup: 'u10adv_fall26_dropin' } },
-  { id: 'u10path', name: '10 & Under Pathway | Fall 2026', short: '10U Pathway', product: 'prod_VSwfrBU79qetLs', qbo: 'U10', sport: 'Tennis', ages: '10 & under', time: '4:30–6:00 PM',
+  { id: 'u10path', name: '10 & Under Pathway | Fall 2026', short: '10U Pathway', product: 'prod_VSwfrBU79qetLs', firstMonth: 'pw_firstmonth_u10path', qbo: 'U10', sport: 'Tennis', ages: '10 & under', time: '4:30–6:00 PM',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'Red, orange and green ball. The ProWorld way into the game.',
     plans: [
       { id: '2', label: '2 Days per Week', days: 2, monthly: 375, lookup: 'u10path_fall26_2d_monthly' },
       { id: '3', label: '3 Days per Week', days: 3, monthly: 510, lookup: 'u10path_fall26_3d_monthly' },
       { id: '5', label: '5 Days per Week', days: 5, monthly: 750, lookup: 'u10path_fall26_5d_monthly' }],
     weekly: null, packs: null, dropin: { label: '1 Session', price: 60, lookup: 'u10path_fall26_dropin' } },
-  { id: 'tots', name: '4 & Under | Fall 2026', short: '4 & Under', product: 'prod_VSwgYEOleDHEs3', qbo: 'U10', sport: 'Tennis', ages: 'Ages 2–4', time: '4:30–5:15 PM',
+  { id: 'tots', name: '4 & Under | Fall 2026', short: '4 & Under', product: 'prod_VSwgYEOleDHEs3', firstMonth: 'pw_firstmonth_tots', qbo: 'U10', sport: 'Tennis', ages: 'Ages 2–4', time: '4:30–5:15 PM',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'ProWorld TOTS: first racquet, first rallies.',
     plans: [
       { id: '2', label: '2 Days per Week', days: 2, monthly: 250, lookup: 'tots_fall26_2d_monthly' },
@@ -51,7 +51,7 @@ const PROGRAMS = [
       { id: 'fit5', sessions: 5, label: '5 Sessions', price: 240, lookup: 'fitness_fall26_5' },
       { id: 'fit10', sessions: 10, label: '10 Sessions', price: 425, lookup: 'fitness_fall26_10' }],
     dropin: { label: '1 Session', price: 50, lookup: 'fitness_fall26_1' } },
-  { id: 'soccer', name: 'Soccer | Fall 2026 (5 - 12yrs)', short: 'Soccer', product: 'prod_VSwhdbxWJc3MMh', qbo: 'Soccer', sport: 'Soccer', ages: 'Ages 5–12', time: '4:00–6:00 PM',
+  { id: 'soccer', name: 'Soccer | Fall 2026 (5 - 12yrs)', short: 'Soccer', product: 'prod_VSwhdbxWJc3MMh', firstMonth: 'pw_firstmonth_soccer', qbo: 'Soccer', sport: 'Soccer', ages: 'Ages 5–12', time: '4:00–6:00 PM',
     days: ['Mon', 'Wed', 'Fri'], blurb: 'Small-sided training on the field. Technique, speed, decisions.',
     plans: [
       { id: '4', label: '4 Sessions / month', sub: 'Monthly · 1 session a week', days: 1, monthly: 175, lookup: 'soccer_fall26_4_monthly' },
