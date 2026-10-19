@@ -63,7 +63,7 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      - name: Publish the billing engine (Functions: api + dailyBilling)
+      - name: "Publish the billing engine (Functions: api + dailyBilling)"
         if: steps.key.outputs.present == 'true'
         run: npx --yes $FIREBASE_TOOLS deploy --only functions --project "$PROJECT" --non-interactive --force
         env:
