@@ -13,9 +13,11 @@ function stripeFor(secret) {
 }
 
 /* ── prices by lookup key, verified against the catalog ── */
-const cache = { at: 0, byLookup: {} };
+const caches = new WeakMap();                       // one cache per Stripe client (a sandbox key and a live key never share prices)
 const TTL = 10 * 60 * 1000;
 async function resolvePrices(stripe, lookups) {
+  if (!caches.has(stripe)) caches.set(stripe, { at: 0, byLookup: {} });
+  const cache = caches.get(stripe);
   const need = [...new Set(lookups)].filter(Boolean);
   const fresh = Date.now() - cache.at < TTL;
   const missing = need.filter((k) => !(fresh && cache.byLookup[k]));
