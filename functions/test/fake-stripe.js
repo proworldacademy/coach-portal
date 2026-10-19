@@ -16,14 +16,17 @@ function fakeStripe(seed) {
     customers: {
       list: (params) => { rec('customers.list', params); return listOf(db.customers.filter((c) => c.email === params.email)); },
       create: async (params) => { rec('customers.create', params); const c = Object.assign({ id: id('cus'), object: 'customer' }, params); db.customers.push(c); return c; },
-      update: async (cid, params) => { rec('customers.update', { cid, params }); const c = db.customers.find((x) => x.id === cid); Object.assign(c, params); return c; }
+      update: async (cid, params) => { rec('customers.update', { cid, params }); const c = db.customers.find((x) => x.id === cid); if (params.invoice_settings) { c.invoice_settings = Object.assign({}, c.invoice_settings, params.invoice_settings); delete params.invoice_settings; } Object.assign(c, params); return c; }
     },
     checkout: { sessions: {
-      create: async (params, opts) => { rec('checkout.sessions.create', { params, opts }); const s = Object.assign({ id: id('cs'), object: 'checkout.session', url: 'https://checkout.stripe.com/c/pay/' + id('x'), status: 'open', payment_status: 'unpaid' }, params); db.sessions.push(s); return s; },
-      retrieve: async (sid) => { rec('checkout.sessions.retrieve', sid); const s = db.sessions.find((x) => x.id === sid); if (!s) throw Object.assign(new Error('No such session'), { type: 'StripeInvalidRequestError' }); return s; }
+      create: async (params, opts) => { rec('checkout.sessions.create', { params, opts }); const s = Object.assign({ id: id('cs'), object: 'checkout.session', url: 'https://checkout.stripe.com/c/pay/' + id('x'), status: 'open', payment_status: 'unpaid', created: Math.floor(Date.now() / 1000), amount_total: (params.line_items || []).reduce((n, l) => n + (l.price_data ? l.price_data.unit_amount * (l.quantity || 1) : 0), 0) }, params); db.sessions.push(s); return s; },
+      retrieve: async (sid, params) => { rec('checkout.sessions.retrieve', { sid, params }); const s = db.sessions.find((x) => x.id === sid); if (!s) throw Object.assign(new Error('No such session'), { type: 'StripeInvalidRequestError' }); return s; },
+      list: (params) => { rec('checkout.sessions.list', params); return listOf(db.sessions.filter((x) => (!params.status || x.status === params.status))); }
     } },
+    paymentIntents: { retrieve: async (pid) => { rec('paymentIntents.retrieve', pid); const s = db.sessions.find((x) => x.payment_intent && (x.payment_intent === pid || x.payment_intent.id === pid)); return s && typeof s.payment_intent === 'object' ? s.payment_intent : { id: pid, payment_method: null }; } },
     subscriptions: {
-      list: (params) => { rec('subscriptions.list', params); return listOf(db.subscriptions.filter((s) => params.status === 'all' || s.status === params.status)); },
+      list: (params) => { rec('subscriptions.list', params); return listOf(db.subscriptions.filter((s) => (params.status === 'all' || s.status === params.status) && (!params.customer || s.customer === params.customer))); },
+      create: async (params, opts) => { rec('subscriptions.create', { params, opts }); const price = db.prices.find((p) => p.id === params.items[0].price) || { id: params.items[0].price }; const sub = Object.assign({ id: id('sub'), object: 'subscription', status: 'active', created: Math.floor(Date.now() / 1000), cancel_at_period_end: false }, params, { items: { data: [{ id: id('si'), price, current_period_end: params.billing_cycle_anchor || null }] } }); db.subscriptions.push(sub); return sub; },
       update: async (sid, params, opts) => { rec('subscriptions.update', { sid, params, opts }); const s = db.subscriptions.find((x) => x.id === sid); if (params.metadata) s.metadata = Object.assign({}, s.metadata, params.metadata); if (params.pause_collection) s.pause_collection = params.pause_collection; if (params.cancel_at_period_end !== undefined) s.cancel_at_period_end = params.cancel_at_period_end; return s; },
       cancel: async (sid, params) => { rec('subscriptions.cancel', { sid, params }); const s = db.subscriptions.find((x) => x.id === sid); s.status = 'canceled'; s.canceled_at = Math.floor(Date.now() / 1000); return s; }
     },
