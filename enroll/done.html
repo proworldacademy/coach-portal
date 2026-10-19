@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light">
+<title>Enrolled · ProWorld Academy</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23050505'/%3E%3Cpath d='M22 48 30 16h14c7 0 10 4 9 10s-6 10-13 10h-6l-3 12z' fill='%23E2FE78'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/shared/brand.css">
+<style>
+:root{--bg:#FFFFFF;--ink:#000000;--muted:rgba(0,0,0,.58);--line:rgba(0,0,0,.14);--surface:rgba(0,0,0,.045);--black:#000000;--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;
+  --display:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;--body:'Aeonik Pro','Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;--radius:4px;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2{margin:0;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;line-height:.92}
+.topbar{background:var(--black);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.14)}
+.topbar .wordmark{display:block;height:22px;aspect-ratio:600/69;background:var(--logo-lime) center/contain no-repeat;flex:none}
+.topbar .tag{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:19px;line-height:1;padding-left:14px;border-left:1px solid rgba(255,255,255,.28)}
+main{max-width:760px;margin:0 auto;padding:40px 20px 100px}
+h1{font-size:clamp(60px,12vw,132px)}
+h1 em{font-style:inherit;background:var(--lime);padding:0 .08em}
+.lead{font-size:18px;margin:16px 0 0;max-width:600px}
+.facts{list-style:none;padding:0;margin:28px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.facts{grid-template-columns:1fr}}
+.facts li{background:var(--surface);border-radius:var(--radius);padding:14px 16px;font-size:14px}
+.facts li b{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-weight:700}
+.facts li.ok{background:var(--mint)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.btn{display:inline-flex;align-items:center;justify-content:center;background:var(--black);color:#fff;border-radius:var(--radius);padding:14px 22px;font-weight:700;font-size:15px;text-decoration:none}
+.btn.lime{background:var(--lime);color:#000}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.note{margin-top:28px;font-size:13.5px;color:var(--muted);max-width:600px}
+.foot{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.spin{width:18px;height:18px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header class="topbar"><a class="wordmark" href="https://proworldacademy.com" aria-label="PROWORLD"></a><span class="tag">Enroll</span></header>
+<main id="app"><p class="lead"><span class="spin"></span>One moment — confirming with Stripe…</p></main>
+<script>
+(function(){
+'use strict';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cents=c=>'$'+(c/100).toLocaleString('en-US',{minimumFractionDigits:c%100?2:0,maximumFractionDigits:2});
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const nice=d=>{if(!d)return '';const [y,m,dd]=d.split('-').map(Number);return MONTHS[m-1]+' '+dd+(y!==new Date().getFullYear()?', '+y:'')};
+const q=new URLSearchParams(location.search);const app=document.getElementById('app');
+function footer(){return `<footer class="foot">ProWorld Academy · 651 Egret Cir, Delray Beach, FL 33444 · (561) 403-0008 · info@proworldacademy.com</footer>`}
+if(q.get('trial')){app.innerHTML=`<h1>See you <em>soon.</em></h1><p class="lead">${esc(q.get('p')||'Your player')} is booked for a free trial session. The front desk will text you to confirm the day and time — nothing was charged.</p><div class="actions"><a class="btn ghost" href="/enroll">Enroll another player</a><a class="btn" href="https://proworldacademy.com">proworldacademy.com</a></div>${footer()}`;return}
+const s=q.get('s');
+if(!s){app.innerHTML=`<h1>Enroll.</h1><p class="lead">Nothing to confirm here — start from the enrollment page.</p><div class="actions"><a class="btn lime" href="/enroll">Go to enrollment</a></div>${footer()}`;return}
+let tries=0;
+function show(){
+  fetch('/api/checkout/status?s='+encodeURIComponent(s),{cache:'no-store'}).then(r=>r.json()).then(st=>{
+    if(st.error)throw new Error(st.message);
+    if(st.status!=='complete'&&tries++<6){setTimeout(show,2000);return}
+    if(st.status!=='complete'){app.innerHTML=`<h1>Not <em>finished.</em></h1><p class="lead">The payment page was closed before the payment went through. Nothing was charged — you can start again, or call the front desk at (561) 403-0008.</p><div class="actions"><a class="btn lime" href="/enroll">Back to enrollment</a></div>${footer()}`;return}
+    const en=st.enrollment;const first=(st.player||'Your player').split(' ')[0];
+    let facts=`<li><b>Paid today</b>${cents(st.paid||0)}</li>`;
+    if(en){facts+=`<li><b>Program</b>${esc(en.program)}${en.plan?' · '+esc(en.plan):''}${en.days&&en.days.length?' · '+en.days.join(', '):''}</li>`;if(en.start)facts+=`<li><b>First day</b>${esc(nice(en.start))}</li>`;if(en.next)facts+=`<li><b>Next charge</b>${en.next.cents===0?'No charge on '+esc(nice(en.next.date))+' (school break)':cents(en.next.cents)+' on '+esc(nice(en.next.date))}</li>`}
+    else for(const l of (st.lines||[]))if(l.cents)facts+=`<li><b>Item</b>${esc(l.label)} · ${cents(l.cents)}</li>`;
+    facts+=`<li class="ok"><b>Receipt</b>Sent by Stripe to ${esc(st.email||'your email')}</li><li class="ok"><b>Roster</b>${esc(first)} is on the list from day one — the coaches have been told</li>`;
+    app.innerHTML=`<h1>${en?'Enrolled.':'Done.'}</h1><p class="lead">${esc(first)} is in${en?' <b>'+esc(en.program)+'</b>':''}. Welcome to ProWorld — where champions are made.</p><ul class="facts">${facts}</ul><div class="actions">${st.portalUrl?`<a class="btn lime" href="${esc(st.portalUrl)}">Manage your account</a>`:''}<a class="btn ghost" href="/enroll">Enroll another player</a></div><p class="note">Your account is where you update the card on file, see every invoice${en?', and cancel any time before the 1st (it takes effect at the end of the month already billed)':''}. The link above is for you only; the front desk can send a fresh one any time.</p>${footer()}`;
+  }).catch(err=>{app.innerHTML=`<h1>One <em>moment.</em></h1><p class="lead">We couldn't confirm the payment just now (${esc(err.message||'no connection')}). If your card was charged, you're enrolled — the receipt from Stripe is the confirmation. Questions: (561) 403-0008.</p><div class="actions"><a class="btn ghost" href="/enroll">Back to enrollment</a></div>${footer()}`});
+}
+show();
+})();
+</script>
+</body>
+</html>
