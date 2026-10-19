@@ -2,6 +2,14 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "billing",
+      "runtime": "nodejs22",
+      "ignore": ["node_modules", ".git", "test", "*.test.js", "*.md"]
+    }
+  ],
   "hosting": {
     "public": ".",
     "ignore": [
@@ -10,12 +18,22 @@
       "**/.*",
       ".git/**",
       "**/node_modules/**",
+      "functions/**",
       "README.md",
       "firestore.rules",
       "ai-worker.js"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "api",
+          "region": "us-central1"
+        }
+      }
+    ],
     "headers": [
       {
         "source": "**",
