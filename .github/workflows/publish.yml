@@ -10,8 +10,10 @@
 #       It is only read when this workflow is run by hand with "Copy the Stripe key into Secret Manager" ticked; it is then stored
 #       in Google Secret Manager as STRIPE_SECRET_KEY and the functions are redeployed to pick it up. It never appears in logs.
 #
-# Order: tests → site (Hosting) → [Stripe key → Secret Manager] → billing engine (Functions). The site is published even when the
-# engine step fails (for example before the project is on the Blaze plan), so a billing hiccup never blocks a page fix.
+# Order: tests → [Stripe key → Secret Manager] → billing engine (Functions) → site (Hosting). The engine goes first so that the
+# site's /api/** rewrite can point at it; the site is published even when the engine step fails (for example before the project
+# is on the Blaze plan) — /api/** simply answers 404 until the engine exists — and the run is then marked failed at the end so
+# the missing engine is not overlooked. A billing hiccup never blocks a page fix.
 name: Publish to Firebase
 on:
   push:
@@ -50,11 +52,6 @@ jobs:
         run: printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-sa.json"
         env:
           KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL }}
-      - name: Publish the site (Hosting, live channel)
-        if: steps.key.outputs.present == 'true'
-        run: npx --yes $FIREBASE_TOOLS deploy --only hosting --project "$PROJECT" --non-interactive --force
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
       - name: Copy the Stripe key into Secret Manager
         if: steps.key.outputs.present == 'true' && github.event_name == 'workflow_dispatch' && inputs.set_stripe_secret
         run: |
@@ -64,10 +61,22 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       - name: "Publish the billing engine (Functions: api + dailyBilling)"
+        id: engine
         if: steps.key.outputs.present == 'true'
+        continue-on-error: true
         run: npx --yes $FIREBASE_TOOLS deploy --only functions --project "$PROJECT" --non-interactive --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+      - name: Publish the site (Hosting, live channel)
+        if: steps.key.outputs.present == 'true'
+        run: npx --yes $FIREBASE_TOOLS deploy --only hosting --project "$PROJECT" --non-interactive --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+      - name: Was the billing engine published?
+        if: steps.key.outputs.present == 'true' && steps.engine.outcome != 'success'
+        run: |
+          echo "::error::The site is live, but the billing engine did not deploy — see the step above. Usual causes: the project is not on the Blaze plan yet, the deploy service account lacks the roles listed at the top of publish.yml, or the STRIPE_SECRET_KEY secret has not been copied into Secret Manager (run this workflow by hand with the box ticked)."
+          exit 1
       - name: No key yet
         if: steps.key.outputs.present != 'true'
         run: echo "FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL is not set — nothing published. Add the secret and re-run."
