@@ -72,7 +72,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       }
       if (route === 'GET /admin/notices') {
         const ov = await ADMIN.overview(stripe); const out = [];
-        for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'past_due'].includes(s.status)) continue; const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
+        for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'trialing', 'past_due'].includes(s.status)) continue; const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
         return send(res, 200, { today: ov.today, notices: out });
       }
       throw S.err(404, 'route', 'No such admin route.');
