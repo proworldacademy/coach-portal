@@ -44,7 +44,7 @@ async function overview(stripe) {
     const end = S.periodEnd(sub); const nextDate = end ? CAL.dateOfUnixET(end) : null;
     let nextCents = null; if (plan && nextDate && sub.status !== 'canceled' && !sub.cancel_at_period_end) { const p = CAL.parts(nextDate); nextCents = CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); }
     const li = sub.latest_invoice && typeof sub.latest_invoice === 'object' ? sub.latest_invoice : null;
-    subs.push({ id: sub.id, status: sub.status, hold: m.hold === 'true', holdSince: m.hold_since || null, cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection,
+    subs.push({ id: sub.id, session: m.session || null, needsReview: m.needs_review || null, status: sub.status, hold: m.hold === 'true', holdSince: m.hold_since || null, cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection,
       player: m.player || '', playerDob: m.player_dob || '', program: program ? program.short : (m.program || '—'), programId: program ? program.id : m.program || '', plan: plan ? plan.label : (m.plan_label || (price ? '$' + price.unit_amount / 100 : '—')), days: (m.days || '').split(',').filter(Boolean), monthly: plan ? plan.monthly : price ? price.unit_amount / 100 : null, qbo: program ? program.qbo : '',
       start: m.start || CAL.dateOfUnixET(sub.created), created: CAL.dateOfUnixET(sub.created), next: nextDate ? { date: nextDate, cents: nextCents } : null,
       customer: { id: c.id, name: c.name || '', email: c.email || '', phone: c.phone || '' },
@@ -55,9 +55,17 @@ async function overview(stripe) {
     const c = typeof inv.customer === 'object' ? inv.customer : { id: inv.customer };
     open.push({ id: inv.id, created: CAL.dateOfUnixET(inv.created), amountDue: inv.amount_due, description: inv.description || (inv.lines && inv.lines.data[0] && inv.lines.data[0].description) || '', kind: (inv.metadata || {}).kind || (S.invoiceSubscription(inv) ? 'tuition' : 'one-off'), subscription: S.invoiceSubscription(inv), url: inv.hosted_invoice_url || null, customer: { id: c.id, name: c.name || '', email: c.email || '' }, player: (inv.metadata || {}).player || '' });
   }
+  // Paid start months (last 30 days) whose plan does not exist yet — the family never reached the thank-you page and the sweep has not run.
+  const pending = [];
+  const bySession = new Set(subs.map((s) => s.session).filter(Boolean));
+  for await (const cs of stripe.checkout.sessions.list({ status: 'complete', created: { gte: Math.floor(Date.now() / 1000) - 30 * 86400 }, limit: 100 })) {
+    if (cs.mode !== 'payment' || !cs.metadata || cs.metadata.kind !== 'program' || cs.payment_status !== 'paid' || bySession.has(cs.id)) continue;
+    const m = cs.metadata; const prog = CAT.program(m.program);
+    pending.push({ session: cs.id, player: m.player || '', program: prog ? prog.short : m.program, plan: m.plan_label || m.plan, start: m.start, paid: cs.amount_total || 0, created: CAL.dateOfUnixET(cs.created), customer: S.customerId(cs.customer) });
+  }
   subs.sort((a, b) => (a.player || '').localeCompare(b.player || ''));
   const active = subs.filter((s) => ['active', 'past_due', 'trialing'].includes(s.status));
-  return { at: new Date().toISOString(), today: CAL.todayET(), counts: { subscriptions: active.length, onHold: active.filter((s) => s.hold).length, pastDue: subs.filter((s) => s.status === 'past_due').length, openInvoices: open.length, openAmount: open.reduce((n, i) => n + (i.amountDue || 0), 0), monthlyRun: active.reduce((n, s) => n + (s.next && s.next.cents ? s.next.cents : 0), 0) }, subscriptions: subs, openInvoices: open };
+  return { at: new Date().toISOString(), today: CAL.todayET(), pending, counts: { subscriptions: active.length, onHold: active.filter((s) => s.hold).length, pastDue: subs.filter((s) => s.status === 'past_due').length, openInvoices: open.length, openAmount: open.reduce((n, i) => n + (i.amountDue || 0), 0), monthlyRun: active.reduce((n, s) => n + (s.next && s.next.cents ? s.next.cents : 0), 0) }, subscriptions: subs, openInvoices: open };
 }
 
 /* Charge the card on file for a one-time line (an unscheduled session flagged by attendance, a court booking). */
