@@ -1,35 +1,73 @@
-# PROWORLD — publish the site to Firebase Hosting (proworld-coach-portal.web.app) on every change to main.
-# Needs one repository secret: FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL — the JSON key of a service
-# account in the proworld-coach-portal Google Cloud project with the "Firebase Hosting Admin" role.
-# Until that secret exists the workflow runs and does nothing (the GitHub Pages mirror still updates on its own).
-name: Publish to Firebase Hosting
+# PROWORLD — publish the site AND the billing engine to Firebase (proworld-coach-portal) on every change to main.
+#
+# Repository secrets it uses (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL — the JSON key of the deploy service account in the proworld-coach-portal
+#       Google Cloud project. For the site alone it needs "Firebase Hosting Admin"; for the billing engine it also needs
+#       "Cloud Functions Admin", "Cloud Run Admin", "Service Account User", "Secret Manager Admin", "Cloud Scheduler Admin",
+#       "Service Usage Admin", "Artifact Registry Administrator" and "Cloud Build Editor" (or simply "Editor" + "Cloud Run Admin"
+#       + "Service Account User" + "Secret Manager Admin").
+#   STRIPE_SECRET_KEY — the Stripe key the engine runs with (a sandbox key = test mode; a live restricted key = live).
+#       It is only read when this workflow is run by hand with "Copy the Stripe key into Secret Manager" ticked; it is then stored
+#       in Google Secret Manager as STRIPE_SECRET_KEY and the functions are redeployed to pick it up. It never appears in logs.
+#
+# Order: tests → site (Hosting) → [Stripe key → Secret Manager] → billing engine (Functions). The site is published even when the
+# engine step fails (for example before the project is on the Blaze plan), so a billing hiccup never blocks a page fix.
+name: Publish to Firebase
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      set_stripe_secret:
+        description: "Copy the STRIPE_SECRET_KEY repository secret into Secret Manager before deploying the engine"
+        type: boolean
+        default: false
 concurrency:
   group: publish-live
   cancel-in-progress: false
 permissions:
   contents: read
-  checks: write
-  pull-requests: write
+env:
+  PROJECT: proworld-coach-portal
+  FIREBASE_TOOLS: firebase-tools@14
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install and test the billing engine
+        run: |
+          npm install --prefix functions --no-audit --no-fund
+          npm test --prefix functions
       - name: Is the Firebase key in place?
         id: key
         run: echo "present=${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL != '' }}" >> "$GITHUB_OUTPUT"
-      - name: Deploy to the live channel
+      - name: Sign in to Firebase with the deploy service account
         if: steps.key.outputs.present == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL }}
-          projectId: proworld-coach-portal
-          channelId: live
+        run: printf '%s' "$KEY" > "$RUNNER_TEMP/firebase-sa.json"
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL }}
+      - name: Publish the site (Hosting, live channel)
+        if: steps.key.outputs.present == 'true'
+        run: npx --yes $FIREBASE_TOOLS deploy --only hosting --project "$PROJECT" --non-interactive --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+      - name: Copy the Stripe key into Secret Manager
+        if: steps.key.outputs.present == 'true' && github.event_name == 'workflow_dispatch' && inputs.set_stripe_secret
+        run: |
+          if [ -z "$STRIPE_SECRET_KEY" ]; then echo "The STRIPE_SECRET_KEY repository secret is empty — add it under Settings → Secrets and variables → Actions, then run again."; exit 1; fi
+          printf '%s' "$STRIPE_SECRET_KEY" | npx --yes $FIREBASE_TOOLS functions:secrets:set STRIPE_SECRET_KEY --data-file=- --project "$PROJECT" --non-interactive --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      - name: Publish the billing engine (Functions: api + dailyBilling)
+        if: steps.key.outputs.present == 'true'
+        run: npx --yes $FIREBASE_TOOLS deploy --only functions --project "$PROJECT" --non-interactive --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
       - name: No key yet
         if: steps.key.outputs.present != 'true'
         run: echo "FIREBASE_SERVICE_ACCOUNT_PROWORLD_COACH_PORTAL is not set — nothing published. Add the secret and re-run."
