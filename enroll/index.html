@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light">
+<title>Enroll · ProWorld Academy</title>
+<meta name="description" content="Enroll at ProWorld Academy, Delray Beach — pick your program, how often you train and how you'd like to pay. Secure payment by Stripe.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23050505'/%3E%3Cpath d='M22 48 30 16h14c7 0 10 4 9 10s-6 10-13 10h-6l-3 12z' fill='%23E2FE78'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/shared/brand.css">
+<style>
+:root{--bg:#FFFFFF;--ink:#000000;--muted:rgba(0,0,0,.58);--line:rgba(0,0,0,.14);--surface:rgba(0,0,0,.045);--surface-2:rgba(0,0,0,.09);
+  --black:#000000;--white:#FFFFFF;--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;--cyan:#A9F3F7;
+  --display:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;--body:'Aeonik Pro','Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;--radius:4px;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,select{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;line-height:.92;letter-spacing:-.005em}
+:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+.topbar{background:var(--black);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.14)}
+.topbar .wordmark{display:block;height:22px;aspect-ratio:600/69;background:var(--logo-lime) center/contain no-repeat;flex:none}
+.topbar .tag{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:19px;line-height:1;padding-left:14px;border-left:1px solid rgba(255,255,255,.28);white-space:nowrap}
+.topbar .line{margin-left:auto;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7);white-space:nowrap}
+@media (max-width:560px){.topbar .line{display:none}.topbar .wordmark{height:18px}.topbar .tag{font-size:16px}}
+main{max-width:1180px;margin:0 auto;padding:32px 20px 140px}
+@media (max-width:720px){main{padding:22px 14px 150px}}
+.hero h1{font-size:clamp(50px,8.5vw,104px)}
+.hero h1 em{font-style:inherit;color:var(--ink);background:var(--lime);padding:0 .08em}
+.hero p{max-width:620px;margin:12px 0 0;color:var(--muted);font-size:16px}
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:48px;align-items:start;margin-top:28px}
+@media (max-width:920px){.two-col{grid-template-columns:1fr;gap:24px}}
+.step{padding:30px 0;border-top:1px solid var(--line)}
+.step:first-child{border-top:0;padding-top:8px}
+.step-head{display:flex;align-items:baseline;gap:14px;margin-bottom:16px}
+.step-num{font-family:var(--display);font-style:italic;font-weight:800;font-size:22px;color:var(--muted);min-width:28px}
+.step-head h2{font-size:clamp(30px,4.6vw,46px)}
+.step-help{margin:-6px 0 16px 42px;color:var(--muted);font-size:14px}
+.menu{display:flex;flex-direction:column;gap:8px}
+.menu-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;width:100%;text-align:left;background:var(--surface);border:2px solid transparent;border-radius:var(--radius);padding:18px 20px;transition:border-color .12s,background .12s}
+.menu-row:hover{border-color:var(--ink)}
+.menu-row[aria-pressed="true"]{background:var(--lime);color:#000;border-color:var(--lime)}
+.menu-row .name,.menu-row .meta,.menu-row .blurb{display:block}
+.menu-row .name{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(28px,4vw,40px);line-height:.95}
+.menu-row .meta{margin-top:6px;font-size:13.5px;color:var(--muted)}
+.menu-row[aria-pressed="true"] .meta,.menu-row[aria-pressed="true"] .price span,.menu-row[aria-pressed="true"] .blurb{color:rgba(0,0,0,.66)}
+.menu-row .price{text-align:right;white-space:nowrap}
+.menu-row .price b{font-family:var(--display);font-style:italic;font-weight:800;font-size:clamp(26px,3.6vw,36px);display:block;line-height:1}
+.menu-row .price span{font-size:12px;color:var(--muted)}
+.menu-row .blurb{margin-top:8px;font-size:14px;max-width:520px}
+@media (max-width:560px){.menu-row{grid-template-columns:1fr}.menu-row .price{text-align:left;margin-top:6px}}
+.subhead{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:22px 0 8px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.opt{text-align:left;background:var(--surface);border:2px solid transparent;border-radius:var(--radius);padding:16px 18px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;transition:border-color .12s,background .12s}
+.opt>span{display:block}.opt .t,.opt .d{display:block}.opt .d{margin-top:6px}
+.opt:hover{border-color:var(--ink)}
+.opt[aria-pressed="true"]{background:var(--lime);color:#000;border-color:var(--lime)}
+.opt .t{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:24px;line-height:1}
+.opt .d{font-size:13px;color:var(--muted);line-height:1.35}
+.opt[aria-pressed="true"] .d,.opt[aria-pressed="true"] .p small{color:rgba(0,0,0,.65)}
+.opt .p{font-size:15px;font-weight:700}
+.opt .p small{font-weight:400;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:2px solid transparent;border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;transition:border-color .12s,background .12s}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--lime);color:#000;border-color:var(--lime)}
+.chip:disabled{opacity:.35;cursor:not-allowed;border-color:transparent}
+.chip.lock[aria-pressed="true"]{opacity:1}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+@media (max-width:560px){.form{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.wide{grid-column:1/-1}
+.field label{font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.field input,.field select{background:var(--bg);border:1.5px solid var(--line);border-radius:var(--radius);padding:11px 12px;font-size:15px;width:100%}
+.field input:focus,.field select:focus{border-color:var(--ink);outline:none}
+.field input.err{border-color:var(--orchid)}
+.field .hint{font-size:12px;color:var(--muted)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;margin-top:10px}
+.check input{margin-top:3px;width:18px;height:18px;accent-color:#000;flex:none}
+.check a{color:inherit;text-decoration:underline;text-underline-offset:2px}.check a:hover{background:var(--lime)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--black);color:#fff;border-radius:var(--radius);padding:14px 22px;font-weight:700;font-size:15px;text-decoration:none;transition:background .12s,color .12s}
+.btn:hover{background:#222}
+.btn.lime{background:var(--lime);color:#000}.btn.lime:hover{background:#d6f45c}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}.btn.ghost:hover{border-color:var(--ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.spin{width:16px;height:16px;border:2px solid rgba(0,0,0,.25);border-top-color:#000;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stripe-note{font-size:12.5px;color:var(--muted);margin-top:12px}
+.summary{position:sticky;top:20px;background:var(--black);color:#fff;border-radius:var(--radius);padding:22px 22px 20px;border-top:4px solid var(--lime)}
+.summary h3{font-size:30px;color:var(--lime)}
+.summary .rows{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.summary .rows li{display:flex;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.14)}
+.summary .rows li span:first-child{color:rgba(255,255,255,.62)}
+.summary .rows li span:last-child{text-align:right}
+.summary .empty{color:rgba(255,255,255,.6);font-size:13.5px;margin:12px 0 0}
+.summary .total{margin-top:16px}
+.summary .total .l{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.62)}
+.summary .total .n{font-family:var(--display);font-style:italic;font-weight:800;font-size:56px;line-height:1;color:var(--lime)}
+.summary .then{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:8px;line-height:1.45}
+.summary .bar,.summary .toggle{display:none}
+@media (max-width:920px){
+  .summary{position:fixed;left:0;right:0;bottom:0;top:auto;border-radius:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:30;border-top:3px solid var(--lime)}
+  .summary.collapsed .rows,.summary.collapsed .total,.summary.collapsed .desk-only,.summary.collapsed .empty{display:none}
+  .summary .bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .summary .bar h3{font-size:22px}.summary .bar .n{font-family:var(--display);font-style:italic;font-weight:800;font-size:30px;line-height:1;color:var(--lime)}
+  .summary .toggle{display:inline-block;margin-top:8px;font-size:12.5px;color:rgba(255,255,255,.75);text-decoration:underline}
+  .summary .desk-only{display:none}.summary .total .n{font-size:40px}
+}
+.foot{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+.foot b{color:var(--ink)}
+.loading{padding:40px 0;color:var(--muted)}
+.problem{background:var(--surface);border-left:4px solid var(--orchid);border-radius:var(--radius);padding:16px 18px;font-size:14px;margin-top:20px}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:#000;color:#fff;padding:12px 18px;border-radius:var(--radius);font-size:14px;opacity:0;transition:opacity .2s,transform .2s;z-index:50;max-width:92vw;text-align:center;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (min-width:921px){#toast{bottom:24px}}
+</style>
+</head>
+<body>
+<header class="topbar"><a class="wordmark" href="https://proworldacademy.com" aria-label="PROWORLD" title="proworldacademy.com"></a><span class="tag">Enroll</span><span class="line">Where Champions Are Made.</span></header>
+<main id="app"><div class="loading">Loading the programs…</div></main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+'use strict';
+const $=(s,r)=>(r||document).querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(Number(n))?0:2,maximumFractionDigits:2});
+const cents=c=>money(c/100);
+const ALL=['Mon','Tue','Wed','Thu','Fri'];
+const ordinal=n=>n+(n%100>=11&&n%100<=13?'th':['th','st','nd','rd'][Math.min(n%10,4)]||'th');
+let toastT;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3600)}
+const prefersReduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function reveal(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:prefersReduced?'auto':'smooth',block:'start'})}
+const todayLocal=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+
+let CAT=null, quote=null, quoteT=null, busy=false;
+const params=new URLSearchParams(location.search);
+const e={program:params.get('p')||null,kind:null,plan:params.get('plan')||null,option:null,days:(params.get('days')||'').split(',').map(s=>s.trim()).filter(Boolean),start:params.get('start')||todayLocal(),camp:params.get('camp')||null,campOption:null,
+  player:{first:params.get('first')||'',last:params.get('last')||'',dob:params.get('dob')||''},parent:{name:params.get('parent')||'',email:params.get('email')||'',phone:params.get('phone')||''},agree:false,authorize:false,summaryOpen:false,by:params.get('by')||'enroll'};
+if(e.program&&e.plan)e.kind='monthly';
+
+function load(){
+  fetch('/api/catalog',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('catalog '+r.status);return r.json()}).then(c=>{CAT=c;if(e.program&&!PROG(e.program)){e.program=null;e.kind=null;e.plan=null}if(e.kind==='monthly'){const P=PROG(e.program);const pl=P&&P.plans.find(x=>x.id===e.plan);if(!pl){e.kind=null;e.plan=null}else if(pl.days>=P.days.length)e.days=P.days.slice();else e.days=e.days.filter(d=>P.days.includes(d)).slice(0,pl.days)}render();if(e.kind==='monthly')refreshQuote()})
+  .catch(()=>{$('#app').innerHTML='<section class="hero"><h1>One <em>moment</em></h1><p>The enrollment page couldn\'t reach the academy\'s system. Reload in a minute, or call the front desk at (561) 403-0008 and we\'ll enroll you over the phone.</p></section>'});
+}
+const PROG=id=>CAT&&CAT.programs.find(p=>p.id===id);
+const CAMP=id=>CAT&&CAT.camps.find(c=>c.id===id);
+
+function render(){
+  const P=e.program?PROG(e.program):null;const C=e.camp?CAMP(e.camp):null;const plan=P&&e.plan?P.plans.find(x=>x.id===e.plan):null;const hasPlans=!!(P&&P.plans.length);
+  let n=0;const num=()=>++n;
+  let html=`<section class="hero"><h1>Pick your <em>program.</em></h1><p>Fall 2026 at ProWorld Academy, Delray Beach. Choose a program, how often you train and how you'd like to pay — then a secure Stripe checkout. You're enrolled and on the roster in about two minutes.</p></section><div class="two-col"><div class="steps">`;
+  html+=`<section class="step" id="s-program"><div class="step-head"><span class="step-num">${num()}</span><h2>Program</h2></div><div class="menu">`;
+  for(const p of CAT.programs){const from=p.plans.length?{a:Math.min(...p.plans.map(x=>x.monthly)),u:'per month'}:{a:Math.min(...p.packs.map(x=>x.price)),u:'per session'};html+=`<button class="menu-row" data-act="program" data-id="${p.id}" aria-pressed="${e.program===p.id}"><span><span class="name">${esc(p.name)}</span><span class="meta">${esc(p.sport)} · ${esc(p.ages)} · ${esc(p.time)}</span><span class="blurb">${esc(p.blurb)}</span></span><span class="price"><b>from ${money(from.a)}</b><span>${from.u}</span></span></button>`}
+  html+=`</div><p class="subhead">Camps</p><div class="menu">`;
+  for(const c of CAT.camps){html+=`<button class="menu-row" data-act="camp" data-id="${c.id}" aria-pressed="${e.camp===c.id}"><span><span class="name">${esc(c.name)}</span><span class="meta">${esc(c.dates)} · ${esc(c.ages)}</span><span class="blurb">${esc(c.blurb)}</span></span><span class="price"><b>from ${money(Math.min(...c.options.map(o=>o.price)))}</b><span>per option</span></span></button>`}
+  html+=`</div></section>`;
+  if(C){
+    html+=`<section class="step" id="s-camp"><div class="step-head"><span class="step-num">${num()}</span><h2>Which option</h2></div><div class="opts">`;
+    for(const o of C.options)html+=`<button class="opt" data-act="campopt" data-id="${o.id}" aria-pressed="${e.campOption===o.id}"><span><span class="t">${esc(o.label)}</span><span class="d">${esc(C.dates)}</span></span><span class="p">${money(o.price)}<small> once</small></span></button>`;
+    html+=`</div></section>`;
+    if(e.campOption)html+=peopleStep(num(),false);
+  }
+  if(P){
+    if(hasPlans){html+=`<section class="step" id="s-plan"><div class="step-head"><span class="step-num">${num()}</span><h2>How often</h2></div><div class="opts">`;for(const pl of P.plans)html+=`<button class="opt" data-act="plan" data-id="${pl.id}" aria-pressed="${e.plan===pl.id}"><span><span class="t">${esc(pl.label)}</span><span class="d">${esc(pl.sub||('Monthly · '+pl.days+' day'+(pl.days>1?'s':'')+' a week · '+P.time))}</span></span><span class="p">${money(pl.monthly)}<small> / month</small></span></button>`;html+=`</div></section>`}
+    const planOk=!hasPlans||!!plan;
+    if(planOk){html+=`<section class="step" id="s-billing"><div class="step-head"><span class="step-num">${num()}</span><h2>How you'd like to pay</h2></div><div class="opts">`;
+      if(plan)html+=`<button class="opt" data-act="billing" data-id="monthly" aria-pressed="${e.kind==='monthly'}"><span><span class="t">Monthly</span><span class="d">Charged on the 1st of each month. Start mid-month and you pay only the remaining training days; months with a school break are prorated. Cancel any time from your account.</span></span><span class="p">${money(plan.monthly)}<small> / month</small></span></button>`;
+      for(const w of (P.weekly||[]))html+=`<button class="opt" data-act="billing" data-id="weekly|${w.id}" aria-pressed="${e.kind==='weekly'&&e.option===w.id}"><span><span class="t">${esc(w.label)}</span><span class="d">One week, charged when booked. For visiting players and trial weeks.</span></span><span class="p">${money(w.price)}<small> / week</small></span></button>`;
+      for(const pk of (P.packs||[]))html+=`<button class="opt" data-act="billing" data-id="pack|${pk.id}" aria-pressed="${e.kind==='pack'&&e.option===pk.id}"><span><span class="t">${esc(pk.label)}</span><span class="d">${pk.sessions===1?'A single session, booked in the app.':'Flexible. Book each session at least 6 hours ahead. Expires at the end of the term.'}</span></span><span class="p">${money(pk.price)}<small> once</small></span></button>`;
+      if(P.dropin&&!(P.packs||[]).some(x=>x.sessions===1))html+=`<button class="opt" data-act="billing" data-id="dropin|1" aria-pressed="${e.kind==='dropin'}"><span><span class="t">${esc(P.dropin.label)}</span><span class="d">One session, paid now.</span></span><span class="p">${money(P.dropin.price)}<small> once</small></span></button>`;
+      if(P.trial)html+=`<button class="opt" data-act="billing" data-id="trial|1" aria-pressed="${e.kind==='trial'}"><span><span class="t">${esc(P.trial.label)}</span><span class="d">Come and try a session first. No card needed.</span></span><span class="p">Free</span></button>`;
+      html+=`</div></section>`}
+    if(e.kind==='monthly'&&plan){const lock=plan.days>=P.days.length;html+=`<section class="step" id="s-days"><div class="step-head"><span class="step-num">${num()}</span><h2>Which days</h2></div><p class="step-help">${lock?'Covers every training day.':'Pick '+plan.days+' of '+P.days.length+'. Same-month changes are made with the front desk with 6 hours notice.'}</p><div class="chips">`;for(const d of ALL){const avail=P.days.includes(d);const on=e.days.includes(d);const dis=!avail||(!on&&e.days.length>=plan.days);html+=`<button class="chip ${lock?'lock':''}" data-act="day" data-id="${d}" aria-pressed="${on}" ${dis||lock?'disabled':''}>${d}</button>`}html+=`</div>`;
+      if(e.days.length===plan.days){html+=`<div class="form" style="margin-top:22px"><div class="field"><label for="f-start">First day</label><input id="f-start" type="date" value="${esc(e.start)}" min="${todayLocal()}"><span class="hint">Today, or the day you'd like to begin. You pay only the training days left in that month.</span></div></div>`}
+      html+=`</section>`;
+      if(e.days.length===plan.days)html+=peopleStep(num(),true)}
+    else if(e.kind&&e.kind!=='monthly')html+=peopleStep(num(),false);
+  }
+  html+=`</div>`+summaryHTML()+`</div><footer class="foot"><span><b>ProWorld Academy</b> · 651 Egret Cir, Delray Beach, FL 33444 · (561) 403-0008 · info@proworldacademy.com</span><span>Payments by Stripe. Your card details never reach us.</span></footer>`;
+  $('#app').innerHTML=html;bind();
+}
+function peopleStep(n,monthly){
+  const p=e.player,g=e.parent;const late=CAT.rules.late;
+  return `<section class="step" id="s-player"><div class="step-head"><span class="step-num">${n}</span><h2>Player & parent</h2></div><div class="form"><div class="field"><label for="f-first">Player first name</label><input id="f-first" data-f="player.first" value="${esc(p.first)}" autocomplete="off"></div><div class="field"><label for="f-last">Player last name</label><input id="f-last" data-f="player.last" value="${esc(p.last)}" autocomplete="off"></div><div class="field"><label for="f-dob">Player date of birth</label><input id="f-dob" data-f="player.dob" type="date" value="${esc(p.dob)}"></div><div class="field"><label for="f-parent">Parent or guardian</label><input id="f-parent" data-f="parent.name" value="${esc(g.name)}" autocomplete="name"></div><div class="field"><label for="f-email">Email</label><input id="f-email" data-f="parent.email" type="email" value="${esc(g.email)}" autocomplete="email"><span class="hint">Receipts and renewal reminders go here.</span></div><div class="field"><label for="f-phone">Mobile</label><input id="f-phone" data-f="parent.phone" type="tel" value="${esc(g.phone)}" autocomplete="tel"><span class="hint">Text alerts for schedule changes and weather.</span></div></div>
+  <p class="subhead">Agreements</p><label class="check"><input type="checkbox" data-f="agree" ${e.agree?'checked':''}><span>I've read and accept the <a href="https://proworldacademy.com/privacy-policy" target="_blank" rel="noopener">ProWorld Academy Program Policies & Enrollment Agreement</a>, including the attendance, rescheduling and weather policies.</span></label>${monthly?`<label class="check"><input type="checkbox" data-f="authorize" ${e.authorize?'checked':''}><span>I authorize ProWorld Academy to charge my card on the 1st of each month until I cancel (less in months with a school break, prorated by training days). If a payment is not received by the ${ordinal(late.grace_until_day)}, a ${money(late.late_fee_usd)} late fee applies; training pauses on the ${ordinal(late.suspend_day)} and the spot is released on the ${ordinal(late.remove_day)} if still unpaid.</span></label>`:''}
+  <div class="actions"><button class="btn lime" id="go" data-act="pay">${e.kind==='trial'?'Reserve the free session':'Continue to secure payment'}</button><span class="stripe-note">${e.kind==='trial'?'No payment today.':'Card entered on Stripe\'s secure page, saved on file for your account.'}</span></div></section>`;
+}
+function summaryHTML(){
+  const P=e.program?PROG(e.program):null;const C=e.camp?CAMP(e.camp):null;const plan=P&&e.plan?P.plans.find(x=>x.id===e.plan):null;let rows='';let due=null,then='';
+  if(C){rows+=`<li><span>Camp</span><span>${esc(C.name)}</span></li>`;const o=C.options.find(x=>x.id===e.campOption);if(o){rows+=`<li><span>${esc(o.label)}</span><span>${money(o.price)}</span></li>`;due=money(o.price);then='One payment. See you at camp.'}}
+  else if(P){rows+=`<li><span>Program</span><span>${esc(P.name)}</span></li>`;
+    if(e.kind==='monthly'&&plan){rows+=`<li><span>Schedule</span><span>${esc(plan.label)}${e.days.length?' · '+e.days.join(', '):''}</span></li><li><span>Billing</span><span>Monthly, renews on the 1st</span></li>`;if(quote){for(const l of quote.lines)rows+=`<li><span>${esc(l.label)}</span><span>${cents(l.cents)}</span></li>`;due=cents(quote.dueCents);then=quote.then}else if(e.days.length===plan.days){due='…';then='Working out your first month…'}}
+    else if(e.kind==='weekly'){const w=P.weekly.find(x=>x.id===e.option);rows+=`<li><span>Billing</span><span>Per week booked</span></li><li><span>${esc(w.label)} · 1 week</span><span>${money(w.price)}</span></li>`;due=money(w.price);then='Charged per week booked — no renewal. Book more weeks with the front desk.'}
+    else if(e.kind==='pack'){const k=P.packs.find(x=>x.id===e.option);rows+=`<li><span>${esc(k.label)}</span><span>${money(k.price)}</span></li>`;due=money(k.price);then='One payment, no renewal. Sessions are booked ahead and expire at the end of the term.'}
+    else if(e.kind==='dropin'){rows+=`<li><span>${esc(P.dropin.label)}</span><span>${money(P.dropin.price)}</span></li>`;due=money(P.dropin.price);then='One session.'}
+    else if(e.kind==='trial'){rows+=`<li><span>${esc(P.trial.label)}</span><span>Free</span></li>`;due='$0';then='No card needed. The front desk will confirm your day and time.'}}
+  if(e.player.first)rows+=`<li><span>Player</span><span>${esc(e.player.first+' '+e.player.last)}</span></li>`;
+  const has=P||C;
+  return `<aside class="summary ${e.summaryOpen?'':'collapsed'}" id="summary"><div class="bar"><h3>Your enrollment</h3><span class="n">${due==null?'—':due}</span></div><h3 class="desk-only">Your enrollment</h3>${has?`<ul class="rows">${rows}</ul>`:`<p class="empty">Nothing picked yet. Start with a program.</p>`}${has?`<div class="total"><div class="l">Due today</div><div class="n">${due==null?'—':due}</div>${then?`<div class="then">${esc(then)}</div>`:''}</div>`:''}<button class="toggle" data-act="toggle">${e.summaryOpen?'Hide details':'Show details'}</button></aside>`;
+}
+function refreshSummary(){const old=$('#summary');if(!old)return;const tmp=document.createElement('div');tmp.innerHTML=summaryHTML();old.replaceWith(tmp.firstElementChild);const t=$('[data-act="toggle"]');if(t)t.onclick=()=>{e.summaryOpen=!e.summaryOpen;refreshSummary()}}
+function refreshQuote(){quote=null;refreshSummary();clearTimeout(quoteT);const P=PROG(e.program);const plan=P&&P.plans.find(x=>x.id===e.plan);if(!plan||e.days.length!==plan.days)return;const body={program:e.program,plan:e.plan,start:e.start};quoteT=setTimeout(()=>{fetch('/api/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()).then(q=>{if(q.error){toast(q.message||'Could not price this start date.');return}if(e.program!==body.program||e.plan!==body.plan||e.start!==body.start)return;quote=q;refreshSummary()}).catch(()=>{})},150)}
+function bind(){
+  const app=$('#app');
+  app.querySelectorAll('[data-act]').forEach(el=>{const act=el.dataset.act,id=el.dataset.id;
+    if(act==='program')el.onclick=()=>{if(e.program===id)return;Object.assign(e,{program:id,camp:null,campOption:null,kind:null,plan:null,option:null,days:[]});const P=PROG(id);render();reveal(P.plans.length?'s-plan':'s-billing')};
+    if(act==='camp')el.onclick=()=>{if(e.camp===id)return;Object.assign(e,{camp:id,program:null,kind:'camp',plan:null,option:null,days:[],campOption:null});render();reveal('s-camp')};
+    if(act==='campopt')el.onclick=()=>{e.campOption=id;render();reveal('s-player')};
+    if(act==='plan')el.onclick=()=>{e.plan=id;e.days=[];e.kind=null;e.option=null;quote=null;render();reveal('s-billing')};
+    if(act==='billing')el.onclick=()=>{const [k,opt]=id.split('|');e.kind=k;e.option=opt||null;e.days=[];quote=null;if(k==='monthly'){const P=PROG(e.program);const pl=P.plans.find(x=>x.id===e.plan);if(pl.days>=P.days.length)e.days=P.days.slice()}render();if(k==='monthly'){refreshQuote();reveal('s-days')}else reveal('s-player')};
+    if(act==='day')el.onclick=()=>{const i=e.days.indexOf(id);if(i>=0)e.days.splice(i,1);else e.days.push(id);const P=PROG(e.program);e.days.sort((a,b)=>P.days.indexOf(a)-P.days.indexOf(b));const pl=P.plans.find(x=>x.id===e.plan);render();refreshQuote();if(e.days.length===pl.days)reveal('s-player')};
+    if(act==='toggle')el.onclick=()=>{e.summaryOpen=!e.summaryOpen;refreshSummary()};
+    if(act==='pay')el.onclick=()=>pay(el);
+  });
+  const st=$('#f-start');if(st)st.onchange=()=>{e.start=st.value||todayLocal();refreshQuote()};
+  app.querySelectorAll('[data-f]').forEach(i=>{const f=i.dataset.f;if(i.type==='checkbox')i.addEventListener('change',()=>{e[f]=i.checked});else i.addEventListener('input',()=>{const [a,b]=f.split('.');e[a][b]=i.value;i.classList.remove('err');refreshSummary()})});
+}
+function validate(){const app=$('#app');let ok=true;const fields={'player.first':e.player.first,'player.last':e.player.last,'player.dob':e.player.dob,'parent.name':e.parent.name,'parent.email':e.parent.email,'parent.phone':e.parent.phone};
+  for(const f in fields){const v=fields[f];const i=app.querySelector(`[data-f="${f}"]`);const bad=!v||(f==='parent.email'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))||(f==='parent.phone'&&v.replace(/\D/g,'').length<10);if(i)i.classList.toggle('err',bad);if(bad)ok=false}
+  if(!ok){toast('Fill in the highlighted fields to continue.');return false}
+  if(!e.agree||(e.kind==='monthly'&&!e.authorize)){toast(e.kind==='monthly'?'Accept the agreement and authorize the monthly charge.':'Accept the enrollment agreement to continue.');return false}
+  return true}
+function pay(btn){
+  if(busy||!validate())return;
+  let body;const people={player:e.player,parent:e.parent,agree:true,by:e.by,cancel_url:location.href.split('#')[0],idempotency:(crypto.randomUUID?crypto.randomUUID():String(Date.now()))};
+  if(e.kind==='monthly')body=Object.assign({kind:'monthly',program:e.program,plan:e.plan,days:e.days,start:e.start,authorize:e.authorize===true},people);
+  else{const P=e.program?PROG(e.program):null;const C=e.camp?CAMP(e.camp):null;body=Object.assign({kind:'items',items:[itemFor(P,C)]},people)}
+  busy=true;btn.disabled=true;btn.innerHTML='<span class="spin"></span> Opening secure payment…';
+  fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()).then(out=>{if(out.error){throw new Error(out.message||'Could not start the payment.')}location.href=out.url})
+  .catch(err=>{busy=false;btn.disabled=false;btn.textContent=e.kind==='trial'?'Reserve the free session':'Continue to secure payment';toast(err.message||'Could not start the payment. Call (561) 403-0008.')});
+}
+/* the one-time line to buy — its lookup key comes with the catalog; the server checks it against Stripe before charging */
+function itemFor(P,C){
+  if(C){const o=C.options.find(x=>x.id===e.campOption);return {lookup:o.lookup}}
+  if(e.kind==='weekly')return {lookup:P.weekly.find(x=>x.id===e.option).lookup};
+  if(e.kind==='pack')return {lookup:P.packs.find(x=>x.id===e.option).lookup};
+  if(e.kind==='dropin')return {lookup:P.dropin.lookup};
+  if(e.kind==='trial')return {lookup:P.trial.lookup};
+  return null;
+}
+load();
+})();
+</script>
+</body>
+</html>
