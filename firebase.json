@@ -28,8 +28,8 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "run": {
-          "serviceId": "api",
+        "function": {
+          "functionId": "api",
           "region": "us-central1"
         }
       }
