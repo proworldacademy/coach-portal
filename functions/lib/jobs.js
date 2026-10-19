@@ -9,10 +9,30 @@
 const CAL = require('./calendar');
 const CAT = require('./catalog');
 const S = require('./stripe');
+const CHECKOUT = require('./checkout');
 
 const RULES = CAL.RULES;
 const LATE = RULES.late_policy;
 const monthlyLookups = () => new Set(CAT.PROGRAMS.flatMap((p) => p.plans.map((x) => x.lookup)));
+
+/* 0. Paid start months without their plan yet: a family paid, closed the tab before the thank-you page, and nothing created the plan.
+   Every completed start-month payment of the last two weeks gets its plan here (idempotent — already-converted sessions are skipped). */
+async function convertPaidEnrollments(stripe, today, log) {
+  log = log || (() => {});
+  const report = { checked: 0, created: [], already: 0, errors: [] };
+  const since = Math.floor(Date.now() / 1000) - 14 * 86400;
+  for await (const session of stripe.checkout.sessions.list({ status: 'complete', created: { gte: since }, limit: 100, expand: ['data.payment_intent'] })) {
+    if (!CHECKOUT.isProgramPayment(session)) continue;
+    report.checked++;
+    try {
+      const before = await CHECKOUT.findEnrollment(stripe, S.customerId(session.customer), session.id);
+      if (before) { report.already++; continue; }
+      const sub = await CHECKOUT.ensureEnrollment(stripe, session, log);
+      if (sub) report.created.push({ session: session.id, subscription: sub.id, player: session.metadata.player });
+    } catch (e) { report.errors.push({ session: session.id, player: session.metadata && session.metadata.player, error: e.message }); log(`error ${session.id}: ${e.message}`); }
+  }
+  return report;
+}
 
 function daysBetween(a, b) { const pa = CAL.parts(a), pb = CAL.parts(b); return Math.round((Date.UTC(pb.y, pb.m, pb.d) - Date.UTC(pa.y, pa.m, pa.d)) / 86400000); }
 
@@ -111,4 +131,4 @@ function breakMonthNotice(programShort, priceCents, y, m) {
   return `Heads-up for ${CAL.MONTHS_LONG[m]}: ${breaks.map((b) => b.label + ' (' + b.from.slice(5).replace('-', '/') + '–' + b.to.slice(5).replace('-', '/') + ')').join(' and ')} ${breaks.length > 1 ? 'are' : 'is'} not part of the ${programShort} program, so the ${CAL.MONTHS[m]} 1 charge is prorated: ${f.trainingDays} of ${f.weekdays} training days = $${charge / 100} instead of $${priceCents / 100}. The credit shows on the invoice. ${camps ? 'Want to train that week? ' + camps.charAt(0).toUpperCase() + camps.slice(1) + ' are booked separately.' : ''}`.trim();
 }
 
-module.exports = { applyBreakCredits, applyLatePolicy, breakMonthNotice, daysBetween };
+module.exports = { convertPaidEnrollments, applyBreakCredits, applyLatePolicy, breakMonthNotice, daysBetween };
