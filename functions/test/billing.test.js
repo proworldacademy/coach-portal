@@ -73,44 +73,85 @@ const family = { player: { first: 'Ava', last: 'Torres', dob: '2014-05-02' }, pa
 
 const NOW_OCT13 = Date.UTC(2026, 9, 13, 14, 0, 0) / 1000;                                   // Oct 13, 2026 10:00 Delray Beach
 
-test('monthly enrollment: the prorated month as a one-time line now, the plan starts billing on the next 1st (trial to the 1st, no Stripe proration)', async () => {
+test('monthly enrollment: the start month is a plain payment that saves the card; the plan is created on the next 1st with no proration', async () => {
   const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
   const out = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '3', days: ['Mon', 'Wed', 'Fri'], start: '2026-10-13', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'abc' }, family));
   assert.match(out.url, /^https:\/\/checkout\.stripe\.com\//);
   const call = stripe._calls.find((c) => c.name === 'checkout.sessions.create');
   const p = call.args.params;
-  assert.equal(p.mode, 'subscription');
-  assert.equal(p.line_items.length, 2);
-  assert.equal(p.line_items[0].price, 'price_afterschool_fall26_3d_monthly');
-  assert.deepEqual(p.line_items[1].price_data, { currency: 'usd', product: 'prod_VSweKxrlHVGGqf', unit_amount: 62400 });
-  assert.equal(out.quote.mode, 'trial');
-  assert.equal(p.subscription_data.proration_behavior, undefined);                           // Stripe refuses 'none' next to a one-time line
-  assert.equal(p.subscription_data.billing_cycle_anchor, undefined);
-  assert.equal(new Date(p.subscription_data.trial_end * 1000).toISOString(), '2026-11-01T11:00:00.000Z');
-  assert.ok(p.custom_text.submit.message.startsWith('Due today: October tuition (prorated: 14 of 22 training days, from Oct 13). Then $747 on Nov 1'));
-  assert.equal(p.subscription_data.metadata.days, 'Mon,Wed,Fri');
-  assert.equal(p.subscription_data.metadata.player, 'Ava Torres');
+  assert.equal(p.mode, 'payment');                                                          // no subscription at checkout → no "trial" anywhere
+  assert.equal(p.line_items.length, 1);
+  assert.deepEqual(p.line_items[0].price_data, { currency: 'usd', product: 'pw_firstmonth_afterschool', unit_amount: 62400 });
+  assert.equal(p.payment_intent_data.setup_future_usage, 'off_session');
+  assert.equal(p.invoice_creation.enabled, true);
+  assert.equal(p.metadata.kind, 'program'); assert.equal(p.metadata.days, 'Mon,Wed,Fri'); assert.equal(p.metadata.player, 'Ava Torres');
+  assert.equal(new Date(parseInt(p.metadata.anchor, 10) * 1000).toISOString(), '2026-11-01T11:00:00.000Z');
+  assert.equal(p.metadata.price, 'price_afterschool_fall26_3d_monthly');
   assert.equal(p.customer, stripe._db.customers[0].id);
   assert.equal(stripe._db.customers[0].email, 'jane.torres@example.com');
+  assert.ok(p.custom_text.submit.message.startsWith('Due today: October tuition (prorated: 14 of 22 training days, from Oct 13). Then $747 on Nov 1'));
   assert.ok(p.custom_text.submit.message.includes('$50 late fee'));
   assert.ok(p.custom_text.submit.message.length <= 1200);
   assert.equal(call.args.opts.idempotencyKey, 'enroll_abc');
-  assert.equal(out.quote.dueCents, 62400);
+  assert.equal(out.quote.mode, 'charge'); assert.equal(out.quote.dueCents, 62400);
   assert.match(out.quote.then, /^Then \$747 on Nov 1 \(16 of 21 training days · thanksgiving break off\), and \$980 on the 1st of every month after/);
+
+  // Stripe confirms the payment (the family lands on the thank-you page): the plan is created on the saved card.
+  const session = stripe._db.sessions[0];
+  Object.assign(session, { status: 'complete', payment_status: 'paid', customer: stripe._db.customers[0], payment_intent: { id: 'pi_1', payment_method: 'pm_card_1' }, line_items: { data: [{ description: 'Afterschool | Fall 2026 — start month (prorated by training days)', amount_total: 62400 }] }, customer_details: { email: 'jane.torres@example.com' } });
+  const st = await CHECKOUT.sessionStatus(stripe, session.id);
+  assert.equal(st.status, 'complete'); assert.equal(st.paid, 62400);
+  const created = stripe._calls.filter((c) => c.name === 'subscriptions.create');
+  assert.equal(created.length, 1);
+  const sp = created[0].args.params;
+  assert.equal(sp.customer, stripe._db.customers[0].id);
+  assert.equal(sp.items[0].price, 'price_afterschool_fall26_3d_monthly');
+  assert.equal(sp.default_payment_method, 'pm_card_1');
+  assert.equal(sp.proration_behavior, 'none');
+  assert.equal(new Date(sp.billing_cycle_anchor * 1000).toISOString(), '2026-11-01T11:00:00.000Z');
+  assert.equal(sp.metadata.session, session.id); assert.equal(sp.metadata.player, 'Ava Torres'); assert.equal(sp.metadata.price, undefined);
+  assert.equal(created[0].args.opts.idempotencyKey, 'plan_' + session.id);
+  assert.equal(stripe._db.customers[0].invoice_settings.default_payment_method, 'pm_card_1');   // the same card pays one-off charges on file
+  assert.equal(st.enrollment.subscription, stripe._db.subscriptions[0].id);
+  assert.deepEqual(st.enrollment.next, { date: '2026-11-01', cents: 74700 });
+  assert.deepEqual(st.enrollment.days, ['Mon', 'Wed', 'Fri']);
+  assert.ok(st.portalUrl);
+  // Opening the thank-you page again (or the sweep running later) never creates a second plan.
+  await CHECKOUT.sessionStatus(stripe, session.id);
+  const sweep = await JOBS.convertPaidEnrollments(stripe, '2026-10-14');
+  assert.equal(stripe._calls.filter((c) => c.name === 'subscriptions.create').length, 1);
+  assert.equal(sweep.checked, 1); assert.equal(sweep.already, 1); assert.equal(sweep.created.length, 0);
 });
 
-test('monthly enrollment edge cases: a start on the 1st and a start within two days of the 1st anchor the plan with nothing due today', async () => {
+test('a paid start month whose thank-you page was never opened gets its plan from the nightly sweep', async () => {
+  const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
+  await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'u10path', plan: '2', days: ['Tue', 'Thu'], start: '2026-10-13', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'swp' }, family));
+  const session = stripe._db.sessions[0];
+  Object.assign(session, { status: 'complete', payment_status: 'paid', customer: stripe._db.customers[0].id, payment_intent: { id: 'pi_2', payment_method: 'pm_card_2' } });
+  const report = await JOBS.convertPaidEnrollments(stripe, '2026-10-14');
+  assert.equal(report.created.length, 1); assert.equal(report.errors.length, 0);
+  const sub = stripe._db.subscriptions[0];
+  assert.equal(sub.metadata.session, session.id); assert.equal(sub.default_payment_method, 'pm_card_2');
+  assert.equal(sub.items.data[0].price.lookup_key, 'u10path_fall26_2d_monthly');
+  // An unpaid (abandoned) session is never converted.
+  await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'u10path', plan: '2', days: ['Tue', 'Thu'], start: '2026-10-13', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'abandoned' }, family));
+  const again = await JOBS.convertPaidEnrollments(stripe, '2026-10-14');
+  assert.equal(again.created.length, 0); assert.equal(again.already, 1);
+  assert.equal(stripe._db.subscriptions.length, 1);
+});
+
+test('monthly enrollment edge cases: a start on the 1st and a start within two days of the 1st let Checkout anchor the plan with nothing due today', async () => {
   const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
   // Asking for Nov 1 (a Sunday): the start rolls to Mon Nov 2, so November (16 of 21 training days of the $1,500 plan) is the one-time line and the plan starts billing Dec 1
   const nov = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '5', start: '2026-11-01', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'nov' }, family));
-  assert.equal(nov.quote.mode, 'trial'); assert.equal(nov.quote.dueCents, 114300); assert.equal(nov.quote.anchor, '2026-12-01');
+  assert.equal(nov.quote.mode, 'charge'); assert.equal(nov.quote.dueCents, 114300); assert.equal(nov.quote.anchor, '2026-12-01');
   // Starting on Dec 1 (a Tuesday, a training day): December is billed on Dec 1 like any month; nothing today; the plan is anchored to Dec 1
   const dec = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '5', start: '2026-12-01', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'dec' }, family));
   const pd = stripe._calls.filter((c) => c.name === 'checkout.sessions.create')[1].args.params;
   assert.equal(dec.quote.mode, 'anchor'); assert.equal(dec.quote.dueCents, 0);
   assert.equal(pd.line_items.length, 1);
   assert.equal(pd.subscription_data.proration_behavior, 'none');
-  assert.equal(pd.subscription_data.trial_end, undefined);
+  assert.equal(pd.mode, 'subscription');
   assert.equal(new Date(pd.subscription_data.billing_cycle_anchor * 1000).toISOString(), '2026-12-01T11:00:00.000Z');
   assert.match(dec.quote.then, /^First charge: \$/);
   assert.ok(pd.custom_text.submit.message.startsWith('Nothing due today — December tuition is charged on Dec 1. First charge: $'));
@@ -121,9 +162,9 @@ test('monthly enrollment edge cases: a start on the 1st and a start within two d
   assert.equal(pl.line_items.length, 1);
   assert.equal(new Date(pl.subscription_data.billing_cycle_anchor * 1000).toISOString(), '2026-11-01T11:00:00.000Z');
   assert.equal(late.quote.lines[0].label, 'Oct 30–31: on us — nothing due today');
-  // Enrolling on Oct 29 at 10:00: the 1st is 68 hours away → the regular path (Oct 29–30 charged now, trial to Nov 1)
+  // Enrolling on Oct 29 at 10:00: the 1st is 68 hours away → the regular path (Oct 29–30 paid now, plan created for Nov 1)
   const ok = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '5', start: '2026-10-29', _today: '2026-10-29', _now: Date.UTC(2026, 9, 29, 14, 0, 0) / 1000, idempotency: 'ok' }, family));
-  assert.equal(ok.quote.mode, 'trial'); assert.ok(ok.quote.dueCents > 0);
+  assert.equal(ok.quote.mode, 'charge'); assert.ok(ok.quote.dueCents > 0);
 });
 
 test('monthly enrollment refuses the wrong day count, a bad email, a missing authorization, and a price that disagrees with Stripe', async () => {
