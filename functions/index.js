@@ -22,6 +22,8 @@ const DB = require('./lib/db');
 const SYNC = require('./lib/catalog-sync');
 const SWITCH = require('./lib/switch');
 const REMOVE = require('./lib/remove');
+const FEED = require('./lib/feed');
+const FAMILY = require('./lib/family');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -67,6 +69,27 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       return send(res, 200, out);
     }
     if (route === 'GET /checkout/status') { const stripe = S.stripeFor(key); return send(res, 200, await CHECKOUT.sessionStatus(stripe, String(req.query.s || ''), log, ctx)); }
+
+    if (route === 'GET /roster') {
+      // the roster feed for the concierge and the morning digest — read-only, one key, set by an owner on the backend
+      await FEED.requireKey(ctx.db, req);
+      return send(res, 200, await FEED.roster(ctx.db));
+    }
+
+    if (path.startsWith('/api/family/')) {
+      // the family portal: a signed-in parent sees their own players, attendance, reports and bills — nothing else
+      const who = await FAMILY.requireFamily(req);
+      const stripe = S.stripeFor(key); const b = req.body || {};
+      if (route === 'GET /family/me') return send(res, 200, Object.assign({ mode: mode(key) }, await FAMILY.me(ctx.db, stripe, who)));
+      if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
+      if (route === 'POST /family/request') {
+        const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
+        const out = await FAMILY.request(ctx.db, who, b, players);
+        logger.info('family request', { by: who.email, kind: out.kind, id: out.id });
+        return send(res, 200, out);
+      }
+      throw S.err(404, 'route', 'No such family route.');
+    }
 
     if (path.startsWith('/api/admin/')) {
       const who = await ADMIN.requireStaff(req);
