@@ -1,7 +1,10 @@
 /* ProWorld Academy — the billing engine behind /backend and /enroll (Cloud Functions for Firebase, 2nd gen).
    One HTTPS function, `api`, answers /api/* through the Hosting rewrite in firebase.json; one scheduled function, `dailyBilling`,
-   runs the break-month credits and the late-fee timeline every morning at 05:05 Delray Beach time.
-   The Stripe key is a Secret Manager secret named STRIPE_SECRET_KEY (a sandbox key = test mode, a live restricted key = live). */
+   runs every morning at 05:05 Delray Beach time: paid checkouts without their follow-through, break-month credits, the late-fee
+   timeline, holds that were paid, and the roster against Stripe.
+   The Stripe key is a Secret Manager secret named STRIPE_SECRET_KEY (a sandbox key = test mode, a live restricted key = live).
+   Everything a payment changes on the roster — the player record, the parent details, the note for Monday, the Slack messages
+   and the family's text — lives in lib/roster.js and lib/notify.js (settings/notify in the database, written by an owner). */
 'use strict';
 const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
@@ -13,6 +16,9 @@ const S = require('./lib/stripe');
 const CHECKOUT = require('./lib/checkout');
 const JOBS = require('./lib/jobs');
 const ADMIN = require('./lib/admin');
+const ROSTER = require('./lib/roster');
+const NOTIFY = require('./lib/notify');
+const DB = require('./lib/db');
 const SYNC = require('./lib/catalog-sync');
 const SWITCH = require('./lib/switch');
 
@@ -34,6 +40,8 @@ function allowOrigin(req, res) {
     res.set('Access-Control-Allow-Origin', o).set('Vary', 'Origin').set('Access-Control-Allow-Headers', 'Content-Type, Authorization').set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   }
 }
+const subIdOf = (b) => { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); return id; };
+async function familyOfSub(stripe, sub) { try { const c = await stripe.customers.retrieve(S.customerId(sub.customer)); return { phone: c.phone || '', name: c.name || '' }; } catch (e) { return { phone: '', name: '' }; } }
 
 exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInstances: 10, timeoutSeconds: 60, memory: '256MiB' }, async (req, res) => {
   allowOrigin(req, res);
@@ -41,6 +49,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
   const path = req.path.replace(/\/+$/, '') || '/';
   const route = (req.method + ' ' + path).replace(/^(\w+) \/api/, '$1 ');
   const key = STRIPE_SECRET_KEY.value();
+  const ctx = { db: DB.get(), mode: mode(key) };
+  const log = (l) => logger.info('engine: ' + l);
   try {
     if (route === 'GET /health') return send(res, 200, { ok: true, mode: mode(key), today: CAL.todayET(), rules: CAL.RULES.version });
     if (route === 'GET /catalog') return send(res, 200, Object.assign({ mode: mode(key), rules: { version: CAL.RULES.version, bill_day: CAL.RULES.bill_day, late: CAL.RULES.late_policy, terms: CAL.RULES.terms, breaks: CAL.RULES.breaks } }, CAT.publicCatalog()));
@@ -49,37 +59,32 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       const stripe = S.stripeFor(key); const b = req.body || {};
       const out = b.kind === 'monthly' ? await CHECKOUT.createMonthlySession(stripe, b) : await CHECKOUT.createOneTimeSession(stripe, b);
       logger.info('checkout session', { id: out.id, kind: b.kind, program: b.program, by: b.by || 'enroll' });
+      if (out.trial) {                                                          // a free session: no Stripe session to come back for — the try-out is filed now
+        try { out.tryout = (await ROSTER.recordTrial(ctx.db, out.trial, { log, mode: ctx.mode })).tryout; } catch (e) { logger.error('trial not filed', { message: e.message }); }
+        delete out.trial;
+      }
       return send(res, 200, out);
     }
-    if (route === 'GET /checkout/status') { const stripe = S.stripeFor(key); return send(res, 200, await CHECKOUT.sessionStatus(stripe, String(req.query.s || ''))); }
+    if (route === 'GET /checkout/status') { const stripe = S.stripeFor(key); return send(res, 200, await CHECKOUT.sessionStatus(stripe, String(req.query.s || ''), log, ctx)); }
 
     if (path.startsWith('/api/admin/')) {
       const who = await ADMIN.requireStaff(req);
       const stripe = S.stripeFor(key); const b = req.body || {};
-      if (route === 'GET /admin/overview') return send(res, 200, Object.assign({ mode: mode(key), who: who.email }, await ADMIN.overview(stripe)));
-      if (route === 'POST /admin/portal') { const c = S.clean(b.customer, 60); if (!/^cus_/.test(c)) throw S.err(400, 'customer', 'customer id required'); return send(res, 200, { url: await S.portalUrl(stripe, c, SITE + '/backend') }); }
-      if (route === 'POST /admin/hold') { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); const on = b.hold === true; await stripe.subscriptions.update(id, { metadata: { hold: on ? 'true' : '', hold_since: on ? CAL.todayET() : '', hold_by: who.email } }); logger.info('hold', { id, on, by: who.email }); return send(res, 200, { ok: true }); }
-      if (route === 'POST /admin/cancel') { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); if (b.now === true) await stripe.subscriptions.cancel(id, { cancellation_details: { comment: 'Cancelled by ' + who.email } }); else await stripe.subscriptions.update(id, { cancel_at_period_end: true, metadata: { cancel_by: who.email } }); logger.info('cancel', { id, now: b.now === true, by: who.email }); return send(res, 200, { ok: true }); }
-      if (route === 'POST /admin/resume') { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); await stripe.subscriptions.update(id, { cancel_at_period_end: false, metadata: { cancel_by: '' } }); return send(res, 200, { ok: true }); }
-      if (route === 'POST /admin/plan') {
-        // A paid start month whose plan is missing (the family never reached the thank-you page): create it now.
-        const sid = S.clean(b.session, 80); if (!/^cs_/.test(sid)) throw S.err(400, 'session', 'session id required');
-        const session = await stripe.checkout.sessions.retrieve(sid, { expand: ['payment_intent'] });
-        const sub = await CHECKOUT.ensureEnrollment(stripe, session, (l) => logger.info('plan: ' + l));
-        if (!sub) throw S.err(409, 'not_paid', 'That session is not a paid start-month payment.');
-        return send(res, 200, { ok: true, subscription: sub.id });
+      if (route === 'GET /admin/overview') return send(res, 200, Object.assign({ mode: mode(key), who: who.email, billing: who.billing, owner: who.owner }, await ADMIN.overview(stripe)));
+      if (route === 'GET /admin/notices') {
+        const ov = await ADMIN.overview(stripe); const out = [];
+        for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'trialing', 'past_due'].includes(s.status)) continue; const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
+        return send(res, 200, { today: ov.today, notices: out });
       }
-      if (route === 'POST /admin/charge') { const out = await ADMIN.chargeOnFile(stripe, b, who); logger.info('charge on file', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
-      if (route === 'POST /admin/enroll-link') { const out = await CHECKOUT.createMonthlySession(stripe, Object.assign({}, b, { by: 'staff:' + who.email })); return send(res, 200, out); }
-      if (route === 'POST /admin/run-jobs') {
-        if (!who.owner) throw S.err(403, 'owner', 'Only an owner can run the jobs by hand.');
-        const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today || '') ? b.today : CAL.todayET();
-        const lines = []; const log = (l) => lines.push(l);
-        const plans = !b.which || b.which === 'plans' ? await JOBS.convertPaidEnrollments(stripe, today, log) : null;
-        const credits = !b.which || b.which === 'credits' ? await JOBS.applyBreakCredits(stripe, today, log) : null;
-        const late = !b.which || b.which === 'late' ? await JOBS.applyLatePolicy(stripe, today, log) : null;
-        logger.info('jobs run by hand', { by: who.email, today, lines });
-        return send(res, 200, { today, plans, credits, late, log: lines });
+      if (route === 'POST /admin/announce') {
+        // a line from the backend page to the team's Slack (attendance posted, a court released, a player added at the front desk)
+        const which = b.which === 'coaches' ? 'coaches' : 'desk';
+        const lines = Array.isArray(b.lines) ? b.lines.slice(0, 8).map((l) => String(l == null ? '' : l).replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').trim().slice(0, 1500)).filter(Boolean) : null;   // newlines stay (the attendance list)
+        return send(res, 200, { ok: await NOTIFY.slack(ctx.db, which, S.clean(b.text, 600) + ' — ' + (who.name || who.email), lines) });
+      }
+      if (route === 'POST /admin/text') {
+        // a text to a family from the backend page (a private booked, a court reserved, a pack running low) — only when texts are switched on
+        return send(res, 200, { ok: await NOTIFY.text(ctx.db, S.clean(b.phone, 30), S.clean(b.body, 600)) });
       }
       if (route === 'GET /admin/catalog') return send(res, 200, Object.assign({ mode: mode(key) }, await SYNC.checkCatalog(stripe)));
       if (route === 'POST /admin/catalog/sync') {
@@ -93,10 +98,71 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'GET /admin/switch') { const ov = await ADMIN.overview(stripe); return send(res, 200, Object.assign({ mode: mode(key) }, await SWITCH.list(ov.subscriptions, ov.today))); }
       if (route === 'POST /admin/switch/update') return send(res, 200, { ok: true, row: await SWITCH.update(b.id, b, who.email) });
       if (route === 'POST /admin/switch/import') { if (!who.owner) throw S.err(403, 'owner', 'Only an owner can import the roster.'); const out = await SWITCH.importRows(Array.isArray(b.rows) ? b.rows.slice(0, 400) : [], who.email); logger.info('switch import', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
-      if (route === 'GET /admin/notices') {
-        const ov = await ADMIN.overview(stripe); const out = [];
-        for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'trialing', 'past_due'].includes(s.status)) continue; const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
-        return send(res, 200, { today: ov.today, notices: out });
+      // ── everything below moves money or a family's plan: owners, administrators and the Billing page only ──
+      ADMIN.requireBilling(who);
+      if (route === 'POST /admin/portal') { const c = S.clean(b.customer, 60); if (!/^cus_/.test(c)) throw S.err(400, 'customer', 'customer id required'); return send(res, 200, { url: await S.portalUrl(stripe, c, SITE + '/backend') }); }
+      if (route === 'POST /admin/hold') {
+        const id = subIdOf(b); const on = b.hold === true; const today = CAL.todayET();
+        const sub = await stripe.subscriptions.update(id, { metadata: { hold: on ? 'true' : '', hold_since: on ? today : '', hold_by: who.email, hold_invoice: '' } });
+        logger.info('hold', { id, on, by: who.email });
+        const p = await ROSTER.setPlan(ctx.db, id, on ? { hold: true, holdReason: 'staff', holdSince: today, holdBy: who.email, holdInvoice: '', invoiceUrl: '' } : { hold: false, holdReason: '', holdSince: '', holdBy: who.email, holdInvoice: '', invoiceUrl: '' }, { log });
+        const fam = await familyOfSub(stripe, sub);
+        await ROSTER.tell(ctx.db, on ? 'hold' : 'released', p, { reason: 'staff', by: who.name || who.email, phone: fam.phone, player: (sub.metadata || {}).player || '' });
+        return send(res, 200, { ok: true, player: p ? p.id : null });
+      }
+      if (route === 'POST /admin/cancel') {
+        const id = subIdOf(b); const today = CAL.todayET();
+        let sub, endsOn = null;
+        if (b.now === true) { sub = await stripe.subscriptions.cancel(id, { cancellation_details: { comment: 'Cancelled by ' + who.email } }); endsOn = today; }
+        else { sub = await stripe.subscriptions.update(id, { cancel_at_period_end: true, metadata: { cancel_by: who.email } }); const end = S.periodEnd(sub); endsOn = end ? CAL.dateOfUnixET(end) : null; }
+        logger.info('cancel', { id, now: b.now === true, by: who.email });
+        const p = await ROSTER.setPlan(ctx.db, id, b.now === true ? { status: 'canceled', hold: false, endsOn, cancelledReason: 'staff', cancelledBy: who.email } : { endsOn, cancelledReason: 'staff', cancelledBy: who.email }, { log });
+        const fam = await familyOfSub(stripe, sub);
+        await ROSTER.tell(ctx.db, 'cancelled', p, { reason: 'staff', by: who.name || who.email, endsOn, phone: fam.phone, player: (sub.metadata || {}).player || '' });
+        return send(res, 200, { ok: true, endsOn, player: p ? p.id : null });
+      }
+      if (route === 'POST /admin/resume') {
+        const id = subIdOf(b);
+        const sub = await stripe.subscriptions.update(id, { cancel_at_period_end: false, metadata: { cancel_by: '' } });
+        const p = await ROSTER.setPlan(ctx.db, id, { endsOn: null, cancelledReason: '', cancelledBy: '' }, { log });
+        await ROSTER.tell(ctx.db, 'keep', p, { by: who.name || who.email, player: (sub.metadata || {}).player || '' });
+        return send(res, 200, { ok: true, player: p ? p.id : null });
+      }
+      if (route === 'POST /admin/plan') {
+        // A paid start month whose plan is missing (the family never reached the thank-you page): create it now, and file the player.
+        const sid = S.clean(b.session, 80); if (!/^cs_/.test(sid)) throw S.err(400, 'session', 'session id required');
+        const session = await stripe.checkout.sessions.retrieve(sid, { expand: ['payment_intent', 'customer'] });
+        const sub = await CHECKOUT.ensureEnrollment(stripe, session, log);
+        if (!sub) throw S.err(409, 'not_paid', 'That session is not a paid start-month payment.');
+        const rec = await ROSTER.record(ctx.db, stripe, session, sub, { log, mode: ctx.mode });
+        return send(res, 200, { ok: true, subscription: sub.id, player: rec ? rec.player : null });
+      }
+      if (route === 'POST /admin/record') {
+        // File (again) the roster record and the messages for any paid checkout — a staff retry when something was missed.
+        const sid = S.clean(b.session, 80); if (!/^cs_/.test(sid)) throw S.err(400, 'session', 'session id required');
+        const session = await stripe.checkout.sessions.retrieve(sid, { expand: ['payment_intent', 'customer', 'subscription'] });
+        let sub = session.mode === 'subscription' && session.subscription && typeof session.subscription === 'object' ? session.subscription : null;
+        if (!sub && CHECKOUT.isProgramPayment(session)) sub = await CHECKOUT.findEnrollment(stripe, S.customerId(session.customer), session.id);
+        const rec = await ROSTER.record(ctx.db, stripe, session, sub, { log, mode: ctx.mode });
+        return send(res, 200, { ok: !!rec, player: rec ? rec.player : null, what: rec ? rec.what : null });
+      }
+      if (route === 'POST /admin/charge') { const out = await ADMIN.chargeOnFile(stripe, b, who); logger.info('charge on file', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
+      if (route === 'POST /admin/enroll-link') { const out = await CHECKOUT.createMonthlySession(stripe, Object.assign({}, b, { by: 'staff:' + who.email })); return send(res, 200, out); }
+      if (route === 'POST /admin/notify-test') {
+        if (!who.owner) throw S.err(403, 'owner', 'Only an owner can send the test messages.');
+        return send(res, 200, await NOTIFY.test(ctx.db, S.clean(b.phone, 30)));
+      }
+      if (route === 'POST /admin/run-jobs') {
+        if (!who.owner) throw S.err(403, 'owner', 'Only an owner can run the jobs by hand.');
+        const today = /^\d{4}-\d{2}-\d{2}$/.test(b.today || '') ? b.today : CAL.todayET();
+        const lines = []; const l2 = (l) => lines.push(l);
+        const plans = !b.which || b.which === 'plans' ? await JOBS.convertPaidEnrollments(stripe, today, l2, ctx) : null;
+        const credits = !b.which || b.which === 'credits' ? await JOBS.applyBreakCredits(stripe, today, l2, ctx) : null;
+        const late = !b.which || b.which === 'late' ? await JOBS.applyLatePolicy(stripe, today, l2, ctx) : null;
+        const holds = !b.which || b.which === 'holds' ? await JOBS.releaseHolds(stripe, today, l2, ctx) : null;
+        const roster = !b.which || b.which === 'roster' ? await ROSTER.syncSubscriptions(ctx.db, (await ADMIN.overview(stripe)).subscriptions, { log: l2 }) : null;
+        logger.info('jobs run by hand', { by: who.email, today, lines });
+        return send(res, 200, { today, plans, credits, late, holds, roster, log: lines });
       }
       throw S.err(404, 'route', 'No such admin route.');
     }
@@ -105,13 +171,18 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
 });
 
 exports.dailyBilling = onSchedule({ schedule: '5 5 * * *', timeZone: CAL.TZ, region: REGION, secrets: [STRIPE_SECRET_KEY], retryCount: 2, timeoutSeconds: 540, memory: '256MiB' }, async () => {
-  const stripe = S.stripeFor(STRIPE_SECRET_KEY.value());
+  const key = STRIPE_SECRET_KEY.value();
+  const stripe = S.stripeFor(key);
+  const ctx = { db: DB.get(), mode: mode(key) };
   const today = CAL.todayET();
   const log = (l) => logger.info('billing: ' + l);
-  const plans = await JOBS.convertPaidEnrollments(stripe, today, log);
-  const credits = await JOBS.applyBreakCredits(stripe, today, log);
-  const late = await JOBS.applyLatePolicy(stripe, today, log);
-  if (plans.created.length || plans.errors.length) logger.info('dailyBilling plans', plans);
-  logger.info('dailyBilling done', { today, mode: mode(STRIPE_SECRET_KEY.value()), plans: { checked: plans.checked, created: plans.created.length, errors: plans.errors.length }, credits: { checked: credits.checked, credited: credits.credited.length, paused: credits.paused.length, errors: credits.errors.length }, late: { checked: late.checked, lateFees: late.lateFees.length, holds: late.holds.length, cancelled: late.cancelled.length, errors: late.errors.length } });
-  if (plans.errors.length || credits.errors.length || late.errors.length) logger.error('dailyBilling errors', { plans: plans.errors, credits: credits.errors, late: late.errors });
+  const plans = await JOBS.convertPaidEnrollments(stripe, today, log, ctx);
+  const credits = await JOBS.applyBreakCredits(stripe, today, log, ctx);
+  const late = await JOBS.applyLatePolicy(stripe, today, log, ctx);
+  const holds = await JOBS.releaseHolds(stripe, today, log, ctx);
+  let roster = { checked: 0, updated: [], finished: [] };
+  try { roster = await ROSTER.syncSubscriptions(ctx.db, (await ADMIN.overview(stripe)).subscriptions, { log }); } catch (e) { logger.error('roster sync failed', { message: e.message }); }
+  if (plans.created.length || plans.recorded.length || plans.errors.length) logger.info('dailyBilling plans', plans);
+  logger.info('dailyBilling done', { today, mode: ctx.mode, plans: { checked: plans.checked, created: plans.created.length, recorded: plans.recorded.length, errors: plans.errors.length }, credits: { checked: credits.checked, credited: credits.credited.length, paused: credits.paused.length, told: credits.told, errors: credits.errors.length }, late: { checked: late.checked, failed: late.failed.length, lateFees: late.lateFees.length, holds: late.holds.length, cancelled: late.cancelled.length, errors: late.errors.length }, holds: { checked: holds.checked, released: holds.released.length, errors: holds.errors.length }, roster: { checked: roster.checked, updated: roster.updated.length, finished: roster.finished.length } });
+  if (plans.errors.length || credits.errors.length || late.errors.length || holds.errors.length) logger.error('dailyBilling errors', { plans: plans.errors, credits: credits.errors, late: late.errors, holds: holds.errors });
 });
