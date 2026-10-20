@@ -142,22 +142,34 @@ test('a paid start month whose thank-you page was never opened gets its plan fro
 
 test('monthly enrollment edge cases: a start on the 1st and a start within two days of the 1st let Checkout anchor the plan with nothing due today', async () => {
   const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
-  // Asking for Nov 1 (a Sunday): the start rolls to Mon Nov 2, so November (16 of 21 training days of the $1,500 plan) is the one-time line and the plan starts billing Dec 1
+  // Asking for Nov 1 (a Sunday) on Oct 13: the start rolls to Mon Nov 2, November's own first training day — nothing today; November
+  // (16 of 21 training days of the $1,500 plan = $1,143) is billed on Nov 1 like every month, the Thanksgiving credit applied by the job
   const nov = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '5', start: '2026-11-01', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'nov' }, family));
-  assert.equal(nov.quote.mode, 'charge'); assert.equal(nov.quote.dueCents, 114300); assert.equal(nov.quote.anchor, '2026-12-01');
+  const pn = stripe._calls.filter((c) => c.name === 'checkout.sessions.create')[0].args.params;
+  assert.equal(nov.quote.mode, 'anchor'); assert.equal(nov.quote.dueCents, 0); assert.equal(nov.quote.anchor, '2026-11-01');
+  assert.deepEqual(nov.quote.lines, [{ label: 'Nothing due today — November tuition (prorated: 16 of 21 training days, thanksgiving break off) is charged on Nov 1', cents: 0 }]);
+  assert.ok(nov.quote.then.startsWith('First charge: $1,143 on Nov 1, and $1,500 on the 1st of every month after'), nov.quote.then);
+  assert.equal(pn.mode, 'subscription'); assert.equal(pn.subscription_data.proration_behavior, 'none');
+  assert.equal(new Date(pn.subscription_data.billing_cycle_anchor * 1000).toISOString(), '2026-11-01T11:00:00.000Z');
+  assert.equal(pn.subscription_data.metadata.start, '2026-11-02');
+  // A start in the middle of a month still ahead (Nov 10): nothing today either; Nov 1 bills the training days from Nov 10 (the job credits the rest)
+  const mid = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '3', days: ['Mon', 'Wed', 'Fri'], start: '2026-11-10', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'mid' }, family));
+  assert.equal(mid.quote.mode, 'anchor'); assert.equal(mid.quote.anchor, '2026-11-01');
+  assert.equal(mid.quote.lines[0].label, 'Nothing due today — November tuition (prorated: 10 of 21 training days, from Nov 10, thanksgiving break off) is charged on Nov 1');
+  assert.equal(CAL.firstChargeCents(98000, '2026-11-01', '2026-11-10'), 46700); assert.ok(mid.quote.then.startsWith('First charge: $467 on Nov 1,'));
   // Starting on Dec 1 (a Tuesday, a training day): December is billed on Dec 1 like any month; nothing today; the plan is anchored to Dec 1
   const dec = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '5', start: '2026-12-01', _today: '2026-10-13', _now: NOW_OCT13, idempotency: 'dec' }, family));
-  const pd = stripe._calls.filter((c) => c.name === 'checkout.sessions.create')[1].args.params;
+  const pd = stripe._calls.filter((c) => c.name === 'checkout.sessions.create')[2].args.params;
   assert.equal(dec.quote.mode, 'anchor'); assert.equal(dec.quote.dueCents, 0);
   assert.equal(pd.line_items.length, 1);
   assert.equal(pd.subscription_data.proration_behavior, 'none');
   assert.equal(pd.mode, 'subscription');
   assert.equal(new Date(pd.subscription_data.billing_cycle_anchor * 1000).toISOString(), '2026-12-01T11:00:00.000Z');
   assert.match(dec.quote.then, /^First charge: \$/);
-  assert.ok(pd.custom_text.submit.message.startsWith('Nothing due today — December tuition is charged on Dec 1. First charge: $'));
+  assert.ok(pd.custom_text.submit.message.startsWith('Nothing due today — December tuition (prorated: 14 of 23 training days, winter break off) is charged on Dec 1. First charge: $'));
   // Enrolling on Oct 30 at 10:00 for Oct 30: the 1st is under 48 hours away → Oct 30–31 on the house, plan anchored to Nov 1
   const late = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'afterschool', plan: '5', start: '2026-10-30', _today: '2026-10-30', _now: Date.UTC(2026, 9, 30, 14, 0, 0) / 1000, idempotency: 'late' }, family));
-  const pl = stripe._calls.filter((c) => c.name === 'checkout.sessions.create')[2].args.params;
+  const pl = stripe._calls.filter((c) => c.name === 'checkout.sessions.create')[3].args.params;
   assert.equal(late.quote.mode, 'anchor'); assert.equal(late.quote.dueCents, 0);
   assert.equal(pl.line_items.length, 1);
   assert.equal(new Date(pl.subscription_data.billing_cycle_anchor * 1000).toISOString(), '2026-11-01T11:00:00.000Z');
@@ -227,6 +239,12 @@ test('break credits: the week before Nov 1, every monthly plan gets the Thanksgi
   assert.equal(stripe._db.subscriptions[0].metadata.credit_2026_11, items[0].id);
   const r3 = await JOBS.applyBreakCredits(stripe, '2026-10-26');
   assert.equal(r3.credited.length, 0, 'runs again safely: every subscription is already flagged');
+  // A plan enrolled ahead for a mid-month start (Nov 10) is credited the days before its start on the same run, break included
+  const mid = fakeStripe({ subscriptions: [sub('s', 'afterschool_fall26_3d_monthly', nov1, { metadata: { start: '2026-11-10', player: 'Ava Torres' } }), sub('f', 'afterschool_fall26_3d_monthly', nov1, { metadata: { start: '2026-11-02' } })] });
+  const r5 = await JOBS.applyBreakCredits(mid, '2026-11-01');                                   // the 1st itself at 05:05, an hour before the invoices
+  assert.deepEqual(r5.credited.map((c) => [c.subscription, c.credit]), [['s', 51300], ['f', 23300]]);   // $980 − $467 (10 of 21 days from Nov 10); Nov 2 is November's first training day → the plain break credit
+  assert.equal(mid._db.invoiceItems[0].description, 'Start credit — November: 10 of 21 training days from Nov 10 (thanksgiving break off)');
+  assert.equal(mid._db.invoiceItems[1].description, 'Thanksgiving break credit — November: 16 of 21 training days');
   // June: no training days → collection paused for that month (resumes an hour before the next 1st; July is judged on its own)
   const jun = fakeStripe({ subscriptions: [sub('j', 'afterschool_fall26_3d_monthly', CAL.unixET('2027-06-01', 6, 0))] });
   const r4 = await JOBS.applyBreakCredits(jun, '2027-05-26');

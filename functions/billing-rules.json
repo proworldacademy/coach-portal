@@ -5,7 +5,7 @@
   "bill_day": 1,
   "monthly_plans": {
     "charge": "On the 1st of each month, for that month, to the card on file (Stripe subscription anchored to the 1st).",
-    "mid_month_start": "Charged at sign-up for the remaining training days of the month only: price × remaining_training_days ÷ weekdays_in_month, rounded to the dollar. Full price from the next 1st.",
+    "mid_month_start": "Charged at sign-up for the remaining training days of the month only: price × remaining_training_days ÷ weekdays_in_month, rounded to the dollar. Full price from the next 1st. A start in a month still ahead charges nothing at sign-up: that month is billed on its own 1st, prorated from the start day (families moving over from the old system keep their paid month and are first charged on the next 1st).",
     "break_months": "A month touched by a break is billed price × training_days_in_month ÷ weekdays_in_month (same formula). A month with no training days (June, July) is not billed.",
     "plan_change": "Prorated the same way for the rest of the month; the new price applies from the next 1st.",
     "cancel": "Any time before the 1st, from the family account (Customer Portal) or the front desk; takes effect at the end of the month already billed; no refund of the current month."
@@ -66,7 +66,7 @@
     "removed": {"when": "the 15th", "channels": ["email", "sms", "slack #front-desk"], "template": "removed"}
   },
   "stripe_implementation": {
-    "subscription": "billing_cycle_anchor_config.day_of_month = 1, proration_behavior = none; the first partial month is added as a one-time invoice item computed with the formula above and charged at sign-up.",
+    "subscription": "billing_cycle_anchor = the next 1st at 06:00 ET, proration_behavior = none; a start in the current month is charged at sign-up as a one-time payment (start-month product) computed with the formula above, and the plan is created on the saved card the moment Stripe confirms it; a start in a month still ahead is anchored to that month's 1st with nothing due today, and the nightly job credits the days before the start (and the breaks) onto that first invoice.",
     "break_month": "On the 25th a job adds a negative invoice item ('Winter break credit — Dec 21–31') to the customer's pending items so the Dec 1 invoice shows the full price and the credit; months with factor 0 get the subscription paused for collection.",
     "late_fee": "On the 6th, if the month's invoice is still open: create and charge a one-off invoice 'Late fee — <month> tuition' ($50); on the 10th flag the player on hold; on the 15th cancel the subscription and release the spot.",
     "weekly_and_one_time": "One-time prices charged via Checkout or the card on file."

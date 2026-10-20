@@ -79,14 +79,24 @@ function firstMonthQuote(priceCents, start) {
   const td = trainingDaysIn(y, m, d), wk = weekdaysIn(y, m), full = trainingDaysIn(y, m, 1);
   const cents = monthChargeCents(priceCents, y, m, d);
   const prorated = td < wk;
-  const label = MONTHS_LONG[m] + ' tuition' + (prorated ? ' (prorated: ' + td + ' of ' + wk + ' training days' + (d > 1 ? ', from ' + MONTHS[m] + ' ' + d : '') + (breaksIn(y, m).length ? ', ' + breaksIn(y, m).map((b) => b.label.toLowerCase()).join(' + ') + ' off' : '') + ')' : '');
+  const lateStart = s > firstTrainingDay(ymd(y, m, 1));                           // later than the month's own first training day
+  const note = prorated ? td + ' of ' + wk + ' training days' + (lateStart ? ', from ' + MONTHS[m] + ' ' + d : '') + (breaksIn(y, m).length ? ', ' + breaksIn(y, m).map((b) => b.label.toLowerCase()).join(' + ') + ' off' : '') : '';
+  const label = MONTHS_LONG[m] + ' tuition' + (note ? ' (prorated: ' + note + ')' : '');
+  const monthFirst = ymd(y, m, 1);
   const anchor = nextFirst(s);
   const an = parts(anchor);
   const nextCents = monthChargeCents(priceCents, an.y, an.m, 1);
   const nextNote = monthNote(an.y, an.m);
-  return { ok: true, start: s, startMonth: { y, m }, trainingDays: td, weekdays: wk, fullTrainingDays: full, cents, label, anchor, anchorUnix: unixET(anchor, 6, 0),
+  return { ok: true, start: s, startMonth: { y, m }, trainingDays: td, weekdays: wk, fullTrainingDays: full, cents, label, note, lateStart,
+    monthFirst, monthFirstUnix: unixET(monthFirst, 6, 0), anchor, anchorUnix: unixET(anchor, 6, 0),
     next: { date: anchor, cents: nextCents, note: nextNote, label: MONTHS[an.m] + ' 1' } };
+}
+/* What a plan's invoice dated `date` (a 1st) should charge: the month's training days, counted from the plan's start when the start falls in that month. */
+function firstChargeCents(priceCents, date, start) {
+  const p = parts(date); let from = 1;
+  if (start) { const st = parts(start); if (st.y === p.y && st.m === p.m) from = st.d; }
+  return monthChargeCents(priceCents, p.y, p.m, from);
 }
 
 module.exports = { RULES, TZ, MONTHS, MONTHS_LONG, ymd, parts, dow, daysInMonth, addDays, cmp, todayET, unixET, dateOfUnixET, tzOffsetMinutes,
-  isTrainingDay, inTerm, inBreak, weekdaysIn, trainingDaysIn, monthChargeCents, monthCreditCents, monthFactor, breaksIn, firstTrainingDay, nextFirst, monthLabel, monthNote, firstMonthQuote };
+  isTrainingDay, inTerm, inBreak, weekdaysIn, trainingDaysIn, monthChargeCents, monthCreditCents, monthFactor, breaksIn, firstTrainingDay, nextFirst, monthLabel, monthNote, firstMonthQuote, firstChargeCents };

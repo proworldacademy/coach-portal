@@ -42,7 +42,7 @@ async function overview(stripe) {
     if (sub.status === 'canceled' && sub.canceled_at && Date.now() / 1000 - sub.canceled_at > 120 * 86400) continue;
     const { program, plan, price } = planOf(sub); const m = sub.metadata || {}; const c = typeof sub.customer === 'object' ? sub.customer : { id: sub.customer };
     const end = S.periodEnd(sub); const nextDate = end ? CAL.dateOfUnixET(end) : null;
-    let nextCents = null; if (plan && nextDate && sub.status !== 'canceled' && !sub.cancel_at_period_end) { const p = CAL.parts(nextDate); nextCents = CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); }
+    let nextCents = null; if (plan && nextDate && sub.status !== 'canceled' && !sub.cancel_at_period_end) nextCents = CAL.firstChargeCents(plan.monthly * 100, nextDate, m.start);
     const li = sub.latest_invoice && typeof sub.latest_invoice === 'object' ? sub.latest_invoice : null;
     subs.push({ id: sub.id, session: m.session || null, needsReview: m.needs_review || null, status: sub.status, hold: m.hold === 'true', holdSince: m.hold_since || null, cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection,
       player: m.player || '', playerDob: m.player_dob || '', parent: m.parent || '', parentPhone: m.parent_phone || '', program: program ? program.short : (m.program || '—'), programId: program ? program.id : m.program || '', plan: plan ? plan.label : (m.plan_label || (price ? '$' + price.unit_amount / 100 : '—')), days: (m.days || '').split(',').filter(Boolean), monthly: plan ? plan.monthly : price ? price.unit_amount / 100 : null, qbo: program ? program.qbo : '',

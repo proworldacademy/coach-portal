@@ -3,9 +3,10 @@
    the start month are charged at checkout as a one-time payment computed by the academy's own rule — a plain payment-mode Checkout
    that also saves the card. The moment that payment is confirmed (the thank-you page, or the nightly sweep if the page was never
    opened), the engine creates the monthly subscription on the saved card, anchored to the next 1st with no proration. No Stripe
-   "trial" is involved, so families never see trial wording. Two edge cases skip the one-time payment and let Checkout create the
-   subscription directly, anchored to the 1st: a start on the 1st itself (the whole month is billed that morning, as every other month)
-   and a start within two days of the 1st (those one or two days are on the house). Everything else is a one-time payment. */
+   "trial" is involved, so families never see trial wording. Two cases skip the one-time payment and let Checkout create the
+   subscription directly, anchored to a 1st: a start in a month that has not begun yet (the 1st itself, or any later day — that month is
+   billed on its 1st, prorated by the credit job if the start is later than the month's first training day), and a start within two days
+   of the next 1st (those one or two days are on the house). Everything else is a one-time payment. */
 'use strict';
 const CAL = require('./calendar');
 const CAT = require('./catalog');
@@ -40,13 +41,13 @@ function monthlyQuote(programId, planId, start, today, now) {
   const q = CAL.firstMonthQuote(plan.monthly * 100, startDate);
   if (!q.ok) throw S.err(400, 'no_training_days', q.reason);
   const sp = CAL.parts(q.start);
-  const startUnix = CAL.unixET(q.start, 6, 0);
   let mode, lines, dueCents, anchor, anchorUnix, next;
-  if (sp.d === 1 && startUnix > now + 3600) {
-    // Starting on a 1st: that month is billed that morning like any other month, break-adjusted by the credit job — nothing today.
-    mode = 'anchor'; anchor = q.start; anchorUnix = startUnix; dueCents = 0;
-    next = { date: q.start, cents: q.cents, note: CAL.monthNote(sp.y, sp.m), label: CAL.MONTHS[sp.m] + ' 1' };
-    lines = [{ label: `Nothing due today — ${CAL.MONTHS_LONG[sp.m]} tuition is charged on ${next.label}`, cents: 0 }];
+  if (q.monthFirstUnix > now + 3600) {
+    // The start month has not begun (a start on the 1st, or any day of a month still ahead): nothing today — that month is billed on its own 1st
+    // like every other month, and the credit job prorates that invoice (a later start day, a school break) before it is created.
+    mode = 'anchor'; anchor = q.monthFirst; anchorUnix = q.monthFirstUnix; dueCents = 0;
+    next = { date: q.monthFirst, cents: q.cents, note: q.note, label: CAL.MONTHS[sp.m] + ' 1' };
+    lines = [{ label: `Nothing due today — ${q.label} is charged on ${next.label}`, cents: 0 }];
   } else if (q.anchorUnix - now >= MIN_CHARGE_LEAD) {
     mode = 'charge'; anchor = q.anchor; anchorUnix = q.anchorUnix; dueCents = q.cents; next = q.next;
     lines = [{ label: q.label, cents: q.cents }];
@@ -59,7 +60,7 @@ function monthlyQuote(programId, planId, start, today, now) {
   const first = dueCents > 0 ? 'Then' : 'First charge:';
   const then = (next.cents === 0
     ? `No charge on ${next.label} (${CAL.breaksIn(an.y, an.m).map((b) => b.label.toLowerCase()).join(', ')}).`
-    : `${first} ${money(next.cents)} on ${next.label}${next.note ? ' (' + next.note + ')' : ''},`)
+    : `${first} ${money(next.cents)} on ${next.label}${next.note && mode !== 'anchor' ? ' (' + next.note + ')' : ''},`)
     + ` and ${money(plan.monthly * 100)} on the 1st of every month after — months with a school break are prorated automatically. Cancel from your account any time before the 1st.`;
   return { program: prog, plan, start: q.start, startLabel: 'Starts ' + CAL.MONTHS[sp.m] + ' ' + sp.d, lines, dueCents, then, mode, anchor, anchorUnix, next };
 }
@@ -208,7 +209,7 @@ function enrollmentOf(sub, m) {
   const end = S.periodEnd(sub);
   const nextDate = end ? CAL.dateOfUnixET(end) : null;
   const prog = CAT.program(m.program); const plan = CAT.plan(m.program, m.plan);
-  let nextCents = null; if (plan && nextDate) { const p = CAL.parts(nextDate); nextCents = CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); }
+  let nextCents = null; if (plan && nextDate) nextCents = CAL.firstChargeCents(plan.monthly * 100, nextDate, m.start);
   return { program: prog ? prog.name : m.program_name, plan: plan ? plan.label : m.plan_label, days: (m.days || '').split(',').filter(Boolean), start: m.start, subscription: sub.id, status: sub.status, next: nextDate ? { date: nextDate, cents: nextCents } : null };
 }
 async function sessionStatus(stripe, id, log) {

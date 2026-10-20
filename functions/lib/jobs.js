@@ -1,7 +1,8 @@
 /* The two timed rules, run every morning at 05:05 Delray Beach time (an hour before the 1st-of-month invoices are created at 06:00):
-   1. Break-month credits: in the week before a 1st that opens a month with a school break, each monthly subscription gets a credit line
-      (full price minus the training-day charge) so the invoice shows the full tuition and the credit. A month with no training days
-      (June, July) pauses collection for that month instead — invoices created while paused are voided. Each subscription is flagged per month, so a day's run can be repeated safely.
+   1. First-invoice credits: in the week before a 1st, each monthly subscription whose coming month is short — a school break, or a plan
+      that starts later than the month's first training day — gets a credit line (full price minus the training-day charge) so the invoice
+      shows the full tuition and the credit. A month with no training days (June, July) pauses collection for that month instead — invoices
+      created while paused are voided. Each subscription is flagged per month, so a day's run can be repeated safely.
    2. The late-fee timeline: a tuition invoice still open after the 5th gets a $50 late-fee invoice on the 6th; on the 10th the subscription
       is marked on hold (the attendance board shows it); on the 15th the subscription is cancelled and the spot released. Flags on the
       invoice and the subscription make every step run once. */
@@ -56,7 +57,9 @@ async function applyBreakCredits(stripe, today, log) {
         const flag = 'credit_' + nextDate.slice(0, 7).replace('-', '_');
         if (sub.metadata && sub.metadata[flag]) { report.skipped++; continue; }
         const f = CAL.monthFactor(y, m);
-        if (f.factor >= 1) { report.skipped++; continue; }
+        const start = sub.metadata && /^\d{4}-\d{2}-\d{2}$/.test(sub.metadata.start || '') ? sub.metadata.start : null;   // a start inside this month: only the days from it
+        const charge = CAL.firstChargeCents(price.unit_amount, nextDate, start);
+        if (f.factor >= 1 && charge >= price.unit_amount) { report.skipped++; continue; }
         if (f.factor === 0) {
           // Pause through this one month only (resume an hour before the next 1st's invoices); the next month is judged on its own the following week.
           const resumesAt = CAL.unixET(CAL.nextFirst(nextDate), 5, 0);
@@ -65,10 +68,15 @@ async function applyBreakCredits(stripe, today, log) {
           log(`paused ${sub.id} for ${nextDate.slice(0, 7)}, resumes ${CAL.dateOfUnixET(resumesAt)}`);
           continue;
         }
-        const credit = CAL.monthCreditCents(price.unit_amount, y, m);
+        const credit = price.unit_amount - charge;
         if (credit <= 0) { report.skipped++; continue; }
         const breaks = CAL.breaksIn(y, m).map((b) => b.label).join(' + ');
-        const description = `${breaks} credit — ${CAL.MONTHS_LONG[m]}: ${f.trainingDays} of ${f.weekdays} training days`;
+        const from = start && CAL.parts(start).y === y && CAL.parts(start).m === m ? CAL.parts(start).d : 1;
+        const lateStart = from > 1 && CAL.ymd(y, m, from) > CAL.firstTrainingDay(CAL.ymd(y, m, 1));
+        const days = `${CAL.trainingDaysIn(y, m, from)} of ${f.weekdays} training days`;
+        const description = lateStart
+          ? `Start credit — ${CAL.MONTHS_LONG[m]}: ${days} from ${CAL.MONTHS[m]} ${from}${breaks ? ' (' + breaks.toLowerCase() + ' off)' : ''}`
+          : `${breaks} credit — ${CAL.MONTHS_LONG[m]}: ${days}`;
         const ii = await stripe.invoiceItems.create({ customer: S.customerId(sub.customer), subscription: sub.id, amount: -credit, currency: 'usd', description, metadata: { kind: 'break_credit', month: nextDate.slice(0, 7), subscription: sub.id, player: (sub.metadata && sub.metadata.player) || '' } }, { idempotencyKey: `credit_${sub.id}_${nextDate.slice(0, 7)}` });
         await stripe.subscriptions.update(sub.id, { metadata: { [flag]: ii.id } });
         report.credited.push({ subscription: sub.id, month: nextDate.slice(0, 7), credit, item: ii.id });
