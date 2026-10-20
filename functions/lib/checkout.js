@@ -10,6 +10,7 @@
 const CAL = require('./calendar');
 const CAT = require('./catalog');
 const S = require('./stripe');
+const ROSTER = require('./roster');
 
 const SITE = 'https://proworld-coach-portal.web.app';
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -184,7 +185,9 @@ async function createOneTimeSession(stripe, body) {
   const note = S.clean(body.note, 200);
   if (!line_items.length) {                                                       // free trial only: register the family, no payment
     await stripe.customers.update(customer.id, { metadata: { last_trial: CAL.todayET() + ' · ' + playerName } });
-    return { url: `${SITE}/enroll/done?trial=1&p=${encodeURIComponent(playerName)}`, id: null, quote: { lines: [{ label: 'FREE Trial Session', cents: 0 }], dueCents: 0 } };
+    const trialLine = items.map((i) => CAT.oneTimeLines()[S.clean(i.lookup, 80)]).find((l) => l && l.kind === 'trial');
+    return { url: `${SITE}/enroll/done?trial=1&p=${encodeURIComponent(playerName)}`, id: null, quote: { lines: [{ label: 'FREE Trial Session', cents: 0 }], dueCents: 0 },
+      trial: { player, parent, playerName, program: trialLine ? trialLine.program : 'soccer', customer: customer.id, by: parent.by } };
   }
   const description = labels.join(' + ') + ' · ' + playerName + (note ? ' · ' + note : '');
   const meta = { kind: [...kinds].join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, items: items.map((i) => i.lookup + (i.qty > 1 ? 'x' + i.qty : '')).join(','), note, source: 'proworld-backend', by: parent.by };
@@ -211,18 +214,25 @@ function enrollmentOf(sub, m) {
   let nextCents = null; if (plan && nextDate) { const p = CAL.parts(nextDate); nextCents = CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); }
   return { program: prog ? prog.name : m.program_name, plan: plan ? plan.label : m.plan_label, days: (m.days || '').split(',').filter(Boolean), start: m.start, subscription: sub.id, status: sub.status, next: nextDate ? { date: nextDate, cents: nextCents } : null };
 }
-async function sessionStatus(stripe, id, log) {
+async function sessionStatus(stripe, id, log, ctx) {
   if (!/^cs_[A-Za-z0-9_]+$/.test(id || '')) throw S.err(400, 'session', 'Bad session id.');
+  ctx = ctx || {};
   const s = await stripe.checkout.sessions.retrieve(id, { expand: ['subscription', 'customer', 'invoice', 'line_items', 'payment_intent'] });
   const out = { status: s.status, paymentStatus: s.payment_status, mode: s.mode, paid: s.amount_total || 0, player: s.metadata && s.metadata.player, email: s.customer_details && s.customer_details.email, lines: (s.line_items ? s.line_items.data : []).map((l) => ({ label: l.description, cents: l.amount_total })) };
+  let sub = null;
   if (s.mode === 'subscription' && s.subscription) {
-    const sub = s.subscription;
+    sub = s.subscription;
     out.enrollment = enrollmentOf(sub, sub.metadata || {});
   } else if (isProgramPayment(s)) {
-    try { const sub = await ensureEnrollment(stripe, s, log); if (sub) out.enrollment = enrollmentOf(sub, Object.assign({}, s.metadata, sub.metadata || {})); }
+    try { sub = await ensureEnrollment(stripe, s, log); if (sub) out.enrollment = enrollmentOf(sub, Object.assign({}, s.metadata, sub.metadata || {})); }
     catch (e) { out.enrollment = { pending: true, program: s.metadata.program_name, plan: s.metadata.plan_label, days: (s.metadata.days || '').split(',').filter(Boolean), start: s.metadata.start, error: e.message }; }
   } else if (s.mode === 'payment') {
     try { await ensureCardOnFile(stripe, s); } catch (e) { /* the card is still attached; the next charge-on-file reports it */ }
+  }
+  // the roster and the messages — the same minute the family lands here (the nightly sweep repeats it harmlessly)
+  if (ctx.db && s.status === 'complete') {
+    try { const rec = await ROSTER.record(ctx.db, stripe, s, sub, { log, mode: ctx.mode }); if (rec) out.roster = { player: rec.player || null, created: !!rec.created, tryout: rec.tryout || null }; }
+    catch (e) { out.rosterError = e.message; if (log) log('roster error ' + s.id + ': ' + e.message); }
   }
   if (s.status === 'complete' && s.customer) { try { out.portalUrl = await S.portalUrl(stripe, S.customerId(s.customer), `${SITE}/enroll/done?s=${id}`); } catch (e) { out.portalUrl = null; } }
   return out;

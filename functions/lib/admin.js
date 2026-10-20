@@ -1,5 +1,6 @@
 /* The staff side: who may call the admin API (the same rule as the site — owners by account id, or an active staff record that
-   holds the backend page), and what it answers (every family's plan, status and open balance, straight from Stripe). */
+   holds the backend page), what may change money (owners, administrators and whoever holds the Billing page), and what it
+   answers (every family's plan, status and open balance, straight from Stripe). */
 'use strict';
 const admin = require('firebase-admin');
 const CAL = require('./calendar');
@@ -18,14 +19,18 @@ async function requireStaff(req) {
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
   if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use the backend.');
-  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, owner: true };
+  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, owner: true, admin: true, billing: true };
   const doc = await admin.firestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
   const active = !!(rec && rec.active === true);
   const pages = rec && Array.isArray(rec.pages) ? rec.pages : ['coach-portal', 'tryouts'];
-  if (!active || !(rec.owner === true || pages.includes('backend'))) throw S.err(403, 'access', 'Your access does not include the backend.');
-  return { uid: decoded.uid, email, owner: rec.owner === true, admin: rec.role === 'admin' };
+  const hasBackend = pages.includes('backend') || pages.some((p) => /^be-/.test(p));
+  if (!active || !(rec.owner === true || hasBackend)) throw S.err(403, 'access', 'Your access does not include the backend.');
+  const isAdmin = rec.owner === true || rec.role === 'admin';
+  // money moves only for owners, administrators and people with the Billing page ticked on the Dashboard
+  return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: isAdmin, billing: isAdmin || pages.includes('billing') };
 }
+function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
 
 function planOf(sub) {
   const item = sub.items && sub.items.data && sub.items.data[0]; const price = item && item.price;
@@ -44,7 +49,7 @@ async function overview(stripe) {
     const end = S.periodEnd(sub); const nextDate = end ? CAL.dateOfUnixET(end) : null;
     let nextCents = null; if (plan && nextDate && sub.status !== 'canceled' && !sub.cancel_at_period_end) { const p = CAL.parts(nextDate); nextCents = CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); }
     const li = sub.latest_invoice && typeof sub.latest_invoice === 'object' ? sub.latest_invoice : null;
-    subs.push({ id: sub.id, session: m.session || null, needsReview: m.needs_review || null, status: sub.status, hold: m.hold === 'true', holdSince: m.hold_since || null, cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection,
+    subs.push({ id: sub.id, session: m.session || null, needsReview: m.needs_review || null, status: sub.status, hold: m.hold === 'true', holdSince: m.hold_since || null, holdBy: m.hold_by || null, holdInvoice: m.hold_invoice || null, cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection,
       player: m.player || '', playerDob: m.player_dob || '', parent: m.parent || '', parentPhone: m.parent_phone || '', program: program ? program.short : (m.program || '—'), programId: program ? program.id : m.program || '', plan: plan ? plan.label : (m.plan_label || (price ? '$' + price.unit_amount / 100 : '—')), days: (m.days || '').split(',').filter(Boolean), monthly: plan ? plan.monthly : price ? price.unit_amount / 100 : null, qbo: program ? program.qbo : '',
       start: m.start || CAL.dateOfUnixET(sub.created), created: CAL.dateOfUnixET(sub.created), next: nextDate ? { date: nextDate, cents: nextCents } : null,
       customer: { id: c.id, name: c.name || '', email: c.email || '', phone: c.phone || '' },
@@ -68,7 +73,7 @@ async function overview(stripe) {
   return { at: new Date().toISOString(), today: CAL.todayET(), pending, counts: { subscriptions: active.length, onHold: active.filter((s) => s.hold).length, pastDue: subs.filter((s) => s.status === 'past_due').length, openInvoices: open.length, openAmount: open.reduce((n, i) => n + (i.amountDue || 0), 0), monthlyRun: active.reduce((n, s) => n + (s.next && s.next.cents ? s.next.cents : 0), 0) }, subscriptions: subs, openInvoices: open };
 }
 
-/* Charge the card on file for a one-time line (an unscheduled session flagged by attendance, a court booking). */
+/* Charge the card on file for a one-time line (an unscheduled session flagged by attendance, a court booking, a pack, a camp). */
 async function chargeOnFile(stripe, body, who) {
   const customer = S.clean(body.customer, 60); if (!/^cus_/.test(customer)) throw S.err(400, 'customer', 'A customer id is required.');
   const { line, price } = await S.oneTimeLine(stripe, S.clean(body.lookup, 80));
@@ -79,7 +84,7 @@ async function chargeOnFile(stripe, body, who) {
   const fin = await stripe.invoices.finalizeInvoice(inv.id);
   let paid = false, error = null;
   try { const p = await stripe.invoices.pay(fin.id); paid = p.status === 'paid'; } catch (e) { error = e.message; }
-  return { invoice: fin.id, paid, error, url: fin.hosted_invoice_url, amount: fin.amount_due };
+  return { invoice: fin.id, paid, error, url: fin.hosted_invoice_url, amount: fin.amount_due, label: line.label, kind: line.kind, lookup: line.lookup, qty, sessions: (line.sessions || 0) * qty, hours: (line.hours || 0) * qty };
 }
 
-module.exports = { requireStaff, overview, chargeOnFile, planOf };
+module.exports = { requireStaff, requireBilling, overview, chargeOnFile, planOf };
