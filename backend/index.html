@@ -778,6 +778,7 @@ function renderPlayers(app){
   <section class="section"><div class="search"><input id="pq" placeholder="Search player or parent" value="${esc(state.playersQ)}"><div class="seg">${[['all','All'],['new','New'],['online','Enrolled online'],['hold','On hold'],['fulltime','Full Time'],['afterschool','Afterschool'],['u10adv','10U Advanced'],['u10path','10U Pathway'],['tots','4 & Under'],['fitness','Fitness'],['soccer','Soccer'],['flex','On packs'],['tryout','Tryouts']].map(([k,l])=>`<button data-pf="${k}" aria-pressed="${f===k}">${l}</button>`).join('')}</div><button class="btn sm" id="add-player" style="margin-left:auto">Add player</button></div>
   <table class="tablelist" style="margin-top:14px"><thead><tr><th>Player</th><th>Plan</th><th>Attended</th><th>Next charge</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="muted">${DB.ready?'No players match.':'Loading the roster…'}</td></tr>`}</tbody></table></section>
   <section class="section" id="live-stripe"><h2>Live · Stripe</h2><p class="muted mini" id="live-note">Loading the families on file…</p><div id="live-body"></div></section>
+  <section class="section" id="switch"><h2>Moving from Play by Point</h2><p class="muted mini">Every active family, the link that keeps their spot (nothing charged today — billing here starts on the next 1st), who was sent it, and who is done. Set the program (and the plan, if you know it; otherwise the family picks), then send the link by email or text and mark it sent. A family that enrolls from the link lands on the roster above and in the Coach Portal the same minute.</p><div id="switch-body">Loading the families…</div></section>
   ${renderBillingRules()}
   ${DB.ctx&&DB.ctx.owner?renderNotifyPanel():''}
   <p class="note">The card is never typed by staff: the front desk sends the family the enrollment link, the parent enters the card once on Stripe (kept on file), and every renewal, pack, private and drop-in after that charges it. The billing engine runs every morning at 5:05: paid checkouts are put on the roster, break-month credits go on the week before the 1st, the $50 late fee on the 6th, hold on the 10th, spot released on the 15th — and the family, the coaches and the front desk are told at each step.</p>`;
@@ -815,6 +816,7 @@ async function renderLive(app){
   <div id="live-catalog" class="mini" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">Checking the Stripe catalog…</div>`;
   if(!document.body.contains(body))return;   // the view changed while Stripe answered
   renderCatalog(app);
+  renderSwitch(app);
   const rf=note.querySelector('#live-refresh');if(rf)rf.onclick=()=>{note.textContent='Refreshing…';renderLive(app)};
   body.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>playerSheet(app,b.dataset.open));
   body.querySelectorAll('[data-live]').forEach(b=>b.onclick=async()=>{const act=b.dataset.live,id=b.dataset.id;b.disabled=true;try{
@@ -846,6 +848,41 @@ async function renderCatalog(app){
   const canSync=!!(LIVE&&LIVE.owner);
   el.innerHTML=`<span class="pill warn">catalog</span> ${esc(where)}: ${c.products.ok} of ${c.products.expected} products and ${c.prices.ok} of ${c.prices.expected} prices match.${fix.length?' '+esc(fix.join(', '))+'.'+(canSync?' <button class="btn xs lime" id="live-sync">Sync catalog</button>':' (an owner runs the sync)'):''}${block.length?`<div class="m" style="margin-top:8px"><b>Fix in Stripe first</b> — the engine will not sell these until they match the catalog: ${block.map(esc).join(' · ')}</div>`:''}`;
   const b=$('#live-sync');if(b)b.onclick=async()=>{b.disabled=true;b.textContent='Syncing…';try{const r=await liveApi('/api/admin/catalog/sync',{});toast(`Done — ${r.done.created.length} created, ${r.done.updated.length} description${r.done.updated.length===1?'':'s'} rewritten.`);renderCatalog(app)}catch(e){toast(e.message);b.disabled=false;b.textContent='Sync catalog'}};
+}
+let SW=null,swFilter='waiting',swQ='';
+async function renderSwitch(app){
+  const el=$('#switch-body');if(!el)return;
+  try{SW=await liveApi('/api/admin/switch')}catch(e){el.innerHTML='<p class="muted mini">'+esc(e.message)+'</p>';return}
+  drawSwitch(app);
+}
+function swState(r){return r.enrolled?'enrolled':r.skip?'skipped':r.sentAt?'sent':'waiting'}
+function swFirst(r){return (r.guardian||'').trim().split(/\s+/)[0]||'there'}
+function swText(r){return `Hi ${swFirst(r)} — ProWorld is moving billing from PlayByPoint to our own system. Please take 2 minutes to keep ${r.first||r.player}'s spot: ${r.link}  Nothing is charged today; the first charge is Nov 1 (prorated for Thanksgiving week), then the 1st of each month at the same price as now. Questions: (561) 403-0008.`}
+function swMailBody(r){return `Hi ${swFirst(r)},\n\nProWorld Academy is moving enrollment and billing from PlayByPoint to our own system. Please take two minutes to keep ${r.first||r.player}'s spot:\n\n${r.link}\n\n• Nothing is charged today — this month is already paid.\n• Your card is saved on Stripe's secure page. The first charge is Nov 1 (prorated for Thanksgiving week), then the 1st of each month at the same price as today.\n• Please do this by Wednesday, Oct 28, so November goes through without a gap.\n\nQuestions? Reply here or call the front desk at (561) 403-0008.\n\nProWorld Academy — where champions are made.`}
+function swMailto(r){return 'mailto:'+encodeURIComponent(r.email)+'?subject='+encodeURIComponent(`Keep ${r.first||r.player}'s spot — 2 minutes before Nov 1`)+'&body='+encodeURIComponent(swMailBody(r))}
+function drawSwitch(app){
+  const el=$('#switch-body');if(!el||!SW)return;const c=SW.counts;const q=swQ.toLowerCase();
+  const rows=SW.rows.filter(r=>(swFilter==='all'||swFilter===swState(r))&&(!q||[r.player,r.guardian,r.email,r.phone,r.coach].join(' ').toLowerCase().includes(q)));
+  const progOpts=sel=>`<option value="">— program —</option>`+PROGRAMS.filter(p=>p.plans&&p.plans.length).map(p=>`<option value="${p.id}" ${sel===p.id?'selected':''}>${esc(p.short)}</option>`).join('');
+  const planOpts=(pid,sel)=>{const P=pid?PROG(pid):null;return `<option value="">family picks the plan</option>`+(P?P.plans.map(pl=>`<option value="${pl.id}" ${sel===pl.id?'selected':''}>${esc(pl.label)} · ${money(pl.monthly)}</option>`).join(''):'')};
+  el.innerHTML=`<div class="stats"><div class="stat"><b>${c.families}</b><span>families on the roster</span></div><div class="stat"><b>${c.enrolled}</b><span>enrolled here · card on file</span></div><div class="stat ${c.sent?'warn':''}"><b>${c.sent}</b><span>link sent · not done yet</span></div><div class="stat ${c.waiting?'warn':''}"><b>${c.waiting}</b><span>still to send${c.noEmail?' · '+c.noEmail+' without email':''}${c.noProgram?' · '+c.noProgram+' without a program':''}</span></div></div>
+  <div class="search" style="margin-top:14px"><input id="swq" placeholder="Search player, parent, email or phone" value="${esc(swQ)}"><div class="seg">${[['waiting','To send'],['sent','Sent'],['enrolled','Enrolled'],['skipped','Skipped'],['all','All']].map(([k,l])=>`<button data-swf="${k}" aria-pressed="${swFilter===k}">${l}</button>`).join('')}</div><button class="btn xs ghost" id="sw-refresh" style="margin-left:auto">Refresh</button></div>
+  <p class="muted mini" style="margin-top:8px">Billing on the new system starts ${esc(fmtDate(parse(SW.start)))} for everyone who moves over; the link says so and locks the date. A family that enrolls shows up under Live · Stripe the same minute.</p>
+  <table class="tablelist" style="margin-top:12px"><thead><tr><th>Player</th><th>Parent</th><th>Program · plan</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(r=>{const st=swState(r);const pillCls=st==='enrolled'?'ok':st==='sent'?'info':st==='waiting'?'warn':'';const pillText=st==='enrolled'?'enrolled ✓':st==='sent'?'sent '+fmtDate(new Date(r.sentAt)):st;
+    return `<tr data-sw="${esc(r.id)}"><td><b>${esc(r.player)}</b><div class="m">${esc(r.programText||'')}${r.coach?' · '+esc(r.coach):''}</div></td><td>${esc(r.guardian||'—')}<div class="m">${r.email?esc(r.email):'<span class="pill warn">no email</span>'}${r.phone?' · '+esc(phoneFmt(r.phone)):''}</div>${r.matchNote&&/CHECK|NOT FOUND/i.test(r.matchNote)?`<div class="m" style="color:#7a4a00">${esc(r.matchNote)}</div>`:''}</td><td>${r.enrolled?`${esc(r.enrolled.program)} · ${esc(r.enrolled.plan)}<div class="m">${r.enrolled.next?'next '+money(r.enrolled.next.cents/100)+' on '+esc(fmtDate(parse(r.enrolled.next.date))):''}${r.enrolled.player&&r.enrolled.player!==r.player?' · as '+esc(r.enrolled.player):''}</div>`:`<select data-swp="program" style="font-size:13px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;max-width:150px">${progOpts(r.program)}</select> <select data-swp="plan" style="font-size:13px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;max-width:230px" ${r.program?'':'disabled'}>${planOpts(r.program,r.plan)}</select>`}</td><td><span class="pill ${pillCls}">${esc(pillText)}</span>${r.skipReason&&st==='skipped'?`<div class="m">${esc(r.skipReason)}</div>`:''}</td><td><span class="acts" style="margin-left:0;flex-wrap:wrap">${r.enrolled?`<button class="btn xs ghost" data-swa="copy">Copy link</button>`:`<button class="btn xs ghost" data-swa="copy">Copy link</button>${r.email?`<a class="btn xs ghost" href="${swMailto(r)}">Email</a>`:''}${r.phone?`<a class="btn xs ghost" href="sms:${esc(r.phone)}?&body=${encodeURIComponent(swText(r))}">Text</a>`:''}${r.sentAt?`<button class="btn xs ghost" data-swa="unsent">Not sent</button>`:`<button class="btn xs lime" data-swa="sent">Mark sent</button>`}${r.skip?`<button class="btn xs ghost" data-swa="unskip">Include</button>`:`<button class="btn xs ghost" data-swa="skip">Skip</button>`}`}</span></td></tr>`}).join('')||'<tr><td colspan="5" class="muted">Nobody here.</td></tr>'}</tbody></table>`;
+  $('#swq').oninput=ev=>{swQ=ev.target.value;drawSwitch(app);const i=$('#swq');i.focus();i.setSelectionRange(i.value.length,i.value.length)};
+  el.querySelectorAll('[data-swf]').forEach(b=>b.onclick=()=>{swFilter=b.dataset.swf;drawSwitch(app)});
+  $('#sw-refresh').onclick=()=>{el.querySelector('.stats').style.opacity=.5;renderSwitch(app)};
+  const rowOf=t=>{const tr=t.closest('tr');return SW.rows.find(r=>r.id===tr.dataset.sw)};
+  const save=async(r,patch)=>{const out=await liveApi('/api/admin/switch/update',Object.assign({id:r.id},patch));Object.assign(r,out.row);const fresh=await liveApi('/api/admin/switch');SW=fresh;drawSwitch(app)};
+  el.querySelectorAll('[data-swp]').forEach(sel=>sel.onchange=async()=>{const r=rowOf(sel);const k=sel.dataset.swp;try{await save(r,k==='program'?{program:sel.value,plan:'',days:''}:{plan:sel.value})}catch(e){toast(e.message)}});
+  el.querySelectorAll('[data-swa]').forEach(b=>b.onclick=async()=>{const r=rowOf(b);const a=b.dataset.swa;b.disabled=true;try{
+    if(a==='copy'){await navigator.clipboard.writeText(r.link);toast('Link copied — paste it into a text or email.');b.disabled=false;return}
+    if(a==='sent')await save(r,{sent:true,via:'manual'});
+    else if(a==='unsent')await save(r,{sent:false});
+    else if(a==='skip'){const why=prompt('Skip this family — why? (left, pays another way, duplicate…)')||'';await save(r,{skip:true,skipReason:why})}
+    else if(a==='unskip')await save(r,{skip:false,skipReason:''});
+  }catch(e){toast(e.message);b.disabled=false}});
 }
 /* ---- Notifications (owners): where the engine's messages go — Slack webhooks for the coaches and the front desk, the JustCall line for families ---- */
 let NOTIFY_CFG=null;
