@@ -78,7 +78,7 @@ async function portalConfiguration(stripe) {
   const ours = list.data.find((c) => c.metadata && c.metadata.proworld === 'family') || list.data.find((c) => c.is_default) || list.data[0];
   if (ours) { portalIds.set(stripe, ours.id); return ours.id; }
   const made = await stripe.billingPortal.configurations.create({
-    business_profile: { headline: 'ProWorld Academy — your account', privacy_policy_url: 'https://proworldacademy.com/privacy-policy', terms_of_service_url: 'https://proworldacademy.com/privacy-policy' },
+    business_profile: { headline: 'ProWorld Academy — your account', privacy_policy_url: 'https://proworldacademy.com/privacy-policy', terms_of_service_url: 'https://proworld-coach-portal.web.app/enroll/agreement' },
     features: {
       customer_update: { enabled: true, allowed_updates: ['email', 'phone', 'address', 'name'] },
       invoice_history: { enabled: true },

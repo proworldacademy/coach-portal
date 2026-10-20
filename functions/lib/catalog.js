@@ -51,8 +51,8 @@ const PROGRAMS = [
       { id: 'fit5', sessions: 5, label: '5 Sessions', price: 240, lookup: 'fitness_fall26_5' },
       { id: 'fit10', sessions: 10, label: '10 Sessions', price: 425, lookup: 'fitness_fall26_10' }],
     dropin: { label: '1 Session', price: 50, lookup: 'fitness_fall26_1' } },
-  { id: 'soccer', name: 'Soccer | Fall 2026 (5 - 12yrs)', short: 'Soccer', product: 'prod_VSwhdbxWJc3MMh', firstMonth: 'pw_firstmonth_soccer', qbo: 'Soccer', sport: 'Soccer', ages: 'Ages 5–12', time: '4:00–6:00 PM',
-    days: ['Mon', 'Wed', 'Fri'], blurb: 'Small-sided training on the field. Technique, speed, decisions.',
+  { id: 'soccer', name: 'Soccer | Fall 2026 (5 - 12yrs)', short: 'Soccer', product: 'prod_VSwhdbxWJc3MMh', firstMonth: 'pw_firstmonth_soccer', qbo: 'Soccer', sport: 'Soccer', ages: 'Ages 5–12', time: 'Tue/Thu 5:00–6:30 PM · Sat 9:00–10:30 AM',
+    days: ['Tue', 'Thu', 'Sat'], blurb: 'Small-sided training on the turf, 60 minutes of soccer plus 30 of athletic fitness. Technique, speed, decisions. The first session is free.',
     plans: [
       { id: '4', label: '4 Sessions / month', sub: 'Monthly · 1 session a week', days: 1, monthly: 175, lookup: 'soccer_fall26_4_monthly' },
       { id: '8', label: '8 Sessions / month', sub: 'Monthly · 2 sessions a week', days: 2, monthly: 320, lookup: 'soccer_fall26_8_monthly' },
