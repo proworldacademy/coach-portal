@@ -327,3 +327,18 @@ test('catalog check: 26 products and 112 prices are expected; the sync creates t
   assert.deepEqual(bad.products.archived.map((a) => a.id), ['prod_VSwtDH5VO3FYSZ']);
   assert.equal(bad.blocking, 3); assert.equal(bad.ready, false);
 });
+
+/* ── moving the families over (the pure parts; the roster itself lives in Firestore) ── */
+const SWITCH = require('../lib/switch');
+test('switch links: program and plan when set, the family details, billing from the next 1st, the date locked', () => {
+  assert.equal(SWITCH.groupOf('Full Time'), 'ft'); assert.equal(SWITCH.groupOf('Afterschool 4Pm'), 'as'); assert.equal(SWITCH.groupOf('10 & Under'), 'u10');
+  assert.deepEqual(SWITCH.splitName('Bradley I'), { first: 'Bradley', last: '' });
+  assert.deepEqual(SWITCH.splitName('Ava Torres'), { first: 'Ava', last: 'Torres' });
+  assert.equal(SWITCH.slug('Toño Fernández'), 'tono-fernandez');
+  const link = SWITCH.linkFor({ program: 'afterschool', plan: '3', first: 'Bradley', guardian: 'Jane Doe', email: 'jane@example.com', phone: '5615550101' }, '2026-11-01');
+  const u = new URL(link);
+  assert.equal(u.origin + u.pathname, 'https://proworld-coach-portal.web.app/enroll');
+  assert.deepEqual(Object.fromEntries(u.searchParams), { switch: '1', p: 'afterschool', plan: '3', start: '2026-11-01', first: 'Bradley', parent: 'Jane Doe', email: 'jane@example.com', phone: '5615550101', by: 'switch' });
+  const bare = new URL(SWITCH.linkFor({ program: '', plan: 'x', first: 'Ava', last: 'Torres' }, '2026-11-01'));
+  assert.equal(bare.searchParams.get('p'), null); assert.equal(bare.searchParams.get('last'), 'Torres');
+});

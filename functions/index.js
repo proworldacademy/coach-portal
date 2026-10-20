@@ -14,6 +14,7 @@ const CHECKOUT = require('./lib/checkout');
 const JOBS = require('./lib/jobs');
 const ADMIN = require('./lib/admin');
 const SYNC = require('./lib/catalog-sync');
+const SWITCH = require('./lib/switch');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -88,6 +89,10 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         logger.info('catalog sync', { by: who.email, mode: mode(key), created: out.done.created, updated: out.done.updated });
         return send(res, 200, Object.assign({ mode: mode(key), log: lines }, out));
       }
+      // Moving the families over from Play by Point: the list with who has enrolled, the front desk's edits, the one-time import.
+      if (route === 'GET /admin/switch') { const ov = await ADMIN.overview(stripe); return send(res, 200, Object.assign({ mode: mode(key) }, await SWITCH.list(ov.subscriptions, ov.today))); }
+      if (route === 'POST /admin/switch/update') return send(res, 200, { ok: true, row: await SWITCH.update(b.id, b, who.email) });
+      if (route === 'POST /admin/switch/import') { if (!who.owner) throw S.err(403, 'owner', 'Only an owner can import the roster.'); const out = await SWITCH.importRows(Array.isArray(b.rows) ? b.rows.slice(0, 400) : [], who.email); logger.info('switch import', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       if (route === 'GET /admin/notices') {
         const ov = await ADMIN.overview(stripe); const out = [];
         for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'trialing', 'past_due'].includes(s.status)) continue; const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
