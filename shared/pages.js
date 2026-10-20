@@ -23,7 +23,11 @@
     { id: "coach-board", section: "tools", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: true, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
       desc: "Rosters by coach, players with no coach yet, try-outs, the Proworld Standard and the quarter commit — from Monday every morning, with a log of every change. Comes with the Coach Portal." },
     { id: "backend", section: "tools", name: "ProWorld backend", short: "Backend", color: "", status: "here", opens: "site", menu: true, url: "/backend", owner: "Owners · Front desk · Coaches · Families",
-      desc: "The academy's own system, replacing Play by Point: front desk, enroll, courts, attendance, players & billing, privates, books and the family's account. One player record drives everything. Demo data until Stripe is connected; the view switches by role." },
+      desc: "The academy's own system, replacing Play by Point: front desk, enroll, courts, attendance, players & billing, privates, books and the family's account. One player record drives everything — a family that enrolls online is on the roster, in the Coach Portal, on the attendance list and on Monday the same minute, and the coaches are told." },
+    { id: "billing", section: "tools", name: "Billing · live actions", short: "Billing", color: "orchid", status: "here", opens: "site", url: "/backend#players", owner: "Owners · Front desk",
+      desc: "On top of the backend page: hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link. Without this tick the backend shows billing read-only." },
+    { id: "enroll", section: "tools", name: "Public enrollment page", short: "Enroll", color: "mint", status: "live", opens: "site", url: "/enroll", with: "backend", owner: "Families · Front desk",
+      desc: "Where families enroll and pay: program, days, parent, Stripe. Open it to see what a family sees, or send the prefilled link from the backend's Enroll tab. No sign-in needed — it is public. Comes with the backend." },
     { id: "ai-check", section: "tools", name: "AI & Comms Check", short: "AI check", color: "orchid", status: "here", opens: "site", menu: true, url: "/checks", owner: "Owners · Front desk",
       desc: "Is everything answering? The 2-minute morning glance at the automatic reports, the weekly test messages on every channel (text, WhatsApp, website, Instagram, Messenger), the monthly accounts that switch it all off, and what’s still missing. Every tick is saved with who and when." },
     { id: "desk-live", section: "tools", name: "Front Desk · Daily Attendance", short: "Attendance", color: "cyan", status: "live", opens: "link", owner: "Front desk",
@@ -91,7 +95,7 @@
     marketing: { label: "Marketing", pages: ["mkt", "leads", "soccer", "pipeline", "thanksgiving", "sunday-preview", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
     editor: { label: "Video editor", pages: ["mkt"] },
     coach: { label: "Coach", pages: ["coach-portal", "tryouts", "backend"] },
-    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "ai-check", "backend", "attendance", "leads", "inbox-brief"] },
+    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "ai-check", "backend", "billing", "attendance", "leads", "inbox-brief"] },
     admin: { label: "Administrator", pages: all, admin: true },
     none: { label: "Nothing yet", pages: [] }
   };
