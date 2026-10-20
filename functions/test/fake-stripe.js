@@ -11,7 +11,7 @@ function fakeStripe(seed) {
   const rec = (name, args) => calls.push({ name, args });
   const stripe = {
     _db: db, _calls: calls,
-    prices: { list: (params) => { rec('prices.list', params); const keys = params.lookup_keys || []; return listOf(db.prices.filter((p) => keys.includes(p.lookup_key) && (params.active === undefined || p.active === params.active))); } },
+    prices: { list: (params) => { rec('prices.list', params); const keys = params.lookup_keys; if (keys && keys.length > 10) throw Object.assign(new Error('Array lookup_keys exceeded maximum 10 allowed elements.'), { type: 'StripeInvalidRequestError' }); return listOf(db.prices.filter((p) => (!keys || keys.includes(p.lookup_key)) && (params.active === undefined || p.active === params.active))); } },
     products: {
       retrieve: async (pid) => { rec('products.retrieve', pid); const p = db.products[pid]; if (!p) throw Object.assign(new Error('No such product'), { type: 'StripeInvalidRequestError', code: 'resource_missing' }); return p; },
       list: (params) => { rec('products.list', params); return listOf(Object.values(db.products).filter((p) => params.active === undefined || (p.active !== false) === params.active)); },
