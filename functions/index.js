@@ -13,6 +13,7 @@ const S = require('./lib/stripe');
 const CHECKOUT = require('./lib/checkout');
 const JOBS = require('./lib/jobs');
 const ADMIN = require('./lib/admin');
+const SYNC = require('./lib/catalog-sync');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -78,6 +79,14 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         const late = !b.which || b.which === 'late' ? await JOBS.applyLatePolicy(stripe, today, log) : null;
         logger.info('jobs run by hand', { by: who.email, today, lines });
         return send(res, 200, { today, plans, credits, late, log: lines });
+      }
+      if (route === 'GET /admin/catalog') return send(res, 200, Object.assign({ mode: mode(key) }, await SYNC.checkCatalog(stripe)));
+      if (route === 'POST /admin/catalog/sync') {
+        // Makes the Stripe account behind the key carry the catalog: start-month products, family-facing descriptions, the portal. Never prices.
+        if (!who.owner) throw S.err(403, 'owner', 'Only an owner can change the Stripe catalog.');
+        const lines = []; const out = await SYNC.syncCatalog(stripe, (l) => lines.push(l));
+        logger.info('catalog sync', { by: who.email, mode: mode(key), created: out.done.created, updated: out.done.updated });
+        return send(res, 200, Object.assign({ mode: mode(key), log: lines }, out));
       }
       if (route === 'GET /admin/notices') {
         const ov = await ADMIN.overview(stripe); const out = [];
