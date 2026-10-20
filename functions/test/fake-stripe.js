@@ -12,7 +12,12 @@ function fakeStripe(seed) {
   const stripe = {
     _db: db, _calls: calls,
     prices: { list: (params) => { rec('prices.list', params); const keys = params.lookup_keys || []; return listOf(db.prices.filter((p) => keys.includes(p.lookup_key) && (params.active === undefined || p.active === params.active))); } },
-    products: { retrieve: async (pid) => { rec('products.retrieve', pid); const p = db.products[pid]; if (!p) throw Object.assign(new Error('No such product'), { type: 'StripeInvalidRequestError' }); return p; } },
+    products: {
+      retrieve: async (pid) => { rec('products.retrieve', pid); const p = db.products[pid]; if (!p) throw Object.assign(new Error('No such product'), { type: 'StripeInvalidRequestError', code: 'resource_missing' }); return p; },
+      list: (params) => { rec('products.list', params); return listOf(Object.values(db.products).filter((p) => params.active === undefined || (p.active !== false) === params.active)); },
+      create: async (params) => { rec('products.create', params); if (db.products[params.id]) throw Object.assign(new Error('Product already exists'), { type: 'StripeInvalidRequestError' }); const p = Object.assign({ object: 'product', active: true, default_price: null }, params, { id: params.id || id('prod') }); db.products[p.id] = p; return p; },
+      update: async (pid, params) => { rec('products.update', { pid, params }); const p = db.products[pid]; if (!p) throw Object.assign(new Error('No such product'), { type: 'StripeInvalidRequestError', code: 'resource_missing' }); Object.assign(p, params); return p; }
+    },
     customers: {
       list: (params) => { rec('customers.list', params); return listOf(db.customers.filter((c) => c.email === params.email)); },
       create: async (params) => { rec('customers.create', params); const c = Object.assign({ id: id('cus'), object: 'customer' }, params); db.customers.push(c); return c; },

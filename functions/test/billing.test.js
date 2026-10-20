@@ -269,3 +269,43 @@ test('the family notice for a break month reads right', () => {
   assert.equal(JOBS.breakMonthNotice('Afterschool', 98000, 2026, 9), null);
   assert.match(JOBS.breakMonthNotice('Afterschool', 98000, 2027, 5), /no tuition charge on Jun 1/);
 });
+
+/* ── the Stripe catalog check and sync (what "Sync catalog" in the backend does) ── */
+const SYNC = require('../lib/catalog-sync');
+for (const m of CAT.MEMBERSHIP) PRICES.push({ id: 'price_' + m.lookup, object: 'price', active: true, lookup_key: m.lookup, type: 'recurring', recurring: { interval: 'month', interval_count: 1 }, unit_amount: m.price * 100, product: 'prod_VSwuLdnecvHOo2' });
+function liveLikeProducts() {
+  // A Stripe account as the live one stood before the first sync: the 20 Play by Point products with their internal descriptions, no start-month products.
+  const out = {};
+  for (const e of SYNC.expectedProducts()) if (!e.create) out[e.id] = { id: e.id, object: 'product', active: true, name: e.name, description: e.description + ' Mirrors the Play by Point program line for line.', default_price: e.id === 'prod_VSwrEVcItQBJ4t' ? PRODUCTS.prod_VSwrEVcItQBJ4t.default_price : null };
+  return out;
+}
+test('catalog check: 26 products and 112 prices are expected; the sync creates the start-month products and rewrites descriptions, never prices', async () => {
+  assert.equal(SYNC.expectedProducts().length, 26);
+  assert.equal(SYNC.expectedPrices().length, 112);
+  const stripe = fakeStripe({ prices: PRICES, products: liveLikeProducts() });
+  const before = await SYNC.checkCatalog(stripe);
+  assert.equal(before.products.missing.length, 6); assert.ok(before.products.missing.every((m) => m.create && /^pw_firstmonth_/.test(m.id)));
+  assert.equal(before.products.stale.length, 20); assert.equal(before.products.ok, 0);
+  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [112, 112, 0, 0]);
+  assert.equal(before.fixable, 26); assert.equal(before.blocking, 0); assert.equal(before.ready, false);
+  const lines = [];
+  const out = await SYNC.syncCatalog(stripe, (l) => lines.push(l));
+  assert.equal(out.done.created.length, 6); assert.equal(out.done.updated.length, 20); assert.ok(out.done.portal);
+  const made = stripe._db.products.pw_firstmonth_afterschool;
+  assert.equal(made.name, 'Afterschool | Fall 2026 — start month (prorated by training days)');
+  assert.equal(made.statement_descriptor, 'PROWORLD AFTERSCHOOL'); assert.equal(made.metadata.kind, 'first_month');
+  assert.equal(stripe._db.products.prod_VSweKxrlHVGGqf.description, 'Afterschool program · Aug 10 – Dec 18, 2026.');
+  assert.ok(!stripe._calls.some((c) => /^prices\.(create|update)/.test(c.name)), 'prices are never written');
+  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 26); assert.equal(out.after.prices.ok, 112);
+  // a second sync changes nothing
+  const again = await SYNC.syncCatalog(stripe);
+  assert.deepEqual([again.done.created.length, again.done.updated.length], [0, 0]);
+  // a price that drifted from the catalog, a missing lookup key and an archived product all block go-live and are named
+  const drift = PRICES.map((p) => p.lookup_key === 'afterschool_fall26_3d_monthly' ? Object.assign({}, p, { unit_amount: 99000 }) : p).filter((p) => p.lookup_key !== 'tg26_u10_saturday_dropin');
+  const prods = liveLikeProducts(); prods.prod_VSwtDH5VO3FYSZ.active = false;
+  const bad = await SYNC.checkCatalog(fakeStripe({ prices: drift, products: prods }));
+  assert.equal(bad.prices.mismatched.length, 1); assert.match(bad.prices.mismatched[0].problem, /\$990 in Stripe, catalog says \$980/);
+  assert.deepEqual(bad.prices.missing.map((m) => m.lookup), ['tg26_u10_saturday_dropin']);
+  assert.deepEqual(bad.products.archived.map((a) => a.id), ['prod_VSwtDH5VO3FYSZ']);
+  assert.equal(bad.blocking, 3); assert.equal(bad.ready, false);
+});
