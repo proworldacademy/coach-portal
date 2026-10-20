@@ -1,10 +1,10 @@
 /* The timed rules, run every morning at 05:05 Delray Beach time (an hour before the 1st-of-month invoices are created at 06:00):
    0. Paid checkouts without their follow-through: the plan for a paid start month, and the roster record + the messages for
       every paid checkout (program, pack, camp, week, drop-in) — in case the family closed the tab before the thank-you page.
-   1. Break-month credits: in the week before a 1st that opens a month with a school break, each monthly subscription gets a credit line
-      (full price minus the training-day charge) so the invoice shows the full tuition and the credit; the family is told. A month with
-      no training days (June, July) pauses collection for that month instead — invoices created while paused are voided.
-      Each subscription is flagged per month, so a day's run can be repeated safely.
+   1. First-invoice credits: in the week before a 1st, each monthly subscription whose coming month is short — a school break, or a plan
+      that starts later than the month's first training day — gets a credit line (full price minus the training-day charge) so the invoice
+      shows the full tuition and the credit; the family is told. A month with no training days (June, July) pauses collection for that
+      month instead — invoices created while paused are voided. Each subscription is flagged per month, so a day's run can be repeated safely.
    2. The late-fee timeline: a tuition invoice still open on the 2nd gets the family a "didn't go through" text; still open after the
       5th, a $50 late-fee invoice on the 6th; on the 10th the subscription is marked on hold (the attendance list drops the player);
       on the 15th the subscription is cancelled and the spot released. Flags on the invoice and the subscription make every step run once.
@@ -75,24 +75,35 @@ async function applyBreakCredits(stripe, today, log, ctx) {
         const flag = 'credit_' + nextDate.slice(0, 7).replace('-', '_');
         if (sub.metadata && sub.metadata[flag]) { report.skipped++; continue; }
         const f = CAL.monthFactor(y, m);
-        if (f.factor >= 1) { report.skipped++; continue; }
+        const start = sub.metadata && /^\d{4}-\d{2}-\d{2}$/.test(sub.metadata.start || '') ? sub.metadata.start : null;   // a start inside this month: only the days from it
+        const charge = CAL.firstChargeCents(price.unit_amount, nextDate, start);
+        if (f.factor >= 1 && charge >= price.unit_amount) { report.skipped++; continue; }
         const programShort = (() => { for (const p of CAT.PROGRAMS) if (p.plans.some((x) => x.lookup === price.lookup_key)) return p.short; return 'program'; })();
-        const notice = breakMonthNotice(programShort, price.unit_amount, y, m);
+        let notice = null;
         if (f.factor === 0) {
           // Pause through this one month only (resume an hour before the next 1st's invoices); the next month is judged on its own the following week.
           const resumesAt = CAL.unixET(CAL.nextFirst(nextDate), 5, 0);
           await stripe.subscriptions.update(sub.id, { pause_collection: { behavior: 'void', resumes_at: resumesAt }, metadata: { [flag]: 'paused' } }, { idempotencyKey: `pause_${sub.id}_${nextDate.slice(0, 7)}` });
           report.paused.push({ subscription: sub.id, month: nextDate.slice(0, 7), resumes: CAL.dateOfUnixET(resumesAt) });
           log(`paused ${sub.id} for ${nextDate.slice(0, 7)}, resumes ${CAL.dateOfUnixET(resumesAt)}`);
+          notice = breakMonthNotice(programShort, price.unit_amount, y, m);
         } else {
-          const credit = CAL.monthCreditCents(price.unit_amount, y, m);
+          const credit = price.unit_amount - charge;
           if (credit <= 0) { report.skipped++; continue; }
           const breaks = CAL.breaksIn(y, m).map((b) => b.label).join(' + ');
-          const description = `${breaks} credit — ${CAL.MONTHS_LONG[m]}: ${f.trainingDays} of ${f.weekdays} training days`;
+          const from = start && CAL.parts(start).y === y && CAL.parts(start).m === m ? CAL.parts(start).d : 1;
+          const lateStart = from > 1 && CAL.ymd(y, m, from) > CAL.firstTrainingDay(CAL.ymd(y, m, 1));
+          const days = `${CAL.trainingDaysIn(y, m, from)} of ${f.weekdays} training days`;
+          const description = lateStart
+            ? `Start credit — ${CAL.MONTHS_LONG[m]}: ${days} from ${CAL.MONTHS[m]} ${from}${breaks ? ' (' + breaks.toLowerCase() + ' off)' : ''}`
+            : `${breaks} credit — ${CAL.MONTHS_LONG[m]}: ${days}`;
           const ii = await stripe.invoiceItems.create({ customer: S.customerId(sub.customer), subscription: sub.id, amount: -credit, currency: 'usd', description, metadata: { kind: 'break_credit', month: nextDate.slice(0, 7), subscription: sub.id, player: (sub.metadata && sub.metadata.player) || '' } }, { idempotencyKey: `credit_${sub.id}_${nextDate.slice(0, 7)}` });
           await stripe.subscriptions.update(sub.id, { metadata: { [flag]: ii.id } });
           report.credited.push({ subscription: sub.id, month: nextDate.slice(0, 7), credit, item: ii.id });
           log(`credit ${sub.id} ${nextDate.slice(0, 7)} -$${credit / 100} (${description})`);
+          notice = lateStart
+            ? `${CAL.MONTHS_LONG[m]} tuition for the ${programShort} program is prorated from your start (${CAL.MONTHS[m]} ${from}): ${days} = $${charge / 100} instead of $${price.unit_amount / 100}, charged on ${CAL.MONTHS[m]} 1. The credit shows on the invoice.`
+            : breakMonthNotice(programShort, price.unit_amount, y, m);
         }
         if (ctx.db && notice) {
           const fam = await phoneOf(stripe, S.customerId(sub.customer));
