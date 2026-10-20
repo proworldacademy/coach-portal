@@ -74,12 +74,8 @@ async function checkCatalog(stripe) {
   }
   const prices = { expected: 0, ok: 0, missing: [], mismatched: [] };
   const want = expectedPrices();
-  const byLookup = {};
-  const keys = want.filter((w) => !w.byProduct).map((w) => w.lookup);
-  for (let i = 0; i < keys.length; i += 50) {
-    const res = await stripe.prices.list({ lookup_keys: keys.slice(i, i + 50), active: true, limit: 100 });
-    for (const p of res.data) byLookup[p.lookup_key] = p;
-  }
+  const byLookup = {};                                // every active price with a lookup key, two pages at most (Stripe takes 10 lookup keys per query, so listing is cheaper)
+  for await (const p of stripe.prices.list({ active: true, limit: 100 })) if (p.lookup_key) byLookup[p.lookup_key] = p;
   for (const w of want) {
     prices.expected++;
     let p = byLookup[w.lookup];

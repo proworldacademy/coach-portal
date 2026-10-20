@@ -22,8 +22,8 @@ async function resolvePrices(stripe, lookups) {
   const fresh = Date.now() - cache.at < TTL;
   const missing = need.filter((k) => !(fresh && cache.byLookup[k]));
   if (!fresh) cache.byLookup = {};
-  for (let i = 0; i < missing.length; i += 50) {
-    const chunk = missing.slice(i, i + 50);
+  for (let i = 0; i < missing.length; i += 10) {   // Stripe takes at most 10 lookup keys per query
+    const chunk = missing.slice(i, i + 10);
     const res = await stripe.prices.list({ lookup_keys: chunk, active: true, limit: 100 });
     for (const p of res.data) cache.byLookup[p.lookup_key] = p;
   }
