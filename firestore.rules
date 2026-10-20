@@ -9,6 +9,7 @@
 //       Marketing        → "mkt"
 //       Coach Portal     → "coach-portal"   (players, assessments, videos, journal, goals)
 //       Try-outs         → "tryouts" or "coach-portal"
+//       Backend          → "backend"  (players, attendance lists, the shared record, the engine's ledger)
 //       Every other page → its own id (a copied page's key in pageKeys/<id>, an outside page's link in pageLinks/<id>)
 //     People added before the Dashboard had sign-in carry no `pages` list: they keep exactly what they had —
 //     the Coach Portal and Try-outs.
@@ -57,6 +58,8 @@ service cloud.firestore {
     function myPages() { return ('pages' in staffRec()) ? staffRec().pages : ['coach-portal', 'tryouts']; }
     function portal() { return hasPage('coach-portal'); }
     function tryoutsOk() { return hasPage('coach-portal') || hasPage('tryouts'); }
+    // The backend (/backend): front desk, attendance, players & billing. The old be-* ids count as the same page.
+    function backend() { return hasPage('backend') || hasPage('be-owner') || hasPage('be-desk') || hasPage('be-coach') || hasPage('be-parent'); }
 
     // The scheduled runs (Sunday engine, Monday review, morning numbers, morning Monday sync): one email/password account,
     // runs@proworldacademy.com — its User UID from Authentication → Users.
@@ -97,29 +100,34 @@ service cloud.firestore {
       allow read: if tryoutsOk();
       allow write: if portal() && admin();
     }
-    // Players. The morning Monday sync (the runs account) reads them and writes only Monday's fields; it never deletes.
+    // Players — the one roster. Written by the morning Monday sync (the runs account: Monday's fields only, never deletes),
+    // the Coach Portal, the front desk on the backend, and the billing engine (a family that enrolls online: it writes with the
+    // admin SDK, outside these rules — see functions/lib/roster.js for exactly what it writes).
     match /players/{id} {
       // (the runs account is checked first everywhere, so its sign-in never has to pass the staff checks)
-      allow read: if runs() || portal();
+      allow read: if runs() || portal() || backend();
       allow create: if (runs()
         && request.resource.data.keys().hasOnly(['name', 'shortName', 'group', 'tier', 'coach', 'coach2', 'fitness', 'status', 'source',
-                                                 'mondayId', 'monday', 'createdAt', 'updatedAt', 'createdBy'])) || (!runs() && portal());
+                                                 'mondayId', 'monday', 'createdAt', 'updatedAt', 'createdBy'])) || (!runs() && (portal() || backend()));
       allow update: if (runs()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'mondayId', 'monday', 'updatedAt'])) || (!runs() && portal());
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'mondayId', 'monday', 'updatedAt']))
+        || (!runs() && portal())
+        || (!runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['group', 'coach', 'coach2', 'status', 'sport', 'updatedAt']));
       allow delete: if portal() && admin();
-      // Parent name, email and phone, copied from Monday by the sync. Opened behind a button on the player's page;
-      // nobody edits them in the portal (Monday is where they change).
+      // Parent name, email and phone: from Monday (the sync), from the enrollment page (the engine) or typed at the front desk.
+      // Opened behind a button on the player's page, never shown in lists.
       match /private/{doc} {
-        allow read: if runs() || portal();
-        allow write: if runs();
+        allow read: if runs() || portal() || backend();
+        allow write: if runs() || (backend()
+          && request.resource.data.keys().hasOnly(['guardian', 'email', 'phone', 'dob', 'source', 'updatedAt', 'mondayId', 'syncedAt']));
       }
     }
     // Changes made in the portal that Monday must get with the next morning sync: a coach-added player (it goes to the
     // front desk's New Requests on the LEADS board) or a player marked away / finished / active. Anyone with the Coach
     // Portal files one in their own name; only the sync moves it on.
     match /outbox/{id} {
-      allow read: if runs() || portal();
-      allow create: if !runs() && portal()
+      allow read: if runs() || portal() || backend();
+      allow create: if !runs() && (portal() || backend())
         && request.resource.data.keys().hasOnly(['type', 'pid', 'name', 'first', 'last', 'group', 'coach', 'note', 'mondayId', 'from', 'to',
                                                  'by', 'byName', 'at', 'state'])
         && request.resource.data.type in ['add', 'status']
@@ -154,8 +162,30 @@ service cloud.firestore {
       }
     }
     match /tryouts/{id} {
-      allow read, create, update: if tryoutsOk();
+      allow read, create, update: if tryoutsOk() || backend();
       allow delete: if tryoutsOk() && admin();
+    }
+
+    // ── The backend (/backend) ──
+    // enrollments/<checkout session>: the billing engine's ledger of every paid checkout (what was bought, who was told). Read only.
+    match /enrollments/{id} {
+      allow read: if backend() || portal();
+    }
+    // backend/state: what the front desk, attendance and courts share — court blocks, bookings, privates, charges, the "Sent" log,
+    // per-player notes. One document, written by whoever holds the backend page.
+    match /backend/{doc} {
+      allow read: if backend();
+      allow write: if !runs() && backend() && request.resource.data.size() < 200;
+    }
+    // sheets/<date>_<session>: one attendance list per session per day.
+    match /sheets/{id} {
+      allow read: if backend() || portal();
+      allow write: if !runs() && backend() && id.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9]{1,12}');
+    }
+    // settings/notify: where the engine's messages go (Slack webhooks, the JustCall line). Owners only — the engine reads it
+    // with the admin SDK.
+    match /settings/{doc} {
+      allow read, write: if !runs() && owner();
     }
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }
