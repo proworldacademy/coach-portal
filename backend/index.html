@@ -778,6 +778,7 @@ function renderPlayers(app){
   <section class="section"><div class="search"><input id="pq" placeholder="Search player or parent" value="${esc(state.playersQ)}"><div class="seg">${[['all','All'],['new','New'],['online','Enrolled online'],['hold','On hold'],['fulltime','Full Time'],['afterschool','Afterschool'],['u10adv','10U Advanced'],['u10path','10U Pathway'],['tots','4 & Under'],['fitness','Fitness'],['soccer','Soccer'],['flex','On packs'],['tryout','Tryouts']].map(([k,l])=>`<button data-pf="${k}" aria-pressed="${f===k}">${l}</button>`).join('')}</div><button class="btn sm" id="add-player" style="margin-left:auto">Add player</button></div>
   <table class="tablelist" style="margin-top:14px"><thead><tr><th>Player</th><th>Plan</th><th>Attended</th><th>Next charge</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="muted">${DB.ready?'No players match.':'Loading the roster…'}</td></tr>`}</tbody></table></section>
   <section class="section" id="live-stripe"><h2>Live · Stripe</h2><p class="muted mini" id="live-note">Loading the families on file…</p><div id="live-body"></div></section>
+  ${renderEngineRecords()}
   <section class="section" id="switch"><h2>Moving from Play by Point</h2><p class="muted mini">Every active family, the link that keeps their spot (nothing charged today — billing here starts on the next 1st), who was sent it, and who is done. Set the program (and the plan, if you know it; otherwise the family picks), then send the link by email or text and mark it sent. A family that enrolls from the link lands on the roster above and in the Coach Portal the same minute.</p><div id="switch-body">Loading the families…</div></section>
   ${renderBillingRules()}
   ${DB.ctx&&DB.ctx.owner?renderNotifyPanel():''}
@@ -789,9 +790,20 @@ function renderPlayers(app){
   app.querySelectorAll('[data-manual]').forEach(b=>b.onclick=()=>{const c=state.charges.find(x=>x.id===b.dataset.manual);chargeCard(c,{manual:'cash/other'});save();renderPlayers(app);toast('Marked paid.')});
   app.querySelectorAll('[data-void]').forEach(b=>b.onclick=()=>{const c=state.charges.find(x=>x.id===b.dataset.void);c.status='void';save();renderPlayers(app);toast('Approved as a swap — no charge.')});
   $('#add-player').onclick=()=>addPlayerSheet(app);
-  bindBillingRules(app);bindNotifyPanel(app);
+  bindBillingRules(app);bindNotifyPanel(app);bindEngineRecords(app);
   renderLive(app);
 }
+/* ---- Records the engine filed (online enrollments), finished ones included — and the way to take a test or a mistaken one out. Owners only. ---- */
+function renderEngineRecords(){
+  if(!(DB.ctx&&DB.ctx.owner))return '';
+  const rows=Object.keys(DB.raw||{}).map(id=>Object.assign({id},DB.raw[id])).filter(d=>d.source==='enroll').sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if(!rows.length)return '';
+  return `<section class="section" id="engine-records"><h2>Filed by the engine</h2><p class="muted mini">Every record an online enrollment created, finished ones included. A test or a mistaken one is removed here — the record, the parent's details, its ledger lines and anything still queued for Monday go together; the plan in Stripe is not touched (a live plan is cancelled first). Players from Monday or the Coach Portal are removed in the Coach Portal.</p>
+  <table class="tablelist"><thead><tr><th>Player</th><th>What</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(d=>{const led=(DB.ledger||[]).filter(l=>l.player===d.id);const l0=led[0];const e=d.enroll||{};return `<tr><td><b>${esc(d.name||d.id)}</b><div class="m">${d.createdAt?esc(fmtDate(new Date(d.createdAt))):''}${e.start?' · starts '+esc(fmtDate(parse(e.start))):''}</div></td><td>${esc(l0?l0.what:(e.programShort||''))}${l0?(l0.mode==='live'?' <span class="pill ok">live</span>':' <span class="pill warn">sandbox</span>'):''}<div class="m">${led.length} ledger line${led.length===1?'':'s'}${e.subscription?' · '+esc(e.subscription):''}</div></td><td><span class="pill ${d.status==='active'?'ok':''}">${esc(d.status||'')}</span>${e.hold?' <span class="pill warn">hold</span>':''}</td><td><span class="acts" style="margin-left:0"><button class="btn xs ghost" data-rm="${esc(d.id)}" data-name="${esc(d.name||d.id)}">Remove record</button></span></td></tr>`}).join('')}</tbody></table></section>`;
+}
+function bindEngineRecords(app){app.querySelectorAll('[data-rm]').forEach(b=>{const reset=()=>{b.dataset.armed='';b.textContent='Remove record';b.classList.remove('lime')};b.onclick=async()=>{
+  if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Remove '+b.dataset.name+' for good?';b.classList.add('lime');setTimeout(()=>{if(b.isConnected&&b.dataset.armed==='1')reset()},8000);return}
+  b.disabled=true;try{const r=await liveApi('/api/admin/roster/remove',{player:b.dataset.rm});toast(`${r.name||b.dataset.name} removed — ${r.enrollments} ledger line${r.enrollments===1?'':'s'}, ${r.outbox} Monday item${r.outbox===1?'':'s'}.`)}catch(e){toast(e.message);b.disabled=false;reset()}}})}
 /* ---- Live Stripe panel: what the billing engine has on file (families, plans, the next 1st, open balances) ---- */
 async function liveApi(path,body){
   const ctx=window.PWCTX;if(!ctx||!ctx.user)throw new Error('Sign in to use the billing engine.');

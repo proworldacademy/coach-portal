@@ -21,6 +21,7 @@ const NOTIFY = require('./lib/notify');
 const DB = require('./lib/db');
 const SYNC = require('./lib/catalog-sync');
 const SWITCH = require('./lib/switch');
+const REMOVE = require('./lib/remove');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -98,6 +99,13 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'GET /admin/switch') { const ov = await ADMIN.overview(stripe); return send(res, 200, Object.assign({ mode: mode(key) }, await SWITCH.list(ov.subscriptions, ov.today))); }
       if (route === 'POST /admin/switch/update') return send(res, 200, { ok: true, row: await SWITCH.update(b.id, b, who.email) });
       if (route === 'POST /admin/switch/import') { if (!who.owner) throw S.err(403, 'owner', 'Only an owner can import the roster.'); const out = await SWITCH.importRows(Array.isArray(b.rows) ? b.rows.slice(0, 400) : [], who.email); logger.info('switch import', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
+      if (route === 'POST /admin/roster/remove') {
+        // A record the engine filed (a test, a mistake) goes away with its parent details, ledger lines and anything queued for Monday. Owners only.
+        if (!who.owner) throw S.err(403, 'owner', 'Only an owner can remove a record.');
+        const out = await REMOVE.removeRecord(ctx.db, stripe, S.clean(b.player, 60), { log });
+        logger.info('record removed', Object.assign({ by: who.email }, out));
+        return send(res, 200, Object.assign({ ok: true }, out));
+      }
       // ── everything below moves money or a family's plan: owners, administrators and the Billing page only ──
       ADMIN.requireBilling(who);
       if (route === 'POST /admin/portal') { const c = S.clean(b.customer, 60); if (!/^cus_/.test(c)) throw S.err(400, 'customer', 'customer id required'); return send(res, 200, { url: await S.portalUrl(stripe, c, SITE + '/backend') }); }

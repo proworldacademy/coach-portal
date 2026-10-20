@@ -14,12 +14,14 @@ function fakeDb(seed) {
     if (opts && opts.merge && docs.has(path)) docs.set(path, deepMerge(docs.get(path), clone(data)));
     else docs.set(path, clone(data));
   };
+  const remove = (path) => { writes.push({ path, delete: true }); docs.delete(path); };   // like Firestore: the document only, never what is nested under it
   function docRef(path) {
     return {
       id: path.split('/').pop(), path,
       get: async () => snapOf(path),
       set: async (data, opts) => { apply(path, data, opts); },
       update: async (data) => { if (!docs.has(path)) throw new Error('No document to update: ' + path); apply(path, data, { merge: true }); },
+      delete: async () => { remove(path); },
       collection: (sub) => colRef(path + '/' + sub)
     };
   }
@@ -37,7 +39,7 @@ function fakeDb(seed) {
     _docs: docs, _writes: writes,
     doc: (path) => docRef(path),
     collection: (path) => colRef(path),
-    batch: () => { const ops = []; return { set: (ref, data, opts) => { ops.push(() => apply(ref.path, data, opts)); }, update: (ref, data) => { ops.push(() => apply(ref.path, data, { merge: true })); }, commit: async () => { ops.forEach((f) => f()); } }; }
+    batch: () => { const ops = []; return { set: (ref, data, opts) => { ops.push(() => apply(ref.path, data, opts)); }, update: (ref, data) => { ops.push(() => apply(ref.path, data, { merge: true })); }, delete: (ref) => { ops.push(() => remove(ref.path)); }, commit: async () => { ops.forEach((f) => f()); } }; }
   };
   return db;
 }

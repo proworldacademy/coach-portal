@@ -211,3 +211,30 @@ test('the soccer catalog matches the live schedule: Tuesday, Thursday and Saturd
   assert.equal(s.plans.find((p) => p.id === '12').days, 3);
   assert.match(s.time, /Tue\/Thu 5:00–6:30 PM · Sat 9:00–10:30 AM/);
 });
+
+test('removing a record the engine filed: the player, the parent details, the ledger and the Monday queue go — never a Monday player, never a live plan', async () => {
+  const REMOVE = require('../lib/remove');
+  const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
+  const db = fakeDb(SETTINGS); wire();
+  const session = await paidProgramSession(stripe);
+  await CHECKOUT.sessionStatus(stripe, session.id, null, { db, mode: 'test' });
+  assert.ok(db._docs.has('players/as-ava-t') && db._docs.has('players/as-ava-t/private/contact') && db._docs.has('enrollments/' + session.id));
+  const queued = [...db._docs.keys()].filter((k) => k.startsWith('outbox/')); assert.equal(queued.length, 1);
+  const sub = stripe._db.subscriptions[0];
+  // the plan is live in this Stripe mode: a real family — refused until it is cancelled
+  await assert.rejects(REMOVE.removeRecord(db, stripe, 'as-ava-t'), (e) => e.status === 409 && e.code === 'plan');
+  sub.status = 'canceled';
+  const out = await REMOVE.removeRecord(db, stripe, 'as-ava-t');
+  assert.deepEqual(out, { player: 'as-ava-t', name: 'Ava Torres', private: 1, enrollments: 1, outbox: 1 });
+  assert.ok(!db._docs.has('players/as-ava-t') && !db._docs.has('players/as-ava-t/private/contact') && !db._docs.has('enrollments/' + session.id) && !db._docs.has(queued[0]));
+  assert.equal(db._docs.has('settings/notify'), true, 'nothing else is touched');
+  // a sandbox record while the engine runs live: Stripe does not know the plan, so there is nothing to check — it goes
+  db._docs.set('players/as-bo-t', { name: 'Bo Tester', source: 'enroll', enroll: { subscription: 'sub_from_the_sandbox' } });
+  assert.deepEqual(await REMOVE.removeRecord(db, stripe, 'as-bo-t'), { player: 'as-bo-t', name: 'Bo Tester', private: 0, enrollments: 0, outbox: 0 });
+  // never a record from Monday or the Coach Portal, never a bad id
+  db._docs.set('players/as-cy-m', { name: 'Cy Monday', source: 'monday' });
+  await assert.rejects(REMOVE.removeRecord(db, stripe, 'as-cy-m'), (e) => e.status === 409 && e.code === 'source' && /Coach Portal/.test(e.message));
+  assert.ok(db._docs.has('players/as-cy-m'));
+  await assert.rejects(REMOVE.removeRecord(db, stripe, 'nobody'), (e) => e.status === 404);
+  await assert.rejects(REMOVE.removeRecord(db, stripe, '../x'), (e) => e.status === 400);
+});
