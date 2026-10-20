@@ -137,10 +137,14 @@ let toastT;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList
 const prefersReduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function reveal(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:prefersReduced?'auto':'smooth',block:'start'})}
 const todayLocal=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const dayLabel=s=>{const [y,m,d]=String(s).split('-').map(Number);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1]+' '+d};
 
 let CAT=null, quote=null, quoteT=null, busy=false;
 const params=new URLSearchParams(location.search);
-const e={program:params.get('p')||null,kind:null,plan:params.get('plan')||null,option:null,days:(params.get('days')||'').split(',').map(s=>s.trim()).filter(Boolean),start:params.get('start')||todayLocal(),camp:params.get('camp')||null,campOption:null,
+/* ?switch=1 — a family moving over from the old system: the month already paid there stays paid; billing here starts on the next 1st (or the ?start given). */
+const moving=params.get('switch')==='1';
+const nextFirstLocal=()=>{const d=new Date(),n=new Date(d.getFullYear(),d.getMonth()+1,1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01'};
+const e={program:params.get('p')||null,kind:null,plan:params.get('plan')||null,option:null,days:(params.get('days')||'').split(',').map(s=>s.trim()).filter(Boolean),start:params.get('start')||(moving?nextFirstLocal():todayLocal()),camp:params.get('camp')||null,campOption:null,
   player:{first:params.get('first')||'',last:params.get('last')||'',dob:params.get('dob')||''},parent:{name:params.get('parent')||'',email:params.get('email')||'',phone:params.get('phone')||''},agree:false,authorize:false,summaryOpen:false,by:params.get('by')||'enroll'};
 if(e.program&&e.plan)e.kind='monthly';
 
@@ -154,7 +158,9 @@ const CAMP=id=>CAT&&CAT.camps.find(c=>c.id===id);
 function render(){
   const P=e.program?PROG(e.program):null;const C=e.camp?CAMP(e.camp):null;const plan=P&&e.plan?P.plans.find(x=>x.id===e.plan):null;const hasPlans=!!(P&&P.plans.length);
   let n=0;const num=()=>++n;
-  let html=`<section class="hero"><h1>Pick your <em>program.</em></h1><p>Fall 2026 at ProWorld Academy, Delray Beach. Choose a program, how often you train and how you'd like to pay — then a secure Stripe checkout. You're enrolled and on the roster in about two minutes — the coaches know the same minute.</p></section><div class="two-col"><div class="steps">`;
+  let html=moving
+    ?`<section class="hero"><h1>Keep your <em>spot.</em></h1><p>ProWorld Academy is moving enrollment and billing to its own system. Confirm your program and days, save a card on Stripe's secure page, and you're set — <b>nothing is charged today</b>. The month you've already paid stays paid; billing here starts on ${esc(dayLabel(e.start))}, then on the 1st of each month.</p></section><div class="two-col"><div class="steps">`
+    :`<section class="hero"><h1>Pick your <em>program.</em></h1><p>Fall 2026 at ProWorld Academy, Delray Beach. Choose a program, how often you train and how you'd like to pay — then a secure Stripe checkout. You're enrolled and on the roster in about two minutes — the coaches know the same minute.</p></section><div class="two-col"><div class="steps">`;
   html+=`<section class="step" id="s-program"><div class="step-head"><span class="step-num">${num()}</span><h2>Program</h2></div><div class="menu">`;
   for(const p of CAT.programs){const from=p.plans.length?{a:Math.min(...p.plans.map(x=>x.monthly)),u:'per month'}:{a:Math.min(...p.packs.map(x=>x.price)),u:'per session'};html+=`<button class="menu-row" data-act="program" data-id="${p.id}" aria-pressed="${e.program===p.id}"><span><span class="name">${esc(p.name)}</span><span class="meta">${esc(p.sport)} · ${esc(p.ages)} · ${esc(p.time)}</span><span class="blurb">${esc(p.blurb)}</span></span><span class="price"><b>from ${money(from.a)}</b><span>${from.u}</span></span></button>`}
   html+=`</div><p class="subhead">Camps</p><div class="menu">`;
@@ -177,7 +183,9 @@ function render(){
       if(P.trial)html+=`<button class="opt" data-act="billing" data-id="trial|1" aria-pressed="${e.kind==='trial'}"><span><span class="t">${esc(P.trial.label)}</span><span class="d">Come and try a session first. No card needed.</span></span><span class="p">Free</span></button>`;
       html+=`</div></section>`}
     if(e.kind==='monthly'&&plan){const lock=plan.days>=P.days.length;html+=`<section class="step" id="s-days"><div class="step-head"><span class="step-num">${num()}</span><h2>Which days</h2></div><p class="step-help">${lock?'Covers every training day.':'Pick '+plan.days+' of '+P.days.length+'. Same-month changes are made with the front desk with 6 hours notice. Soccer trains Tue/Thu 5:00–6:30 PM and Sat 9:00–10:30 AM.'}</p><div class="chips">`;for(const d of ALL){const avail=P.days.includes(d);if(!avail&&d==='Sat')continue;const on=e.days.includes(d);const dis=!avail||(!on&&e.days.length>=plan.days);html+=`<button class="chip ${lock?'lock':''}" data-act="day" data-id="${d}" aria-pressed="${on}" ${dis||lock?'disabled':''}>${d}</button>`}html+=`</div>`;
-      if(e.days.length===plan.days){html+=`<div class="form" style="margin-top:22px"><div class="field"><label for="f-start">First day</label><input id="f-start" type="date" value="${esc(e.start)}" min="${todayLocal()}"><span class="hint">Today, or the day you'd like to begin. You pay only the training days left in that month.</span></div></div>`}
+      if(e.days.length===plan.days){html+=moving
+        ?`<div class="form" style="margin-top:22px"><div class="field"><label>Billing starts</label><input id="f-start-locked" value="${esc(dayLabel(e.start))} — nothing is charged today" readonly><span class="hint">Your current month is already paid in the old system. Tuition bills on the 1st from then on; months with a school break are prorated.</span></div></div>`
+        :`<div class="form" style="margin-top:22px"><div class="field"><label for="f-start">First day</label><input id="f-start" type="date" value="${esc(e.start)}" min="${todayLocal()}"><span class="hint">Today, or the day you'd like to begin. Start this month and you pay only its remaining training days today; start a later month and nothing is due until that month's 1st.</span></div></div>`}
       html+=`</section>`;
       if(e.days.length===plan.days)html+=peopleStep(num(),true)}
     else if(e.kind&&e.kind!=='monthly')html+=peopleStep(num(),false);
