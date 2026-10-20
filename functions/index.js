@@ -20,6 +20,7 @@ const ROSTER = require('./lib/roster');
 const NOTIFY = require('./lib/notify');
 const DB = require('./lib/db');
 const SYNC = require('./lib/catalog-sync');
+const SWITCH = require('./lib/switch');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -93,6 +94,10 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         logger.info('catalog sync', { by: who.email, mode: mode(key), created: out.done.created, updated: out.done.updated });
         return send(res, 200, Object.assign({ mode: mode(key), log: lines }, out));
       }
+      // Moving the families over from Play by Point: the list with who has enrolled, the front desk's edits, the one-time import.
+      if (route === 'GET /admin/switch') { const ov = await ADMIN.overview(stripe); return send(res, 200, Object.assign({ mode: mode(key) }, await SWITCH.list(ov.subscriptions, ov.today))); }
+      if (route === 'POST /admin/switch/update') return send(res, 200, { ok: true, row: await SWITCH.update(b.id, b, who.email) });
+      if (route === 'POST /admin/switch/import') { if (!who.owner) throw S.err(403, 'owner', 'Only an owner can import the roster.'); const out = await SWITCH.importRows(Array.isArray(b.rows) ? b.rows.slice(0, 400) : [], who.email); logger.info('switch import', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       // ── everything below moves money or a family's plan: owners, administrators and the Billing page only ──
       ADMIN.requireBilling(who);
       if (route === 'POST /admin/portal') { const c = S.clean(b.customer, 60); if (!/^cus_/.test(c)) throw S.err(400, 'customer', 'customer id required'); return send(res, 200, { url: await S.portalUrl(stripe, c, SITE + '/backend') }); }
