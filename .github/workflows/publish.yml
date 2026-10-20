@@ -10,7 +10,7 @@
 #       It is only read when this workflow is run by hand with "Copy the Stripe key into Secret Manager" ticked; it is then stored
 #       in Google Secret Manager as STRIPE_SECRET_KEY and the functions are redeployed to pick it up. It never appears in logs.
 #
-# Order: tests → [Stripe key → Secret Manager] → billing engine (Functions) → site (Hosting). The engine goes first so that the
+# Order: tests → [Stripe key → Secret Manager] → billing engine (Functions) → site (Hosting) → database rules. The engine goes first so that the
 # site's /api/** rewrite can point at it; the site is published even when the engine step fails (for example before the project
 # is on the Blaze plan) — /api/** simply answers 404 until the engine exists — and the run is then marked failed at the end so
 # the missing engine is not overlooked. A billing hiccup never blocks a page fix.
@@ -72,6 +72,16 @@ jobs:
         run: npx --yes $FIREBASE_TOOLS deploy --only hosting --project "$PROJECT" --non-interactive --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+      - name: Publish the database rules (firestore.rules)
+        id: rules
+        if: steps.key.outputs.present == 'true'
+        continue-on-error: true
+        run: npx --yes $FIREBASE_TOOLS deploy --only firestore:rules --project "$PROJECT" --non-interactive --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+      - name: Were the rules published?
+        if: steps.key.outputs.present == 'true' && steps.rules.outcome != 'success'
+        run: echo "::warning::firestore.rules did not deploy from here (the deploy service account needs the Firebase Rules Admin role). Publish them from Cloud Shell — firebase deploy --only firestore:rules — or paste the file into Firebase console → Firestore → Rules."
       - name: Was the billing engine published?
         if: steps.key.outputs.present == 'true' && steps.engine.outcome != 'success'
         run: |

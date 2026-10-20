@@ -3335,8 +3335,19 @@ const PW_CONFIG = {
       if (m.age) bits.push(m.age);
       if (m.syncedAt) { const t = Date.parse(m.syncedAt); if (t) bits.push('synced ' + fmtWhen(t)); }
     } else if (p.source === 'coach') bits.push('Added in the portal' + (p.addedBy ? ' by ' + p.addedBy : '') + ' · not on Monday yet');
+    else if (p.source === 'backend') bits.push('Added at the front desk' + (p.addedBy ? ' by ' + p.addedBy : '') + ' · Monday gets them with the morning sync');
+    else if (p.source === 'enroll') bits.push('Enrolled online · Monday gets them with the morning sync');
     else if (S.board && S.board.mode === 'live') bits.push('Not found on Monday');
-    const chips = pendingChips(p);
+    const en = p.enroll || null;
+    if (en) {
+      const e = [];
+      if (en.kind === 'monthly') { e.push((en.programShort || en.program || 'program') + (en.planLabel ? ' · ' + String(en.planLabel).toLowerCase() : '') + (Array.isArray(en.days) && en.days.length && en.days.length < 5 ? ' (' + en.days.join('/') + ')' : '')); if (en.start) e.push('starts ' + en.start); if (en.hold) e.push(en.holdReason === 'unpaid' ? 'ON HOLD — tuition unpaid, not on the attendance list' : 'on hold by the front desk'); if (en.endsOn) e.push('plan ends ' + en.endsOn); }
+      else if (en.label || en.kind) e.push(en.label || en.kind);
+      if (e.length) bits.push('Billing: ' + e.join(' · '));
+    }
+    let chips = pendingChips(p);
+    if (en && en.at && Date.now() - en.at < 14 * 864e5 && !p.coach && active(p)) chips = '<span class="chip warn">New · assign a coach</span>' + chips;
+    if (en && en.hold) chips = '<span class="chip warn">On hold</span>' + chips;
     return bits.length || chips ? `<div class="mline">${chips}${bits.length ? `<span>${esc(bits.join(' · '))}</span>` : ''}</div>` : '';
   }
 
@@ -3345,12 +3356,12 @@ const PW_CONFIG = {
     const st = S.ui.parentData && S.ui.parentData.pid === p.id ? S.ui.parentData : { loading: true }; let body;
     if (st.loading) body = '<p class="muted">Loading…</p>';
     else if (st.error) body = '<p class="muted">Couldn’t load the parent details. Check the connection and try again.</p>';
-    else if (!st.data || !(st.data.guardian || st.data.email || st.data.phone)) body = `<p class="muted">${p.mondayId ? 'Monday has no parent details for this player yet.' : 'This player isn’t linked to Monday yet. The parent details arrive with the morning sync once they are.'}</p>`;
+    else if (!st.data || !(st.data.guardian || st.data.email || st.data.phone)) body = `<p class="muted">${p.mondayId ? 'Monday has no parent details for this player yet.' : 'No parent details on file yet — they arrive with the morning Monday sync once the player is linked, or the front desk adds them from the backend.'}</p>`;
     else {
       const d = st.data; const tel = String(d.phone || '').replace(/[^+\d]/g, ''); const mail = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(String(d.email || '')) ? String(d.email) : '';
       body = `<dl class="pinfo">${d.guardian ? `<div><dt>Parent / guardian</dt><dd>${esc(d.guardian)}</dd></div>` : ''}${d.email ? `<div><dt>Email</dt><dd>${mail ? `<a href="mailto:${esc(mail)}">${esc(d.email)}</a>` : esc(d.email)}</dd></div>` : ''}${d.phone ? `<div><dt>Phone</dt><dd>${tel ? `<a href="tel:${esc(tel)}">${esc(d.phone)}</a>` : esc(d.phone)}</dd></div>` : ''}</dl>`;
     }
-    return `<div class="panel pbox" tabindex="-1" role="region" aria-label="Parent information"><div class="rowx" style="justify-content:space-between"><div class="lbl">Parent information · from Monday</div><button class="btn sm ghost" data-act="parent-info">Close</button></div>${body}<p class="hint">For the coaching staff only. To change these details, change them on Monday: the portal copies them every morning.</p></div>`;
+    return `<div class="panel pbox" tabindex="-1" role="region" aria-label="Parent information"><div class="rowx" style="justify-content:space-between"><div class="lbl">Parent information · ${p.source === 'enroll' ? 'from the enrollment page' : p.source === 'backend' ? 'from the front desk' : 'from Monday'}</div><button class="btn sm ghost" data-act="parent-info">Close</button></div>${body}<p class="hint">For the coaching staff only. ${p.mondayId ? 'To change these details, change them on Monday: the portal copies them every morning.' : 'The front desk changes them from the backend.'}</p></div>`;
   }
 
   /* home: the latest sync in one line, and anyone Monday couldn't place */
@@ -3372,8 +3383,8 @@ const PW_CONFIG = {
     return `<button class="notice sync${bad || stale || warns ? '' : ' calm'}" ${goAttr({ view: 'board' })}><span class="sx"><b>${esc(head)}</b> ${esc(text)}${stale ? ' · the board is more than a day old' : ''}</span><span class="go">Coach Board</span></button>`;
   }
   function notPlacedPanel() {
-    const list = S.players.filter((p) => active(p) && !p.group).sort((a, b) => String(a.name).localeCompare(String(b.name))); if (!list.length) return '';
-    return `<div class="notice npl"><b>${list.length} new from Monday, not in a group yet.</b> Monday has no program for ${list.length === 1 ? 'this player' : 'them'}. Open the player → Edit player → Group.
+    const list = S.players.filter((p) => active(p) && !p.group && p.sport !== 'soccer').sort((a, b) => String(a.name).localeCompare(String(b.name))); if (!list.length) return '';
+    return `<div class="notice npl"><b>${list.length} new, not in a group yet.</b> ${list.length === 1 ? 'This player' : 'They'} came from Monday or enrolled online without a group. Open the player → Edit player → Group.
       <div class="npl-list">${list.slice(0, 16).map((p) => `<button class="fchip" ${goAttr({ view: 'player', pid: p.id })}>${esc(p.name)}</button>`).join('')}${list.length > 16 ? `<span class="chip">+${list.length - 16}</span>` : ''}</div></div>`;
   }
 
