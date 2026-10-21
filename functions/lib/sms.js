@@ -136,12 +136,14 @@ function switchMatch(ix, name) {
   return ix.first[t[0]] || null;                                                                                                            // the roster has only a first name: any one row with it
 }
 async function recipients(db) {
+  // the roster holds every family Monday ever knew (~1,300 records, most finished): only the live ones are texting candidates,
+  // and only their two private documents are read — fifty players at a time
   const players = (await db.collection('players').get()).docs.map((d) => Object.assign({ id: d.id }, d.data())).filter((p) => p.status !== 'finished');
   const priv = {};                                                  // player id → { contact, sms }
-  for (const d of (await db.collectionGroup('private').get()).docs) {
-    const parts = d.ref.path.split('/'); const pid = parts[parts.length - 3]; const which = parts[parts.length - 1];
-    if (!priv[pid]) priv[pid] = {};
-    if (which === 'contact' || which === 'sms') priv[pid][which] = d.data() || {};
+  for (let i = 0; i < players.length; i += 50) {
+    const slice = players.slice(i, i + 50);
+    const snaps = await Promise.all(slice.map((p) => Promise.all([db.doc(`players/${p.id}/private/contact`).get(), db.doc(`players/${p.id}/private/sms`).get()])));
+    slice.forEach((p, k) => { priv[p.id] = { contact: snaps[k][0].exists ? (snaps[k][0].data() || {}) : {}, sms: snaps[k][1].exists ? (snaps[k][1].data() || {}) : {} }; });
   }
   const sw = switchIndex(await switchRows(db));                     // the Play by Point roster, by player name — the phones most families gave us
   const out = players.map((p) => {
@@ -170,10 +172,10 @@ async function setOptIn(db, pid, on, opts) {
   await db.doc(`players/${pid}/private/sms`).set(set, { merge: true });
   return set;
 }
-/* Owners only: the families who came over from Play by Point gave the academy their mobile for exactly these updates. This marks
-   every player with a number and no consent record yet as opted in, source 'playbypoint', with the owner's name and the time. */
+/* Owners only: the active families gave the academy their mobile for exactly these updates (Play by Point, Monday). This marks every
+   active player with a number and no consent record yet as opted in, source 'playbypoint', with the owner's name and the time. */
 async function optInRoster(db, who) {
-  const rows = (await recipients(db)).filter((r) => r.phone && r.valid && !r.optInAt && !r.optOut);
+  const rows = (await recipients(db)).filter((r) => r.status === 'active' && r.phone && r.valid && !r.optInAt && !r.optOut);
   let n = 0; for (const r of rows) { await setOptIn(db, r.id, true, { source: 'playbypoint', by: who.email, phone: r.phone }); n++; }
   return { optedIn: n, players: rows.map((r) => r.id) };
 }

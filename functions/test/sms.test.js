@@ -21,7 +21,9 @@ const ROSTER = {
   'players/as-dee-m/private/sms': { optIn: true, at: 3, source: 'staff' },
   'players/as-old-p': { name: 'Old Player', group: 'as', status: 'finished' },
   'players/soc-eli-r': { name: 'Eli Ruiz', sport: 'soccer', coach: 'Lukas', status: 'active' },
-  'players/soc-eli-r/private/sms': { optIn: true, at: 4, source: 'enroll', phone: '+15615550105' }
+  'players/soc-eli-r/private/sms': { optIn: true, at: 4, source: 'enroll', phone: '+15615550105' },
+  'players/past-fay-o': { name: 'Fay Old', group: 'as', status: 'away' },
+  'players/past-fay-o/private/contact': { guardian: 'Gus Old', phone: '5615550106', source: 'monday' }
 };
 const DESK = { email: 'desk@proworldacademy.com', name: 'Front Desk', firstName: 'Front', texting: true };
 const COACH = { email: 'eric@proworldacademy.com', name: 'Eric Lane', firstName: 'Eric', texting: false };
@@ -59,7 +61,8 @@ test('placeholders fill from the recipient; an unknown or empty one stays visibl
 test('recipients: the phone we would text (consent → contact card → the Play by Point roster), E.164, validity, consent — finished players left out', async () => {
   const db = fakeDb(Object.assign({}, ROSTER, SETTINGS));
   const rows = await SMS.recipients(db);
-  assert.deepEqual(rows.map((r) => r.id), ['as-ava-t', 'ft-ben-k', 'u10-cy-l', 'as-dee-m', 'soc-eli-r']);
+  assert.deepEqual(rows.map((r) => r.id), ['as-ava-t', 'ft-ben-k', 'u10-cy-l', 'as-dee-m', 'soc-eli-r', 'past-fay-o']);
+  assert.equal(rows.find((r) => r.id === 'past-fay-o').status, 'away');
   const by = Object.fromEntries(rows.map((r) => [r.id, r]));
   assert.equal(by['as-ava-t'].phone, '+15615550101'); assert.equal(by['as-ava-t'].phoneSource, 'consent'); assert.equal(by['as-ava-t'].optIn, true); assert.equal(by['as-ava-t'].programLabel, 'Afterschool'); assert.equal(by['as-ava-t'].first, 'Ava'); assert.deepEqual(by['as-ava-t'].days, ['Mon', 'Wed', 'Fri']);
   assert.equal(by['ft-ben-k'].phone, '+15615550102'); assert.equal(by['ft-ben-k'].phoneSource, 'contact'); assert.equal(by['ft-ben-k'].optIn, false); assert.equal(by['ft-ben-k'].programLabel, 'Full Time');
@@ -87,7 +90,7 @@ test('the Play by Point roster matches on the full name, on first name + last in
   db._docs.delete('players/ft-ben-k/private/contact');
   assert.equal((await SMS.recipient(db, 'ft-ben-k')).phone, '+15615550109');
   const out = await SMS.optInRoster(db, { email: 'owner@proworldacademy.com' });
-  assert.deepEqual(out.players.sort(), ['ft-ben-k'], 'only players with a number and no consent record yet');
+  assert.deepEqual(out.players.sort(), ['ft-ben-k'], 'only active players with a number and no consent record yet (not the away family)');
   assert.equal(db._docs.get('players/ft-ben-k/private/sms').source, 'playbypoint'); assert.equal(db._docs.get('players/as-ava-t/private/sms').source, 'enroll', 'an existing record is left alone');
 });
 
