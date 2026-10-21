@@ -10,227 +10,365 @@
   else if (/^#\//.test(location.hash)) location.replace("/portal" + location.hash);
 </script>
 <link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <style>
-/* Layout: black masthead and page strip, then the person's pages as tiles, then (owners and administrators) the people list. */
-:root{
-  --ink:#000; --panel:#0e0e0e; --panel-2:#161616; --panel-3:#1f1f1f; --line:#272727; --line-2:#333;
-  --text:#fff; --text-2:#c9cbc2; --muted:#8f9288; --faint:#5b5d56;
-  --lime:#E2FE78; --mint:#94FCB1; --orchid:#E286E4; --cyan:#A9F3F7; --warn:#FFC857;
-  --display:"Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;
-  --body:"Aeonik Pro","Helvetica Neue",Arial,sans-serif; color-scheme:dark;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html{background:var(--ink)}
-body{font-family:var(--body);background:var(--ink);color:var(--text);min-height:100vh;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1280px;margin:0 auto;padding-block:0 72px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
-@media(max-width:640px){.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
-button{font-family:inherit}
-:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
-a{color:var(--lime)}
-.hdr{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0 18px;border-bottom:1px solid var(--line-2);position:relative;flex-wrap:wrap}
-.hdr::after{content:"";position:absolute;left:0;bottom:-1px;width:180px;height:3px;background:var(--lime)}
-.brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.wordmark{width:200px;height:24px;background:var(--logo-lime) left center/contain no-repeat;flex-shrink:0}
-.brand-sub{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-2);font-weight:700}
-.pw-user{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
-.pw-user .pw-user-name{color:var(--text);font-weight:700}
-.pw-user .pw-user-out{background:none;border:1px solid var(--line-2);color:var(--text-2);border-radius:5px;padding:6px 10px;font-size:11px;cursor:pointer}
-.pw-user .pw-user-out:hover{border-color:var(--lime);color:var(--lime)}
-.hero{padding:30px 0 10px}
-.hero h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;line-height:.95;font-size:52px;text-wrap:balance}
-.hero h1 em{font-style:inherit;color:var(--lime)}
-.hero p{color:var(--muted);margin-top:8px;max-width:64ch}
-@media(max-width:640px){.hero h1{font-size:38px}}
-.sec{margin-top:28px}
-.sec-label{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:18px;color:var(--lime);margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.sec-label::after{content:"";flex:1;height:1px;background:var(--line)}
-.sec-label.orchid{color:var(--orchid)}.sec-label.mint{color:var(--mint)}.sec-label.cyan{color:var(--cyan)}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-@media(max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:640px){.grid{grid-template-columns:minmax(0,1fr)}}
-.mod{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--lime);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:170px;min-width:0}
-.mod.mint{border-top-color:var(--mint)}.mod.cyan{border-top-color:var(--cyan)}.mod.orchid{border-top-color:var(--orchid)}.mod.gray{border-top-color:var(--line-2)}
-.mod-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.mod h3{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:24px;line-height:1}
-.mod p{color:var(--text-2);font-size:13px;flex:1}
-.badge{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 7px;border-radius:3px;background:var(--panel-3);color:var(--text-2);white-space:nowrap}
-.badge.here,.badge.live{background:var(--mint);color:#000}.badge.proto{background:var(--cyan);color:#000}
-.mod-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.who{font-size:11px;color:var(--muted)}
-.opens{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--cyan);border:1px solid #234a4d;padding:2px 6px;border-radius:3px;white-space:nowrap;margin-left:6px}
-.mod.archive{opacity:.75}
-.lk{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.lkf{display:flex;gap:6px;width:100%;margin-top:2px}
-.lkf input{flex:1;min-width:0;background:#000;border:1px solid var(--line-2);color:var(--text);border-radius:5px;padding:7px 9px;font:12px var(--body)}
-.lkf input:focus{outline:2px solid var(--lime);outline-offset:1px}
-.btn{background:var(--lime);color:#000;border:1px solid var(--lime);padding:9px 16px;font-family:var(--display);font-style:italic;font-weight:800;font-size:14px;letter-spacing:1px;text-transform:uppercase;border-radius:5px;cursor:pointer;text-decoration:none;display:inline-block;line-height:1}
-.btn:hover{background:#eeffa0}
-.btn.ghost{background:transparent;color:var(--lime)}
-.btn.ghost.muted{color:var(--muted);border-color:var(--line-2)}
-.btn.orchid{background:var(--orchid);border-color:var(--orchid)}
-.btn.xs{padding:5px 9px;font-size:11px;letter-spacing:.5px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.empty{text-align:center;padding:40px;color:var(--muted);background:var(--panel);border:1px dashed var(--line-2);border-radius:6px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px}
-.notice{background:#0d1719;border:1px solid var(--cyan);color:var(--cyan);border-radius:5px;padding:10px 14px;font-size:12.5px;margin-bottom:14px;line-height:1.5}
-.tbl-wrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:900px}
-th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:left;padding:8px 8px;border-bottom:1px solid var(--line-2);vertical-align:bottom}
-th.pg{text-align:center;max-width:84px}
-th.pg span{display:block;font-size:9px;letter-spacing:1px;line-height:1.2}
-th.grp{text-align:center;color:var(--text-2);border-bottom:1px solid var(--line);font-size:9px;letter-spacing:1.5px;padding:6px 4px}
-td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:13px}
-td.c{text-align:center}
-tr:hover td{background:var(--panel-2)}
-tr.off td{opacity:.5}
-#acl tr>*:first-child{position:sticky;left:0;z-index:1;background:var(--panel);min-width:190px;box-shadow:1px 0 0 var(--line)}
-#acl tr:hover>*:first-child{background:var(--panel-2)}
+/* The home page (direction C4 · Round 2): the greeting on the gradient with the needs-you list, today's signals, the pages
+   this person has as glass tiles with the live numbers inside, everything else as one filterable list, and — for owners and
+   administrators — the People & access grid, the outside tools and what runs by itself. The look is shared/design.css. */
+.lib-h{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.lib-h button{border:1px solid var(--line-2);background:var(--card);backdrop-filter:blur(8px);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;letter-spacing:.5px;transition:background .2s,color .2s,border-color .2s,transform .25s var(--ease)}
+.lib-h button:hover{transform:translateY(-1px)}.lib-h button.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+.lib{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;background:var(--card);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(12px);padding:6px 10px}
+@media(max-width:820px){.lib{grid-template-columns:minmax(0,1fr)}}
+.lr{display:grid;grid-template-columns:minmax(0,1fr) auto auto 18px;gap:12px;align-items:center;padding:11px 10px;border-radius:10px;text-align:left;min-width:0;transition:background .2s;animation:pwd-up .4s var(--ease) both;color:inherit}
+.lr:hover{background:rgba(0,0,0,.05)}
+.lr b{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr .t{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:3px 8px;white-space:nowrap}
+.lr .d{font-size:11.5px;color:var(--muted);white-space:nowrap;min-width:52px;text-align:right}
+.lr em{font-style:normal;color:var(--ink);transition:transform .3s var(--ease)}.lr:hover em{transform:translateX(4px)}
+@media(max-width:560px){.lr{grid-template-columns:minmax(0,1fr) 18px}.lr .t,.lr .d{display:none}}
+/* you own it: one slim row of pills */
+.own{display:flex;flex-wrap:wrap;gap:10px}
+.op{display:flex;align-items:center;gap:12px;padding:10px 16px 10px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);backdrop-filter:blur(16px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28);text-align:left;transition:border-color .25s,transform .25s var(--ease);color:inherit;max-width:100%}
+.op:hover{transform:translateY(-2px);border-color:var(--ink)}
+.op b{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:20px;line-height:1;white-space:nowrap}
+.op span{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.op .dot{width:9px;height:9px;border-radius:50%;background:var(--mint);flex:none}
+.op .dot.lime{background:var(--lime);box-shadow:0 0 0 1px rgba(0,0,0,.35)}.op .dot.orchid{background:var(--orchid)}
+@media(max-width:560px){.op{flex-wrap:wrap;border-radius:18px}.op span{white-space:normal}}
+/* a tile that lives elsewhere: the link an owner saved, or the field to paste it */
+.lkf{display:flex;gap:6px;width:100%;margin-top:auto}
+.lkf input{flex:1;min-width:0;height:40px;border:1px solid var(--line-2);border-radius:10px;background:#fff;padding:0 12px;font:400 13px var(--body);color:var(--ink)}
+.lkf input:focus{outline:none;border-color:var(--ink)}
+/* people & access */
+.tbl-wrap{overflow-x:auto;border-radius:14px}
+table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
+.acl th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:left;padding:8px 8px;border-bottom:1px solid var(--line-2);vertical-align:bottom;background:transparent}
+.acl th.pg{text-align:center;max-width:84px}
+.acl th.pg span{display:block;font-size:9px;letter-spacing:1px;line-height:1.2}
+.acl th.grp{text-align:center;color:var(--ink-2);border-bottom:1px solid var(--line);font-size:9px;letter-spacing:1.5px;padding:6px 4px}
+.acl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.acl td.c{text-align:center}
+.acl tr:hover td{background:rgba(0,0,0,.035)}
+.acl tr.off td{opacity:.5}
+.acl tr>*:first-child{position:sticky;left:0;z-index:1;background:rgba(255,255,255,.92);min-width:190px;box-shadow:1px 0 0 var(--line)}
 .uname{font-weight:700}
 .uemail{font-size:11px;color:var(--muted);word-break:break-all}
-.utag{display:inline-block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--panel-3);color:var(--text-2);margin-left:6px}
-.utag.owner{background:var(--lime);color:#000}.utag.admin{background:var(--orchid);color:#000}.utag.off{background:var(--warn);color:#000}
-.chk{width:24px;height:24px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:transparent;font-weight:900;user-select:none}
-.chk:hover{border-color:var(--lime)}
-.chk.on{background:var(--lime);border-color:var(--lime);color:#000}
-.chk.lock{opacity:.5;cursor:default}
-.form{display:grid;grid-template-columns:1fr 1.4fr 1fr auto;gap:10px;align-items:end;margin-top:16px}
-@media(max-width:760px){.form{grid-template-columns:1fr}}
-.field label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:700}
-.field input,.field select,select.mini{width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:9px 11px;border-radius:5px;font-family:var(--body);font-size:14px}
-select.mini{width:auto;padding:5px 8px;font-size:12px}
-.field input:focus,.field select:focus{outline:none;border-color:var(--lime)}
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--lime);color:#000;padding:11px 18px;border-radius:6px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:50;max-width:90vw}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.err{background:var(--orchid)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.utag{display:inline-block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.07);color:var(--ink-2);margin-left:6px}
+.utag.owner{background:var(--lime);color:var(--ink)}.utag.admin{background:var(--orchid);color:var(--ink)}.utag.off{background:var(--warn);color:var(--ink)}
+.chk{width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px solid var(--line-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:transparent;font-weight:900;user-select:none;transition:background .2s,border-color .2s,transform .2s var(--ease)}
+.chk:hover{border-color:var(--ink);transform:scale(1.1)}
+.chk.on{background:var(--ink);border-color:var(--ink);color:var(--lime)}
+.chk.lock{opacity:.45;cursor:default;transform:none}
+.addf{display:grid;grid-template-columns:1fr 1.4fr 1fr auto;gap:10px;align-items:end;margin-top:16px}
+@media(max-width:760px){.addf{grid-template-columns:1fr}}
 .req{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
 .req:last-child{border-bottom:0}
-.outside{display:flex;flex-wrap:wrap;gap:8px}
-.outside a{color:var(--text-2);text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.5px;background:var(--panel);border:1px solid var(--line-2);padding:7px 12px;border-radius:999px}
-.outside a:hover{border-color:var(--lime);color:var(--lime)}
-.runs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media(max-width:900px){.runs{grid-template-columns:minmax(0,1fr)}}
-.run{background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:12px 14px;font-size:12.5px;color:var(--text-2);line-height:1.5}
-.run b{display:block;color:var(--text);font-size:13px;margin-bottom:4px}
-footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--faint);letter-spacing:1px;text-transform:uppercase}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.rowx{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* runs */
+.rn{display:grid;grid-template-columns:200px 150px minmax(0,1fr);gap:12px;align-items:center;padding:12px;border-top:1px solid var(--line);font-size:13px}
+.rn:first-child{border-top:0}
+.rn b{font-weight:700}.rn .d{color:var(--muted);font-size:12.5px}.rn .w{color:var(--ink-2);font-size:12.5px}
+@media(max-width:700px){.rn{grid-template-columns:minmax(0,1fr)}}
 </style>
-</head><body>
+</head><body class="skin-home">
 <script src="/shared/pages.js"></script>
 <script src="/shared/pwauth.js"></script>
-<script src="/shared/menu.js"></script>
+<script src="/shared/design.js"></script>
 <div class="wrap">
-<header class="hdr">
-  <div class="brand"><div class="wordmark" role="img" aria-label="PROWORLD"></div><div class="brand-sub">Dashboard</div></div>
-  <div class="pw-user" id="pw-user"></div>
-</header>
+  <div class="pwd-top" id="pwd-top"></div>
 
-<section class="hero">
-  <h1>One link. <em>Every page.</em></h1>
-  <p id="hero-p">Everything the team uses, in one place. You see the pages you've been given.</p>
-</section>
+  <section class="hero" id="hero">
+    <div>
+      <div class="eyebrow"><i></i><span id="date"></span></div>
+      <h1 id="greet"><span>One</span> <span>link.</span> <span><em>Every page.</em></span></h1>
+      <p class="sum" id="sum">Checking what's new…</p>
+    </div>
+    <div class="need" id="need">
+      <div class="ey"><span><i></i>Needs you</span><span><b id="needN">0</b> today</span></div>
+      <div id="need-rows"></div>
+      <div class="clear"><b>All clear.</b><span id="clear-txt">Nothing needs you right now.</span></div>
+      <div class="ft"><span>Tick a row when it's done. It stays out of the way until tomorrow.</span><button type="button" id="undo">Bring back</button></div>
+    </div>
+  </section>
 
-<div id="sections"></div>
+  <div class="tick" id="pwd-tick" aria-label="Today's signals" hidden></div>
 
-<section class="sec" id="people-sec" hidden>
-  <div class="sec-label orchid">People &amp; access</div>
-  <div class="card">
-    <div class="notice">Everyone signs in with their own Google account. Tick a page to give it, untick to take it away — it takes effect at once. The database enforces this, so a page that isn't ticked can't be opened, even with the link. Owners always have everything. <strong>Admin</strong> = can manage this list.</div>
-    <div class="tbl-wrap"><table id="acl"></table></div>
-    <form class="form" id="add-form">
-      <div class="field"><label for="nu-name">Name</label><input id="nu-name" placeholder="e.g., Manu" autocomplete="off"></div>
-      <div class="field"><label for="nu-email">Google email</label><input id="nu-email" type="email" placeholder="name@proworldacademy.com" autocomplete="off"></div>
-      <div class="field"><label for="nu-preset">Start with</label><select id="nu-preset"></select></div>
-      <div class="field"><label>&nbsp;</label><button class="btn orchid" type="submit">+ Add person</button></div>
-    </form>
-  </div>
-  <div class="card" id="req-card" style="margin-top:14px" hidden>
-    <div class="sec-label cyan" style="font-size:15px;margin-bottom:8px">Asked to get in</div>
-    <div id="req-list"></div>
-  </div>
-</section>
+  <section class="sec" id="today-sec">
+    <div class="sec-h"><h2>Today</h2><small id="today-small"></small></div>
+    <div class="rail" id="rail"></div>
+  </section>
 
-<section class="sec" id="outside-sec" hidden>
-  <div class="sec-label mint">Outside tools · their own logins</div>
-  <div class="outside" id="outside"></div>
-</section>
+  <section class="sec" id="lib-sec" hidden>
+    <div class="sec-h"><h2>Everything else</h2><small id="lib-small"></small></div>
+    <div class="lib-h" id="libh"></div>
+    <div class="lib" id="lib"></div>
+  </section>
 
-<section class="sec" id="runs-sec" hidden>
-  <div class="sec-label mint">What runs by itself</div>
-  <div class="runs">
-    <div class="run"><b>Numbers · every morning 7 AM ET</b>Reads Instagram and Meta ads from Metricool and puts them on the Marketing Home and Ads tabs.</div>
-    <div class="run"><b>Sunday engine · 5:52 PM ET</b>Reads the results and the brief, refills the idea banks, builds the next two weeks and posts its report on Marketing → Reports.</div>
-    <div class="run"><b>Monday review · 8:52 AM ET</b>Syncs Instagram, judges the week against the plan, queues requests for Sunday and posts the weekly report on Marketing → Reports.</div>
-  </div>
-</section>
+  <section class="sec" id="own-sec" hidden>
+    <div class="sec-h"><h2>You own it</h2><small>owners and administrators</small></div>
+    <div class="own" id="own"></div>
+  </section>
 
-<footer><span>PROWORLD Academy · Individually built. Fully connected.</span><span>proworldacademy.com</span></footer>
+  <section class="sec" id="people-sec" hidden>
+    <div class="sec-h"><h2>People &amp; access</h2><small id="people-small"></small></div>
+    <div class="card">
+      <div class="notice">Everyone signs in with their own Google account. Tick a page to give it, untick to take it away — it takes effect at once. The database enforces this, so a page that isn't ticked can't be opened, even with the link. Owners always have everything. <b>Admin</b> = can manage this list.</div>
+      <div class="tbl-wrap"><table class="acl" id="acl"></table></div>
+      <form class="addf" id="add-form">
+        <div class="field"><label for="nu-name">Name</label><input id="nu-name" placeholder="e.g., Manu" autocomplete="off"></div>
+        <div class="field"><label for="nu-email">Google email</label><input id="nu-email" type="email" placeholder="name@proworldacademy.com" autocomplete="off"></div>
+        <div class="field"><label for="nu-preset">Start with</label><select id="nu-preset"></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn orchid sm" type="submit">+ Add person</button></div>
+      </form>
+    </div>
+    <div class="card" id="req-card" style="margin-top:14px" hidden>
+      <span class="ey"><span>Asked to get in</span><span class="pill orchid" id="req-n"></span></span>
+      <div id="req-list"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="outside-sec" hidden>
+    <div class="sec-h"><h2>Outside tools</h2><small>their own logins</small></div>
+    <div class="chips" id="outside"></div>
+  </section>
+
+  <section class="sec" id="runs-sec" hidden>
+    <div class="sec-h"><h2>What runs by itself</h2><small>every day, without anyone</small></div>
+    <div class="list" id="runs">
+      <div class="rn"><b>Billing engine</b><span class="d">5:05 AM ET · daily</span><span class="w">Plans for the paid start months, first-invoice credits, the late policy, hold releases, the roster.</span></div>
+      <div class="rn"><b>Monday sync</b><span class="d">6:22 AM ET · daily</span><span class="w">Monday's roster changes into the Coach Portal, the portal's changes onto Monday, the Coach Board and its change log.</span></div>
+      <div class="rn"><b>Numbers</b><span class="d">6:54 AM ET · daily</span><span class="w">Instagram and Meta ads from Metricool onto the Marketing Home and Ads tabs.</span></div>
+      <div class="rn"><b>Concierge roster</b><span class="d">2:00 AM ET · daily</span><span class="w">The AI concierge refreshes who is enrolled from this site's roster feed, and checks itself at 7 AM.</span></div>
+      <div class="rn"><b>Monday review</b><span class="d">Mondays · 8:52 AM ET</span><span class="w">Judges the week against the plan, queues requests for Sunday, posts the weekly report on Marketing → Reports.</span></div>
+      <div class="rn"><b>Sunday engine</b><span class="d">Sundays · 5:52 PM ET</span><span class="w">Reads the results and the brief, refills the idea banks, builds the next two weeks, posts its report.</span></div>
+    </div>
+  </section>
+
+  <footer class="pwd-foot"><b>PROWORLD</b><span>Individually built. Fully connected.</span><span>proworldacademy.com</span></footer>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="pwd-toast" role="status"></div>
 <script>
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  let toastT; function toast(m, err) { const t = $("toast"); t.textContent = m; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 2800); }
-  const P = window.PW_PAGES, PAGES = P.PAGES, SECTIONS = P.SECTIONS;
+  const D = window.PWDesign, esc = D.esc, toast = D.toast;
+  const P = window.PW_PAGES, PAGES = P.PAGES;
+  const GROUP = { ft: "Full Time", as: "Afterschool", u10: "10 & Under", tour: "Tour Team", camp: "Campers" };
+  const DAY = 864e5;
+  const fmt = (n) => (n == null || isNaN(n) ? "—" : Number(n).toLocaleString("en-US"));
+  const kfmt = (n) => (n == null || isNaN(n) ? "—" : n >= 10000 ? (Math.round(n / 100) / 10).toLocaleString("en-US") + "K" : fmt(n));
+  const iso = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const today = iso(new Date());
+  const when = (v) => { const d = typeof v === "number" ? new Date(v) : new Date(String(v || "")); return isNaN(d) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+  const plural = (n, one, many) => n === 1 ? one : many;
   let ctx = null, fs = null, staff = [], requests = [];
+  // what the database says, piece by piece; each tile repaints as its piece arrives
+  const S = { players: null, board: null, sync: null, tryouts: null, checks: null, numbers: null, weeks: null, enroll: null, family: null, links: {} };
 
+  D.mount({ skin: "home", active: "/", strip: true });
+  $("date").textContent = D.greet().date + " · Delray Beach";
+
+  // ── greeting ──
+  function greeting() {
+    const g = D.greet(ctx && ctx.name);
+    $("greet").innerHTML = g.first ? "<span>Good</span> <span>" + esc(g.word) + ",</span> <span><em>" + esc(g.first) + ".</em></span>" : "<span>Welcome</span> <span><em>back.</em></span>";
+  }
+
+  // ── needs you ──
+  const doneKey = "pw-need-done";
+  const doneMap = () => { try { return JSON.parse(localStorage.getItem(doneKey) || "{}") || {}; } catch (e) { return {}; } };
+  const setDone = (m) => { try { localStorage.setItem(doneKey, JSON.stringify(m)); } catch (e) { /* private window */ } };
+  let needItems = [];
+  function needList() {
+    const out = [];
+    const has = (id) => ctx && ctx.has(id);
+    if (has("mkt") && S.weeks && S.weeks.waiting > 0) out.push({ id: "mkt", n: S.weeks.waiting, what: plural(S.weeks.waiting, "post waiting for your approval", "posts waiting for your approval"), where: "Marketing", href: "/marketing" });
+    if (has("coach-portal") && S.sync && S.sync.toCheck > 0) out.push({ id: "board", n: S.sync.toCheck, what: plural(S.sync.toCheck, "roster row to check after the sync", "roster rows to check after the sync"), where: "Coach Board", href: "/portal#/board" });
+    if (has("ai-check") && S.checks && (S.checks.due + S.checks.bad) > 0) out.push({ id: "checks", n: S.checks.due + S.checks.bad, what: S.checks.bad ? plural(S.checks.due + S.checks.bad, "AI check due", "AI checks due") + " · " + S.checks.bad + " with a problem" : plural(S.checks.due, "AI check due today", "AI checks due today"), where: "AI check", href: "/checks" });
+    if (ctx && ctx.admin && requests.length) { const n = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length; if (n) out.push({ id: "requests", n, what: plural(n, "person asked to get in", "people asked to get in"), where: "Access", href: "#people-sec" }); }
+    if (has("coach-portal") && S.players && S.players.toAssign > 0) out.push({ id: "assign", n: S.players.toAssign, what: plural(S.players.toAssign, "new player needs a coach", "new players need a coach"), where: "Coach Portal", href: "/portal" });
+    if (has("backend") && S.family && S.family.open > 0) out.push({ id: "family", n: S.family.open, what: plural(S.family.open, "family request waiting for the front desk", "family requests waiting for the front desk"), where: "Backend", href: "/backend" });
+    if ((has("tryouts") || has("coach-portal")) && S.tryouts && S.tryouts.waiting > 0) out.push({ id: "tryouts", n: S.tryouts.waiting, what: plural(S.tryouts.waiting, "try-out waiting for a result or a decision", "try-outs waiting for a result or a decision"), where: "Try-outs", href: "/portal#/tryouts" });
+    return out;
+  }
+  function paintNeed() {
+    needItems = needList(); const done = doneMap();
+    $("need-rows").innerHTML = needItems.map((it) => '<a class="nr' + (done[it.id] === today ? " done" : "") + '" href="' + esc(it.href) + '" data-need="' + esc(it.id) + '"><span class="tk" data-tk role="button" aria-label="Mark done" tabindex="0">✓</span><b>' + esc(it.n) + "</b><span>" + esc(it.what) + "</span><small>" + esc(it.where) + "</small><em>→</em></a>").join("");
+    const left = needItems.filter((it) => done[it.id] !== today).length, hidden = needItems.length - left;
+    $("needN").textContent = left;
+    $("need").classList.toggle("allclear", left === 0);
+    $("clear-txt").textContent = hidden ? "You ticked " + hidden + (hidden === 1 ? " thing" : " things") + " off today. The list refills as the runs come in." : "Nothing needs you right now. The list refills as the runs come in.";
+    $("undo").hidden = !hidden;
+    $("sum").innerHTML = left ? "<b>" + left + (left === 1 ? " thing" : " things") + "</b> need" + (left === 1 ? "s" : "") + " you today." : loading() ? "Checking what's new…" : "<b>Nothing</b> needs you right now.";
+  }
+  const loading = () => ["players", "board", "sync", "tryouts", "checks", "numbers", "weeks", "enroll", "family"].some((k) => S[k] === null && wants(k));
+  function wants(k) {
+    if (!ctx) return false; const has = (id) => ctx.has(id);
+    return ({ players: has("coach-portal") || has("backend"), board: has("coach-portal"), sync: has("coach-portal"), tryouts: has("tryouts") || has("coach-portal") || has("backend"), checks: has("ai-check"), numbers: has("mkt"), weeks: has("mkt"), enroll: has("backend") || has("coach-portal"), family: has("backend") })[k];
+  }
+  $("need").addEventListener("click", (e) => { const tk = e.target.closest("[data-tk]"); if (!tk) return; e.preventDefault(); e.stopPropagation(); const id = tk.closest("[data-need]").getAttribute("data-need"); const m = doneMap(); m[id] = today; setDone(m); paintNeed(); });
+  $("need").addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && e.target.closest("[data-tk]")) { e.preventDefault(); e.target.click(); } });
+  $("undo").addEventListener("click", () => { setDone({}); paintNeed(); });
+  document.addEventListener("click", (e) => { const a = e.target.closest('a[href^="#"]'); if (!a) return; const el = document.querySelector(a.getAttribute("href")); if (el) { e.preventDefault(); el.hidden = false; el.scrollIntoView({ behavior: "smooth", block: "start" }); } });
+
+  // ── today's signals (the ticker and the compact bar) ──
+  function signals() {
+    const out = []; const has = (id) => ctx && ctx.has(id);
+    if (has("coach-portal") && S.board) out.push({ cls: "ok", html: S.board.at ? "Monday sync ran <b>" + esc(when(S.board.at)) + "</b>" : "No Monday sync yet", href: "/portal#/board" });
+    if (has("coach-portal") && S.sync && S.sync.toCheck) out.push({ cls: "due", html: "<b>" + S.sync.toCheck + "</b> to check on the board", href: "/portal#/board" });
+    if (S.players) out.push({ cls: "ok", html: "<b>" + fmt(S.players.active) + "</b> active players", href: has("coach-portal") ? "/portal" : "/backend" });
+    if (has("coach-portal") && S.players && S.players.toAssign) out.push({ cls: "new", html: "<b>" + S.players.toAssign + "</b> new " + plural(S.players.toAssign, "player needs", "players need") + " a coach", href: "/portal" });
+    if (has("mkt") && S.weeks && S.weeks.waiting) out.push({ cls: "due", html: "<b>" + S.weeks.waiting + " " + plural(S.weeks.waiting, "post", "posts") + "</b> waiting for approval", href: "/marketing" });
+    if (has("mkt") && S.numbers && S.numbers.change != null) out.push({ cls: "ok", html: "Instagram <b>" + (S.numbers.change >= 0 ? "+" : "") + fmt(S.numbers.change) + "</b> this week", href: "/marketing" });
+    if (has("ai-check") && S.checks) out.push({ cls: S.checks.bad ? "due" : S.checks.due ? "due" : "ok", html: S.checks.bad ? "<b>" + S.checks.bad + "</b> AI " + plural(S.checks.bad, "check has", "checks have") + " a problem" : S.checks.due ? "<b>" + S.checks.due + "</b> AI " + plural(S.checks.due, "check", "checks") + " due" : "AI checks <b>all good</b>", href: "/checks" });
+    if (ctx && ctx.admin) { const n = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length; if (n) out.push({ cls: "new", html: "<b>" + n + "</b> " + plural(n, "person", "people") + " asked to get in", href: "#people-sec" }); }
+    if ((has("tryouts") || has("coach-portal")) && S.tryouts) out.push({ cls: S.tryouts.waiting ? "due" : "ok", html: S.tryouts.waiting ? "<b>" + S.tryouts.waiting + "</b> " + plural(S.tryouts.waiting, "try-out", "try-outs") + " waiting" : "<b>" + S.tryouts.week + "</b> " + plural(S.tryouts.week, "try-out", "try-outs") + " this week", href: "/portal#/tryouts" });
+    if (has("backend")) { const d = daysToFirst(); out.push({ cls: "info", html: "bills go out on the <b>1st</b> · " + d + " " + plural(d, "day", "days"), href: "/backend#players" }); }
+    if (has("backend") && S.enroll) out.push({ cls: S.enroll.month ? "new" : "ok", html: enrollWords(S.enroll), href: "/backend#players" });
+    if (has("backend") && S.family && S.family.open) out.push({ cls: "due", html: "<b>" + S.family.open + "</b> family " + plural(S.family.open, "request", "requests") + " open", href: "/backend" });
+    D.signals(out);
+  }
+  // "3 enrolled online this month · 2 bought online · 1 test" — the same words on the tiles and in the ticker
+  const enrollWords = (e) => "<b>" + e.month + "</b> enrolled online this month" + (e.bought ? " · <b>" + e.bought + "</b> bought online" : "") + (e.test ? " · " + e.test + " test" : "");
+  function daysToFirst() { const d = new Date(); const first = new Date(d.getFullYear(), d.getMonth() + 1, 1); return Math.max(0, Math.round((first - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / DAY)); }
+
+  // ── today: the tiles ──
+  const ORDER = ["coach-portal", "mkt"];
   function tiles() {
-    const mine = PAGES.filter((p) => ctx.has(p.id));
-    const tile = (p) => {
-      const internal = p.opens === "site";
-      // a page that lives elsewhere: its link (with its own key) is kept in the database, not in this public page
-      const open = p.opens === "link" ? '<span class="lk" data-link="' + esc(p.id) + '"><span class="who">Checking the link…</span></span>'
-        : '<a class="btn" href="' + esc(p.url) + '"' + (internal ? "" : ' target="_blank" rel="noopener"') + ">Open →</a>";
-      return '<div class="mod ' + esc(p.color) + (p.status === "archive" ? " archive" : "") + '"><div class="mod-top"><h3>' + esc(p.name) + '</h3><span class="badge ' + esc(p.status) + '">' + esc(P.STATUS_LABEL[p.status] || p.status) + "</span></div><p>" + esc(p.desc) + '</p><div class="mod-foot"><span class="who">' + esc(p.owner) + (P.OPENS_LABEL[p.opens] ? '<span class="opens">' + esc(P.OPENS_LABEL[p.opens]) + "</span>" : "") + "</span>" + open + "</div></div>";
-    };
-    $("sections").innerHTML = mine.length ? SECTIONS.map((s) => { const ps = mine.filter((p) => p.section === s.id); return ps.length ? '<section class="sec"><div class="sec-label ' + esc(s.color) + '">' + esc(s.label) + '</div><div class="grid">' + ps.map(tile).join("") + "</div></section>" : ""; }).join("")
-      : '<section class="sec"><div class="empty">No pages are ticked for you yet. Ask an administrator.</div></section>';
-    paintLinks();
+    const mine = PAGES.filter((p) => p.section === "tools" && ctx.has(p.id));
+    mine.sort((a, b) => { const ia = ORDER.indexOf(a.id), ib = ORDER.indexOf(b.id); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib); });
+    $("today-small").textContent = mine.length ? mine.length + (mine.length === 1 ? " tool" : " tools") + " in daily use · live numbers" : "";
+    $("rail").innerHTML = mine.length ? mine.map(tile).join("") : '<div class="empty" style="grid-column:1/-1">No pages are ticked for you yet. Ask an administrator.</div>';
+    D.countUp($("rail")); paintLinks();
+  }
+  const go = (p) => '<span class="go"><span>' + esc(p.owner) + '</span><span class="ar">→</span></span>';
+  const open = (p) => '<a class="g' + (ORDER.includes(p.id) ? " w3" : "") + '" href="' + esc(p.url) + '" data-tile="' + esc(p.id) + '">';
+  function tile(p) {
+    const id = p.id;
+    if (id === "coach-portal") {
+      const r = S.players; let pill = r ? (r.toAssign ? '<span class="pill lime">' + r.toAssign + " new · assign</span>" : '<span class="pill mint">roster live</span>') : '<span class="pill ghost">loading</span>';
+      let inner;
+      if (r) { const rows = Object.keys(GROUP).map((g) => [GROUP[g], r.groups[g] || 0]).filter((x) => x[1] > 0); if (r.noGroup) rows.push(["No group yet", r.noGroup, "lime"]); const max = Math.max.apply(null, rows.map((x) => x[1]).concat([1])); inner = rows.length ? '<div class="bars">' + rows.slice(0, 4).map((x) => "<div><span>" + esc(x[0]) + '</span><i class="' + (x[2] || "") + '" style="--w:' + Math.round(x[1] / max * 100) + '%"></i><span>' + fmt(x[1]) + "</span></div>").join("") + "</div>" : "<p>No active players on the roster yet.</p>"; }
+      else inner = "<p>" + esc(p.desc) + "</p>";
+      return open(p) + '<span class="ey"><span>Players · assessments</span>' + pill + "</span><h3>Coach Portal</h3>" + inner + go(p) + "</a>";
+    }
+    if (id === "mkt") {
+      const n = S.numbers, w = S.weeks;
+      const pill = w ? (w.waiting ? '<span class="pill lime">' + w.waiting + " to approve</span>" : '<span class="pill mint">plan approved</span>') : '<span class="pill ghost">loading</span>';
+      const line = n ? "<p><b data-n=\"" + (n.followers || 0) + '">0</b> followers' + (n.change != null ? " · <b>" + (n.change >= 0 ? "+" : "") + fmt(n.change) + "</b> this week" : "") + (n.views != null ? " · <b>" + kfmt(n.views) + "</b> views" : "") + "</p>" : "<p>" + esc(p.desc) + "</p>";
+      return open(p) + '<span class="ey"><span>Marketing · this week</span>' + pill + "</span><h3>Marketing</h3>" + (n ? spark(n.series) : "") + line + go(p) + "</a>";
+    }
+    if (id === "backend") {
+      const d = daysToFirst(), e = S.enroll, f = S.family;
+      const pill = f ? (f.open ? '<span class="pill lime">' + f.open + " " + plural(f.open, "request", "requests") + "</span>" : '<span class="pill mint">live</span>') : '<span class="pill ghost">loading</span>';
+      return open(p) + '<span class="ey"><span>Enroll · attendance · billing</span>' + pill + '</span><h3>Backend</h3><div class="big"><span data-n="' + d + '">0</span><small>' + plural(d, "day", "days") + " to the 1st</small></div><p>Bills go out on the <b>1st</b>" + (e ? " · " + enrollWords(e) : "") + (f ? " · " + (f.open ? "<b>" + f.open + "</b> family " + plural(f.open, "request", "requests") + " open" : "no family requests open") : "") + "</p>" + go(p) + "</a>";
+    }
+    if (id === "ai-check") {
+      const c = S.checks;
+      const pill = c ? (c.bad ? '<span class="pill warn">' + c.bad + " problem" + (c.bad > 1 ? "s" : "") + "</span>" : c.due ? '<span class="pill lime">' + c.due + " due</span>" : '<span class="pill mint">all good</span>') : '<span class="pill ghost">loading</span>';
+      const dots = '<div class="dots">' + (c ? c.states : CHECKS.map(() => "none")).map((s, i) => '<i class="' + s + '" style="animation-delay:' + (300 + i * 45) + 'ms"></i>').join("") + "</div>";
+      const leg = c ? '<div class="leg"><span><i class="ok"></i>' + c.ok + " ok</span>" + (c.due ? '<span><i class="due"></i>' + c.due + " due</span>" : "") + (c.bad ? '<span><i class="bad"></i>' + c.bad + " problem</span>" : "") + "</div>" : '<div class="leg"><span><i class="none"></i>' + CHECKS.length + " checks</span></div>";
+      return open(p) + '<span class="ey"><span>Is everything answering?</span>' + pill + "</span><h3>AI check</h3>" + dots + leg + go(p) + "</a>";
+    }
+    if (id === "coach-board") {
+      const b = S.board, s = S.sync;
+      const pill = b ? (b.at ? '<span class="pill mint">synced ' + esc(when(b.at)) + "</span>" : '<span class="pill ghost">no sync yet</span>') : '<span class="pill ghost">loading</span>';
+      const big = s && s.bad ? '<div class="big"><span>!</span><small>last sync didn\'t finish</small></div>' : '<div class="big"><span data-n="' + (s ? s.toCheck : 0) + '">0</span><small>to check</small></div>';
+      return open(p) + '<span class="ey"><span>Roster · from Monday</span>' + pill + "</span><h3>Coach Board</h3>" + big + "<p>" + (b ? "<b>" + fmt(b.active) + "</b> active · " + b.coaches + " " + plural(b.coaches, "coach", "coaches") + " · " + b.noCoach + " with no coach yet · " + b.tries + " " + plural(b.tries, "try-out", "try-outs") : esc(p.desc)) + "</p>" + go(p) + "</a>";
+    }
+    if (id === "tryouts") {
+      const t = S.tryouts;
+      const pill = t ? (t.waiting ? '<span class="pill lime">' + t.waiting + " waiting</span>" : '<span class="pill mint">all good</span>') : '<span class="pill ghost">loading</span>';
+      return open(p) + '<span class="ey"><span>Prospective players</span>' + pill + '</span><h3>Try-outs</h3><div class="big"><span data-n="' + (t ? t.week : 0) + '">0</span><small>this week</small></div><p>' + (t ? (t.today ? "<b>" + t.today + "</b> today · " : "") + (t.waiting ? "<b>" + t.waiting + "</b> " + plural(t.waiting, "needs", "need") + " a result or a decision" : "nothing waiting on a decision") + (t.later ? " · " + t.later + " coming up" : "") : esc(p.desc)) + "</p>" + go(p) + "</a>";
+    }
+    if (id === "family") {
+      const f = S.family;
+      return open(p) + '<span class="ey"><span>Parents · their own account</span>' + (f ? (f.open ? '<span class="pill lime">' + f.open + " open</span>" : '<span class="pill cyan">live</span>') : '<span class="pill cyan">live</span>') + '</span><h3>Family portal</h3><div class="big"><span data-n="' + (f ? f.open : 0) + '">0</span><small>' + plural(f ? f.open : 0, "request", "requests") + " open</small></div><p>A parent signs in with the e-mail on file and sees their players, attendance, reports and bills — and asks the front desk for a court, a private or a plan change.</p>" + go(p) + "</a>";
+    }
+    if (id === "enroll") {
+      const e = S.enroll;
+      return open(p) + '<span class="ey"><span>Public · no sign-in</span><span class="pill cyan">public</span></span><h3>Enroll</h3><div class="big"><span data-n="' + (e ? e.month : 0) + '">0</span><small>enrolled online this month' + (e && e.test ? " · " + e.test + " test" : "") + '</small></div><p>Program → plan → days → first day → parent → agreement → Stripe. Open it to see what a family sees, or send the prefilled link from the backend\'s Enroll tab.</p>' + go(p) + "</a>";
+    }
+    if (id === "billing") return open(p) + '<span class="ey"><span>On the backend</span><span class="pill orchid">live actions</span></span><h3>Billing</h3><p>Hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link — on Players &amp; billing.</p>' + go(p) + "</a>";
+    if (p.opens === "link") return '<div class="g" data-tile="' + esc(id) + '"><span class="ey"><span>Live · every 5 min</span><span class="pill mint">live</span></span><h3>' + esc(p.short || p.name) + "</h3><p>" + esc(p.desc) + '</p><span class="lk" data-link="' + esc(id) + '"><span class="hint">Checking the link…</span></span></div>';
+    return open(p) + '<span class="ey"><span>' + esc(P.STATUS_LABEL[p.status] || p.status) + "</span></span><h3>" + esc(p.short || p.name) + "</h3><p>" + esc(p.desc) + "</p>" + go(p) + "</a>";
+  }
+  function spark(series) {
+    const v = (series || []).filter((x) => x != null); if (v.length < 2) return "";
+    const min = Math.min.apply(null, v), max = Math.max.apply(null, v), span = max - min || 1;
+    const pts = v.map((y, i) => [Math.round(i / (v.length - 1) * 300), Math.round(50 - (y - min) / span * 42)]);
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0] + "," + p[1]).join(" ");
+    return '<svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="' + line + " L300,56 L0,56 Z\"/><path d=\"" + line + '"/><circle cx="300" cy="' + pts[pts.length - 1][1] + '" r="4"/></svg>';
   }
 
   // ── pages that live elsewhere (the live attendance and directors pages): the link an owner saved, pageLinks/<id> ──
-  const links = {};
   function paintLinks() {
     document.querySelectorAll("[data-link]").forEach((el) => {
       const id = el.getAttribute("data-link");
       const draw = (editing) => {
-        const url = links[id] || "";
+        const url = S.links[id] || "";
         if (url && !editing) {
-          el.innerHTML = '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Open →</a>' + (ctx.owner ? '<button type="button" class="btn ghost xs" data-a="edit">Change link</button>' : "");
+          el.innerHTML = '<span class="rowx" style="margin-top:auto"><a class="btn sm" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Open <span class="ar">→</span></a>' + (ctx.owner ? '<button type="button" class="btn muted xs" data-a="edit">Change link</button>' : "") + "</span>";
         } else if (ctx.owner) {
-          el.innerHTML = '<form class="lkf"><input type="url" required placeholder="Paste the page’s full link (https://…)" aria-label="The page’s full link"><button class="btn xs">Save</button></form>';
+          el.innerHTML = '<form class="lkf"><input type="url" required placeholder="Paste the page’s full link (https://…)" aria-label="The page’s full link"><button class="btn sm lime">Save</button></form>';
           const inp = el.querySelector("input"); inp.value = url;
           el.querySelector("form").addEventListener("submit", (e) => {
             e.preventDefault();
             const v = inp.value.trim();
             if (!/^https:\/\/[^\s]+$/.test(v) || v.length > 1900) { toast("Paste the whole link, starting with https://", true); return; }
-            fs.doc("pageLinks/" + id).set({ url: v, at: Date.now(), by: ctx.email }).then(() => { links[id] = v; draw(false); toast("Link saved — everyone with this page can open it now."); }, (e2) => toast("Couldn't save the link (" + (e2.code || e2.message) + ")", true));
+            fs.doc("pageLinks/" + id).set({ url: v, at: Date.now(), by: ctx.email }).then(() => { S.links[id] = v; draw(false); toast("Link saved — everyone with this page can open it now."); }, (e2) => toast("Couldn't save the link (" + (e2.code || e2.message) + ")", true));
           });
         } else {
-          el.innerHTML = '<span class="who">Not connected yet — an owner adds its link.</span>';
+          el.innerHTML = '<span class="hint" style="margin-top:auto">Not connected yet — an owner adds its link.</span>';
         }
         const b = el.querySelector('[data-a="edit"]'); if (b) b.addEventListener("click", () => draw(true));
       };
-      if (id in links) { draw(false); return; }
-      fs.doc("pageLinks/" + id).get().then((d) => { links[id] = d.exists ? String(d.data().url || "") : ""; draw(false); }, () => { links[id] = ""; draw(false); });
+      if (id in S.links) { draw(false); return; }
+      fs.doc("pageLinks/" + id).get().then((d) => { S.links[id] = d.exists ? String(d.data().url || "") : ""; draw(false); }, () => { S.links[id] = ""; draw(false); });
     });
   }
 
-  // ── people & access (owners and administrators) ──
+  // ── everything else: one list with a filter ──
+  const dateOf = (s) => { const m = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)[a-z]*\.? (\d{1,2}), (20\d\d)/.exec(String(s || "")); return m ? m[1].slice(0, 3) + " " + m[2] : ""; };
+  const kindOf = (p) => ({ plan: "plan", proto: "prototype", report: "report", page: "page", archive: "archive" }[p.status] || p.section);
+  let libF = "";
+  function library() {
+    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id));
+    $("lib-sec").hidden = !mine.length; if (!mine.length) return;
+    $("lib-small").textContent = mine.length + " pages";
+    const groups = [["", "All · " + mine.length], ["plan", "Plans"], ["report", "Reports"], ["page", "Pages"]];
+    const match = (p, f) => !f || (f === "plan" ? /plan|prototype/.test(kindOf(p)) : f === "page" ? /page|archive/.test(kindOf(p)) : kindOf(p) === f);
+    $("libh").innerHTML = groups.filter((g) => !g[0] || mine.some((p) => match(p, g[0]))).map((g) => '<button type="button" class="' + (g[0] === libF ? "on" : "") + '" data-f="' + g[0] + '">' + esc(g[1]) + "</button>").join("");
+    const rows = mine.filter((p) => match(p, libF));
+    $("lib").innerHTML = rows.map((p, i) => '<a class="lr" href="' + esc(p.url) + '" style="animation-delay:' + i * 25 + 'ms" title="' + esc(p.desc) + '"><b>' + esc(p.name) + '</b><span class="t">' + esc(kindOf(p)) + '</span><span class="d">' + esc(dateOf(p.desc)) + "</span><em>→</em></a>").join("");
+  }
+  $("libh").addEventListener("click", (e) => { const b = e.target.closest("button[data-f]"); if (!b) return; libF = b.getAttribute("data-f"); library(); });
+
+  // ── you own it (owners and administrators) ──
+  function own() {
+    if (!ctx.admin) return;
+    const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
+    $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
+    $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';
+    $("people-small").textContent = staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "");
+    $("outside").innerHTML = P.OUTSIDE.map((o) => '<a class="chip" href="' + esc(o.url) + '" target="_blank" rel="noopener">' + esc(o.name) + "</a>").join("");
+  }
+
+  // ── people & access ──
   // a page that comes with another (the Coach Board comes with the Coach Portal) has no tick box and is never written to anyone's list
   const real = (ids) => ids.filter((id) => !(PAGES.find((p) => p.id === id) || {}).with);
   const pagesOf = (s) => real(s.owner === true ? P.ALL.slice() : Array.isArray(s.pages) ? s.pages : P.LEGACY.slice());
   // Owners change anyone. An administrator changes other people only — never an owner, never their own entry — and only
   // hands out pages they hold themselves (the database rules say the same thing).
-  const mine = () => (ctx.owner ? P.ALL : ctx.pages || []);
-  const canEdit = (s) => ctx.owner || (s.owner !== true && s.id !== ctx.email && pagesOf(s).every((id) => mine().includes(id)));
+  const minePages = () => (ctx.owner ? P.ALL : ctx.pages || []);
+  const canEdit = (s) => ctx.owner || (s.owner !== true && s.id !== ctx.email && pagesOf(s).every((id) => minePages().includes(id)));
   function renderPeople() {
     const rows = staff.slice().sort((a, b) => (b.owner === true) - (a.owner === true) || String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    const SECTIONS = P.SECTIONS;
     let h = '<thead><tr><th></th><th></th>' + SECTIONS.map((s) => '<th class="grp" colspan="' + PAGES.filter((p) => p.section === s.id && !p.with).length + '">' + esc(s.label) + "</th>").join("") + "<th></th></tr>"
       + '<tr><th>Person</th><th class="c">Admin</th>' + SECTIONS.map((s) => PAGES.filter((p) => p.section === s.id && !p.with).map((p) => '<th class="pg"><span>' + esc(p.short || p.name) + "</span></th>").join("")).join("") + "<th></th></tr></thead><tbody>";
     rows.forEach((s) => {
@@ -238,21 +376,22 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
       h += '<tr class="' + (on || owner ? "" : "off") + '"><td><div class="uname">' + esc(s.name || s.id) + (owner ? '<span class="utag owner">Owner</span>' : "") + (!on && !owner ? '<span class="utag off">Access off</span>' : "") + '</div><div class="uemail">' + esc(s.id) + (legacy ? " · from the Coach Portal list" : "") + "</div></td>";
       h += '<td class="c"><div class="chk' + (owner || s.role === "admin" ? " on" : "") + (edit ? "" : " lock") + '" role="checkbox" aria-checked="' + (owner || s.role === "admin") + '" tabindex="0" title="Can manage this list"' + (edit ? ' data-admin="' + esc(s.id) + '"' : "") + ">✓</div></td>";
       SECTIONS.forEach((sec) => PAGES.filter((p) => p.section === sec.id && !p.with).forEach((p) => {
-        const has = owner || ids.includes(p.id), can = edit && mine().includes(p.id);
+        const has = owner || ids.includes(p.id), can = edit && minePages().includes(p.id);
         h += '<td class="c"><div class="chk' + (has ? " on" : "") + (can ? "" : " lock") + '" role="checkbox" aria-checked="' + has + '" tabindex="0" title="' + esc(p.name) + (can || owner || self ? "" : " — only an owner can change this") + '"' + (can ? ' data-u="' + esc(s.id) + '" data-p="' + esc(p.id) + '"' : "") + ">✓</div></td>";
       }));
-      h += '<td class="c" style="white-space:nowrap">' + (!edit ? "" : '<button class="btn ghost muted xs" data-onoff="' + esc(s.id) + '">' + (on ? "Turn off" : "Turn on") + '</button> <button class="btn ghost muted xs" data-rm="' + esc(s.id) + '" title="Remove from the list">✕</button>') + "</td></tr>";
+      h += '<td class="c" style="white-space:nowrap">' + (!edit ? "" : '<button type="button" class="btn muted xs" data-onoff="' + esc(s.id) + '">' + (on ? "Turn off" : "Turn on") + '</button> <button type="button" class="btn muted xs" data-rm="' + esc(s.id) + '" title="Remove from the list">✕</button>') + "</td></tr>";
     });
     $("acl").innerHTML = h + "</tbody>";
-    $("acl").querySelectorAll("[data-p]").forEach((el) => { const go = () => togglePage(el.getAttribute("data-u"), el.getAttribute("data-p")); el.addEventListener("click", go); el.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); go(); } }); });
-    $("acl").querySelectorAll("[data-admin]").forEach((el) => { const go = () => toggleAdmin(el.getAttribute("data-admin")); el.addEventListener("click", go); el.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); go(); } }); });
+    $("acl").querySelectorAll("[data-p]").forEach((el) => { const go2 = () => togglePage(el.getAttribute("data-u"), el.getAttribute("data-p")); el.addEventListener("click", go2); el.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); go2(); } }); });
+    $("acl").querySelectorAll("[data-admin]").forEach((el) => { const go2 = () => toggleAdmin(el.getAttribute("data-admin")); el.addEventListener("click", go2); el.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); go2(); } }); });
     $("acl").querySelectorAll("[data-onoff]").forEach((el) => el.addEventListener("click", () => toggleActive(el.getAttribute("data-onoff"))));
     $("acl").querySelectorAll("[data-rm]").forEach((el) => el.addEventListener("click", () => removePerson(el.getAttribute("data-rm"), el)));
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true));
-    $("req-card").hidden = !reqs.length;
-    $("req-list").innerHTML = reqs.map((r) => '<div class="req"><div><div class="uname">' + esc(r.name || r.email) + '</div><div class="uemail">' + esc(r.email) + '</div></div><div class="row"><select class="mini" data-preset-for="' + esc(r.id) + '">' + presetOptions("none") + '</select><button class="btn xs" data-approve="' + esc(r.id) + '">Add</button><button class="btn ghost muted xs" data-dismiss="' + esc(r.id) + '">Dismiss</button></div></div>').join("");
+    $("req-card").hidden = !reqs.length; $("req-n").textContent = reqs.length + " waiting";
+    $("req-list").innerHTML = reqs.map((r) => '<div class="req"><div><div class="uname">' + esc(r.name || r.email) + '</div><div class="uemail">' + esc(r.email) + (r.at ? " · " + esc(when(r.at)) : "") + '</div></div><div class="rowx"><select class="mini" data-preset-for="' + esc(r.id) + '" aria-label="Start with">' + presetOptions("none") + '</select><button type="button" class="btn sm lime" data-approve="' + esc(r.id) + '">Let in</button><button type="button" class="btn muted xs" data-dismiss="' + esc(r.id) + '">Dismiss</button></div></div>').join("");
     $("req-list").querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", () => approve(b.getAttribute("data-approve"))));
     $("req-list").querySelectorAll("[data-dismiss]").forEach((b) => b.addEventListener("click", () => fs.doc("requests/" + b.getAttribute("data-dismiss")).delete().catch(fail)));
+    own(); paintNeed(); signals();
   }
   const presetOptions = (sel) => Object.keys(P.PRESETS).map((k) => '<option value="' + k + '"' + (k === sel ? " selected" : "") + ">" + esc(P.PRESETS[k].label) + "</option>").join("");
   function fail(e) { console.error(e); toast(e && e.code === "permission-denied" ? "Not allowed — only owners and administrators can change access." : "Couldn't save — " + ((e && e.message) || e), true); }
@@ -274,7 +413,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
     const pr = P.PRESETS[preset] || P.PRESETS.none;
     const existing = staff.find((s) => s.id === email);
     if (existing) { toast(email + " is already on the list — tick their pages below", true); return Promise.resolve(false); }
-    const pages = pr.pages.filter((id) => mine().includes(id));   // an administrator hands out only what they hold
+    const pages = pr.pages.filter((id) => minePages().includes(id));   // an administrator hands out only what they hold
     return fs.doc("staff/" + email).set({ email, name: name || email.split("@")[0], role: pr.admin ? "admin" : "coach", active: true, pages, addedBy: ctx.email, addedAt: Date.now() })
       .then(() => { toast((name || email) + " added — they can sign in now"); return true; }).catch((e) => { fail(e); return false; });
   }
@@ -285,20 +424,73 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);display
   }
   $("add-form").addEventListener("submit", (e) => { e.preventDefault(); addPerson($("nu-name").value, $("nu-email").value, $("nu-preset").value).then((ok) => { if (ok) { $("nu-name").value = ""; $("nu-email").value = ""; } }); });
 
+  // ── the live numbers, piece by piece (each read only when this person holds the page, each failure silent) ──
+  // The AI & Comms Check's items and how often each is due (hours) — the same list as /checks.
+  const CHECKS = [["concierge-watchdog", 24], ["coach-digest", 24], ["monday-sync", 24], ["mkt-numbers", 24], ["text-new", 168], ["pipedrive-lead", 168], ["human-takeover", 168], ["text-known", 168], ["website-chat", 168], ["whatsapp", 168], ["instagram", 168], ["messenger", 168], ["portal-ai", 168], ["live-pages", 168], ["justcall-account", 744], ["ai-credit", 744], ["manychat-account", 744]];
+  const repaint = () => { tiles(); paintNeed(); signals(); };
+  const quiet = (p) => p.catch((e) => { console.warn(e && e.message ? e.message : e); });
+  function loadAll() {
+    const has = (id) => ctx.has(id);
+    if (wants("players")) quiet(fs.collection("players").where("status", "==", "active").get().then((s) => {
+      const r = { active: 0, groups: {}, noGroup: 0, toAssign: 0 }; const now = Date.now();
+      s.forEach((d) => { const p = d.data() || {}; if (!p.name) return; r.active++; if (p.group) r.groups[p.group] = (r.groups[p.group] || 0) + 1; else r.noGroup++; const en = p.enroll; if (en && en.at && now - en.at < 14 * DAY && !p.coach) r.toAssign++; });
+      S.players = r; repaint();
+    }));
+    if (wants("board")) {
+      quiet(fs.doc("board/current").get().then((d) => {
+        const B = d.exists ? (d.data() || {}) : {}; const items = B.items || [];
+        const act = items.filter((x) => x.g === "active" && x.st === "active");
+        S.board = { at: B.at || null, active: act.length, coaches: new Set(act.filter((x) => x.lead).map((x) => x.lead)).size, noCoach: act.filter((x) => !x.lead).length, tries: items.filter((x) => x.g === "tryouts").length };
+        repaint();
+      }));
+      quiet(fs.collection("syncLog").orderBy("at", "desc").limit(1).get().then((s) => { const l = s.docs.length ? (s.docs[0].data() || {}) : null; S.sync = l ? { at: l.at, bad: l.ok === false, toCheck: l.ok === false ? 0 : (l.errors || []).length, preview: l.mode === "preview" } : { at: null, bad: false, toCheck: 0 }; repaint(); }));
+    }
+    if (wants("tryouts")) quiet(fs.collection("tryouts").get().then((s) => {
+      const t = { today: 0, week: 0, later: 0, waiting: 0 }; const lim = iso(new Date(Date.now() + 7 * DAY));
+      s.forEach((d) => { const x = d.data() || {}; const st = ["planned", "came", "no-show", "cancelled"].includes(x.status) ? x.status : "planned"; const decided = !!(x.checks && x.checks.decision && x.checks.decision.done);
+        if (st === "planned") { if (x.date === today) { t.today++; t.week++; } else if (x.date && x.date > today && x.date <= lim) t.week++; else if (x.date && x.date < today) t.waiting++; else t.later++; }
+        else if (st === "came" && !decided) t.waiting++; });
+      S.tryouts = t; repaint();
+    }));
+    if (wants("checks")) quiet(fs.collection("checks").get().then((s) => {
+      const res = {}; s.forEach((d) => { res[d.id] = d.data() || {}; }); const now = Date.now();
+      const states = CHECKS.map(([id, every]) => { const r = res[id]; if (!r || !r.at) return "due"; if (r.ok === false) return "bad"; return now - r.at > every * 3600000 ? "due" : "ok"; });
+      S.checks = { states, ok: states.filter((x) => x === "ok").length, due: states.filter((x) => x === "due").length, bad: states.filter((x) => x === "bad").length };
+      repaint();
+    }));
+    if (wants("numbers")) {
+      // the Marketing record keeps each document as { json } holding { v: <the body>, at } — the same reader as marketing/app.js
+      const parse = (d) => { try { const b = d && typeof d.json === "string" ? JSON.parse(d.json) : null; return b && typeof b === "object" && "v" in b ? b.v : b; } catch (e) { return null; } };
+      quiet(fs.collection("apps/marketing/numbers").orderBy(firebase.firestore.FieldPath.documentId(), "desc").limit(1).get().then((s) => {
+        const N = s.docs.length ? parse(s.docs[0].data()) : null; const ig = N && N.ig ? N.ig : null; const num = (v) => (v === null || v === undefined || v === "" || isNaN(+v) ? null : +v);
+        const daily = N && Array.isArray(N.igDaily) ? N.igDaily.map((d) => num(d.followers)).filter((v) => v !== null) : [];
+        S.numbers = ig ? { followers: num(ig.followers), change: num(ig.followersChange7) !== null ? num(ig.followersChange7) : (num(ig.followers) !== null && num(ig.followersPrev) !== null ? num(ig.followers) - num(ig.followersPrev) : null), views: num(ig.views7), series: daily.slice(-30) } : { followers: null, change: null, views: null, series: [] };
+        repaint();
+      }));
+      const sunday = (d) => { const s = new Date(d); s.setHours(0, 0, 0, 0); s.setDate(s.getDate() - s.getDay()); return iso(s); };
+      const thisWS = sunday(new Date()), nextWS = sunday(new Date(Date.now() + 7 * DAY));
+      quiet(Promise.all([thisWS, nextWS].map((id) => fs.doc("apps/marketing/weeks/" + id).get())).then((ds) => {
+        let waiting = 0, plans = 0;
+        ds.forEach((d) => { const w = d.exists ? parse(d.data()) : null; if (!w) return; plans++; if (w.locked) return; (w.coaches || []).forEach((c) => (c.ideas || []).forEach((i) => { if (!i.approved) waiting++; })); (w.production || []).forEach((i) => { if (!i.approved) waiting++; }); });
+        S.weeks = { waiting, plans }; repaint();
+      }));
+    }
+    // enrolled online this month = program enrollments paid for real (test-mode checkouts are counted apart, until Stripe goes live)
+    if (wants("enroll")) { const d = new Date(); const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime(); quiet(fs.collection("enrollments").where("at", ">=", start).get().then((s) => { let n = 0, test = 0, bought = 0; s.forEach((x) => { const e = x.data() || {}; if (e.done === false || e.kind === "trial") return; if (e.mode === "test") { test++; return; } if (e.kind === "program") n++; else bought++; }); S.enroll = { month: n, bought, test }; repaint(); })); }
+    if (wants("family")) quiet(fs.collection("familyRequests").where("state", "==", "open").get().then((s) => { S.family = { open: s.size }; repaint(); }));
+  }
+
   window.PWAuth.start({}).then((c) => {
     ctx = c; fs = window.PWAuth.fs();
-    tiles();
-    if (ctx.owner) $("hero-p").textContent = "Everything the team uses, in one place. You own it: below, choose who sees what.";
-    else if (ctx.admin) $("hero-p").textContent = "Everything the team uses, in one place. As an administrator you can give the people below the pages you have yourself; only an owner unlocks anything else.";
+    greeting(); tiles(); library(); paintNeed(); signals(); loadAll();
     if (ctx.admin) {
-      $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
-      $("outside").innerHTML = P.OUTSIDE.map((o) => '<a href="' + esc(o.url) + '" target="_blank" rel="noopener">' + esc(o.name) + "</a>").join("");
       $("nu-preset").innerHTML = presetOptions("marketing");
+      own();
       fs.collection("staff").onSnapshot((s) => { staff = s.docs.map((d) => Object.assign({ id: d.id }, d.data())); renderPeople(); }, fail);
       fs.collection("requests").onSnapshot((s) => { requests = s.docs.map((d) => Object.assign({ id: d.id }, d.data())); renderPeople(); }, () => {});
     }
   });
-  window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; tiles(); });
+  window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; greeting(); tiles(); library(); paintNeed(); signals(); });
 })();
 </script>
 </body></html>

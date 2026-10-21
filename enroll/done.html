@@ -9,37 +9,35 @@
 <title>Enrolled · ProWorld Academy</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23050505'/%3E%3Cpath d='M22 48 30 16h14c7 0 10 4 9 10s-6 10-13 10h-6l-3 12z' fill='%23E2FE78'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
 <style>
-:root{--bg:#FFFFFF;--ink:#000000;--muted:rgba(0,0,0,.58);--line:rgba(0,0,0,.14);--surface:rgba(0,0,0,.045);--black:#000000;--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;
-  --display:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;--body:'Aeonik Pro','Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;--radius:4px;box-sizing:border-box}
-*,*::before,*::after{box-sizing:inherit}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
-h1,h2{margin:0;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;line-height:.92}
-.topbar{background:var(--black);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.14)}
-.topbar .wordmark{display:block;height:22px;aspect-ratio:600/69;background:var(--logo-lime) center/contain no-repeat;flex:none}
-.topbar .tag{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:19px;line-height:1;padding-left:14px;border-left:1px solid rgba(255,255,255,.28)}
-main{max-width:760px;margin:0 auto;padding:40px 20px 100px}
-h1{font-size:clamp(60px,12vw,132px)}
-h1 em{font-style:inherit;background:var(--lime);padding:0 .08em}
-.lead{font-size:18px;margin:16px 0 0;max-width:600px}
+/* The thank-you page in the redesign (skin "home"): shared/design.css does the look; the script's classes are styled here. */
+main{max-width:820px;padding:30px 0 100px}
+h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(60px,12vw,132px);line-height:.86;letter-spacing:-.005em;margin:0}
+h1 em{font-style:inherit;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
+.lead{font-size:18px;margin:18px 0 0;max-width:60ch;color:var(--ink-2);line-height:1.5}
+.lead b{color:var(--ink);background:linear-gradient(var(--lime),var(--lime)) no-repeat 0 62%/100% 48%;padding:0 3px}
 .facts{list-style:none;padding:0;margin:28px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:560px){.facts{grid-template-columns:1fr}}
-.facts li{background:var(--surface);border-radius:var(--radius);padding:14px 16px;font-size:14px}
-.facts li b{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-weight:700}
-.facts li.ok{background:var(--mint)}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
-.btn{display:inline-flex;align-items:center;justify-content:center;background:var(--black);color:#fff;border-radius:var(--radius);padding:14px 22px;font-weight:700;font-size:15px;text-decoration:none}
-.btn.lime{background:var(--lime);color:#000}
-.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
-.note{margin-top:28px;font-size:13.5px;color:var(--muted);max-width:600px}
-.foot{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
-.spin{width:18px;height:18px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+.facts li{background:var(--card);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(12px);padding:14px 16px;font-size:14px;color:var(--ink)}
+.facts li b{display:block;font-family:var(--body);font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-weight:700}
+.facts li:first-child{font-family:var(--display);font-style:italic;font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.facts li.ok{background:var(--mint);border-color:transparent}
+.facts li.ok b{color:rgba(0,0,0,.55)}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;align-items:center}
+.note{margin-top:26px;font-size:13.5px;color:var(--muted);max-width:60ch;line-height:1.5}
+.foot{margin-top:60px;padding-top:16px;border-top:1px solid var(--line-2);font-size:11.5px;color:var(--muted)}
+.spin{width:18px;height:18px;border:2px solid var(--line-2);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
-<body>
-<header class="topbar"><a class="wordmark" href="https://proworldacademy.com" aria-label="PROWORLD"></a><span class="tag">Enroll</span></header>
+<body class="skin-home">
+<div class="wrap">
+<div class="pwd-top" id="pwd-top"></div>
 <main id="app"><p class="lead"><span class="spin"></span>One moment — confirming with Stripe…</p></main>
+</div>
+<script src="/shared/design.js"></script>
+<script>window.PWDesign.mount({skin:"home",strip:false,jump:false,title:"Enrolled"});</script>
 <script>
 (function(){
 'use strict';
