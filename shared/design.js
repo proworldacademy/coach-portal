@@ -5,8 +5,10 @@
    (tiles tilt toward the cursor with a soft flashlight, a lime ripple on press, the sky's bright spot drifting toward the
    cursor, sections rising into place, numbers counting up). Everything respects prefers-reduced-motion.
    Include after shared/pages.js and shared/pwauth.js:  <script src="/shared/design.js"></script>
-   Use:  PWDesign.mount({ skin: "home", active: "/" });  PWDesign.signals([{ cls: "ok", html: "…", href: "/portal" }]);
-         PWDesign.palette([{ name, kind, href }]);  PWDesign.countUp(root);  PWDesign.toast(msg, err)                     */
+   Use:  PWDesign.mount({ skin: "home"|"coach"|"desk"|"studio"|"family", active: "<page id>" | "/", strip: true, jump: true, title: "" });
+         PWDesign.active("tryouts") re-marks the strip when a page changes view;  PWDesign.signals([{ cls: "ok"|"due"|"new"|"info", html, href }]);
+         PWDesign.palette([{ name, kind, href }]);  PWDesign.countUp(root);  PWDesign.toast(msg, err);  PWDesign.esc(s);  PWDesign.greet(name)
+         A public page (no sign-in) mounts with { strip: false, jump: false }: the wordmark alone, no palette.                            */
 (function () {
   "use strict";
   const P = window.PW_PAGES || { PAGES: [], SECTIONS: [] };
@@ -18,7 +20,7 @@
   const SEARCH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
   const mac = /Mac|iPhone|iPad/.test(navigator.platform || "") || /Mac OS/.test(navigator.userAgent || "");
   const KBD = mac ? "⌘K" : "Ctrl K";
-  let opts = { skin: "home", active: here, strip: true }, ctx = null, mounted = false, extra = [], sigs = [];
+  let opts = { skin: "home", active: here, strip: true, jump: true }, ctx = null, mounted = false, extra = [], sigs = [];
 
   // ── the pages this person may open (for the strip and the palette) ──
   const pageHref = (p) => p.url || "/";
@@ -27,6 +29,8 @@
   function isHere(p) { if (!p.url || external(p)) return false; const path = p.url.split("#")[0].replace(/\/$/, "") || "/"; return !p.url.includes("#") && path === here; }
 
   // ── the top bar ──
+  let stripResize = false;
+  function stripFit() { const st = $("#pwd-top .pwd-strip"); if (st) st.classList.toggle("fade", st.scrollLeft + st.clientWidth < st.scrollWidth - 2); }
   function drawTop() {
     const top = $("#pwd-top"); if (!top) return;
     const home = opts.active ? opts.active === "/" : here === "/";
@@ -34,9 +38,19 @@
     const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD pages">' + (ctx ? items.map((i) => '<a class="' + (i.on ? "on" : "") + '" href="' + esc(i.href) + '"' + (i.ext ? ' target="_blank" rel="noopener"' : "") + (i.on ? ' aria-current="page"' : "") + ">" + esc(i.name) + "</a>").join("") + (home ? "" : '<a class="more" href="/">All pages →</a>') : "") + "</nav>";
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
     const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
-    top.innerHTML = '<a class="pwd-mark" href="/" aria-label="PROWORLD Dashboard"></a>' + strip + '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>" + who;
+    const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
+    top.innerHTML = '<a class="pwd-mark" href="/" aria-label="PROWORLD Dashboard"></a>' + strip + jump + who;
     const out = top.querySelector("[data-out]"); if (out) out.addEventListener("click", () => window.PWAuth && window.PWAuth.signOut());
     const me = top.querySelector("[data-me]"); if (me) me.addEventListener("click", (e) => { e.stopPropagation(); me.parentNode.classList.toggle("open"); });
+    // the strip fades on the right only while more pages hide there, and the page you are on is always in view
+    const st = top.querySelector(".pwd-strip");
+    if (st) {
+      // when the pages don't fit, the Jump field shrinks to its icon first
+      top.classList.toggle("tight", st.scrollWidth > st.clientWidth + 2);
+      const on = st.querySelector("a.on"); if (on) { const end = on.offsetLeft + on.offsetWidth; if (end > st.clientWidth) st.scrollLeft = end - st.clientWidth + 28; }
+      stripFit(); st.addEventListener("scroll", stripFit, { passive: true });
+      if (!stripResize) { stripResize = true; addEventListener("resize", stripFit, { passive: true }); }
+    }
     document.addEventListener("click", (e) => { const o = top.querySelector(".pwd-me.open"); if (o && !o.contains(e.target)) o.classList.remove("open"); });
   }
 
@@ -44,7 +58,7 @@
   let barT = null, li = 0, barScroll = false;
   function drawBar() {
     let bar = $("#pwd-bar");
-    if (!bar) { bar = document.createElement("div"); bar.className = "pwd-bar"; bar.id = "pwd-bar"; bar.setAttribute("aria-hidden", "true"); bar.innerHTML = '<div class="in"><a class="pwd-mark" href="/" aria-label="PROWORLD Dashboard"></a><span class="now" id="pwd-now"></span><button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<kbd>" + KBD + "</kbd></button></div>"; document.body.appendChild(bar); }
+    if (!bar) { bar = document.createElement("div"); bar.className = "pwd-bar"; bar.id = "pwd-bar"; bar.setAttribute("aria-hidden", "true"); bar.innerHTML = '<div class="in"><a class="pwd-mark" href="/" aria-label="PROWORLD Dashboard"></a><span class="now" id="pwd-now"></span>' + (opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<kbd>" + KBD + "</kbd></button>") + "</div>"; document.body.appendChild(bar); }
     const now = $("#pwd-now"); const lines = sigs.map((s) => s.html).filter(Boolean);
     now.innerHTML = lines[0] || (opts.title ? esc(opts.title) : "");
     clearInterval(barT);
@@ -85,7 +99,7 @@
   function pclose() { if (!pal) return; pal.classList.remove("on"); pq.blur(); }
   function go(p) { if (!p) return; if (p.ext) window.open(p.href, "_blank", "noopener"); else location.href = p.href; pclose(); }
   function drawPal() {
-    if (pal) return;
+    if (pal || opts.jump === false) return;
     pal = document.createElement("div"); pal.className = "pwd-pal"; pal.id = "pwd-pal"; pal.setAttribute("role", "dialog"); pal.setAttribute("aria-modal", "true"); pal.setAttribute("aria-label", "Jump to a page");
     pal.innerHTML = '<div class="p"><div class="q">' + SEARCH.replace('width="15" height="15"', 'width="18" height="18"') + '<input id="pwd-pq" type="search" autocomplete="off" placeholder="Jump to a page, a report, a plan…" aria-label="Jump to"></div><div class="rs" id="pwd-prs"></div><div class="ft"><span><b>↑ ↓</b> move</span><span><b>Enter</b> open</span><span><b>Esc</b> close</span></div></div>';
     document.body.appendChild(pal); pq = $("#pwd-pq"); prs = $("#pwd-prs");
@@ -158,5 +172,7 @@
   }
   window.addEventListener("pw:auth", (e) => { ctx = e.detail; if (mounted) drawTop(); });
   window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; if (mounted) drawTop(); });
-  window.PWDesign = { mount, signals, palette: (list) => { extra = Array.isArray(list) ? list : []; }, countUp, greet, toast, esc, get ctx() { return ctx; } };
+  // a page with several views (the Coach Portal's assessments / try-outs / board) re-marks the strip as the view changes
+  function active(id) { opts.active = id; if (mounted) drawTop(); }
+  window.PWDesign = { mount, active, signals, palette: (list) => { extra = Array.isArray(list) ? list : []; }, countUp, greet, toast, esc, get ctx() { return ctx; } };
 })();

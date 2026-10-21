@@ -30,24 +30,26 @@
 
   // ── the sign-in screen (one overlay, several states) ──
   const CSS = [
-    ".pwa-bg{position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;z-index:2000;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));font-family:'Aeonik Pro','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow:auto}",
-    ".pwa{width:100%;max-width:440px;background:#0e0e0e;border:1px solid #272727;border-top:4px solid #E2FE78;border-radius:8px;padding:30px}",
-    ".pwa .brand{font-family:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;font-size:22px;letter-spacing:.5px;color:#E2FE78;margin-bottom:18px}",
-    ".pwa h1{font-family:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;font-size:36px;line-height:.95;margin:0 0 10px}",
-    ".pwa h1 em{font-style:inherit;color:#E2FE78}",
-    ".pwa p{color:#a3a69c;font-size:13.5px;margin:0 0 14px;line-height:1.55}",
-    ".pwa p b{color:#fff}",
-    ".pwa .go{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#000;border:0;border-radius:6px;padding:13px 16px;font:700 15px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer}",
-    ".pwa .go:hover{background:#E2FE78}.pwa .go:disabled{opacity:.6;cursor:default}",
-    ".pwa .alt{display:inline-block;margin-top:14px;background:none;border:1px solid #333;color:#c9cbc2;border-radius:6px;padding:9px 14px;font:600 12.5px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;text-decoration:none}",
-    ".pwa .alt:hover{border-color:#E2FE78;color:#E2FE78}",
+    // the gate in the redesign: light, the brand gradient feeling, one glass card — self-contained (no design.css needed)
+    ".pwa-bg{position:fixed;inset:0;background:#ECEEEB;background-image:radial-gradient(62% 52% at 16% 0%,rgba(226,254,120,.9),rgba(226,254,120,0) 62%),radial-gradient(52% 46% at 86% 8%,rgba(148,252,177,.85),rgba(148,252,177,0) 60%),radial-gradient(46% 42% at 62% 96%,rgba(169,243,247,.8),rgba(169,243,247,0) 60%),radial-gradient(34% 34% at 6% 86%,rgba(226,134,228,.4),rgba(226,134,228,0) 60%),radial-gradient(30% 30% at 92% 70%,rgba(248,169,92,.35),rgba(248,169,92,0) 60%);color:#0A0A0A;display:flex;align-items:center;justify-content:center;z-index:2000;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));font-family:'Aeonik Pro','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow:auto}",
+    ".pwa{width:100%;max-width:460px;background:rgba(255,255,255,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(0,0,0,.08);border-radius:22px;padding:28px 28px 24px;box-shadow:0 30px 70px -40px rgba(0,0,0,.45)}",
+    ".pwa .brand{font-family:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;font-size:20px;letter-spacing:.5px;color:#0A0A0A;margin-bottom:22px}",
+    ".pwa h1{font-family:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;font-size:54px;line-height:.9;letter-spacing:-.005em;margin:0 0 12px;color:#0A0A0A}",
+    ".pwa h1 em{font-style:inherit;color:#fff;-webkit-text-stroke:2px #0A0A0A;paint-order:stroke fill}",
+    ".pwa p{color:#3b3d38;font-size:14px;margin:0 0 14px;line-height:1.55}",
+    ".pwa p b{color:#0A0A0A}",
+    ".pwa .go{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#0A0A0A;color:#E2FE78;border:1px solid #0A0A0A;border-radius:999px;padding:13px 18px;font:italic 800 17px/1 'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;box-shadow:0 16px 40px -18px rgba(0,0,0,.45);transition:transform .25s cubic-bezier(.2,.8,.2,1)}",
+    ".pwa .go svg{background:#fff;border-radius:50%;padding:3px;box-sizing:content-box}",
+    ".pwa .go:hover{transform:translateY(-2px)}.pwa .go:disabled{opacity:.6;cursor:default;transform:none}",
+    ".pwa .alt{display:inline-block;margin-top:14px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.14);color:#3b3d38;border-radius:999px;padding:9px 14px;font:700 12.5px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;text-decoration:none;transition:.2s}",
+    ".pwa .alt:hover{border-color:#0A0A0A;color:#0A0A0A}",
     ".pwa .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}",
-    ".pwa .err{color:#E286E4;font-size:12.5px;margin-top:12px;min-height:16px;line-height:1.45}",
-    ".pwa .fine{color:#5b5d56;font-size:11px;margin-top:18px;letter-spacing:.3px}",
-    ".pwa a{color:#E2FE78}",
-    ".pwa .spin{width:18px;height:18px;border:2px solid #333;border-top-color:#E2FE78;border-radius:50%;animation:pwaspin .8s linear infinite;display:inline-block;vertical-align:middle}",
+    ".pwa .err{color:#9a2f8f;font-size:12.5px;margin-top:12px;min-height:16px;line-height:1.45}",
+    ".pwa .fine{color:#656860;font-size:11px;margin-top:18px;letter-spacing:.3px}",
+    ".pwa a{color:#0A0A0A;text-decoration:underline;text-decoration-color:#E2FE78;text-decoration-thickness:2px;text-underline-offset:3px}",
+    ".pwa .spin{width:18px;height:18px;border:2px solid rgba(0,0,0,.15);border-top-color:#0A0A0A;border-radius:50%;animation:pwaspin .8s linear infinite;display:inline-block;vertical-align:middle}",
     "@keyframes pwaspin{to{transform:rotate(360deg)}}",
-    "@media(prefers-reduced-motion:reduce){.pwa .spin{animation:none}}"
+    "@media(prefers-reduced-motion:reduce){.pwa .spin{animation:none}.pwa .go,.pwa .alt{transition:none}}"
   ].join("");
   function ensureCss() { if (document.getElementById("pwa-css")) return; const s = document.createElement("style"); s.id = "pwa-css"; s.textContent = CSS; (document.head || document.documentElement).appendChild(s); }
   const G = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.2 0-11.5-4.2-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
