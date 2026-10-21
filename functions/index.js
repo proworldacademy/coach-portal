@@ -24,6 +24,7 @@ const SWITCH = require('./lib/switch');
 const REMOVE = require('./lib/remove');
 const FEED = require('./lib/feed');
 const FAMILY = require('./lib/family');
+const MONDAY = require('./lib/mondayimport');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -122,6 +123,15 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'GET /admin/switch') { const ov = await ADMIN.overview(stripe); return send(res, 200, Object.assign({ mode: mode(key) }, await SWITCH.list(ov.subscriptions, ov.today))); }
       if (route === 'POST /admin/switch/update') return send(res, 200, { ok: true, row: await SWITCH.update(b.id, b, who.email) });
       if (route === 'POST /admin/switch/import') { if (!who.owner) throw S.err(403, 'owner', 'Only an owner can import the roster.'); const out = await SWITCH.importRows(Array.isArray(b.rows) ? b.rows.slice(0, 400) : [], who.email); logger.info('switch import', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
+      // The parents' details from Monday's ACCOUNTING board: every family the academy has had, into the roster. Owners only; preview first.
+      if (route === 'POST /admin/monday/preview') { if (!who.owner) throw S.err(403, 'owner', 'Only an owner can read the Monday board.'); return send(res, 200, await MONDAY.preview(ctx.db)); }
+      if (route === 'POST /admin/monday/import') {
+        if (!who.owner) throw S.err(403, 'owner', 'Only an owner can import from Monday.');
+        const out = await MONDAY.importAll(ctx.db, who.email);
+        FEED.forget();
+        logger.info('monday import', { by: who.email, matched: out.matched, contacts: out.contactsWritten, created: out.created, skipped: out.skipped, writes: out.writes });
+        return send(res, 200, out);
+      }
       if (route === 'POST /admin/roster/remove') {
         // A record the engine filed (a test, a mistake) goes away with its parent details, ledger lines and anything queued for Monday. Owners only.
         if (!who.owner) throw S.err(403, 'owner', 'Only an owner can remove a record.');
