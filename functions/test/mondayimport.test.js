@@ -8,13 +8,20 @@ const { fakeDb } = require('./fake-db');
 
 /* A stand-in for Monday's API: the ACCOUNTING board's columns and rows, invented families only. */
 const COLUMNS = [
-  { id: 'name', title: 'Name', type: 'name' }, { id: 'text0', title: 'Guardian Name', type: 'text' }, { id: 'phone', title: 'Phone Main', type: 'phone' },
+  { id: 'name', title: 'Name', type: 'name' }, { id: 'text', title: 'Last Name', type: 'text' }, { id: 'group0', title: 'Player Group', type: 'status' }, { id: 'status_x', title: 'Status', type: 'status' },
+  { id: 'text0', title: 'Guardian Name', type: 'text' }, { id: 'phone', title: 'Phone Main', type: 'phone' },
   { id: 'email', title: 'Customer Email', type: 'email' }, { id: 'email4', title: 'Email', type: 'email' }, { id: 'phone2', title: 'Phone 2 (other parent)', type: 'phone' },
   { id: 'numbers', title: 'Balance', type: 'numbers' }, { id: 'status', title: 'Status', type: 'color' }, { id: 'date', title: 'Enroll Date', type: 'date' }
 ];
 function item(id, name, group, c) {
   c = c || {};
   const cv = [];
+  // the board keeps the first name as the row and the last name in a column; a few rows carry the whole name
+  const parts = name.split(' '); const first = c.wholeName ? name : parts[0]; const last = c.wholeName ? '' : (c.lastAs || parts.slice(1).join(' '));
+  name = first;
+  cv.push({ id: 'text', type: 'text', text: last, value: last ? JSON.stringify(last) : null });
+  if (c.playerGroup) cv.push({ id: 'group0', type: 'status', text: c.playerGroup, value: JSON.stringify({ index: 1 }) });
+  if (c.statusText) cv.push({ id: 'status_x', type: 'status', text: c.statusText, value: JSON.stringify({ index: 2 }) });
   if (c.guardian !== undefined) cv.push({ id: 'text0', type: 'text', text: c.guardian, value: JSON.stringify(c.guardian) });
   if (c.phone !== undefined) cv.push({ id: 'phone', type: 'phone', text: c.phone, value: c.phone ? JSON.stringify({ phone: c.phone.replace(/\D/g, ''), countryShortName: 'US' }) : null });
   if (c.email !== undefined) cv.push({ id: 'email', type: 'email', text: c.emailText || c.email, value: c.email ? JSON.stringify({ email: c.email, text: c.emailText || c.email }) : null });
@@ -26,14 +33,14 @@ const ROWS = [
   item(1001, 'Liam Rivera', 'Active', { guardian: 'Maria Rivera', phone: '+1 561-555-0102', email: 'Maria.Rivera@example.com', emailText: 'Maria' }),       // on the roster already, no contact yet
   item(1002, 'Mia Rivera', 'Active', { guardian: 'Maria Rivera', phone: '5615550102', email: 'maria.rivera@example.com' }),                             // on the roster with the parent's own (enrollment) details
   item(1003, 'Noah Kim', 'Away', { guardian: 'Grace Kim', phone: '(561) 555-0103', email: '', email2: 'grace.kim@example.com', phone2: '5615550113' }),  // on the roster; e-mail in the second column
-  item(1004, 'Zoe Carter', 'Finished', { guardian: 'Pat Carter', phone: '5615550104', email: 'pat.carter@example.com' }),                                 // not on the roster → past player
+  item(1004, 'Zoe Carter', 'Finished', { guardian: 'Pat Carter', phone: '5615550104', email: 'pat.carter@example.com', lastAs: 'CARTER' }),               // not on the roster → past player (last name shouted on the board)
   item(1005, 'Zoe Carter', 'OLDER CLIENTS', { guardian: 'Pat Carter', phone: '5615550104', email: 'pat.carter@example.com' }),                            // the same player twice on the board
-  item(1006, 'Eli Brooks', 'Active', { guardian: 'Sam Brooks', phone: '5615550106', email: 'sam.brooks@example.com' }),                                   // not on the roster, training → new active player
+  item(1006, 'Eli Brooks', 'Active', { guardian: 'Sam Brooks', phone: '5615550106', email: 'sam.brooks@example.com', playerGroup: 'BOYS', statusText: 'AFTER-SCHOOL' }),   // not on the roster, training → new active player, afterschool
   item(1007, 'Ava Nolan', 'Requested to OPT OUT', { guardian: 'Dee Nolan', phone: '5615550107', email: '' }),                                             // opted out → finished, flagged
   item(1008, 'Old Timer', 'OLDER CLIENTS', { guardian: '', phone: '', email: '' }),                                                                        // nothing to reach them by → skipped
   item(1009, 'Ben Shaw', 'Try outs', { guardian: 'Kim Shaw', phone: '5615550109', email: 'kim.shaw@example.com' }),                                        // a group the engine does not know → skipped
   item(1010, 'Lucas Perez', 'Away', { guardian: 'Ana Perez', phone: '5615550110', email: 'ana.perez@example.com' }),                                       // short-name match: roster has "Lucas P."-style record "Lucas Perez-Gomez"? no: two Lucas P. on the roster → ambiguous
-  item(1011, 'Nina Walsh', 'New Players / Re Enrolled', { guardian: 'Tom Walsh', phone: '5615550111', email: 'tom.walsh@example.com' })                   // signed up, not started → active
+  item(1011, 'Nina Walsh', 'New Players / Re Enrolled', { guardian: 'Tom Walsh', phone: '5615550111', email: 'tom.walsh@example.com', playerGroup: 'U10', wholeName: true })   // signed up, not started → active; the whole name on the row
 ];
 function wireMonday(rows, opts) {
   opts = opts || {};
@@ -65,6 +72,7 @@ function seed() {
 
 test('columns are found by title and type; a row keeps the parent and both ways to reach them', () => {
   const cols = MONDAY.pickColumns(COLUMNS);
+  assert.equal(cols.last.title, 'Last Name'); assert.equal(cols.playerGroup.title, 'Player Group'); assert.equal(cols.statusText.title, 'Status');
   assert.equal(cols.guardian.title, 'Guardian Name'); assert.equal(cols.phone.title, 'Phone Main'); assert.equal(cols.email.title, 'Customer Email');
   assert.equal(cols.email2.title, 'Email'); assert.equal(cols.phone2.title, 'Phone 2 (other parent)'); assert.equal(cols.dob, null);
   const r = MONDAY.rowOf(ROWS[0], cols);
@@ -74,6 +82,11 @@ test('columns are found by title and type; a row keeps the parent and both ways 
   assert.deepEqual(MONDAY.standingOf('Requested to OPT OUT'), { status: 'finished', word: 'finished', optOut: true });
   assert.deepEqual(MONDAY.standingOf('New Players / Re Enrolled'), { status: 'active', word: 'new' });
   assert.equal(MONDAY.standingOf('Try outs'), null);
+  assert.equal(MONDAY.rowOf(ROWS[3], cols).name, 'Zoe Carter', 'a shouted last name is calmed down');
+  assert.equal(MONDAY.rowOf(ROWS[10], cols).name, 'Nina Walsh', 'a row that already carries the whole name is kept');
+  assert.equal(MONDAY.fullNameOf('Ana Maria', 'DE LA CRUZ'), 'Ana Maria De La Cruz');
+  assert.equal(MONDAY.fullNameOf('Liam Rivera', 'Rivera'), 'Liam Rivera');
+  assert.deepEqual([MONDAY.groupHint('BOYS', 'AFTER-SCHOOL'), MONDAY.groupHint('GIRLS', 'PRO | GIRLS'), MONDAY.groupHint('U10', ''), MONDAY.groupHint('U12', ''), MONDAY.groupHint('BOYS', '')], ['as', 'ft', 'u10', 'as', '']);
 });
 
 test('the preview counts what an import would do and names the players to check — never a parent detail', async () => {
@@ -116,8 +129,9 @@ test('the import writes the parents, adds the missing players with their standin
   assert.ok(ids.includes('players/past-zoe-c') && ids.filter((k) => /zoe/.test(k)).length === 1, ids.join(','));
   assert.equal(db._docs.get('players/past-zoe-c').status, 'finished');
   assert.equal(db._docs.get('players/past-zoe-c').accounting.id, '1005', 'the later duplicate row refreshed the record');
-  assert.deepEqual([db._docs.get('players/new-eli-b').status, db._docs.get('players/new-eli-b').group, db._docs.get('players/new-eli-b').source], ['active', '', 'monday']);
-  assert.equal(db._docs.get('players/new-nina-w').status, 'active');
+  assert.deepEqual([db._docs.get('players/new-eli-b').status, db._docs.get('players/new-eli-b').group, db._docs.get('players/new-eli-b').source], ['active', 'as', 'monday']);
+  assert.deepEqual([db._docs.get('players/new-nina-w').status, db._docs.get('players/new-nina-w').group], ['active', 'u10']);
+  assert.equal(db._docs.get('players/new-eli-b').accounting.playerGroup, 'BOYS');
   assert.equal(db._docs.get('players/past-ava-n/private/contact').optOut, true);
   assert.ok(!ids.some((k) => /old-timer|ben-shaw|lucas-perez/.test(k)), 'nothing to reach, unknown group and ambiguous names are not added');
   assert.ok([...db._docs.keys()].some((k) => /^imports\/monday-/.test(k)), 'a summary is filed');
