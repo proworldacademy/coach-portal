@@ -10,92 +10,71 @@
 <meta name="description" content="Your family at ProWorld Academy — players, attendance, reports, billing and a line to the front desk.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23050505'/%3E%3Ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-style='italic' font-size='34' text-anchor='middle' fill='%23E2FE78'%3EP%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
 <style>
-:root{--bg:#FFFFFF;--ink:#000000;--muted:rgba(0,0,0,.58);--line:rgba(0,0,0,.14);--surface:rgba(0,0,0,.045);--surface-2:rgba(0,0,0,.09);
-  --black:#000000;--white:#FFFFFF;--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;--cyan:#A9F3F7;
-  --display:'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;--body:'Aeonik Pro','Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;--radius:4px;box-sizing:border-box}
-*,*::before,*::after{box-sizing:inherit}
-html{background:var(--bg)}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-input,select,textarea{font:inherit;color:inherit}
-h1,h2,h3{margin:0;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;line-height:.92;letter-spacing:-.005em}
-:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
-.topbar{background:var(--black);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.14)}
-.topbar .wordmark{display:block;height:22px;aspect-ratio:600/69;background:var(--logo-lime) center/contain no-repeat;flex:none}
-.topbar .tag{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:19px;line-height:1;padding-left:14px;border-left:1px solid rgba(255,255,255,.28);white-space:nowrap}
-.topbar .line{margin-left:auto;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7);white-space:nowrap}
-.topbar .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.8)}
-.topbar .who button{border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:5px 10px;font-size:12px;color:#fff}
-.topbar .who button:hover{border-color:var(--lime);color:var(--lime)}
-@media (max-width:560px){.topbar .line{display:none}.topbar .wordmark{height:18px}.topbar .tag{font-size:16px}.topbar .who span{display:none}}
-.wrap{max-width:980px;margin:0 auto;padding:28px 16px 60px}
-h1{font-size:clamp(44px,8vw,86px);margin-bottom:10px}
-h1 em{font-style:inherit;background:var(--lime);padding:0 .12em}
-.lead{font-size:17px;color:var(--muted);max-width:640px;margin:0 0 22px}
-h2{font-size:clamp(28px,4.6vw,40px);margin:34px 0 12px}
-h3{font-size:22px;margin-bottom:6px}
-.muted{color:var(--muted)}
-.card{border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:14px;background:#fff}
-.card.dark{background:var(--black);color:#fff;border-color:var(--black)}
-.card.dark .muted{color:rgba(255,255,255,.62)}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.pill{display:inline-block;font-size:12px;letter-spacing:.02em;padding:3px 9px;border-radius:999px;background:var(--surface-2);white-space:nowrap}
-.pill.lime{background:var(--lime);color:#000}.pill.mint{background:var(--mint);color:#000}.pill.orchid{background:var(--orchid);color:#000}.pill.cyan{background:var(--cyan);color:#000}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid var(--black);border-radius:var(--radius);padding:11px 18px;font-weight:700;text-decoration:none;color:var(--ink);background:#fff;cursor:pointer}
-.btn:hover{background:var(--surface)}
-.btn.lime{background:var(--lime);border-color:var(--lime)}.btn.lime:hover{background:#d8f66a}
-.btn.black{background:var(--black);color:#fff}.btn.black:hover{background:#222}
-.btn:disabled{opacity:.5;cursor:default}
-.btn.sm{padding:7px 12px;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.stat{background:var(--black);color:#fff;border-radius:6px;padding:16px 18px}
-.stat b{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:40px;line-height:1;color:var(--lime)}
-.stat span{font-size:13px;color:rgba(255,255,255,.7)}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 14px;font-size:14.5px;margin-top:10px}
-.kv dt{color:var(--muted)}.kv dd{margin:0}
-@media (max-width:480px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}
-.days{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.day{font-size:12.5px;padding:4px 9px;border-radius:4px;background:var(--mint);color:#000}
-.day.miss{background:var(--orchid)}
-.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:12px 0}
-.score{background:var(--surface);border-radius:6px;padding:12px;text-align:center}
-.score b{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:34px;line-height:1}
-.score span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.note{margin:10px 0 0}.note b{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
-.note p{margin:0;white-space:pre-wrap}
-.focus{margin:8px 0 0;padding-left:18px}
-table{width:100%;border-collapse:collapse;font-size:14.5px}
-th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-td.r,th.r{text-align:right;white-space:nowrap}
-.form{display:grid;gap:12px;max-width:640px}
-.form label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
-.form input,.form select,.form textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--radius);padding:11px 12px;background:#fff}
-.form textarea{min-height:110px;resize:vertical}
-.form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:560px){.form .two{grid-template-columns:1fr}}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--black);color:#fff;padding:12px 18px;border-radius:6px;font-size:14px;max-width:min(92vw,520px);z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-.toast.err{background:var(--orchid);color:#000}
-.gate{max-width:520px;margin:40px auto}
-.gate .or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;margin:16px 0}
-.gate .or::before,.gate .or::after{content:'';flex:1;border-top:1px solid var(--line)}
-.gate input{width:100%;border:1.5px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:10px}
-.fine{font-size:12.5px;color:var(--muted);margin-top:14px}
-.foot{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px}
-.foot a{color:inherit}
-.subnav{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:0 -16px;padding:8px 16px;display:flex;gap:6px;overflow-x:auto}
-.subnav a{white-space:nowrap;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;text-decoration:none;color:var(--ink);background:var(--surface)}
-.subnav a:hover{background:var(--lime)}
-.empty{color:var(--muted);font-size:14px}
-.spin{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--black);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+/* The family portal in the redesign (C4 · Round 2, skin "family"): the look is shared/design.css; below only what this page adds.
+   A parent sees their own players, attendance, the coaches' reports, bills and a line to the front desk — nothing of the team's. */
+.gate{max-width:560px}
+#app{max-width:1000px}
+.gate .card{margin-top:22px;padding:22px}
+.gate .btn{width:100%}
+.gate .or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;margin:16px 0}
+.gate .or::before,.gate .or::after{content:'';flex:1;border-top:1px solid var(--line-2)}
+.gate input{width:100%;height:46px;border:1px solid var(--line-2);border-radius:12px;background:#fff;padding:0 14px;font:400 14.5px var(--body);color:var(--ink);margin-bottom:10px}
+.gate input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset}
+.lead{margin-top:18px;font-size:17px;color:var(--ink-2);max-width:54ch;animation:pwd-up .9s .25s var(--ease) both}
+.lead b{color:var(--ink);background:linear-gradient(var(--lime),var(--lime)) no-repeat 0 62%/100% 48%;padding:0 3px}
+.rowx{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rowx.between{justify-content:space-between}
+.who{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-2);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 14px;backdrop-filter:blur(10px);flex:none;max-width:48vw}
+.who span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who button{color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:5px 10px;font-size:11.5px;white-space:nowrap;transition:.2s}
+.who button:hover{border-color:var(--ink);color:var(--ink)}
+@media(max-width:560px){.who span{display:none}.who{padding-left:6px}}
+.card{margin-bottom:14px}
+.card h3{font-size:30px}
+.facts{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 16px;font-size:14.5px;margin:12px 0 0}
+.facts dt{font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:var(--muted);padding-top:3px}
+.facts dd{margin:0;min-width:0}
+.facts a{text-decoration:underline;text-decoration-color:var(--lime);text-decoration-thickness:2px;text-underline-offset:3px}
+@media(max-width:560px){.facts{grid-template-columns:1fr;gap:2px 0}.facts dt{margin-top:8px}}
+.days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.day{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--mint);color:#000}
+.day.miss{background:rgba(0,0,0,.07);color:var(--muted);text-decoration:line-through}
+.kv{margin:12px 0 6px}
+.note{margin:12px 0 0}.note b{display:block;font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:3px}
+.note p{margin:0;white-space:pre-wrap;color:var(--ink)}
+.focus{margin:6px 0 0;padding-left:20px;color:var(--ink)}
+/* candidate for design.css: a light table */
+.tbl{width:100%;border-collapse:collapse;font-size:14.5px}
+.tbl th,.tbl td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.r,.tbl th.r{text-align:right;white-space:nowrap}
+.tbl .muted{font-size:12.5px}
+.scroll{overflow-x:auto}
+.form .field{min-width:0}
+.fine{font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.5}
+.fine.bad{color:#9a2f8f}
+.fine a,.hint a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--lime);text-decoration-thickness:2px;text-underline-offset:3px}
+.sec{margin-top:40px}
+.sec:first-of-type{margin-top:28px}
+details.past{margin:4px 0 10px}
+details.past summary{cursor:pointer;color:var(--muted);font-size:13.5px;padding:6px 0}
+details.past summary:hover{color:var(--ink)}
+.spin{width:18px;height:18px;border:2px solid var(--line-2);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
+.tabs{margin-top:26px}
+.greet{padding-bottom:0}
+.lead.sum b{background:none;padding:0}
 </style>
 </head>
-<body>
-<header class="topbar"><a class="wordmark" href="https://proworldacademy.com" aria-label="PROWORLD" title="proworldacademy.com"></a><span class="tag">Family</span><span class="line" id="topline">Individually built. Fully connected.</span></header>
-<main class="wrap" id="app"><div class="gate card"><p class="muted"><span class="spin"></span> One moment…</p></div></main>
+<body class="skin-family sky-short">
+<div class="wrap">
+  <div class="pwd-top" id="pwd-top"></div>
+  <main id="app"><div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; One moment…</p></div></div></main>
+</div>
+<script src="/shared/design.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script>
@@ -114,26 +93,31 @@ const short=d=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(d||''))return d||'';const [y,m,dd
 const app=document.getElementById('app');
 let auth=null,me=null,busy=false,toastT=null;
 const G='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.2 0-11.5-4.2-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
-function toast(msg,err){clearTimeout(toastT);let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t)}t.className='toast'+(err?' err':'');t.textContent=msg;t.style.display='block';toastT=setTimeout(()=>{t.style.display='none'},err?6000:3500)}
-function footer(){return `<footer class="foot"><span>ProWorld Academy · 651 Egret Cir, Delray Beach, FL 33444</span><a href="sms:+15614030008">Text the front desk · (561) 403-0008</a><a href="/enroll">Enroll a player</a><a href="/enroll/agreement">Program policies</a></footer>`}
+/* the design's frame: the wordmark alone at the top (no team pages, no jump field) and a spot for "signed in as" */
+window.PWDesign.mount({skin:'family',strip:false,jump:false,title:'Family portal'});
+const topline=document.createElement('div');topline.id='topline';document.getElementById('pwd-top').appendChild(topline);
+function toast(msg,err){clearTimeout(toastT);let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.setAttribute('role','status');document.body.appendChild(t)}t.className='toast show'+(err?' err':'');t.textContent=msg;toastT=setTimeout(()=>{t.className='toast'},err?6000:3500)}
+function footer(){return `<footer class="pwd-foot"><b>PROWORLD</b><span>Individually built. Fully connected.</span><span>651 Egret Cir, Delray Beach, FL 33444</span><a href="sms:+15614030008">Text the front desk · (561) 403-0008</a><a href="/enroll">Enroll a player</a><a href="/enroll/agreement">Program policies</a></footer>`}
 function touch(){return matchMedia('(pointer:coarse)').matches}
+/* the outlined word of a title: "Hi, Maria." → the name white with the black stroke */
+const title=(before,em)=>`<section class="hero one greet"><h1><span>${before}</span> <span><em>${em}</em></span></h1></section>`;
 
 /* ── sign-in ── */
 function gate(state,extra){
-  document.getElementById('topline').textContent='Individually built. Fully connected.';
-  const err=extra&&extra.err?`<p class="fine" style="color:#b0399f">${esc(extra.err)}</p>`:'';
-  if(state==='sent'){app.innerHTML=`<div class="gate"><h1>Check your <em>e-mail.</em></h1><p class="lead">We sent a sign-in link to <b>${esc(extra.email)}</b>. Open it on this device and you're in. Nothing to remember — no password.</p><button class="btn" id="again">Use a different e-mail</button>${footer()}</div>`;document.getElementById('again').onclick=()=>{localStorage.removeItem(EMAIL_KEY);gate('in')};return}
-  if(state==='ask'){app.innerHTML=`<div class="gate"><h1>Almost <em>there.</em></h1><p class="lead">Confirm the e-mail the link was sent to.</p><form id="confirm"><input type="email" id="em" placeholder="you@example.com" required autocomplete="email"><button class="btn lime" type="submit">Sign in</button></form>${err}${footer()}</div>`;document.getElementById('confirm').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('em').value.trim().toLowerCase();try{await auth.signInWithEmailLink(email,location.href);localStorage.removeItem(EMAIL_KEY);history.replaceState(null,'',location.pathname)}catch(x){gate('ask',{err:cleanErr(x)})}};return}
+  topline.innerHTML='';
+  const err=extra&&extra.err?`<p class="fine bad">${esc(extra.err)}</p>`:'';
+  if(state==='sent'){app.innerHTML=`<div class="gate">${title('Check your','e-mail.')}<p class="lead">We sent a sign-in link to <b>${esc(extra.email)}</b>. Open it on this device and you're in. Nothing to remember — no password.</p><div class="card"><button class="btn ghost" id="again">Use a different e-mail</button></div></div>${footer()}`;document.getElementById('again').onclick=()=>{localStorage.removeItem(EMAIL_KEY);gate('in')};return}
+  if(state==='ask'){app.innerHTML=`<div class="gate">${title('Almost','there.')}<p class="lead">Confirm the e-mail the link was sent to.</p><div class="card"><form id="confirm"><input type="email" id="em" placeholder="you@example.com" required autocomplete="email"><button class="btn lime" type="submit">Sign in</button></form>${err}</div></div>${footer()}`;document.getElementById('confirm').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('em').value.trim().toLowerCase();try{await auth.signInWithEmailLink(email,location.href);localStorage.removeItem(EMAIL_KEY);history.replaceState(null,'',location.pathname)}catch(x){gate('ask',{err:cleanErr(x)})}};return}
   app.innerHTML=`<div class="gate">
-    <h1>Your family at <em>ProWorld.</em></h1>
+    ${title('Your family at','ProWorld.')}
     <p class="lead">Your players, their coaches and schedule, this month's attendance, the reports the coaches send, your bills — and a direct line to the front desk. Sign in with the e-mail you gave us when you enrolled.</p>
     <div class="card">
-      <button class="btn black" id="google" style="width:100%">${G} Continue with Google</button>
+      <button class="btn" id="google">${G} Continue with Google</button>
       <div class="or">or</div>
-      <form id="link"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email" value="${esc((extra&&extra.email)||localStorage.getItem(EMAIL_KEY)||'')}"><button class="btn lime" type="submit" style="width:100%">E-mail me a sign-in link</button></form>
+      <form id="link"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email" value="${esc((extra&&extra.email)||localStorage.getItem(EMAIL_KEY)||'')}"><button class="btn lime" type="submit">E-mail me a sign-in link <span class="ar">→</span></button></form>
       ${err}
       <p class="fine">No password. The link works once, on the device you open it on. If your e-mail isn't on file yet, text the front desk at (561) 403-0008 and we'll add it.</p>
-    </div>${footer()}</div>`;
+    </div></div>${footer()}`;
   document.getElementById('google').onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});try{if(touch()){await auth.signInWithRedirect(prov);return}await auth.signInWithPopup(prov)}catch(x){gate('in',{err:cleanErr(x)})}};
   document.getElementById('link').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();if(!email)return;try{await auth.sendSignInLinkToEmail(email,{url:location.origin+'/family',handleCodeInApp:true});localStorage.setItem(EMAIL_KEY,email);gate('sent',{email})}catch(x){gate('in',{email,err:cleanErr(x)})}};
 }
@@ -149,17 +133,17 @@ async function api(path,body){
   return j;
 }
 async function load(){
-  app.innerHTML=`<div class="gate card"><p class="muted"><span class="spin"></span> Loading your family…</p></div>`;
-  try{me=await api('me');render()}catch(e){app.innerHTML=`<div class="gate"><h1>Hmm.</h1><p class="lead">${esc(e.message)}</p><div class="row"><button class="btn" id="retry">Try again</button><button class="btn" id="out">Sign out</button></div>${footer()}</div>`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
+  app.innerHTML=`<div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; Loading your family…</p></div></div>`;
+  try{me=await api('me');render()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
 }
 
 /* ── the page ── */
 function statusPills(p){
   const out=[];const en=p.enroll||{};
-  if(p.status==='away')out.push('<span class="pill">Away</span>');
-  if(p.status==='finished')out.push('<span class="pill">Finished</span>');
-  if(en.hold)out.push('<span class="pill orchid">On hold'+(en.holdReason==='unpaid'?' · balance due':'')+'</span>');
-  if(en.endsOn)out.push(`<span class="pill">Ends ${esc(short(en.endsOn))}</span>`);
+  if(p.status==='away')out.push('<span class="pill ghost">Away</span>');
+  if(p.status==='finished')out.push('<span class="pill ghost">Finished</span>');
+  if(en.hold)out.push('<span class="pill lime">On hold'+(en.holdReason==='unpaid'?' · balance due':'')+'</span>');
+  if(en.endsOn)out.push(`<span class="pill ghost">Ends ${esc(short(en.endsOn))}</span>`);
   if(en.start&&en.start>me.today)out.push(`<span class="pill cyan">Starts ${esc(short(en.start))}</span>`);
   if(!out.length&&p.status==='active')out.push('<span class="pill mint">Training</span>');
   return out.join('');
@@ -170,12 +154,12 @@ function playerCard(p){
   const next=en&&en.next&&en.next.date&&!en.endsOn&&en.status!=='canceled'?`${en.next.cents!=null?cents(en.next.cents):(en.monthly?dollars(en.monthly):'')} on ${esc(nice(en.next.date))}`:'';
   const days=a.days.slice(0,24).map(d=>`<span class="day${d.present?'':' miss'}" title="${d.present?'Attended':'Missed'}">${esc(short(d.date))}</span>`).join('');
   return `<div class="card" id="p-${esc(p.id)}">
-    <div class="row" style="justify-content:space-between"><h3>${esc(p.name)}</h3><div class="row">${statusPills(p)}</div></div>
-    <div class="muted">${esc(p.groupLabel||'Not in a group yet')}${p.coach?' · Coach '+esc(p.coach):' · coach to be assigned'}${p.coach2?' with '+esc(p.coach2):''}</div>
-    <dl class="kv">
-      ${plan?`<dt>Program</dt><dd>${plan}${en.start?`<span class="muted"> · since ${esc(short(en.start))}</span>`:''}</dd>`:'<dt>Program</dt><dd class="muted">On the roster — billing not through this account yet.</dd>'}
+    <div class="rowx between"><h3>${esc(p.name)}</h3><div class="rowx">${statusPills(p)}</div></div>
+    <div class="hint">${esc(p.groupLabel||'Not in a group yet')}${p.coach?' · Coach '+esc(p.coach):' · coach to be assigned'}${p.coach2?' with '+esc(p.coach2):''}</div>
+    <dl class="facts">
+      ${plan?`<dt>Program</dt><dd>${plan}${en.start?`<span class="hint"> · since ${esc(short(en.start))}</span>`:''}</dd>`:'<dt>Program</dt><dd class="hint">On the roster — billing not through this account yet.</dd>'}
       ${next?`<dt>Next charge</dt><dd>${next}</dd>`:''}
-      <dt>${esc(a.month||'This month')}</dt><dd>${a.present||a.missed?`<b>${a.present}</b> session${a.present===1?'':'s'} attended${a.missed?` · <b>${a.missed}</b> missed`:''}`:'<span class="muted">No posted sessions yet this month.</span>'}${days?`<div class="days">${days}</div>`:''}</dd>
+      <dt>${esc(a.month||'This month')}</dt><dd>${a.present||a.missed?`<b>${a.present}</b> session${a.present===1?'':'s'} attended${a.missed?` · <b>${a.missed}</b> missed`:''}`:'<span class="hint">No posted sessions yet this month.</span>'}${days?`<div class="days">${days}</div>`:''}</dd>
       ${p.reports.length?`<dt>Reports</dt><dd><a href="#reports">${p.reports.length} report${p.reports.length===1?'':'s'} from the coaches</a></dd>`:''}
       ${p.purchases.length?`<dt>Purchases</dt><dd>${p.purchases.slice(0,4).map(x=>esc(x.label)+' · '+cents(x.cents)).join('<br>')}</dd>`:''}
     </dl>
@@ -184,42 +168,42 @@ function playerCard(p){
 function reportCard(p,r){
   const sc=[['tennis','Tennis'],['fitness','Fitness'],['mental','Mental'],['overall','Overall']].filter(([k])=>r.scores[k]!=null);
   return `<div class="card">
-    <div class="row" style="justify-content:space-between"><h3>${esc(r.title)}</h3><span class="pill">${esc(p.shortName||p.name)}</span></div>
-    <div class="muted">${esc(r.period)}${r.date?' · '+esc(nice(r.date)):''}${r.coach?' · Coach '+esc(r.coach):''}</div>
-    ${sc.length?`<div class="scores">${sc.map(([k,l])=>`<div class="score"><b>${esc(r.scores[k])}</b><span>${l}</span></div>`).join('')}</div>`:''}
+    <div class="rowx between"><h3>${esc(r.title)}</h3><span class="pill ghost">${esc(p.shortName||p.name)}</span></div>
+    <div class="hint">${esc(r.period)}${r.date?' · '+esc(nice(r.date)):''}${r.coach?' · Coach '+esc(r.coach):''}</div>
+    ${sc.length?`<div class="kv">${sc.map(([k,l])=>`<div><span class="ey">${l}</span><b>${esc(r.scores[k])}</b></div>`).join('')}</div>`:''}
     ${r.focus.length?`<div class="note"><b>Focus areas</b><ol class="focus">${r.focus.map(f=>`<li>${esc(f)}</li>`).join('')}</ol></div>`:''}
     ${r.notes.map(n=>`<div class="note"><b>${esc(n.label)}</b><p>${esc(n.text)}</p></div>`).join('')}
   </div>`;
 }
 function billingBlock(){
   const b=me.billing;const subs=b.subscriptions;const inv=b.openInvoices;
-  const rows=subs.map(s=>`<tr><td>${esc(s.player||'—')}</td><td>${esc(s.program)}${s.plan?' · '+esc(s.plan):''}${s.days.length?'<br><span class="muted">'+esc(s.days.join('/'))+'</span>':''}</td><td>${s.hold?'<span class="pill orchid">On hold</span>':s.cancelAtPeriodEnd?'<span class="pill">Ends '+esc(short(s.next&&s.next.date))+'</span>':s.status==='canceled'?'<span class="pill">Ended</span>':s.status==='past_due'?'<span class="pill orchid">Payment due</span>':'<span class="pill mint">Active</span>'}</td><td class="r">${s.next&&s.next.date&&!s.cancelAtPeriodEnd&&s.status!=='canceled'?(s.next.cents!=null?cents(s.next.cents):dollars(s.monthly))+'<br><span class="muted">'+esc(short(s.next.date))+'</span>':'—'}</td></tr>`).join('');
-  const open=inv.map(i=>`<tr><td>${esc(i.description)}<br><span class="muted">${esc(nice(i.created))}</span></td><td class="r">${cents(i.amountDue)}</td><td class="r">${i.url?`<a class="btn sm lime" href="${esc(i.url)}" target="_blank" rel="noopener">Pay</a>`:''}</td></tr>`).join('');
-  return `<h2 id="billing">Billing.</h2>
-    ${subs.length?`<div class="card" style="overflow:auto"><table><thead><tr><th>Player</th><th>Plan</th><th>Status</th><th class="r">Next charge</th></tr></thead><tbody>${rows}</tbody></table><p class="fine">Tuition bills on the 1st of each month for that month's training days; school breaks are taken off before the charge. Late policy: a $50 late fee on the 6th, the spot goes on hold on the 10th. <a href="/enroll/agreement">Program policies</a>.</p></div>`:`<div class="card"><p class="empty">No monthly plan through this account yet. <a href="/enroll">Enroll a player</a> — nothing is charged until the start month, and your card is kept on file for everything after.</p></div>`}
-    ${inv.length?`<div class="card" style="overflow:auto"><h3>Open invoices</h3><table><tbody>${open}</tbody></table></div>`:''}
-    ${b.customers.length?`<div class="row"><button class="btn black" id="portal">Manage card, invoices &amp; receipts</button><span class="muted" style="font-size:13px">Opens your secure Stripe account page.</span></div>`:''}`;
+  const rows=subs.map(s=>`<tr><td>${esc(s.player||'—')}</td><td>${esc(s.program)}${s.plan?' · '+esc(s.plan):''}${s.days.length?'<br><span class="hint">'+esc(s.days.join('/'))+'</span>':''}</td><td>${s.hold?'<span class="pill lime">On hold</span>':s.cancelAtPeriodEnd?'<span class="pill ghost">Ends '+esc(short(s.next&&s.next.date))+'</span>':s.status==='canceled'?'<span class="pill ghost">Ended</span>':s.status==='past_due'?'<span class="pill lime">Payment due</span>':'<span class="pill mint">Active</span>'}</td><td class="r">${s.next&&s.next.date&&!s.cancelAtPeriodEnd&&s.status!=='canceled'?(s.next.cents!=null?cents(s.next.cents):dollars(s.monthly))+'<br><span class="hint">'+esc(short(s.next.date))+'</span>':'—'}</td></tr>`).join('');
+  const open=inv.map(i=>`<tr><td>${esc(i.description)}<br><span class="hint">${esc(nice(i.created))}</span></td><td class="r">${cents(i.amountDue)}</td><td class="r">${i.url?`<a class="btn sm lime" href="${esc(i.url)}" target="_blank" rel="noopener">Pay</a>`:''}</td></tr>`).join('');
+  return `<section class="sec" id="billing"><div class="sec-h"><h2>Billing</h2><small>${inv.length?inv.length+' to pay':'the 1st of each month'}</small></div>
+    ${subs.length?`<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>Player</th><th>Plan</th><th>Status</th><th class="r">Next charge</th></tr></thead><tbody>${rows}</tbody></table></div><p class="fine">Tuition bills on the 1st of each month for that month's training days; school breaks are taken off before the charge. Late policy: a $50 late fee on the 6th, the spot goes on hold on the 10th. <a href="/enroll/agreement">Program policies</a>.</p></div>`:`<div class="card"><p class="hint">No monthly plan through this account yet. <a href="/enroll">Enroll a player</a> — nothing is charged until the start month, and your card is kept on file for everything after.</p></div>`}
+    ${inv.length?`<div class="card"><h3>Open invoices</h3><div class="scroll"><table class="tbl"><tbody>${open}</tbody></table></div></div>`:''}
+    ${b.customers.length?`<div class="rowx"><button class="btn" id="portal">Manage card, invoices &amp; receipts <span class="ar">→</span></button><span class="hint">Opens your secure Stripe account page.</span></div>`:''}</section>`;
 }
 function requestsBlock(){
   const players=me.players.filter(p=>p.status!=='finished');
-  const list=me.requests.map(r=>`<tr><td>${esc(r.kindLabel)}${r.player?' · '+esc(r.player):''}<br><span class="muted">${esc(r.text)}</span>${r.reply?`<br><b>Front desk:</b> ${esc(r.reply)}`:''}</td><td class="r">${r.state==='open'?'<span class="pill lime">Open</span>':'<span class="pill mint">Done</span>'}<br><span class="muted">${esc(new Date(r.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></td></tr>`).join('');
-  return `<h2 id="requests">Ask the front desk.</h2>
-    <div class="card"><form class="form" id="req">
-      <div class="two"><div><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="message">Something else</option></select></div>
-      <div><label for="player">Player</label><select id="player">${players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="">— not about one player —</option></select></div></div>
-      <div class="two"><div><label for="when">When (if it matters)</label><input id="when" placeholder="e.g. Saturday 9 AM, or next week"></div><div><label for="phone">Best number to reach you</label><input id="phone" placeholder="(561) 555-0000" autocomplete="tel"></div></div>
-      <div><label for="text">Details</label><textarea id="text" required placeholder="Tell us what you need — the front desk reads this and gets back to you by text."></textarea></div>
-      <div class="row"><button class="btn lime" type="submit" id="send">Send to the front desk</button><span class="muted" style="font-size:13px">Or text us any time at (561) 403-0008.</span></div>
+  const list=me.requests.map(r=>`<tr><td>${esc(r.kindLabel)}${r.player?' · '+esc(r.player):''}<br><span class="hint">${esc(r.text)}</span>${r.reply?`<br><b>Front desk:</b> ${esc(r.reply)}`:''}</td><td class="r">${r.state==='open'?'<span class="pill lime">Open</span>':'<span class="pill mint">Done</span>'}<br><span class="hint">${esc(new Date(r.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></td></tr>`).join('');
+  return `<section class="sec" id="requests"><div class="sec-h"><h2>Ask the front desk</h2><small>a court, a private, a change</small></div>
+    <div class="card"><form class="form one" id="req">
+      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="message">Something else</option></select></div>
+      <div class="field"><label for="player">Player</label><select id="player">${players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="">— not about one player —</option></select></div></div>
+      <div class="form"><div class="field"><label for="when">When (if it matters)</label><input id="when" placeholder="e.g. Saturday 9 AM, or next week"></div><div class="field"><label for="phone">Best number to reach you</label><input id="phone" placeholder="(561) 555-0000" autocomplete="tel"></div></div>
+      <div class="field"><label for="text">Details</label><textarea id="text" required placeholder="Tell us what you need — the front desk reads this and gets back to you by text."></textarea></div>
+      <div class="rowx"><button class="btn lime" type="submit" id="send">Send to the front desk <span class="ar">→</span></button><span class="hint">Or text us any time at (561) 403-0008.</span></div>
     </form></div>
-    ${list?`<div class="card" style="overflow:auto"><h3>Your requests</h3><table><tbody>${list}</tbody></table></div>`:''}`;
+    ${list?`<div class="card"><h3>Your requests</h3><div class="scroll"><table class="tbl"><tbody>${list}</tbody></table></div></div>`:''}</section>`;
 }
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
-  document.getElementById('topline').innerHTML=`<span class="who"><span>${esc(me.email)}</span><button id="signout">Sign out</button></span>`;
+  topline.innerHTML=`<span class="who"><span>${esc(me.email)}</span><button id="signout" type="button">Sign out</button></span>`;
   document.getElementById('signout').onclick=()=>auth.signOut();
   if(!me.known){
-    app.innerHTML=`<div class="gate"><h1>We don't see you <em>yet.</em></h1><p class="lead">Nothing is on file under <b>${esc(me.email)}</b>. If you enrolled with a different e-mail, sign out and use that one. If your player came to us before the new system, text the front desk and we'll link your e-mail in a minute.</p>
-      <div class="row"><a class="btn lime" href="sms:+15614030008?&body=${encodeURIComponent('Hi — please link my family portal to '+me.email)}">Text the front desk</a><a class="btn" href="/enroll">Enroll a player</a><button class="btn" id="out2">Sign out</button></div>${footer()}</div>`;
+    app.innerHTML=`<div class="gate">${title("We don't see you",'yet.')}<p class="lead">Nothing is on file under <b>${esc(me.email)}</b>. If you enrolled with a different e-mail, sign out and use that one. If your player came to us before the new system, text the front desk and we'll link your e-mail in a minute.</p>
+      <div class="rowx"><a class="btn lime" href="sms:+15614030008?&body=${encodeURIComponent('Hi — please link my family portal to '+me.email)}">Text the front desk</a><a class="btn ghost" href="/enroll">Enroll a player</a><button class="btn ghost" id="out2">Sign out</button></div></div>${footer()}`;
     document.getElementById('out2').onclick=()=>auth.signOut();return;
   }
   const reports=[];me.players.forEach(p=>p.reports.forEach(r=>reports.push([p,r])));
@@ -227,21 +211,21 @@ function render(){
   const active=me.players.filter(p=>p.status!=='finished');const finished=me.players.filter(p=>p.status==='finished');
   const attended=active.reduce((n,p)=>n+((p.attendance&&p.attendance.present)||0),0);
   app.innerHTML=`
-    <h1>Hi, <em>${esc(first)}.</em></h1>
-    <p class="lead">${active.length?`${active.length===1?active[0].name+' is':active.length+' players are'} on the roster.`:'No active players right now.'} ${attended?`${attended} session${attended===1?'':'s'} attended ${esc((active[0].attendance&&active[0].attendance.month)||'this month')}.`:''} ${me.billing.openInvoices.length?`<b>${me.billing.openInvoices.length} invoice${me.billing.openInvoices.length===1?'':'s'} to pay.</b>`:''}</p>
-    <nav class="subnav" aria-label="Sections"><a href="#players">Players</a><a href="#reports">Reports</a><a href="#billing">Billing</a><a href="#requests">Front desk</a></nav>
-    <h2 id="players">Players.</h2>
-    ${active.map(playerCard).join('')||'<div class="card"><p class="empty">No active players under this e-mail.</p></div>'}
-    ${finished.length?`<details><summary class="muted" style="cursor:pointer">Past players (${finished.length})</summary>${finished.map(playerCard).join('')}</details>`:''}
-    <div class="row" style="margin-top:6px"><a class="btn" href="/enroll">Enroll another player</a></div>
-    <h2 id="reports">Reports.</h2>
-    ${reports.length?reports.map(([p,r])=>reportCard(p,r)).join(''):'<div class="card"><p class="empty">The coaches share reports here after each assessment — the first one appears once it is marked as sent.</p></div>'}
+    ${title('Hi,',esc(first)+'.')}
+    <p class="lead sum">${active.length?`${active.length===1?esc(active[0].name)+' is':active.length+' players are'} on the roster.`:'No active players right now.'} ${attended?`${attended} session${attended===1?'':'s'} attended ${esc((active[0].attendance&&active[0].attendance.month)||'this month')}.`:''} ${me.billing.openInvoices.length?`<b>${me.billing.openInvoices.length} invoice${me.billing.openInvoices.length===1?'':'s'} to pay.</b>`:''}</p>
+    <nav class="tabs" aria-label="Sections"><a href="#players">Players</a><a href="#reports">Reports</a><a href="#billing">Billing</a><a href="#requests">Front desk</a></nav>
+    <section class="sec" id="players"><div class="sec-h"><h2>Players</h2><small>${active.length} on the roster</small></div>
+    ${active.map(playerCard).join('')||'<div class="card"><p class="hint">No active players under this e-mail.</p></div>'}
+    ${finished.length?`<details class="past"><summary>Past players (${finished.length})</summary>${finished.map(playerCard).join('')}</details>`:''}
+    <div class="rowx"><a class="btn ghost sm" href="/enroll">Enroll another player</a></div></section>
+    <section class="sec" id="reports"><div class="sec-h"><h2>Reports</h2><small>from the coaches</small></div>
+    ${reports.length?reports.map(([p,r])=>reportCard(p,r)).join(''):'<div class="card"><p class="hint">The coaches share reports here after each assessment — the first one appears once it is marked as sent.</p></div>'}</section>
     ${billingBlock()}
     ${requestsBlock()}
     ${footer()}`;
   const pb=document.getElementById('portal');if(pb)pb.onclick=async()=>{if(busy)return;busy=true;pb.disabled=true;try{const o=await api('portal',{});location.href=o.url}catch(e){toast(e.message,true)}busy=false;pb.disabled=false};
   document.getElementById('req').onsubmit=async(e)=>{e.preventDefault();if(busy)return;const btn=document.getElementById('send');busy=true;btn.disabled=true;btn.textContent='Sending…';
-    try{await api('request',{kind:document.getElementById('kind').value,player:document.getElementById('player').value,when:document.getElementById('when').value,phone:document.getElementById('phone').value,text:document.getElementById('text').value,name:me.name});toast('Sent — the front desk will get back to you.');me=await api('me');render();location.hash='#requests'}catch(x){toast(x.message,true);busy=false;btn.disabled=false;btn.textContent='Send to the front desk'}
+    try{await api('request',{kind:document.getElementById('kind').value,player:document.getElementById('player').value,when:document.getElementById('when').value,phone:document.getElementById('phone').value,text:document.getElementById('text').value,name:me.name});toast('Sent — the front desk will get back to you.');me=await api('me');render();location.hash='#requests'}catch(x){toast(x.message,true);busy=false;btn.disabled=false;btn.innerHTML='Send to the front desk <span class="ar">→</span>'}
     busy=false};
 }
 
