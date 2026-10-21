@@ -163,7 +163,7 @@ body.sky-short .pwd-sky{height:min(50vh,420px)}
 .tick span:hover,.tick a:hover{color:var(--ink);text-decoration-color:var(--ink)}
 .tick b{color:var(--ink);background:linear-gradient(var(--lime),var(--lime)) no-repeat 0 60%/100% 50%;padding:0 3px}
 .tick i{font-style:normal;width:6px;height:6px;border-radius:50%;background:var(--mint);flex:none;box-shadow:0 0 0 0 rgba(148,252,177,.7);animation:pwd-pulse 2.6s infinite}
-.tick i.due{background:var(--lime);box-shadow:0 0 0 1px rgba(0,0,0,.35);animation:none}.tick i.new{background:var(--orchid);animation:none}.tick i.info{background:var(--cyan);animation:none}
+.tick i.due{background:var(--lime);box-shadow:0 0 0 1px rgba(0,0,0,.35);animation:none}.tick i.new{background:var(--orchid);animation:none}.tick i.info{background:var(--cyan);animation:none}.tick i.bad{background:var(--bad);animation:none}
 @keyframes pwd-pulse{0%{box-shadow:0 0 0 0 rgba(148,252,177,.7)}70%{box-shadow:0 0 0 7px rgba(148,252,177,0)}100%{box-shadow:0 0 0 0 rgba(148,252,177,0)}}
 /* ── sections ── */
 .sec{margin-top:48px;transition:transform .9s var(--ease)}
