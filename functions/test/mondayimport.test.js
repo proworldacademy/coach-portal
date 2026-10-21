@@ -39,8 +39,10 @@ const ROWS = [
   item(1007, 'Ava Nolan', 'Requested to OPT OUT', { guardian: 'Dee Nolan', phone: '5615550107', email: '' }),                                             // opted out → finished, flagged
   item(1008, 'Old Timer', 'OLDER CLIENTS', { guardian: '', phone: '', email: '' }),                                                                        // nothing to reach them by → skipped
   item(1009, 'Ben Shaw', 'Try outs', { guardian: 'Kim Shaw', phone: '5615550109', email: 'kim.shaw@example.com' }),                                        // a group the engine does not know → skipped
-  item(1010, 'Lucas Perez', 'Away', { guardian: 'Ana Perez', phone: '5615550110', email: 'ana.perez@example.com' }),                                       // short-name match: roster has "Lucas P."-style record "Lucas Perez-Gomez"? no: two Lucas P. on the roster → ambiguous
-  item(1011, 'Nina Walsh', 'New Players / Re Enrolled', { guardian: 'Tom Walsh', phone: '5615550111', email: 'tom.walsh@example.com', playerGroup: 'U10', wholeName: true })   // signed up, not started → active; the whole name on the row
+  item(1010, 'Lucas Perez', 'Away', { guardian: 'Ana Perez', phone: '5615550110', email: 'ana.perez@example.com' }),                                       // two Lucas P. on the roster, both with full, different last names → somebody else → a new away player
+  item(1011, 'Nina Walsh', 'New Players / Re Enrolled', { guardian: 'Tom Walsh', phone: '5615550111', email: 'tom.walsh@example.com', playerGroup: 'U10', wholeName: true }),  // signed up, not started → active; the whole name on the row
+  item(1012, 'Mila Dawson', 'Active', { guardian: 'Jo Dawson', phone: '5615550112', email: 'jo.dawson@example.com' }),                                        // the roster only has "Mila D." → the same player (please check)
+  item(1013, 'Theo Reyes', 'Active', { guardian: 'Vi Reyes', phone: '5615550113', email: 'vi.reyes@example.com' })                                            // two "Theo R." records on the roster → ambiguous, skipped
 ];
 function wireMonday(rows, opts) {
   opts = opts || {};
@@ -66,7 +68,10 @@ function seed() {
     'players/as-mia-r/private/contact': { guardian: 'Maria A. Rivera', email: 'maria.rivera@example.com', phone: '5615550102', source: 'enroll' },
     'players/u10-noah-k': { name: 'Noah Kim', group: 'u10', coach: '', status: 'active', source: 'coach' },
     'players/ft-lucas-p': { name: 'Lucas Pereira', group: 'ft', status: 'active', source: 'monday' },
-    'players/as-lucas-p': { name: 'Lucas Pinto', group: 'as', status: 'active', source: 'monday' }
+    'players/as-lucas-p': { name: 'Lucas Pinto', group: 'as', status: 'active', source: 'monday' },
+    'players/as-mila-d': { name: 'Mila D.', shortName: 'Mila D.', group: 'as', status: 'active', source: 'coach' },
+    'players/ft-theo-r': { name: 'Theo R', group: 'ft', status: 'active', source: 'coach' },
+    'players/u10-theo-r': { name: 'Theo R.', group: 'u10', status: 'active', source: 'coach' }
   });
 }
 
@@ -94,14 +99,16 @@ test('the preview counts what an import would do and names the players to check 
   const p = await MONDAY.preview(db);
   assert.equal(calls[0].headers.Authorization, 'tok-123');
   assert.ok(calls[1].body.variables.cols.includes('phone') && !calls[1].body.variables.cols.includes('numbers'), 'only the contact columns are asked for');
-  assert.equal(p.board.rows, 11);
-  assert.equal(p.matched, 3);                              // Liam, Mia, Noah
-  assert.equal(p.contactsToWrite, 2);                      // Liam and Noah; Mia's parent typed her own
+  assert.equal(p.board.rows, 13);
+  assert.equal(p.matched, 4);                              // Liam, Mia, Noah, Mila
+  assert.equal(p.contactsToWrite, 3);                      // Liam, Noah and Mila; Mia's parent typed her own
   assert.equal(p.keptFromEnrollment, 1);
   assert.equal(p.duplicateRows, 1);
-  assert.deepEqual(p.create, { active: 2, away: 0, finished: 2 });   // Eli + Nina; Zoe + Ava
+  assert.deepEqual(p.create, { active: 2, away: 1, finished: 2 });   // Eli + Nina; Lucas Perez; Zoe + Ava
   assert.deepEqual(p.skipped, { noContact: 1, unknownGroup: 1, ambiguous: 1 });
-  assert.ok(p.check.some((c) => /Lucas Perez could be Lucas Pereira or Lucas Pinto/.test(c)), JSON.stringify(p.check));
+  assert.ok(p.check.some((c) => /Mila Dawson ↔ Mila D\. \(please check\)/.test(c)), JSON.stringify(p.check));
+  assert.ok(p.check.some((c) => /Theo Reyes could be Theo R and Theo R\.|Theo Reyes could be Theo R\.? or Theo R\.?/.test(c)), JSON.stringify(p.check));
+  assert.ok(!p.check.some((c) => /Lucas/.test(c)), 'a full, different last name is never a match: ' + JSON.stringify(p.check));
   assert.equal(p.writes, undefined);
   const text = JSON.stringify(p);
   assert.ok(!/5615550|example\.com|Maria|Grace/.test(text), 'no phone, e-mail or parent name in the preview');
@@ -111,7 +118,10 @@ test('the preview counts what an import would do and names the players to check 
 test('the import writes the parents, adds the missing players with their standing, and the feed carries them', async () => {
   NOTIFY.forget(); FEED.forget(); const db = seed(); wireMonday(ROWS);
   const out = await MONDAY.importAll(db, 'owner@example.com');
-  assert.equal(out.contactsWritten, 2); assert.deepEqual(out.created, { active: 2, away: 0, finished: 2 });
+  assert.equal(out.contactsWritten, 3); assert.deepEqual(out.created, { active: 2, away: 1, finished: 2 });
+  assert.equal(db._docs.get('players/as-mila-d/private/contact').guardian, 'Jo Dawson', 'the short-name record got its parent');
+  assert.equal(db._docs.get('players/past-lucas-p').status, 'away', 'Lucas Perez became his own record');
+  assert.ok(!db._docs.get('players/ft-lucas-p/private/contact') && !db._docs.get('players/ft-theo-r/private/contact'), 'nobody else got his parent');
   // Liam: the parent from Monday, marked as such
   const liam = db._docs.get('players/ft-liam-r/private/contact');
   assert.deepEqual([liam.guardian, liam.phone, liam.email, liam.source, liam.accountingId], ['Maria Rivera', '5615550102', 'maria.rivera@example.com', 'monday', '1001']);
@@ -133,7 +143,7 @@ test('the import writes the parents, adds the missing players with their standin
   assert.deepEqual([db._docs.get('players/new-nina-w').status, db._docs.get('players/new-nina-w').group], ['active', 'u10']);
   assert.equal(db._docs.get('players/new-eli-b').accounting.playerGroup, 'BOYS');
   assert.equal(db._docs.get('players/past-ava-n/private/contact').optOut, true);
-  assert.ok(!ids.some((k) => /old-timer|ben-shaw|lucas-perez/.test(k)), 'nothing to reach, unknown group and ambiguous names are not added');
+  assert.ok(!ids.some((k) => /old-timer|ben-shaw|theo-reyes|new-theo/.test(k)), 'nothing to reach, unknown group and ambiguous names are not added');
   assert.ok([...db._docs.keys()].some((k) => /^imports\/monday-/.test(k)), 'a summary is filed');
   // the roster feed now carries every family, with the opt-out words the concierge reads
   const feed = await FEED.roster(db, { fresh: true });
@@ -141,12 +151,12 @@ test('the import writes the parents, adds the missing players with their standin
   assert.deepEqual([row('Liam Rivera').columns.Phone, row('Liam Rivera').columns.Email, row('Liam Rivera').group], ['5615550102', 'maria.rivera@example.com', 'Active']);
   assert.equal(row('Ava Nolan').group, 'Finished · Requested to OPT OUT');
   assert.equal(row('Noah Kim').columns['Phone 2'], '5615550113');
-  assert.equal(feed.counts.withPhone, 7);
+  assert.equal(feed.counts.withPhone, 9);
   // a second run changes nothing but the marks
   const before = db._writes.length;
   const again = await MONDAY.importAll(db, 'owner@example.com');
   assert.deepEqual(again.created, { active: 0, away: 0, finished: 0 });
-  assert.equal(again.matched, 8);
+  assert.equal(again.matched, 10);
   assert.equal([...db._docs.keys()].filter((k) => /^players\/[^/]+$/.test(k)).length, ids.length, 'no duplicates on a re-run');
   assert.ok(db._writes.length > before);
 });
