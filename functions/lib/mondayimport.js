@@ -46,7 +46,7 @@ async function fetchBoard(token, boardId) {
   const board = head && head.boards && head.boards[0];
   if (!board) throw S.err(404, 'board', 'Monday board ' + boardId + ' was not found with this token.');
   const cols = pickColumns(board.columns || []);
-  const ids = ['guardian', 'phone', 'phone2', 'email', 'email2', 'dob'].map((k) => cols[k] && cols[k].id).filter(Boolean);
+  const ids = ['last', 'guardian', 'phone', 'phone2', 'email', 'email2', 'dob', 'playerGroup', 'statusText'].map((k) => cols[k] && cols[k].id).filter(Boolean);
   const first = await gql(token, `query ($ids: [ID!], $limit: Int!, $cols: [String!]) { boards (ids: $ids) { items_page (limit: $limit) { cursor items { ${ITEM_FIELDS} } } } }`, { ids: [String(boardId)], limit: PAGE, cols: ids });
   const page0 = first && first.boards && first.boards[0] && first.boards[0].items_page;
   const items = (page0 && page0.items) || [];
@@ -67,13 +67,16 @@ function pickColumns(columns) {
   const cols = columns || [];
   const byTitle = (re) => cols.find((c) => re.test(c.title || ''));
   const byType = (type, not) => cols.find((c) => c.type === type && !not.includes(c.id));
+  const last = byTitle(/^last\s*name$|surname|apellido/i) || null;                              // the board keeps the player's first name as the row and the last name in a column
   const guardian = byTitle(/guardian/i) || byTitle(/parent|mother|father|account holder|payer|customer name|client name/i) || null;
   const phone = byTitle(/phone\s*main/i) || byType('phone', []) || byTitle(/phone|mobile|cell|whats/i) || null;
   const phone2 = cols.find((c) => c !== phone && (c.type === 'phone' || /phone|mobile|cell|whats/i.test(c.title || ''))) || null;
   const email = byTitle(/customer\s*e-?mail/i) || byType('email', []) || byTitle(/e-?mail/i) || null;
   const email2 = cols.find((c) => c !== email && (c.type === 'email' || /e-?mail/i.test(c.title || ''))) || null;
   const dob = byTitle(/birth|\bdob\b/i) || null;
-  return { guardian, phone, phone2, email, email2, dob };
+  const playerGroup = byTitle(/^player\s*group$/i) || null;                                     // BOYS / GIRLS / U12 / U10 … — a hint for where a new player goes
+  const statusText = cols.find((c) => c.type === 'status' && /^status$/i.test(c.title || '')) || null;   // AFTER-SCHOOL / PRO | GIRLS …
+  return { last, guardian, phone, phone2, email, email2, dob, playerGroup, statusText };
 }
 
 function textOf(cv) {
@@ -101,6 +104,32 @@ function standingOf(groupTitle) {
   return null;                                                              // a group we do not understand: read, never written
 }
 
+/* "RAISS" → "Raiss"; anything not shouted is left as typed. */
+function properCase(s) {
+  const t = String(s || '').trim();
+  if (!t || t !== t.toUpperCase() || t.length < 3) return t;
+  return t.toLowerCase().replace(/(^|[\s'-])([a-z\u00e0-\u00ff])/g, (m, a, b) => a + b.toUpperCase());
+}
+function fullNameOf(itemName, lastName) {
+  const first = String(itemName || '').replace(/\s+/g, ' ').trim();
+  const last = properCase(String(lastName || '').replace(/\s+/g, ' ').trim());
+  if (!last) return first;
+  if (!first) return last;
+  const f = ROSTER.fold(first), l = ROSTER.fold(last);
+  if (f === l || f.endsWith(' ' + l) || f.split(' ').length > 1 && f.endsWith(l)) return first;   // the row already carries the whole name
+  return first + ' ' + last;
+}
+/* Where a player the roster does not know yet most likely goes, from the board's own words. Only the clear cases; the rest
+   stay unplaced for the front desk. */
+function groupHint(playerGroup, statusText) {
+  const g = ROSTER.fold(playerGroup), st = ROSTER.fold(statusText);
+  if (/after/.test(st)) return 'as';
+  if (/\bpro\b|full/.test(st)) return 'ft';
+  if (/^u ?(4|5|6|7|8|9|10)\b|\b10 ?u\b|under|tots|red ball|orange/.test(g) || /\bu ?(8|10)\b/.test(st)) return 'u10';
+  if (/^u ?12\b/.test(g)) return 'as';
+  return '';
+}
+
 function rowOf(item, cols) {
   const cv = {}; (item.column_values || []).forEach((c) => { cv[c.id] = c; });
   const get = (col) => (col ? textOf(cv[col.id]) : '');
@@ -108,7 +137,8 @@ function rowOf(item, cols) {
   const phones = [phoneOf(get(cols.phone)), phoneOf(get(cols.phone2))].filter(Boolean);
   const emails = [emailOf(get(cols.email)), emailOf(get(cols.email2))].filter(Boolean);
   return {
-    id: String(item.id), name: String(item.name || '').replace(/\s+/g, ' ').trim(), group: (item.group && item.group.title) || '',
+    id: String(item.id), name: fullNameOf(item.name, get(cols.last)), group: (item.group && item.group.title) || '',
+    playerGroup: S.clean(get(cols.playerGroup), 40), statusText: S.clean(get(cols.statusText), 40),
     standing,
     guardian: S.clean(get(cols.guardian), 100),
     phone: phones[0] || '', phone2: phones[1] && phones[1] !== phones[0] ? phones[1] : '',
@@ -225,8 +255,8 @@ async function apply(db, planned, who) {
       continue;
     }
     const st = w.row.standing;
-    const doc = { name: w.row.name, shortName: ROSTER.shortName(w.row.name), group: '', tier: '', coach: '', coach2: '', fitness: '', status: st.status, source: 'monday',
-      createdAt: now, updatedAt: now, createdBy: 'Monday import (' + (who || 'owner') + ')', accounting: mark.accounting };
+    const doc = { name: w.row.name, shortName: ROSTER.shortName(w.row.name), group: st.status === 'active' ? groupHint(w.row.playerGroup, w.row.statusText) : '', tier: '', coach: '', coach2: '', fitness: '', status: st.status, source: 'monday',
+      createdAt: now, updatedAt: now, createdBy: 'Monday import (' + (who || 'owner') + ')', accounting: Object.assign({}, mark.accounting, { playerGroup: w.row.playerGroup || '', statusText: w.row.statusText || '' }) };
     ops.push({ path: 'players/' + w.pid, data: doc, merge: false });
     ops.push({ path: `players/${w.pid}/private/contact`, data: contactDoc(w.row, now), merge: false });
   }
@@ -271,4 +301,4 @@ async function importAll(db, who) {
   return done;
 }
 
-module.exports = { preview, importAll, plan, apply, fetchBoard, pickColumns, rowOf, standingOf, matchRow, DEFAULT_BOARD, _useFetch };
+module.exports = { preview, importAll, plan, apply, fetchBoard, pickColumns, rowOf, standingOf, matchRow, fullNameOf, groupHint, DEFAULT_BOARD, _useFetch };
