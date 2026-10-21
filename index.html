@@ -186,6 +186,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   function needList() {
     const out = [];
     const has = (id) => ctx && ctx.has(id);
+    if (has("mkt") && S.weeks && S.weeks.missing > 0) out.push({ id: "mkt-miss", n: S.weeks.missing, what: plural(S.weeks.missing, "planned post that didn't go out", "planned posts that didn't go out"), where: "Marketing", href: "/marketing" });
     if (has("mkt") && S.weeks && S.weeks.waiting > 0) out.push({ id: "mkt", n: S.weeks.waiting, what: plural(S.weeks.waiting, "post waiting for your approval", "posts waiting for your approval"), where: "Marketing", href: "/marketing" });
     if (has("coach-portal") && S.sync && S.sync.toCheck > 0) out.push({ id: "board", n: S.sync.toCheck, what: plural(S.sync.toCheck, "roster row to check after the sync", "roster rows to check after the sync"), where: "Coach Board", href: "/portal#/board" });
     if (has("ai-check") && S.checks && (S.checks.due + S.checks.bad) > 0) out.push({ id: "checks", n: S.checks.due + S.checks.bad, what: S.checks.bad ? plural(S.checks.due + S.checks.bad, "AI check due", "AI checks due") + " · " + S.checks.bad + " with a problem" : plural(S.checks.due, "AI check due today", "AI checks due today"), where: "AI check", href: "/checks" });
@@ -222,6 +223,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (has("coach-portal") && S.sync && S.sync.toCheck) out.push({ cls: "due", html: "<b>" + S.sync.toCheck + "</b> to check on the board", href: "/portal#/board" });
     if (S.players) out.push({ cls: "ok", html: "<b>" + fmt(S.players.active) + "</b> active players", href: has("coach-portal") ? "/portal" : "/backend" });
     if (has("coach-portal") && S.players && S.players.toAssign) out.push({ cls: "new", html: "<b>" + S.players.toAssign + "</b> new " + plural(S.players.toAssign, "player needs", "players need") + " a coach", href: "/portal" });
+    if (has("mkt") && S.weeks && S.weeks.missing) out.push({ cls: "bad", html: "<b>" + S.weeks.missing + " " + plural(S.weeks.missing, "post", "posts") + "</b> missing from the plan", href: "/marketing" });
     if (has("mkt") && S.weeks && S.weeks.waiting) out.push({ cls: "due", html: "<b>" + S.weeks.waiting + " " + plural(S.weeks.waiting, "post", "posts") + "</b> waiting for approval", href: "/marketing" });
     if (has("mkt") && S.numbers && S.numbers.change != null) out.push({ cls: "ok", html: "Instagram <b>" + (S.numbers.change >= 0 ? "+" : "") + fmt(S.numbers.change) + "</b> this week", href: "/marketing" });
     if (has("ai-check") && S.checks) out.push({ cls: S.checks.bad ? "due" : S.checks.due ? "due" : "ok", html: S.checks.bad ? "<b>" + S.checks.bad + "</b> AI " + plural(S.checks.bad, "check has", "checks have") + " a problem" : S.checks.due ? "<b>" + S.checks.due + "</b> AI " + plural(S.checks.due, "check", "checks") + " due" : "AI checks <b>all good</b>", href: "/checks" });
@@ -469,10 +471,22 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       }));
       const sunday = (d) => { const s = new Date(d); s.setHours(0, 0, 0, 0); s.setDate(s.getDate() - s.getDay()); return iso(s); };
       const thisWS = sunday(new Date()), nextWS = sunday(new Date(Date.now() + 7 * DAY));
-      quiet(Promise.all([thisWS, nextWS].map((id) => fs.doc("apps/marketing/weeks/" + id).get())).then((ds) => {
-        let waiting = 0, plans = 0;
-        ds.forEach((d) => { const w = d.exists ? parse(d.data()) : null; if (!w) return; plans++; if (w.locked) return; (w.coaches || []).forEach((c) => (c.ideas || []).forEach((i) => { if (!i.approved) waiting++; })); (w.production || []).forEach((i) => { if (!i.approved) waiting++; }); });
-        S.weeks = { waiting, plans }; repaint();
+      const lastWS = sunday(new Date(Date.now() - 7 * DAY));
+      quiet(Promise.all([thisWS, nextWS, lastWS].map((id) => fs.doc("apps/marketing/weeks/" + id).get()).concat([fs.doc("apps/marketing/state/delivery").get()])).then((ds) => {
+        let waiting = 0, plans = 0, missing = 0;
+        const dl = ds[3] && ds[3].exists ? parse(ds[3].data()) : null, posts = (dl && dl.posts) || {};
+        const t0 = new Date(); t0.setHours(0, 0, 0, 0); const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        ds.slice(0, 3).forEach((d, k) => {
+          const w = d.exists ? parse(d.data()) : null; if (!w) return; if (k < 2) plans++;
+          const items = []; (w.coaches || []).forEach((c) => (c.ideas || []).forEach((i) => items.push(i))); (w.production || []).forEach((i) => items.push(i));
+          if (k < 2 && !w.locked) items.forEach((i) => { if (!i.approved) waiting++; });
+          if (k !== 1) items.forEach((i) => {            // this week and last week: a post whose day passed with nothing matched is missing (the morning run writes the match)
+            const e = posts[(w.weekStart || d.id) + "|" + i.id]; if (i.delivered || (e && (e.status === "posted" || e.status === "late"))) return;
+            if (e && e.status === "missing") { missing++; return; }
+            const di = DAYS.indexOf(i.day); if (di < 0) return; const dd = new Date((w.weekStart || d.id) + "T12:00:00"); dd.setHours(0, 0, 0, 0); dd.setDate(dd.getDate() + di + 1); if (dd < t0) missing++;
+          });
+        });
+        S.weeks = { waiting, plans, missing }; repaint();
       }));
     }
     // enrolled online this month = program enrollments paid for real (test-mode checkouts are counted apart, until Stripe goes live)
