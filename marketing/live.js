@@ -49,13 +49,23 @@
       const items = weekItems(w), waiting = items.filter((x) => !x.it.approved && !w.locked).length;
       if (waiting) attn.push(["", waiting + " post" + (waiting > 1 ? "s" : "") + " for " + label + " waiting for approval — Plan tab."]);
     });
+    // the organism: what is missing (the morning run matches every post and every live campaign to the plan)
+    const lastWS = sundayIso(new Date(today.getTime() - 7 * 864e5)), wLast = W[lastWS];
+    [[wThis, "this week"], [wLast, "last week"]].forEach(([w, label]) => {
+      if (!w) return; const t = PW.weekTally(w);
+      if (t.missing) attn.push(["bad", t.missing + " post" + (t.missing > 1 ? "s" : "") + " missing " + label + ": " + t.missingItems.slice(0, 4).map((it) => (it.day || "") + " · " + it.title).join(" — ") + (t.missingItems.length > 4 ? " …" : "") + ". Post them this week or swap them on the Plan tab."]);
+    });
     const todays = weekItems(wThis).filter((x) => x.it.day === todayName);
-    todays.forEach((x) => { if (!x.it.delivered) attn.push(["lime", "Today: " + x.it.title + " (" + x.who + " · " + (x.it.format || "") + ")"]); });
+    todays.forEach((x) => { if (!PW.isDone(thisWS, x.it)) attn.push(["lime", "Today: " + x.it.title + " (" + x.who + " · " + (x.it.format || "") + ")"]); });
+    adGaps().forEach((g) => attn.push([g.cls, g.text]));
+    const D = S.delivery || {}; if (D.checkedAt) { const age = (Date.now() - new Date(D.checkedAt).getTime()) / 864e5; if (age > 2.5) attn.push(["", "The posts haven't been checked against Instagram since " + dayLabel(String(D.checkedAt).slice(0, 10)) + " — the morning run should do it every day."]); }
     if (N && N.ads && N.ads.connected === false) attn.push(["info", "Meta ads aren't reaching this page yet: connect the ad account inside Metricool (Connections → Meta Ads)."]);
     if (N) { const age = (Date.now() - new Date(String(N.date || N.id) + "T12:00:00").getTime()) / 864e5; if (age > 2.5) attn.push(["", "The morning numbers haven't refreshed since " + dayLabel(N.date || N.id) + "."]); }
     const rep = latestReport((r) => (r.sections || []).some((s) => /NEEDS A HUMAN|FOR MANAGEMENT/i.test(s.h || "")));
     if (rep) { const sec = rep.sections.find((s) => /NEEDS A HUMAN|FOR MANAGEMENT/i.test(s.h || "")); (sec.lines || []).slice(0, 3).forEach((l) => attn.push(["info", String(l).replace(/^\s*[-•*]\s+/, "") + "  · from " + (rep.by === "engine" ? "the Sunday run" : rep.by === "instagram-review" ? "the Monday review" : "a report") + " (" + dayLabel(rep.date) + ")"])); }
-    $("home-attn").innerHTML = attn.length ? attn.slice(0, 8).map((a) => '<div class="attn"><b class="' + a[0] + '">' + (a[0] === "lime" ? "Today" : a[0] === "info" ? "Note" : "To do") + "</b><span>" + esc(a[1]) + "</span></div>").join("") : '<div class="attn"><b class="ok">Clear</b><span>Nothing waiting on you right now.</span></div>';
+    const order = { bad: 0, lime: 1, "": 2, info: 3 };
+    attn.sort((a, b) => (order[a[0]] === undefined ? 2 : order[a[0]]) - (order[b[0]] === undefined ? 2 : order[b[0]]));
+    $("home-attn").innerHTML = attn.length ? attn.slice(0, 9).map((a) => '<div class="attn"><b class="' + a[0] + '">' + (a[0] === "lime" ? "Today" : a[0] === "info" ? "Note" : a[0] === "bad" ? "Missing" : "To do") + "</b><span>" + esc(a[1]) + "</span></div>").join("") : '<div class="attn"><b class="ok">Clear</b><span>Nothing waiting on you right now.</span></div>';
 
     // Instagram
     let ig = null, when = "";
@@ -79,7 +89,8 @@
     // Today & this week
     const items = weekItems(wThis);
     $("home-week").innerHTML = !wThis ? '<div class="pending">No plan for this week yet.</div>' : '<div class="small muted" style="margin-bottom:6px">Week of ' + esc(wThis.weekDates || dayLabel(thisWS)) + (wThis.locked ? " · approved" : " · draft") + "</div>" + items.map((x) => {
-      const st = x.it.delivered ? '<span class="st done">Done</span>' : x.it.approved || wThis.locked ? '<span class="st ok">Approved</span>' : '<span class="st wait">Approve</span>';
+      const os = PW.itemState(thisWS, x.it).st;
+      const st = os === "posted" || os === "late" || os === "missing" || os === "today" ? PW.stateChip(thisWS, x.it) : x.it.approved || wThis.locked ? '<span class="st ok">Approved</span>' : '<span class="st wait">Approve</span>';
       return '<div class="wk' + (x.it.day === todayName ? " today" : "") + '"><span class="d">' + esc(x.it.day || "") + '</span><span class="t">' + esc(x.it.title || "") + "<small>" + esc(x.who) + " · " + esc(x.it.format || "") + "</small></span>" + st + "</div>";
     }).join("") + '<div class="btn-row" style="margin-top:10px"><button class="btn ghost sm" onclick="document.querySelector(\'.tab-btn[data-tab=fortnight]\').click()">Open the Plan →</button></div>';
 
@@ -116,6 +127,97 @@
     return '<div class="grid-2" style="gap:10px">' + tile("Spent", money(A.spend7)) + tile("Leads", fmt(A.leads7), " mint") + tile("Cost per lead", money(A.cpl7, 2), " cyan") + tile("Active campaigns", fmt(A.activeCampaigns), " orchid") + "</div>" + (A.bestAd ? '<div class="small" style="margin-top:10px">Best ad: <strong>' + esc(A.bestAd.name || "") + "</strong>" + (A.bestAd.leads7 !== undefined ? " · " + fmt(A.bestAd.leads7) + " leads" : "") + (A.bestAd.cpl7 !== undefined && A.bestAd.cpl7 !== null ? " at " + money(A.bestAd.cpl7, 2) : "") + "</div>" : "") + '<div class="btn-row" style="margin-top:10px"><button class="btn ghost sm" onclick="document.querySelector(\'.tab-btn[data-tab=ads]\').click()">All campaigns →</button></div>';
   }
 
+  // ── The ad plan: the ads mirror the posts ──
+  // One campaign per program or event (Thanksgiving Camp, Winter Camp, Afterschool, Soccer…), with its window, its phases
+  // (early bird → launch → last spots) and its creatives. The Sunday engine builds and refreshes it from the calendar, from
+  // what the competitors run (adWatch) and from our own cost per lead; the morning run checks which campaigns are live.
+  const todayIso = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const AD_TYPES = ["commercial", "early bird", "discount", "last spots", "trial", "always-on", "vibes"];
+  const camps = () => (S.adPlan && Array.isArray(S.adPlan.campaigns) ? S.adPlan.campaigns : []);
+  const events = () => (S.calendar && Array.isArray(S.calendar.events) ? S.calendar.events.slice().sort((a, b) => String(a.start).localeCompare(String(b.start))) : []);
+  const adDelivery = (c) => (S.delivery && S.delivery.ads && S.delivery.ads[c.id]) || null;
+  const daysTo = (iso) => Math.round((new Date(String(iso) + "T12:00:00") - new Date(todayIso() + "T12:00:00")) / 864e5);
+  // the campaign's state today: live | missing | planned | ended | paused — what the morning run wrote, else from the window
+  function campState(c) {
+    const e = adDelivery(c), t = todayIso(), w = c.window || {};
+    if (c.status === "ended" || (w.end && w.end < t)) return { st: "ended", e };
+    if (e && e.status === "live") return { st: "live", e };
+    if (c.status === "paused") return { st: "paused", e };
+    if (w.start && w.start <= t) return { st: e && e.status === "missing" ? "missing" : c.status === "live" && !e ? "live" : "missing", e };
+    return { st: "planned", e };
+  }
+  function phaseNow(c) { const t = todayIso(); return (c.phases || []).find((p) => p.start && p.start <= t && (p.end || p.start) >= t) || null; }
+  const stChip = (st) => st === "live" ? '<span class="st on">Live</span>' : st === "missing" ? '<span class="st miss">✕ Not live</span>' : st === "ended" ? '<span class="st end">Ended</span>' : st === "paused" ? '<span class="st wait">Paused</span>' : '<span class="st plan">Planned</span>';
+  // what the Home page says about the ads
+  function adGaps() {
+    const out = [];
+    camps().forEach((c) => {
+      const r = campState(c), w = c.window || {};
+      if (r.st === "missing") out.push({ cls: "bad", text: "Ad not live: " + c.name + " should be running since " + dayLabel(w.start) + " — nothing matched in the ad account. Launch it in Ads Manager or move its start on the Ads tab." });
+      else if (r.st === "planned" && w.start && daysTo(w.start) <= 7) { const cr = c.creatives || [], ready = cr.filter((x) => /ready|live|posted|done/i.test(x.status || "")).length; out.push({ cls: cr.length && ready < cr.length ? "" : "info", text: "Ad starts " + dayLabel(w.start) + ": " + c.name + (cr.length ? " — " + ready + " of " + cr.length + " creatives ready" : " — no creatives listed yet") + "." }); }
+    });
+    events().forEach((ev) => { if (ev.adsFrom && daysTo(ev.adsFrom) >= 0 && daysTo(ev.adsFrom) <= 14 && !camps().some((c) => (c.event || "") === ev.id || new RegExp(ev.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(c.name || ""))) out.push({ cls: "", text: "No campaign planned for " + ev.name + " yet — its ads should start " + dayLabel(ev.adsFrom) + ". The Sunday run builds it; you can add it on the Ads tab." }); });
+    return out;
+  }
+  function renderAdPlan() {
+    const el = $("ad-plan"); if (!el) return;
+    const list = camps().slice().sort((a, b) => { const ra = campState(a).st, rb = campState(b).st; const o = { missing: 0, live: 1, planned: 2, paused: 3, ended: 4 }; return (o[ra] - o[rb]) || String((a.window || {}).start || "").localeCompare(String((b.window || {}).start || "")); });
+    const P = S.adPlan || {};
+    let h = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="card-label" style="margin:0">The ad plan · ' + list.filter((c) => campState(c).st !== "ended").length + ' campaign' + (list.filter((c) => campState(c).st !== "ended").length === 1 ? "" : "s") + '</div><div class="btn-row"><button class="btn ghost sm" onclick="addCampaign()">+ Add a campaign</button></div></div>';
+    h += '<div class="small muted" style="margin-top:6px">Built from the season calendar and from when the competitors start their ads: for every program or camp, a campaign with its window, its phases (early bird → launch → last spots) and its creatives — the ad video the photographer shoots that week plus statics and carousels. Checked every morning against the ad account: live, not live, ended.' + (P.updatedAt ? " Last built " + esc(dayLabel(String(P.updatedAt).slice(0, 10))) + (P.by ? " by " + esc(P.by) : "") + "." : "") + "</div>";
+    if (!list.length) h += '<div class="pending" style="margin-top:12px">No campaigns planned yet. The Sunday run builds the plan from the calendar (Thanksgiving Camp, Winter Camp, the programs) and from what the competitors are running; add one here any time.</div>';
+    list.forEach((c) => {
+      const r = campState(c), e = r.e, ph = phaseNow(c), w = c.window || {}, cr = c.creatives || [];
+      h += '<div class="camp ' + (r.st === "live" ? "on" : r.st === "missing" ? "miss" : "") + '"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div style="min-width:0"><div class="item-title" style="font-size:15px">' + esc(c.name || "") + " " + stChip(r.st) + (c.type ? ' <span class="st">' + esc(c.type) + "</span>" : "") + '</div><div class="small muted">' + esc(c.program || "") + (w.start ? " · " + esc(dayLabel(w.start)) + " → " + esc(w.end ? dayLabel(w.end) : "open") : " · no dates yet") + (c.audience ? " · " + esc(c.audience) : "") + (c.budgetHint ? " · " + esc(c.budgetHint) : "") + "</div></div>" +
+        '<div class="btn-row" style="gap:4px"><button class="btn ghost xs" onclick="editCampaign(\'' + esc(c.id) + '\')">✎ Edit</button><button class="btn ghost xs" onclick="addCreative(\'' + esc(c.id) + '\')">+ Creative</button>' + (r.st !== "ended" ? '<button class="btn ghost xs muted" onclick="endCampaign(\'' + esc(c.id) + '\')">End</button>' : "") + "</div></div>";
+      if (c.offer) h += '<div class="small" style="margin-top:6px"><strong>Offer:</strong> ' + esc(c.offer) + "</div>";
+      if ((c.phases || []).length) h += '<div class="ph">' + c.phases.map((p) => '<span class="' + (ph && ph === p ? "now" : "") + '" title="' + esc((p.offer || "") + (p.type ? " · " + p.type : "")) + '">' + esc(p.name || p.type || "phase") + " · " + esc(dayLabel(p.start)) + (p.end ? " – " + esc(dayLabel(p.end)) : "") + "</span>").join("") + "</div>";
+      if (e && (e.campaign || e.spend7 != null)) h += '<div class="small" style="margin-top:8px">' + (e.campaign ? "In the ad account as <strong>" + esc(e.campaign) + "</strong>" : "") + (e.spend7 != null ? " · spent " + money(e.spend7) + " in 7 days" : "") + (e.leads7 != null ? " · " + fmt(e.leads7) + " leads" : "") + (e.cpl7 != null ? " · " + money(e.cpl7, 2) + " per lead" : "") + (e.firstSeen ? " · first seen " + esc(dayLabel(e.firstSeen)) : "") + "</div>";
+      if (r.st === "missing" && e && e.note) h += '<div class="small" style="margin-top:6px;color:var(--bad,#F06A5E)">' + esc(e.note) + "</div>";
+      if (cr.length) h += '<div style="margin-top:10px">' + cr.map((x, i) => '<div class="cr"><span style="min-width:0"><strong>' + esc(x.title || "") + "</strong>" + (x.format ? ' <span class="small muted">· ' + esc(x.format) + "</span>" : "") + (x.hook ? '<div class="small muted">' + esc(x.hook) + "</div>" : "") + (x.headline ? '<div class="small">' + esc(x.headline) + (x.cta ? " · " + esc(x.cta) : "") + "</div>" : "") + '</span><span class="btn-row" style="gap:4px;flex-shrink:0"><span class="st ' + (/live|posted/i.test(x.status || "") ? "on" : /ready|done/i.test(x.status || "") ? "ok" : "") + '">' + esc(x.status || "to make") + '</span><button class="btn ghost xs" onclick="editCreative(\'' + esc(c.id) + "'," + i + ')">✎</button></span></div>').join("") + "</div>";
+      if (c.note) h += '<div class="small muted" style="margin-top:8px">' + esc(c.note) + "</div>";
+      h += "</div>";
+    });
+    el.innerHTML = h + "</div>";
+  }
+  function renderAdWatch() {
+    const el = $("ad-watch"); if (!el) return;
+    const log = Array.isArray(S.adWatch) ? S.adWatch : [], last = log[0];
+    let h = '<div class="card"><div class="card-label orchid">What the competitors are running</div><div class="small muted" style="margin-top:4px">Read every Monday with AdWhispr: who is advertising, how many ads, when the newest started, what kind of offer (early bird, discount, last spots, commercial, vibes), for which program — and how many weeks before the event. The Sunday run times our campaigns from it.</div>';
+    if (!last) h += '<div class="pending" style="margin-top:12px">Nothing read yet — the first read is the Monday review of Oct 26.</div>';
+    else {
+      const rows = Array.isArray(last.rows) ? last.rows : [];
+      h += '<div class="small muted" style="margin-top:8px">As of ' + esc(dayLabel(last.date)) + (last.by ? " · " + esc(last.by) : "") + "</div>";
+      h += rows.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Brand</th><th class="n">Active ads</th><th>Newest started</th><th>Type</th><th>Offer</th><th>Program</th><th>Format</th><th>Note</th></tr></thead><tbody>' + rows.map((r) => "<tr><td><strong>" + esc(r.brand || r.handle || "") + "</strong>" + (r.handle && r.brand ? '<div class="small muted">@' + esc(r.handle) + "</div>" : "") + '</td><td class="n">' + (r.active == null ? "—" : fmt(r.active)) + "</td><td>" + (r.newestStart ? esc(dayLabel(r.newestStart)) + (r.weeksBefore != null ? '<div class="small muted">' + esc(r.weeksBefore) + " wks before</div>" : "") : "—") + "</td><td>" + esc(r.type || "—") + "</td><td>" + esc(r.offer || "—") + "</td><td>" + esc(r.program || "—") + "</td><td>" + esc(r.format || "—") + "</td><td class=\"small\">" + esc(r.note || "") + "</td></tr>").join("") + "</tbody></table></div>" : '<div class="pending">The last read found no competitor ads.</div>';
+      if (last.headline) h += '<div class="small" style="margin-top:8px"><strong>' + esc(last.headline) + "</strong></div>";
+      if (log.length > 1) h += '<div class="small muted" style="margin-top:6px">' + (log.length - 1) + " earlier read" + (log.length > 2 ? "s" : "") + " kept in memory</div>";
+    }
+    el.innerHTML = h + "</div>";
+  }
+  function renderAdCal() {
+    const el = $("ad-cal"); if (!el) return;
+    const list = events().filter((ev) => !ev.end || ev.end >= todayIso());
+    let h = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="card-label cyan" style="margin:0">The season — when the posts and the ads start</div><div class="btn-row"><button class="btn ghost sm" onclick="addEvent()">+ Add an event</button></div></div><div class="small muted" style="margin-top:4px">Camps, breaks, tournaments and enrollment windows. For each: when its posts start and when its ads start — the engine builds the week and the campaign from these dates. ' + (S.calendar && S.calendar.updatedAt ? "Updated " + esc(dayLabel(String(S.calendar.updatedAt).slice(0, 10))) + (S.calendar.by ? " by " + esc(S.calendar.by) : "") + "." : "") + "</div>";
+    if (!list.length) h += '<div class="pending" style="margin-top:12px">No events yet. The Sunday run fills the season from the website and the school calendar; add one here any time.</div>';
+    else h += '<div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Event</th><th>When</th><th>Posts from</th><th>Ads from</th><th class="n">Days to go</th><th></th></tr></thead><tbody>' + list.map((ev) => { const d = daysTo(ev.start); return "<tr><td><strong>" + esc(ev.name) + "</strong>" + (ev.kind ? ' <span class="st">' + esc(ev.kind) + "</span>" : "") + (ev.note ? '<div class="small muted">' + esc(ev.note) + "</div>" : "") + "</td><td>" + esc(dayLabel(ev.start)) + (ev.end && ev.end !== ev.start ? " – " + esc(dayLabel(ev.end)) : "") + "</td><td>" + (ev.postsFrom ? esc(dayLabel(ev.postsFrom)) + (daysTo(ev.postsFrom) <= 0 ? ' <span class="st ok">on</span>' : "") : "—") + "</td><td>" + (ev.adsFrom ? esc(dayLabel(ev.adsFrom)) + (daysTo(ev.adsFrom) <= 0 ? ' <span class="st ok">on</span>' : "") : "—") + '</td><td class="n">' + (d < 0 ? "now" : d) + '</td><td class="n"><span class="btn-row" style="gap:4px;justify-content:flex-end"><button class="btn ghost xs" onclick="editEvent(\'' + esc(ev.id) + '\')">✎</button><button class="btn ghost xs muted" onclick="removeEvent(\'' + esc(ev.id) + '\')">×</button></span></td></tr>'; }).join("") + "</tbody></table></div>";
+    el.innerHTML = h + "</div>";
+  }
+  // ── editing the plan and the season by hand (the runs do the same through the database)
+  const stamp = (key, by) => { S[key] = Object.assign({}, S[key] || {}, { updatedAt: new Date().toISOString(), by: by || "team" }); };
+  const campFields = (c) => [{ key: "name", label: "Campaign name (as it will be named in Ads Manager)", value: c.name || "" }, { key: "program", label: "Program or event it sells", value: c.program || "" }, { key: "type", label: "Type", type: "select", options: AD_TYPES.includes(c.type) ? AD_TYPES : [c.type || "commercial"].concat(AD_TYPES), value: c.type || "commercial" }, { key: "start", label: "Starts (YYYY-MM-DD)", value: (c.window || {}).start || "" }, { key: "end", label: "Ends (YYYY-MM-DD, blank = always on)", value: (c.window || {}).end || "" }, { key: "offer", label: "The offer in one line", value: c.offer || "" }, { key: "audience", label: "Audience", value: c.audience || "" }, { key: "budgetHint", label: "Budget hint", value: c.budgetHint || "" }, { key: "phases", label: "Phases — one per line: name · start · end · type · offer", type: "textarea", rows: 3, value: (c.phases || []).map((p) => [p.name, p.start, p.end, p.type, p.offer].map((x) => x || "").join(" · ")).join("\n") }, { key: "note", label: "Notes", type: "textarea", rows: 2, value: c.note || "" }];
+  const parsePhases = (txt) => String(txt || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const p = l.split("·").map((x) => x.trim()); return { name: p[0] || "", start: p[1] || "", end: p[2] || "", type: p[3] || "", offer: p[4] || "" }; });
+  const fromForm = (c, r) => Object.assign(c, { name: r.name, program: r.program, type: r.type, window: { start: r.start, end: r.end }, offer: r.offer, audience: r.audience, budgetHint: r.budgetHint, phases: parsePhases(r.phases), note: r.note });
+  window.addCampaign = async function () { const r = await PW.askForm("New campaign", campFields({}), "Add campaign", "The morning run checks it against the ad account from its start date; the Sunday run fills its creatives and copy."); if (!r || !r.name) return; S.adPlan = S.adPlan || { campaigns: [] }; S.adPlan.campaigns = S.adPlan.campaigns || []; S.adPlan.campaigns.push(fromForm({ id: "cmp_" + Date.now(), status: "planned", creatives: [], by: "team", at: new Date().toISOString() }, r)); stamp("adPlan"); PW.save("adPlan"); render(); PW.toast("Campaign added to the plan"); };
+  window.editCampaign = async function (id) { const c = camps().find((x) => x.id === id); if (!c) return; const r = await PW.askForm("Edit — " + c.name, campFields(c), "Save"); if (!r || !r.name) return; fromForm(c, r); stamp("adPlan"); PW.save("adPlan"); render(); };
+  window.endCampaign = async function (id) { const c = camps().find((x) => x.id === id); if (!c) return; if (!(await PW.askConfirm("End " + c.name, "Mark this campaign as ended? It stays in the plan as history.", "End it"))) return; c.status = "ended"; c.window = Object.assign({}, c.window || {}, { end: (c.window || {}).end && (c.window || {}).end < todayIso() ? (c.window || {}).end : todayIso() }); stamp("adPlan"); PW.save("adPlan"); render(); };
+  const crFields = (x) => [{ key: "title", label: "Creative", value: x.title || "" }, { key: "format", label: "Format", type: "select", options: ["Ad Video", "Static Post", "Carousel", "Reel", "Story"], value: x.format || "Ad Video" }, { key: "hook", label: "Hook (first 2 seconds / first line)", value: x.hook || "" }, { key: "headline", label: "Headline", value: x.headline || "" }, { key: "primary", label: "Primary text", type: "textarea", rows: 3, value: x.primary || "" }, { key: "cta", label: "Call to action", value: x.cta || "Come Try It Out" }, { key: "status", label: "Status", type: "select", options: ["to make", "filming", "ready", "live", "retired"], value: x.status || "to make" }];
+  window.addCreative = async function (id) { const c = camps().find((x) => x.id === id); if (!c) return; const r = await PW.askForm("New creative — " + c.name, crFields({}), "Add"); if (!r || !r.title) return; (c.creatives = c.creatives || []).push(Object.assign({ id: "cr_" + Date.now() }, r)); stamp("adPlan"); PW.save("adPlan"); render(); };
+  window.editCreative = async function (id, i) { const c = camps().find((x) => x.id === id); if (!c || !c.creatives || !c.creatives[i]) return; const r = await PW.askForm("Creative — " + c.name, crFields(c.creatives[i]), "Save"); if (!r || !r.title) return; Object.assign(c.creatives[i], r); stamp("adPlan"); PW.save("adPlan"); render(); };
+  const evFields = (ev) => [{ key: "name", label: "Event", value: ev.name || "" }, { key: "kind", label: "Kind", type: "select", options: ["camp", "break", "tournament", "enrollment", "holiday", "other"], value: ev.kind || "camp" }, { key: "start", label: "Starts (YYYY-MM-DD)", value: ev.start || "" }, { key: "end", label: "Ends (YYYY-MM-DD)", value: ev.end || "" }, { key: "postsFrom", label: "Posts start (YYYY-MM-DD)", value: ev.postsFrom || "" }, { key: "adsFrom", label: "Ads start (YYYY-MM-DD)", value: ev.adsFrom || "" }, { key: "note", label: "Note (ages, price, link)", value: ev.note || "" }];
+  window.addEvent = async function () { const r = await PW.askForm("New event", evFields({}), "Add"); if (!r || !r.name || !r.start) return; S.calendar = S.calendar || { events: [] }; S.calendar.events = S.calendar.events || []; S.calendar.events.push(Object.assign({ id: "ev_" + Date.now(), by: "team" }, r)); stamp("calendar"); PW.save("calendar"); render(); if (window.renderAll) window.renderAll(); };
+  window.editEvent = async function (id) { const ev = events().find((x) => x.id === id); if (!ev) return; const r = await PW.askForm("Edit — " + ev.name, evFields(ev), "Save"); if (!r || !r.name) return; Object.assign(ev, r); stamp("calendar"); PW.save("calendar"); render(); if (window.renderAll) window.renderAll(); };
+  window.removeEvent = async function (id) { const ev = events().find((x) => x.id === id); if (!ev) return; if (!(await PW.askConfirm("Remove " + ev.name, "Take this event off the season calendar?", "Remove", true))) return; S.calendar.events = S.calendar.events.filter((x) => x.id !== id); stamp("calendar"); PW.save("calendar"); render(); if (window.renderAll) window.renderAll(); };
+
   // ── Ads tab ──
   function renderAdsLive() {
     const el = $("ads-live"); if (!el) return;
@@ -138,7 +240,7 @@
     document.querySelectorAll("#nav .tab-btn").forEach((b) => b.addEventListener("click", () => { open(false); btn.classList.remove("on"); }));
     row.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => { btn.classList.add("on"); }));
   }
-  function render() { try { renderHome(); } catch (e) { console.error("home", e); } try { renderAdsLive(); } catch (e) { console.error("ads", e); } }
+  function render() { try { renderHome(); } catch (e) { console.error("home", e); } try { renderAdPlan(); } catch (e) { console.error("ad plan", e); } try { renderAdsLive(); } catch (e) { console.error("ads", e); } try { renderAdWatch(); } catch (e) { console.error("ad watch", e); } try { renderAdCal(); } catch (e) { console.error("ad calendar", e); } }
   PW.hooks.push(render);
   bindLibrary(); render();
 })();
