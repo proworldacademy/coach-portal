@@ -195,8 +195,23 @@ async function justcallSend(keys, from, to, body) {
   });
   let j = null; try { j = await res.json(); } catch (e) { j = null; }
   if (!res.ok) { const msg = j && (j.message || j.error || (j.errors && JSON.stringify(j.errors))) || ('JustCall ' + res.status); const e = new Error(String(msg).slice(0, 200)); e.status = res.status; throw e; }
-  const d = j && (j.data || j);
-  return { id: String((d && (d.id || d.sms_id || d.message_id)) || ''), raw: d };
+  return { id: findId(j), raw: j, shape: shapeOf(j) };
+}
+/* The docs say the answer is the text object (id at the top); accounts have been seen to wrap it (data, data[0], sms, message…). Look two levels down. */
+function findId(j) {
+  const own = (o) => (o && typeof o === 'object' && !Array.isArray(o) ? o.id || o.sms_id || o.message_id || o.text_id : undefined);
+  const first = (o) => (Array.isArray(o) ? o[0] : o);
+  const tries = [j, first(j && j.data), j && j.sms, j && j.message, j && j.text, j && j.result, first(j && j.data && j.data.sms), first(j && j.data && j.data.data)];
+  for (const t of tries) { const v = own(first(t)); if (v !== undefined && v !== null && v !== '') return String(v); }
+  return '';
+}
+function shapeOf(j, depth) {
+  depth = depth || 0;
+  if (j == null) return typeof j === 'undefined' ? 'undefined' : 'null';
+  if (Array.isArray(j)) return '[' + (j.length ? shapeOf(j[0], depth + 1) : '') + ']';
+  if (typeof j !== 'object') return typeof j;
+  if (depth > 3) return '{…}';
+  return '{' + Object.keys(j).slice(0, 12).map((k) => k + (j[k] && typeof j[k] === 'object' ? ':' + shapeOf(j[k], depth + 1) : '')).join(',') + '}';
 }
 const optedOutError = (msg) => /opt(ed)?[ -]?out|unsubscrib|blacklist|blocked|\bdnd\b|do not (disturb|message)/i.test(String(msg || ''));
 
@@ -285,8 +300,8 @@ async function testSend(db, who, phone, body) {
   try {
     const r = await justcallSend({ key: s.justcallKey, secret: s.justcallSecret }, ln.from, to, text);
     await batchRef.set({ at, by: who.email, byName: who.name || who.email, text, template: 'test', state: 'done', test: true, counts: { total: 1, sent: 1, failed: 0, skipped: 0, queued: 0 }, doneAt: Date.now() });
-    await db.collection('smsLog').doc().set({ batch: batchRef.id, at, by: who.email, byName: who.name || who.email, player: '', playerName: 'Test · ' + (who.name || who.email), group: '', program: '', coach: '', phone: to, body: text, status: 'sent', reason: '', attempts: 1, justcallId: r.id, delivery: '', error: '', sentAt: Date.now() });
-    return { ok: true, id: r.id, answer: r.raw && typeof r.raw === 'object' ? Object.keys(r.raw).slice(0, 12) : [] };
+    await db.collection('smsLog').doc().set({ batch: batchRef.id, at, by: who.email, byName: who.name || who.email, player: '', playerName: 'Test · ' + (who.name || who.email), group: '', program: '', coach: '', phone: to, body: text, status: 'sent', reason: '', attempts: 1, justcallId: r.id, delivery: '', error: '', sentAt: Date.now(), answer: r.shape });
+    return { ok: true, id: r.id, answer: r.shape };
   } catch (e) {
     await batchRef.set({ at, by: who.email, byName: who.name || who.email, text, template: 'test', state: 'done', test: true, counts: { total: 1, sent: 0, failed: 1, skipped: 0, queued: 0 }, doneAt: Date.now() });
     await db.collection('smsLog').doc().set({ batch: batchRef.id, at, by: who.email, byName: who.name || who.email, player: '', playerName: 'Test · ' + (who.name || who.email), group: '', program: '', coach: '', phone: to, body: text, status: 'failed', reason: '', attempts: 1, justcallId: '', delivery: '', error: String(e.message || e).slice(0, 200), failedAt: Date.now() });
@@ -354,4 +369,4 @@ async function webhook(db, headers, body, opts) {
   return out;
 }
 
-module.exports = { settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };
+module.exports = { findId, shapeOf, settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };

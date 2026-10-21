@@ -194,7 +194,9 @@ test('the JustCall webhook: only a signed request counts; STOP switches the fami
 test('a test text goes through the same pipeline and is logged as a test batch', async () => {
   const db = fakeDb(Object.assign({}, ROSTER, SETTINGS)); const calls = wire();
   const out = await SMS.testSend(db, DESK, '(561) 555-0199', '');
-  assert.equal(out.ok, true); assert.match(out.id, /^jc_/); assert.deepEqual(out.answer, ['id']);
+  assert.equal(out.ok, true); assert.match(out.id, /^jc_/); assert.equal(out.answer, '{data:{id}}');
+  for (const [j, id] of [[{ id: 15112 }, '15112'], [{ data: { id: 7 } }, '7'], [{ data: [{ id: 8 }] }, '8'], [{ status: 'success', sms: { id: 9 } }, '9'], [{ data: { sms: [{ id: 10 }] } }, '10'], [{ message: 'ok' }, ''], [null, ''], ['x', '']]) assert.equal(SMS.findId(j), id, JSON.stringify(j));
+  assert.equal(SMS.shapeOf({ status: 'success', data: [{ id: 1, sms_info: { body: 'x' } }] }), '{status,data:[{id,sms_info:{body}}]}');
   assert.equal(calls[0].body.contact_number, '+15615550199'); assert.match(calls[0].body.body, /^Test from the ProWorld backend/); assert.match(calls[0].body.body, /Reply here with any question\.$/);
   const b = [...db._docs.values()].find((v) => v.template === 'test'); assert.equal(b.test, true); assert.equal(b.counts.sent, 1);
   await assert.rejects(SMS.testSend(db, DESK, '123', ''), (e) => e.code === 'phone');
