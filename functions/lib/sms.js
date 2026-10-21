@@ -17,10 +17,11 @@ const NOTIFY = require('./notify');
 const JUSTCALL_API = 'https://api.justcall.io/v2.1';
 const MAX_BODY = 1200;                                   // JustCall takes 1600; long texts cost segments, and nobody reads them
 const MAX_RECIPIENTS = 500;
-const CONCURRENCY = 3;
+const CONCURRENCY = 1;                                   // JustCall's API allows a burst of 30 requests a minute (1800 an hour): one at a time, ~2 s apart
+const SEND_GAP_MS = 2200;
 const ATTEMPTS = 3;
 const DEFAULT_SENDER = 'ProWorld Academy';
-const DEFAULT_INBOX = 'https://app.justcall.io/app/inbox';
+const inboxFor = (from) => `https://app.justcall.io/apex/sms/${String(from || '').replace(/\D/g, '') || '15614030008'}/conversations`;   // the line's conversations in JustCall
 const FOOTER = (name) => `- ${name}. Reply here with any question.`;   // the concierge recognises "Reply here with any question" as ours (a plain hyphen: an em dash would make every text UCS-2 and cost double)
 const STOP_WORDS = /^\s*(stop|stopall|stop all|unsubscribe|cancel|end|quit)\b/i;
 const START_WORDS = /^\s*(start|unstop|yes|subscribe)\b/i;
@@ -73,14 +74,15 @@ async function settings(db) {
   let d = {};
   try { const snap = await db.doc('settings/sms').get(); d = snap.exists ? (snap.data() || {}) : {}; } catch (e) { d = {}; }
   const templates = Array.isArray(d.templates) && d.templates.length ? d.templates : DEFAULT_TEMPLATES;
-  return { senderName: cleanText(d.senderName, 60) || DEFAULT_SENDER, footer: d.footer !== false, inboxUrl: /^https:\/\/[^\s"']+$/.test(d.inboxUrl || '') ? d.inboxUrl : DEFAULT_INBOX, templates: templates.map((t) => ({ id: slug(t.id || t.name) || 'template', name: cleanText(t.name, 40) || 'Template', text: cleanText(t.text, MAX_BODY) })), updatedAt: d.updatedAt || null, by: d.by || '' };
+  let from = ''; try { from = (await NOTIFY.settings(db)).justcallNumber || ''; } catch (e) { from = ''; }
+  return { senderName: cleanText(d.senderName, 60) || DEFAULT_SENDER, footer: d.footer !== false, inboxUrl: /^https:\/\/[^\s"']+$/.test(d.inboxUrl || '') ? d.inboxUrl : inboxFor(from), templates: templates.map((t) => ({ id: slug(t.id || t.name) || 'template', name: cleanText(t.name, 40) || 'Template', text: cleanText(t.text, MAX_BODY) })), updatedAt: d.updatedAt || null, by: d.by || '' };
 }
 async function saveSettings(db, patch, who) {
   const cur = await settings(db);
   const set = { updatedAt: Date.now(), by: who };
   if (patch.senderName !== undefined) set.senderName = cleanText(patch.senderName, 60) || DEFAULT_SENDER;
   if (patch.footer !== undefined) set.footer = patch.footer !== false;
-  if (patch.inboxUrl !== undefined) { const u = cleanText(patch.inboxUrl, 200); if (u && !/^https:\/\/[^\s"']+$/.test(u)) throw S.err(400, 'inbox', 'The inbox link must start with https://'); set.inboxUrl = u || DEFAULT_INBOX; }
+  if (patch.inboxUrl !== undefined) { const u = cleanText(patch.inboxUrl, 200); if (u && !/^https:\/\/[^\s"']+$/.test(u)) throw S.err(400, 'inbox', 'The inbox link must start with https://'); set.inboxUrl = u || ''; }
   if (patch.templates !== undefined) {
     if (!Array.isArray(patch.templates)) throw S.err(400, 'templates', 'Templates must be a list.');
     const seen = new Set(); const list = [];
@@ -239,7 +241,7 @@ async function continueBatch(db, batchId, opts) {
   const b = snap.data();
   const logs = (await db.collection('smsLog').where('batch', '==', batchId).get()).docs.map((d) => ({ ref: d.ref, id: d.id, data: d.data() }));
   const queue = logs.filter((l) => l.data.status === 'queued');
-  const budget = opts.budgetMs != null ? opts.budgetMs : 40000; const delay = opts.delayMs != null ? opts.delayMs : 120; const started = Date.now();
+  const budget = opts.budgetMs != null ? opts.budgetMs : 40000; const delay = opts.delayMs != null ? opts.delayMs : SEND_GAP_MS; const started = Date.now();
   const s = await NOTIFY.settings(db, true); const keys = { key: s.justcallKey, secret: s.justcallSecret }; const from = e164(s.justcallNumber || '');
   const flip = {};                                                   // players JustCall says have opted out: switch them off once
   let i = 0; let ran = 0;
@@ -257,7 +259,7 @@ async function continueBatch(db, batchId, opts) {
           if (!retry || attempts >= ATTEMPTS) {
             await l.ref.set({ status: 'failed', attempts, error: String(e.message || e).slice(0, 200), failedAt: Date.now() }, { merge: true }); l.data.status = 'failed'; done = true;
             if (optedOutError(e.message)) flip[l.data.player] = true;
-          } else await sleep(opts.backoffMs != null ? opts.backoffMs : 1000 * attempts * attempts);
+          } else await sleep(opts.backoffMs != null ? opts.backoffMs : e.status === 429 ? 15000 : 1000 * attempts * attempts);   // a 429 is the burst limit: wait it out
         }
       }
       await sleep(delay);

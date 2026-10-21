@@ -210,4 +210,6 @@ test('settings: templates are edited as a list with ids, the sender name and the
   await assert.rejects(SMS.saveSettings(db, { inboxUrl: 'javascript:alert(1)' }, 'x'), (e) => e.code === 'inbox');
   await assert.rejects(SMS.saveSettings(db, { templates: 'x' }, 'x'), (e) => e.code === 'templates');
   const ln = await SMS.line(db); assert.deepEqual(ln, { connected: true, from: '+15614030008', textsOn: true });
+  assert.equal(s.inboxUrl, 'https://app.justcall.io/app/inbox', 'a saved link is kept');
+  const d2 = await SMS.saveSettings(db, { inboxUrl: '' }, 'x'); assert.equal(d2.inboxUrl, 'https://app.justcall.io/apex/sms/15614030008/conversations', 'no link saved: the line\'s conversations in JustCall');
 });
