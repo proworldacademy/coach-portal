@@ -227,8 +227,19 @@ test('removing a record the engine filed: the player, the parent details, the le
   sub.status = 'canceled';
   const out = await REMOVE.removeRecord(db, stripe, 'as-ava-t');
   assert.deepEqual(out, { player: 'as-ava-t', name: 'Ava Torres', private: 2, enrollments: 1, outbox: 1 });   // the contact card and the texting consent
-  assert.ok(!db._docs.has('players/as-ava-t') && !db._docs.has('players/as-ava-t/private/contact') && !db._docs.has('enrollments/' + session.id) && !db._docs.has(queued[0]));
+  assert.ok(!db._docs.has('players/as-ava-t') && !db._docs.has('players/as-ava-t/private/contact') && !db._docs.has(queued[0]));
+  const tomb = db._docs.get('enrollments/' + session.id);
+  assert.equal(tomb.removed, true); assert.equal(tomb.done, true); assert.equal(tomb.player, null); assert.equal(tomb.playerName, ''); assert.equal(tomb.parentName, ''); assert.equal(tomb.session, session.id);
   assert.equal(db._docs.has('settings/notify'), true, 'nothing else is touched');
+  // the nightly sweep meets the same paid checkout again: the tombstone says done — nothing is filed, nobody is told
+  const sent = wire();
+  const again = await ROSTER.record(db, stripe, session, sub, { mode: 'test' });
+  assert.equal(again.fresh, false); assert.equal(again.removed, true);
+  assert.ok(!db._docs.has('players/as-ava-t')); assert.equal(sent.length, 0, 'no Slack, no text');
+  // and the sweep itself skips a cancelled plan's checkout outright
+  stripe._db.sessions[stripe._db.sessions.length - 1].mode = 'subscription'; stripe._db.sessions[stripe._db.sessions.length - 1].subscription = sub;
+  const swept = await JOBS.convertPaidEnrollments(stripe, '2026-10-21', null, { db, mode: 'test' });
+  assert.equal(swept.recorded.length, 0); assert.ok(!db._docs.has('players/as-ava-t'));
   // a sandbox record while the engine runs live: Stripe does not know the plan, so there is nothing to check — it goes
   db._docs.set('players/as-bo-t', { name: 'Bo Tester', source: 'enroll', enroll: { subscription: 'sub_from_the_sandbox' } });
   assert.deepEqual(await REMOVE.removeRecord(db, stripe, 'as-bo-t'), { player: 'as-bo-t', name: 'Bo Tester', private: 0, enrollments: 0, outbox: 0 });

@@ -143,7 +143,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'POST /admin/roster/remove') {
         // A record the engine filed (a test, a mistake) goes away with its parent details, ledger lines and anything queued for Monday. Owners only.
         if (!who.owner) throw S.err(403, 'owner', 'Only an owner can remove a record.');
-        const out = await REMOVE.removeRecord(ctx.db, stripe, S.clean(b.player, 60), { log });
+        const out = await REMOVE.removeRecord(ctx.db, stripe, S.clean(b.player, 60), { log, by: who.email });
         logger.info('record removed', Object.assign({ by: who.email }, out));
         return send(res, 200, Object.assign({ ok: true }, out));
       }

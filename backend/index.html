@@ -1217,7 +1217,7 @@ async function connect(ctx){
   DB.unsubs.push(fs.collection('players').onSnapshot(s=>{DB.raw={};s.forEach(d=>{DB.raw[d.id]=d.data()});rebuildPlayers();rerender('players')},e=>{console.error('players',e);toast('Could not read the roster — ask an owner to check your access.')}));
   DB.unsubs.push(fs.collection('tryouts').onSnapshot(s=>{DB.tryouts={};s.forEach(d=>{DB.tryouts[d.id]=d.data()});rebuildPlayers();rerender('players')},e=>console.error('tryouts',e)));
   DB.unsubs.push(fs.collection('sheets').where('date','>=',iso(addDays(parse(monthStart()),-31))).onSnapshot(s=>{s.docChanges().forEach(ch=>{if(ch.type!=='removed')applySheet(ch.doc.data())});rerender('sheets')},e=>console.error('sheets',e)));
-  DB.unsubs.push(fs.collection('enrollments').orderBy('at','desc').limit(400).onSnapshot(s=>{DB.ledger=[];s.forEach(d=>DB.ledger.push(Object.assign({id:d.id},d.data())));rerender('ledger')},e=>console.error('enrollments',e)));
+  DB.unsubs.push(fs.collection('enrollments').orderBy('at','desc').limit(400).onSnapshot(s=>{DB.ledger=[];s.forEach(d=>{const x=d.data();if(x&&x.removed)return;DB.ledger.push(Object.assign({id:d.id},x))});rerender('ledger')},e=>console.error('enrollments',e)));
   DB.unsubs.push(fs.collection('familyRequests').where('state','==','open').onSnapshot(s=>{DB.family=[];s.forEach(d=>DB.family.push(Object.assign({id:d.id},d.data())));DB.family.sort((a,b)=>(b.at||0)-(a.at||0));rerender('family')},e=>console.error('familyRequests',e)));
   render();
 }

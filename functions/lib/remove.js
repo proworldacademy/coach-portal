@@ -1,6 +1,6 @@
-/* Removing a record the engine filed — a test enrollment, or one made by mistake. Owners only, from the player's sheet on the
-   backend. It takes out everything lib/roster.js wrote for that player: the player, the parent's details under it, the engine's
-   ledger entries and whatever is still queued for Monday. Only a record the engine itself created (source 'enroll') can go this
+/* Removing a record the engine filed — a test enrollment, or one made by mistake. Owners only, from the backend. It takes out
+   everything lib/roster.js wrote for that player: the player, the parent's details under it and whatever is still queued for
+   Monday; the engine's ledger entries become tombstones (done · removed · no names) so the nightly sweep never files the family again. Only a record the engine itself created (source 'enroll') can go this
    way; players from Monday or the Coach Portal are removed there. A plan that is still live in the current Stripe mode means a
    real family, so the plan has to be cancelled first. Nothing in Stripe is touched. */
 'use strict';
@@ -24,7 +24,9 @@ async function removeRecord(db, stripe, pid, opts) {
   const removed = { player: pid, name: p.name || '', private: 0, enrollments: 0, outbox: 0 };
   const batch = db.batch();
   for (const d of (await ref.collection('private').get()).docs) { batch.delete(d.ref); removed.private++; }
-  for (const d of (await db.collection('enrollments').where('player', '==', pid).get()).docs) { batch.delete(d.ref); removed.enrollments++; }
+  // the ledger lines stay as tombstones (done, removed, no names): the nightly sweep of paid checkouts sees "done" and never
+  // records the family again — deleting them would bring the record, the Monday note and the three messages back at 05:05
+  for (const d of (await db.collection('enrollments').where('player', '==', pid).get()).docs) { const x = d.data() || {}; batch.set(d.ref, { session: x.session || d.id, mode: x.mode || '', kind: x.kind || '', done: true, removed: true, removedAt: Date.now(), removedBy: opts.by || '', player: null, playerName: '', parentName: '', what: 'removed', at: x.at || Date.now() }); removed.enrollments++; }
   for (const d of (await db.collection('outbox').where('pid', '==', pid).get()).docs) { if (d.data().state === 'queued') { batch.delete(d.ref); removed.outbox++; } }
   batch.delete(ref);
   await batch.commit();

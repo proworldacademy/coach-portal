@@ -44,6 +44,7 @@ async function convertPaidEnrollments(stripe, today, log, ctx) {
     } else if (session.mode === 'subscription' && session.subscription) {
       sub = typeof session.subscription === 'object' ? session.subscription : null;
       if (!sub) { try { sub = await stripe.subscriptions.retrieve(session.subscription, { expand: ['items.data.price'] }); } catch (e) { sub = { id: session.subscription }; } }
+      if (sub && ['canceled', 'incomplete_expired'].includes(sub.status)) continue;      // a plan already cancelled (a test, a change of mind) is never put back on the roster
     } else if (!(session.mode === 'payment' && session.payment_status === 'paid')) continue;
     if (!ctx.db) continue;
     try {
