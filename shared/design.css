@@ -1,9 +1,11 @@
 /* PROWORLD — the design system every page follows (shared/design.css). Direction C4 · Round 2, chosen Oct 19, 2026.
    Light grey base, never a black page. Black is for type, buttons and pills. Lime leads; one status language everywhere:
    lime = needs you · mint = all good · orchid = new · cyan = live / information.
-   All the brand colours live in the background: six soft lights drift under every page, and the top of the page wears one
-   gradient "skin" from the brand pack that fades into the grey — body.skin-home (lime → mint → cyan), .skin-coach
-   (mint → cyan → blue), .skin-desk (orchid → pink → peach), .skin-studio (cyan → orchid → lime), .skin-family.
+   All the brand colours live in the background: six soft lights drift under every page, and the top of the page wears a
+   "sky" built from the brand pack's three gradients — green (mint · lime · deep green), warm (orange · pink · orchid · lime)
+   and blue (deep blue · sky · light cyan) — as slow clouds of colour under a white mist, fading into the grey. A skin picks
+   the colours: body.skin-home (the green one), .skin-coach (the blue one), .skin-desk (the warm one), .skin-studio (orchid ·
+   cyan · lime), .skin-family (orange · pink · cyan).
    Needs shared/brand.css before it (the fonts and the wordmarks). The page chrome (lights, sky, top bar, compact bar,
    the ⌘K palette) is drawn by shared/design.js; the classes below are what a page builds its content with. */
 :root{
@@ -20,27 +22,51 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 img{display:block;max-width:100%}
 :focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:6px}
 [hidden]{display:none!important}
-/* ── the lights: all the brand colours, softly, under every page ── */
+/* ── the lights: the brand pack's gradient colours, softly, under every page ── */
 .pwd-lights{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none}
-.pwd-lights i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.28;will-change:transform}
-.pwd-lights .k1{width:54vw;height:54vw;background:var(--lime);top:-20vw;left:-12vw;animation:pwd-f1 24s ease-in-out infinite alternate}
-.pwd-lights .k2{width:48vw;height:48vw;background:var(--mint);top:18vh;right:-16vw;animation:pwd-f2 28s ease-in-out infinite alternate}
-.pwd-lights .k3{width:46vw;height:46vw;background:var(--cyan);bottom:-22vw;left:24vw;animation:pwd-f3 32s ease-in-out infinite alternate}
-.pwd-lights .k4{width:30vw;height:30vw;background:var(--orchid);top:48vh;left:-6vw;opacity:.2;animation:pwd-f2 36s ease-in-out infinite alternate-reverse}
-.pwd-lights .k5{width:28vw;height:28vw;background:var(--peach);bottom:8vh;right:4vw;opacity:.16;animation:pwd-f1 40s ease-in-out infinite alternate-reverse}
-.pwd-lights .k6{width:26vw;height:26vw;background:var(--blue);top:6vh;left:42vw;opacity:.14;animation:pwd-f3 44s ease-in-out infinite alternate}
+.pwd-lights i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.36;will-change:transform}
+.pwd-lights .k1{width:54vw;height:54vw;background:#EDFF74;top:-20vw;left:-12vw;animation:pwd-f1 24s ease-in-out infinite alternate}
+.pwd-lights .k2{width:48vw;height:48vw;background:#B6FDB5;top:18vh;right:-16vw;animation:pwd-f2 28s ease-in-out infinite alternate}
+.pwd-lights .k3{width:46vw;height:46vw;background:#BFF5F7;bottom:-22vw;left:24vw;animation:pwd-f3 32s ease-in-out infinite alternate}
+.pwd-lights .k4{width:30vw;height:30vw;background:#E283E7;top:48vh;left:-6vw;opacity:.2;animation:pwd-f2 36s ease-in-out infinite alternate-reverse}
+.pwd-lights .k5{width:28vw;height:28vw;background:#F9B327;bottom:8vh;right:4vw;opacity:.16;animation:pwd-f1 40s ease-in-out infinite alternate-reverse}
+.pwd-lights .k6{width:26vw;height:26vw;background:#5EA6E3;top:6vh;left:42vw;opacity:.16;animation:pwd-f3 44s ease-in-out infinite alternate}
 @keyframes pwd-f1{to{transform:translate(18vw,14vh) scale(1.15)}}
 @keyframes pwd-f2{to{transform:translate(-16vw,-12vh) scale(.9)}}
 @keyframes pwd-f3{to{transform:translate(-20vw,-16vh) scale(1.2)}}
-.pwd-lights::after{content:"";position:absolute;inset:0;background:rgba(236,238,235,.5)}
-/* ── the sky: the page's gradient skin, moving slowly, fading into the grey; its bright spot drifts toward the cursor ── */
-.pwd-sky{position:absolute;top:0;left:0;right:0;height:min(84vh,760px);z-index:1;pointer-events:none;background-image:linear-gradient(118deg,#E2FE78 0%,#94FCB1 48%,#A9F3F7 100%);background-size:220% 220%;animation:pwd-gr 18s ease-in-out infinite alternate;mask-image:linear-gradient(#000 48%,transparent);-webkit-mask-image:linear-gradient(#000 48%,transparent)}
-.pwd-sky::after{content:"";position:absolute;inset:0;background:radial-gradient(52% 72% at var(--hx,78%) var(--hy,18%),rgba(255,255,255,.58),transparent 60%)}
+.pwd-lights::after{content:"";position:absolute;inset:0;background:rgba(236,238,235,.44)}
+/* ── the sky: the page's gradient, built like the brand pack's three — green (mint · lime · deep green), warm (orange · pink ·
+   orchid · lime) and blue (deep blue · sky · light cyan) — as drifting clouds of colour with a slow white mist over them, fading
+   into the grey; its bright spot follows the cursor. A skin only sets the colours. ── */
+.pwd-sky{position:absolute;top:0;left:0;right:0;height:min(84vh,760px);z-index:1;pointer-events:none;overflow:hidden;
+  --sa:#ACF9B8;--sb:#C1F98F;--sc:#EDFF74;--s1:#B6FDB5;--s2:#62AC49;--s3:#C1F98F;--s4:#EDFF74;--s5:#BFF5F7;
+  background-color:var(--sb);
+  background-image:
+    radial-gradient(70% 80% at 12% 12%,var(--s1) 0%,rgba(255,255,255,0) 62%),
+    radial-gradient(60% 75% at 96% 6%,var(--s2) 0%,rgba(255,255,255,0) 58%),
+    radial-gradient(70% 70% at 56% 72%,var(--s3) 0%,rgba(255,255,255,0) 64%),
+    radial-gradient(55% 65% at 92% 88%,var(--s4) 0%,rgba(255,255,255,0) 60%),
+    radial-gradient(60% 60% at 18% 92%,var(--s5) 0%,rgba(255,255,255,0) 62%),
+    linear-gradient(118deg,var(--sa) 0%,var(--sb) 50%,var(--sc) 100%);
+  background-size:170% 170%,170% 170%,170% 170%,170% 170%,170% 170%,100% 100%;
+  background-repeat:no-repeat;
+  animation:pwd-clouds 38s ease-in-out infinite alternate;
+  mask-image:linear-gradient(#000 48%,transparent);-webkit-mask-image:linear-gradient(#000 48%,transparent)}
+@keyframes pwd-clouds{from{background-position:0% 0%,100% 0%,50% 100%,100% 100%,0% 100%,0 0}to{background-position:100% 55%,10% 80%,15% 0%,45% 25%,100% 30%,0 0}}
+/* the mist: soft white breath drifting the other way */
+.pwd-sky::before{content:"";position:absolute;inset:-10%;background-image:
+    radial-gradient(45% 50% at 30% 40%,rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 70%),
+    radial-gradient(40% 45% at 75% 60%,rgba(255,255,255,.45) 0%,rgba(255,255,255,0) 70%),
+    radial-gradient(60% 40% at 50% 100%,rgba(255,255,255,.5) 0%,rgba(255,255,255,0) 70%);
+  background-size:160% 160%,160% 160%,120% 120%;background-repeat:no-repeat;animation:pwd-mist 52s ease-in-out infinite alternate-reverse;filter:blur(30px)}
+@keyframes pwd-mist{from{background-position:0% 100%,100% 0%,50% 100%}to{background-position:100% 0%,0% 100%,50% 60%}}
+.pwd-sky::after{content:"";position:absolute;inset:0;background:radial-gradient(52% 72% at var(--hx,78%) var(--hy,18%),rgba(255,255,255,.5),transparent 60%)}
 @keyframes pwd-gr{from{background-position:0% 0%}to{background-position:100% 100%}}
-body.skin-coach .pwd-sky{background-image:linear-gradient(118deg,#94FCB1 0%,#A9F3F7 42%,#BAFFF9 62%,#6FC2F5 100%)}
-body.skin-desk .pwd-sky{background-image:linear-gradient(118deg,#E286E4 0%,#F7A3B0 46%,#F8C178 100%)}
-body.skin-studio .pwd-sky{background-image:linear-gradient(118deg,#A9F3F7 0%,#E286E4 54%,#E2FE78 100%)}
-body.skin-family .pwd-sky{background-image:linear-gradient(118deg,#F8C178 0%,#F7A3B0 40%,#E286E4 72%,#A9F3F7 100%)}
+/* the skins */
+body.skin-coach .pwd-sky{--sa:#5EA6E3;--sb:#9ED8F0;--sc:#C0F7F7;--s1:#BFF5F7;--s2:#0457CD;--s3:#7FC3EB;--s4:#0053D4;--s5:#B6FDB5}
+body.skin-desk .pwd-sky{--sa:#F6B23C;--sb:#E696E0;--sc:#E2FF72;--s1:#F9B327;--s2:#E283E7;--s3:#ED9B8B;--s4:#E2FF72;--s5:#E5A8CC}
+body.skin-studio .pwd-sky{--sa:#BFF5F7;--sb:#E696E0;--sc:#E2FF72;--s1:#C0F7F7;--s2:#E283E7;--s3:#E5A8CC;--s4:#EDFF74;--s5:#5EA6E3}
+body.skin-family .pwd-sky{--sa:#F9B327;--sb:#E5A8CC;--sc:#BFF5F7;--s1:#F6B23C;--s2:#E283E7;--s3:#ED9B8B;--s4:#C0F7F7;--s5:#E2FF72}
 body.sky-short .pwd-sky{height:min(50vh,420px)}
 /* ── the page ── */
 .wrap{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
