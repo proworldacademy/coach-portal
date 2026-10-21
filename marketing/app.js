@@ -287,6 +287,11 @@
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     b.classList.add("active"); $("tab-" + b.dataset.tab).classList.add("active");
   }));
+  // a link can open a tab: /marketing/#ads, /marketing/#reports … (a hash that is not a tab is left alone)
+  (function () {
+    const fromHash = () => { const h = String(location.hash || "").replace(/^#/, ""); const b = h && $("tab-" + h) ? document.querySelector('.tab-btn[data-tab="' + h + '"]') : null; if (b) { b.click(); window.scrollTo(0, 0); } };
+    window.addEventListener("hashchange", fromHash); fromHash();
+  })();
   (function () { const d = new Date(); $("today-date").textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }); })();
 
   // ───────────────────────── season / theme ─────────────────────────
@@ -503,9 +508,18 @@
   function dayDate(ws, day) { const i = POST_DAYS.indexOf(day); if (i < 0) return null; const d = wsDate(ws); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i + 1); return d; }
   function deliveryOf(ws, it) { const D = S.delivery && S.delivery.posts; return (D && it && D[dkey(ws, it.id)]) || null; }
   // state of one planned item: posted | late | missing | today | pending | spare (+ the ledger entry when there is one)
+  // an Ad Video item is not an Instagram post: it counts as posted when its campaign is live in the ad account
+  // (the campaign in the ad plan whose creative was made from the item, else the one named like it)
+  function adCampaignOf(it) {
+    if (!it || !/Ad Video/i.test(String(it.format || ""))) return null;
+    const P = (S.adPlan && S.adPlan.campaigns) || []; const t = String(it.title || "").toLowerCase();
+    const named = (c) => [c.program, c.name].some((n) => n && t.indexOf(String(n).toLowerCase()) >= 0);
+    return P.find((c) => (c.creatives || []).some((x) => x.from === it.id)) || (t ? P.find(named) : null) || null;
+  }
   function itemState(ws, it) {
     const e = deliveryOf(ws, it), auto = !!(e && (e.status === "posted" || e.status === "late"));
     if (it.delivered || auto) return { st: auto && e.status === "late" ? "late" : "posted", e, hand: !auto };
+    if (!e) { const c = adCampaignOf(it), a = c && S.delivery && S.delivery.ads && S.delivery.ads[c.id]; if (a && a.status === "live") return { st: "posted", e: { status: "posted", postedAt: a.firstSeen, title: c.name, matchedBy: "campaign", note: "the campaign is live in the ad account" } }; }
     const d = dayDate(ws, it.day);
     if (!d) return { st: "spare", e };
     if (e && e.status === "missing") return { st: "missing", e };

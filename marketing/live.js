@@ -1,6 +1,7 @@
 /* PROWORLD Marketing — Home and Ads (live.js)
-   Home is what a marketing person needs first: what needs you, the Instagram numbers, this week's posts, the ads,
-   the top posts. The numbers come from numbers/<date> documents the daily numbers run writes every morning
+   Home is the status report, live: what needs you, the Instagram numbers, this week's posts, the ads, what went out
+   against the plan week by week, the ad plan, the top posts, and whether the runs ran — it prints as the report to send.
+   The numbers come from numbers/<date> documents the daily numbers run writes every morning
    (Instagram and Meta ads through Metricool); until the first one exists, Home falls back to the latest Monday
    review snapshot. Also runs the Library row of the tab bar. */
 (function () {
@@ -105,6 +106,68 @@
       const rv = latestReport((r) => r.by === "instagram-review"); const sec = rv && (rv.sections || []).find((s) => /WHAT WE POSTED/i.test(s.h || ""));
       $("home-top").innerHTML = sec ? '<div class="small muted" style="margin-bottom:6px">From the Monday review of ' + esc(dayLabel(rv.date)) + "</div>" + tableFromLines(sec.lines || []) : '<div class="pending">The top posts appear here after the first morning numbers run.</div>';
     }
+  }
+  // ── The status report on Home: what went out vs the plan, week by week since the start; the ad plan at a glance;
+  // whether the runs ran. Everything here is computed from the record the runs keep — nothing is typed in by hand.
+  function scoreWeek(ws, w) {
+    const t = { planned: 0, posted: 0, late: 0, missing: 0, today: 0, pending: 0, spare: 0, miss: [] };
+    weekItems(w).forEach((x) => { const s = PW.itemState(ws, x.it).st; if (s === "spare") { t.spare++; return; } t.planned++; if (s === "posted") t.posted++; else if (s === "late") { t.posted++; t.late++; } else if (s === "missing") { t.missing++; t.miss.push(x); } else if (s === "today") t.today++; else t.pending++; });
+    return t;
+  }
+  function behind(t) {
+    if (!t.miss.length) return '<span class="muted">—</span>';
+    if (t.miss.length <= 3) return t.miss.map((x) => esc(x.who) + " · " + esc(x.it.day || "") + " · " + esc(x.it.title || "")).join("<br>");
+    const by = {}; t.miss.forEach((x) => { by[x.who] = (by[x.who] || 0) + 1; });
+    return Object.keys(by).sort((a, b) => by[b] - by[a]).map((k) => esc(k) + " " + by[k]).join(" · ");
+  }
+  function renderScore() {
+    const el = $("home-score"); if (!el) return;
+    const W = S.weeks || {}, thisWS = sundayIso(new Date());
+    const rows = Object.keys(W).filter((ws) => ws <= thisWS && W[ws] && W[ws].weekStart).sort().map((ws) => ({ ws, w: W[ws], t: scoreWeek(ws, W[ws]) }));
+    const D = S.delivery || {}, extras = Array.isArray(D.extras) ? D.extras : [];
+    const when = $("home-score-when"); if (when) when.textContent = D.checkedAt ? "· checked against Instagram " + dayLabel(String(D.checkedAt).slice(0, 10)) : "";
+    if (!rows.length) { el.innerHTML = '<div class="pending">No week planned yet — the score starts with the first plan (Plan tab, or the Sunday run).</div>'; return; }
+    const tot = rows.reduce((a, r) => { a.planned += r.t.planned; a.posted += r.t.posted; a.missing += r.t.missing; return a; }, { planned: 0, posted: 0, missing: 0 });
+    let h = '<p class="sum">Since ' + esc(PW.fmtDay(rows[0].ws)) + ": <strong>" + tot.posted + " of " + tot.planned + "</strong> planned posts went out, " + (tot.missing ? '<strong style="color:var(--bad,#F06A5E)">' + tot.missing + " missing</strong>" : "<strong>none missing</strong>") + (extras.length ? ", and " + extras.length + " post" + (extras.length > 1 ? "s" : "") + " went out that " + (extras.length > 1 ? "were" : "was") + " not in the plan" : "") + ".</p>";
+    h += '<div class="tbl-wrap"><table class="tbl score"><thead><tr><th>Week</th><th class="n">Planned</th><th class="n">Went out</th><th class="n">Missing</th><th>Who is behind</th></tr></thead><tbody>';
+    rows.forEach((r) => { const t = r.t, now = r.ws === thisWS; h += '<tr class="' + (now ? "now" : "") + '"><td><span class="wk-n">' + esc(r.w.weekDates || dayLabel(r.ws)) + "</span>" + (now ? '<div class="small muted">this week · ' + t.pending + " to come" + (t.today ? " · " + t.today + " today" : "") + "</div>" : "") + '</td><td class="n">' + t.planned + '</td><td class="n good">' + t.posted + (t.late ? ' <span class="small muted">(' + t.late + " late)</span>" : "") + '</td><td class="n' + (t.missing ? " bad" : "") + '">' + t.missing + '</td><td class="small">' + behind(t) + "</td></tr>"; });
+    h += "</tbody></table></div>";
+    if (extras.length) h += '<div class="small muted" style="margin-top:8px">Not in the plan: ' + extras.slice(0, 6).map((x) => esc(dayLabel(x.date)) + " · " + esc(x.title || "")).join(" — ") + (extras.length > 6 ? " …" : "") + "</div>";
+    h += '<div class="btn-row" style="margin-top:10px"><button class="btn ghost sm" onclick="document.querySelector(\'.tab-btn[data-tab=assignments]\').click()">Open the weeks →</button></div>';
+    el.innerHTML = h;
+  }
+  function renderHomeAdPlan() {
+    const el = $("home-adplan"); if (!el) return;
+    const o = { missing: 0, live: 1, planned: 2, paused: 3, ended: 4 };
+    const list = camps().filter((c) => campState(c).st !== "ended").sort((a, b) => (o[campState(a).st] - o[campState(b).st]) || String((a.window || {}).start || "").localeCompare(String((b.window || {}).start || "")));
+    if (!list.length) { el.innerHTML = '<div class="pending">No campaigns planned yet — the Sunday run builds the plan from the season calendar; add one on the Ads tab.</div>'; return; }
+    const isReady = (x) => /ready|live|posted|done/i.test(x.status || "");
+    let h = '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campaign</th><th>Status</th><th>Runs</th><th>Phase now</th><th>Creatives</th></tr></thead><tbody>';
+    list.forEach((c) => {
+      const r = campState(c), e = r.e, ph = phaseNow(c), w = c.window || {}, cr = c.creatives || [], ready = cr.filter(isReady).length, todo = cr.filter((x) => !isReady(x));
+      h += "<tr><td><strong>" + esc(c.name || "") + "</strong>" + (c.program ? '<div class="small muted">' + esc(c.program) + (c.type ? " · " + esc(c.type) : "") + "</div>" : "") + "</td><td>" + stChip(r.st) + (e && e.spend7 != null ? '<div class="small muted">' + money(e.spend7) + " · " + fmt(e.leads7) + " leads" + (e.cpl7 != null ? " · " + money(e.cpl7, 2) + " each" : "") + "</div>" : "") + "</td><td>" + (w.start ? esc(dayLabel(w.start)) + " → " + esc(w.end ? dayLabel(w.end) : "open") : "—") + "</td><td>" + (ph ? esc(ph.name || ph.type || "") + (ph.end ? '<div class="small muted">to ' + esc(dayLabel(ph.end)) + "</div>" : "") : "—") + "</td><td>" + (cr.length ? ready + " of " + cr.length + " ready" + (todo.length ? '<div class="small muted">to make: ' + todo.slice(0, 2).map((x) => esc(x.title || "")).join(", ") + (todo.length > 2 ? " …" : "") + "</div>" : "") : '<span class="small muted">none yet</span>') + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+    const ended = camps().length - list.length;
+    h += '<div class="btn-row" style="margin-top:10px;align-items:center"><button class="btn ghost sm" onclick="document.querySelector(\'.tab-btn[data-tab=ads]\').click()">The ad plan in full →</button>' + (ended ? '<span class="small muted">' + ended + " ended</span>" : "") + "</div>";
+    el.innerHTML = h;
+  }
+  // the three runs: when each last ran, from what it leaves in the record (the ledger's checkedAt and the numbers for the
+  // morning check, the reports for the Monday review and the Sunday engine)
+  const RUNS = [
+    { name: "The morning check", when: "every day, 6:54 AM", days: 1, last: () => { const D = S.delivery || {}, N = latestNumbers(); const a = D.checkedAt ? String(D.checkedAt).slice(0, 10) : "", b = N ? String(N.date || N.id).slice(0, 10) : ""; return a > b ? a : b; }, does: "Reads yesterday's Instagram and ad numbers, matches every post of the last 7 days to the plan, marks posted / missing, checks which campaigns are live, keeps the archive complete." },
+    { name: "The Monday review", when: "Mondays, 8:52 AM", days: 7, last: () => { const r = latestReport((x) => x.by === "instagram-review"); return r ? String(r.date).slice(0, 10) : ""; }, does: "The week's scoreboard, the watchlist and the competitors' ads, what parents are asking, three moves for the week — on the Reports tab." },
+    { name: "The Sunday engine", when: "Sundays, 5:52 PM", days: 7, last: () => { const r = latestReport((x) => x.by === "engine"); return r ? String(r.date).slice(0, 10) : ""; }, does: "Reads what worked, refills the idea banks, builds the next two weeks (what was missed first), keeps the season calendar and the ad plan — on the Reports tab." }
+  ];
+  function renderRuns() {
+    const el = $("home-runs"); if (!el) return;
+    el.innerHTML = RUNS.map((r) => {
+      const last = r.last(), age = last ? Math.round((new Date(todayIso() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
+      const cls = age === null ? "off" : age <= r.days ? "" : age <= r.days * 2 ? "warn" : "bad";
+      const txt = age === null ? "hasn't run yet" : age <= 0 ? "ran today" : age === 1 ? "ran yesterday" : "last ran " + dayLabel(last) + (cls === "bad" ? " — overdue, tell Antonio" : "");
+      return '<div class="run"><i class="' + cls + '"></i><div><b>' + esc(r.name) + ' <span class="small muted" style="font-weight:400">· ' + esc(r.when) + "</span></b>" + esc(txt) + "<small>" + esc(r.does) + "</small></div></div>";
+    }).join("") + '<div class="small muted" style="margin-top:8px">The runs work in the cloud on their own — no computer or app needs to be open.</div>';
+    const ph = $("home-print-head"); if (ph) ph.textContent = "PROWORLD Marketing · status report · " + new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   }
   function tableFromLines(lines) {
     const rows = lines.filter((l) => /^\|/.test(l)).map((l) => l.split("|").slice(1, -1).map((c) => c.trim())).filter((c) => !c.every((x) => /^:?-+:?$/.test(x)));
@@ -240,7 +303,7 @@
     document.querySelectorAll("#nav .tab-btn").forEach((b) => b.addEventListener("click", () => { open(false); btn.classList.remove("on"); }));
     row.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => { btn.classList.add("on"); }));
   }
-  function render() { try { renderHome(); } catch (e) { console.error("home", e); } try { renderAdPlan(); } catch (e) { console.error("ad plan", e); } try { renderAdsLive(); } catch (e) { console.error("ads", e); } try { renderAdWatch(); } catch (e) { console.error("ad watch", e); } try { renderAdCal(); } catch (e) { console.error("ad calendar", e); } }
+  function render() { try { renderHome(); } catch (e) { console.error("home", e); } try { renderScore(); } catch (e) { console.error("score", e); } try { renderHomeAdPlan(); } catch (e) { console.error("home ad plan", e); } try { renderRuns(); } catch (e) { console.error("runs", e); } try { renderAdPlan(); } catch (e) { console.error("ad plan", e); } try { renderAdsLive(); } catch (e) { console.error("ads", e); } try { renderAdWatch(); } catch (e) { console.error("ad watch", e); } try { renderAdCal(); } catch (e) { console.error("ad calendar", e); } }
   PW.hooks.push(render);
   bindLibrary(); render();
 })();

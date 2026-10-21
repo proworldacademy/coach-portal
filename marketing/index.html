@@ -254,10 +254,24 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
 .spark circle{transform:none;animation:none;fill:var(--ink)}
 .pending{color:var(--muted);font-size:13px;line-height:1.55}
 .fhead{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
-/* print: the open tab only — the coach assignments on paper for the photographer and the coaches */
+/* the status report (Home): the score table, the runs, the print head */
+.print-only{display:none}
+.home-tools{justify-content:flex-end;margin:-6px 0 10px}
+.score .wk-n{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:15px;white-space:nowrap}
+.score td.bad{color:var(--bad,#F06A5E);font-weight:700}.score td.good{color:var(--ink)}
+.score tr.now td{background:rgba(226,254,120,.35)}
+.score .sum{font-size:13.5px;line-height:1.55;margin:0 0 8px}
+.run{display:grid;grid-template-columns:14px minmax(0,1fr);gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.run:last-child{border-bottom:0}
+.run i{width:10px;height:10px;border-radius:50%;background:var(--mint);margin-top:5px;box-shadow:0 0 0 1px rgba(0,0,0,.25);font-style:normal}
+.run i.warn{background:var(--lime)}.run i.bad{background:var(--bad,#F06A5E)}.run i.off{background:rgba(0,0,0,.12)}
+.run b{display:block}.run small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+/* print: the open tab only — the coach assignments on paper for the photographer and the coaches; Home prints as the status report */
 @media print{.pwd-lights,.pwd-sky,#pwd-top,#pwd-bar,.hero,.nav,.lib-row,.tick,footer.pwd-foot,.btn-row,.week-bar,.toast,#pwd-pal{display:none!important}
   body{background:#fff!important}.wrap{max-width:none;padding:0}.tab{display:none}.tab.active{display:block}
+  .tab.active .page-title{display:block;font-size:34px;line-height:1;margin:0 0 6px}.tab.active .page-sub{display:block;font-size:12px;color:#444;margin:0 0 10px}.print-only{display:block;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#444;margin:0 0 14px}
   .card,.coach,.item,.idea{break-inside:avoid;box-shadow:none!important;background:#fff!important;border:1px solid #ccc!important;backdrop-filter:none!important}
+  .score tr.now td{background:#f3f3f3!important}
   h1,h2,h3,.h-display em,h1 em{color:#000!important;-webkit-text-stroke:0!important}}
 </style>
 
@@ -294,7 +308,9 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
 <!-- ═══ HOME — what a marketing person needs first ═══ -->
 <section class="tab active" id="tab-home">
   <h1 class="h-display page-title">Grow the <em>account</em></h1>
-  <p class="page-sub" id="home-sub">Instagram and Meta ads, refreshed every morning at 7 · this week's posts · what needs you.</p>
+  <p class="page-sub" id="home-sub">The status report, live: what needs you, the numbers, what went out against the plan, the ads, and whether the runs ran — refreshed every morning, nothing ticked by hand. Print it to send it.</p>
+  <div class="print-only" id="home-print-head"></div>
+  <div class="btn-row home-tools"><button type="button" class="btn ghost sm" onclick="window.print()">Print · save as PDF</button></div>
   <div class="card" id="import-card" hidden></div>
   <div class="card" id="home-attn-card"><div class="card-label orchid">Needs you</div><div id="home-attn"></div></div>
   <div class="card"><div class="card-label">Instagram <span class="small muted" id="home-ig-when" style="font-family:var(--body);font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px"></span></div><div class="grid-4" id="home-ig"></div><div id="home-ig-trend" style="margin-top:14px"></div></div>
@@ -302,7 +318,10 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
     <div class="card"><div class="card-label cyan">Today &amp; this week</div><div id="home-week"></div></div>
     <div class="card"><div class="card-label mint">Meta ads · last 7 days</div><div id="home-ads"></div></div>
   </div>
+  <div class="card"><div class="card-label">What went out vs the plan <span class="small muted" id="home-score-when" style="font-family:var(--body);font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px"></span></div><div id="home-score"></div></div>
+  <div class="card"><div class="card-label mint">The ad plan</div><div id="home-adplan"></div></div>
   <div class="card"><div class="card-label">Top posts · last 7 days</div><div id="home-top"></div></div>
+  <div class="card"><div class="card-label cyan">The runs — is it running?</div><div id="home-runs"></div></div>
 </section>
 
 
