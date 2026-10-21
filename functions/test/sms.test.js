@@ -191,6 +191,17 @@ test('the JustCall webhook: only a signed request counts; STOP switches the fami
   const h = await SMS.history(db, DESK, {}); assert.deepEqual(h.events.map((e) => e.kind).sort(), ['optin', 'optout']);
 });
 
+test('a test text goes through the same pipeline and is logged as a test batch', async () => {
+  const db = fakeDb(Object.assign({}, ROSTER, SETTINGS)); const calls = wire();
+  const out = await SMS.testSend(db, DESK, '(561) 555-0199', '');
+  assert.equal(out.ok, true); assert.match(out.id, /^jc_/); assert.deepEqual(out.answer, ['id']);
+  assert.equal(calls[0].body.contact_number, '+15615550199'); assert.match(calls[0].body.body, /^Test from the ProWorld backend/); assert.match(calls[0].body.body, /Reply here with any question\.$/);
+  const b = [...db._docs.values()].find((v) => v.template === 'test'); assert.equal(b.test, true); assert.equal(b.counts.sent, 1);
+  await assert.rejects(SMS.testSend(db, DESK, '123', ''), (e) => e.code === 'phone');
+  wire({ fail: { '+15615550199': { n: 1, status: 401, message: 'Unauthorized' } } });
+  await assert.rejects(SMS.testSend(db, DESK, '5615550199', ''), (e) => e.status === 502 && /Unauthorized/.test(e.message));
+});
+
 test('settings: templates are edited as a list with ids, the sender name and the inbox link are kept sane', async () => {
   const db = fakeDb(SETTINGS);
   const d = await SMS.settings(db); assert.equal(d.senderName, 'ProWorld Academy'); assert.equal(d.templates.length, 3); assert.equal(d.templates[0].id, 'rain'); assert.equal(d.footer, true);

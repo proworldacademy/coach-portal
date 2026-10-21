@@ -271,6 +271,27 @@ async function continueBatch(db, batchId, opts) {
   return Object.assign({ batch: batchId, state, text: b.text, ran }, counts);
 }
 
+/* One text to a staff member's own mobile through the same pipeline — to see the line works and what JustCall answers. Logged as a test batch. */
+async function testSend(db, who, phone, body) {
+  requireTexting(who);
+  const to = e164(phone); if (!to || !validPhone(to)) throw S.err(400, 'phone', 'A mobile in the form (561) 555-0101 is needed.');
+  const ln = await line(db); if (!ln.connected) throw S.err(409, 'keys', 'JustCall is not connected — an owner pastes the API key and secret under Players & billing → Notifications.');
+  if (!ln.from) throw S.err(409, 'from', 'Set the JustCall number to text from (Players & billing → Notifications).');
+  const cfg = await settings(db); const s = await NOTIFY.settings(db, true);
+  const text = (cleanText(body, MAX_BODY) || 'Test from the ProWorld backend: the Messages screen can reach this line.') + (cfg.footer ? '\n' + FOOTER(cfg.senderName) : '');
+  const at = Date.now(); const batchRef = db.collection('smsBatches').doc();
+  try {
+    const r = await justcallSend({ key: s.justcallKey, secret: s.justcallSecret }, ln.from, to, text);
+    await batchRef.set({ at, by: who.email, byName: who.name || who.email, text, template: 'test', state: 'done', test: true, counts: { total: 1, sent: 1, failed: 0, skipped: 0, queued: 0 }, doneAt: Date.now() });
+    await db.collection('smsLog').doc().set({ batch: batchRef.id, at, by: who.email, byName: who.name || who.email, player: '', playerName: 'Test · ' + (who.name || who.email), group: '', program: '', coach: '', phone: to, body: text, status: 'sent', reason: '', attempts: 1, justcallId: r.id, delivery: '', error: '', sentAt: Date.now() });
+    return { ok: true, id: r.id, answer: r.raw && typeof r.raw === 'object' ? Object.keys(r.raw).slice(0, 12) : [] };
+  } catch (e) {
+    await batchRef.set({ at, by: who.email, byName: who.name || who.email, text, template: 'test', state: 'done', test: true, counts: { total: 1, sent: 0, failed: 1, skipped: 0, queued: 0 }, doneAt: Date.now() });
+    await db.collection('smsLog').doc().set({ batch: batchRef.id, at, by: who.email, byName: who.name || who.email, player: '', playerName: 'Test · ' + (who.name || who.email), group: '', program: '', coach: '', phone: to, body: text, status: 'failed', reason: '', attempts: 1, justcallId: '', delivery: '', error: String(e.message || e).slice(0, 200), failedAt: Date.now() });
+    throw S.err(502, 'justcall', 'JustCall did not take it: ' + String(e.message || e).slice(0, 160));
+  }
+}
+
 /* Failed lines go back in the queue for another go (a JustCall hiccup, a number fixed since). */
 async function retryBatch(db, batchId, opts) {
   const logs = (await db.collection('smsLog').where('batch', '==', String(batchId || '')).get()).docs;
@@ -331,4 +352,4 @@ async function webhook(db, headers, body, opts) {
   return out;
 }
 
-module.exports = { settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };
+module.exports = { settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };
