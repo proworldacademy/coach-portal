@@ -12,6 +12,7 @@ const CAL = require('./calendar');
 const CAT = require('./catalog');
 const S = require('./stripe');
 const ROSTER = require('./roster');
+const SMS = require('./sms');
 
 const SITE = 'https://proworld-coach-portal.web.app';
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -75,7 +76,7 @@ async function createMonthlySession(stripe, body) {
   const sched = plan.days >= prog.days.length ? prog.days : days.sort((a, b) => DOWS.indexOf(a) - DOWS.indexOf(b));
   const q = monthlyQuote(prog.id, plan.id, body.start, body._today, body._now);
   const customer = await S.findOrCreateCustomer(stripe, parent);
-  const meta = { kind: 'program', program: prog.id, program_name: prog.name, plan: plan.id, plan_label: plan.label, days: sched.join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, start: q.start, anchor: String(q.anchorUnix), qbo_class: prog.qbo, source: 'proworld-backend', by: parent.by };
+  const meta = { kind: 'program', program: prog.id, program_name: prog.name, plan: plan.id, plan_label: plan.label, days: sched.join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, sms_opt_in: body.smsOptIn === true ? 'yes' : 'no', start: q.start, anchor: String(q.anchorUnix), qbo_class: prog.qbo, source: 'proworld-backend', by: parent.by };
   const description = `${prog.short} · ${plan.label}${sched.length && plan.days < prog.days.length ? ' · ' + sched.join('/') : ''} · ${playerName}`;
   const rules = CAL.RULES.late_policy;
   const submit = `${q.dueCents > 0 ? 'Due today: ' + q.lines[0].label : q.lines[0].label}. ${q.then} If a payment is not received by the ${rules.grace_until_day}th, a $${rules.late_fee_usd} late fee applies; training pauses on the ${rules.suspend_day}th and the spot is released on the ${rules.remove_day}th if still unpaid.`.slice(0, 1190);
@@ -191,7 +192,7 @@ async function createOneTimeSession(stripe, body) {
       trial: { player, parent, playerName, program: trialLine ? trialLine.program : 'soccer', customer: customer.id, by: parent.by } };
   }
   const description = labels.join(' + ') + ' · ' + playerName + (note ? ' · ' + note : '');
-  const meta = { kind: [...kinds].join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, items: items.map((i) => i.lookup + (i.qty > 1 ? 'x' + i.qty : '')).join(','), note, source: 'proworld-backend', by: parent.by };
+  const meta = { kind: [...kinds].join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, sms_opt_in: body.smsOptIn === true ? 'yes' : 'no', items: items.map((i) => i.lookup + (i.qty > 1 ? 'x' + i.qty : '')).join(','), note, source: 'proworld-backend', by: parent.by };
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     customer: customer.id,
@@ -232,7 +233,7 @@ async function sessionStatus(stripe, id, log, ctx) {
   }
   // the roster and the messages — the same minute the family lands here (the nightly sweep repeats it harmlessly)
   if (ctx.db && s.status === 'complete') {
-    try { const rec = await ROSTER.record(ctx.db, stripe, s, sub, { log, mode: ctx.mode }); if (rec) out.roster = { player: rec.player || null, created: !!rec.created, tryout: rec.tryout || null }; }
+    try { const rec = await ROSTER.record(ctx.db, stripe, s, sub, { log, mode: ctx.mode }); if (rec) out.roster = { player: rec.player || null, created: !!rec.created, tryout: rec.tryout || null }; await SMS.consentFromSession(ctx.db, s, rec); }
     catch (e) { out.rosterError = e.message; if (log) log('roster error ' + s.id + ': ' + e.message); }
   }
   if (s.status === 'complete' && s.customer) { try { out.portalUrl = await S.portalUrl(stripe, S.customerId(s.customer), `${SITE}/enroll/done?s=${id}`); } catch (e) { out.portalUrl = null; } }

@@ -194,6 +194,10 @@ service cloud.firestore {
       allow update: if !runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'reply', 'repliedAt', 'repliedBy'])
                     && request.resource.data.state in ['open', 'done'];
     }
+    // Messages (texts to families from the backend): the engine writes the batches and one line per recipient (admin SDK);
+    // staff read them for the Sent history and a player's profile. Consent lives in players/<id>/private/sms, engine-written.
+    match /smsBatches/{id} { allow read: if backend() || portal(); }
+    match /smsLog/{id}     { allow read: if backend() || portal(); }
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }
     match /goals/{id}   { allow read, write: if portal(); }

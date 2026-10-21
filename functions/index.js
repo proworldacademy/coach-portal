@@ -24,6 +24,7 @@ const SWITCH = require('./lib/switch');
 const REMOVE = require('./lib/remove');
 const FEED = require('./lib/feed');
 const FAMILY = require('./lib/family');
+const SMS = require('./lib/sms');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -69,6 +70,13 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       return send(res, 200, out);
     }
     if (route === 'GET /checkout/status') { const stripe = S.stripeFor(key); return send(res, 200, await CHECKOUT.sessionStatus(stripe, String(req.query.s || ''), log, ctx)); }
+
+    if (route === 'POST /sms/webhook') {
+      // JustCall calls this for texts on the academy's line: STOP / START from a family flips their consent, delivery updates land on the log
+      const out = await SMS.webhook(ctx.db, req.headers || {}, req.body || {});
+      logger.info('sms webhook', out);
+      return send(res, 200, { ok: true, did: out.did });
+    }
 
     if (route === 'GET /roster') {
       // the roster feed for the concierge and the morning digest — read-only, one key, set by an owner on the backend
@@ -129,6 +137,15 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         logger.info('record removed', Object.assign({ by: who.email }, out));
         return send(res, 200, Object.assign({ ok: true }, out));
       }
+      // Messages: texts to families from the front desk (owners, administrators, the front desk; coaches read the history of their groups)
+      if (route === 'GET /admin/sms/recipients') { SMS.requireTexting(who); return send(res, 200, { who: { email: who.email, name: who.name, texting: who.texting }, line: await SMS.line(ctx.db), settings: await SMS.settings(ctx.db), players: await SMS.recipients(ctx.db) }); }
+      if (route === 'GET /admin/sms/history') return send(res, 200, Object.assign({ texting: who.texting }, await SMS.history(ctx.db, who, req.query || {})));
+      if (route === 'GET /admin/sms/player') { const pid = S.clean(req.query.id, 60); const r = await SMS.recipient(ctx.db, pid); const h = await SMS.history(ctx.db, who, { player: pid, limit: 20 }); return send(res, 200, { recipient: r, logs: h.logs, batches: h.batches }); }
+      if (route === 'POST /admin/sms/settings') { SMS.requireTexting(who); return send(res, 200, await SMS.saveSettings(ctx.db, b, who.email)); }
+      if (route === 'POST /admin/sms/optin') { SMS.requireTexting(who); const set = await SMS.setOptIn(ctx.db, S.clean(b.player, 60), b.optIn === true, { source: 'staff', by: who.email, phone: b.phone }); logger.info('sms consent', { by: who.email, player: b.player, optIn: set.optIn }); return send(res, 200, { ok: true, consent: set, recipient: await SMS.recipient(ctx.db, S.clean(b.player, 60)) }); }
+      if (route === 'POST /admin/sms/send') { const out = await SMS.send(ctx.db, who, b); logger.info('sms batch', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
+      if (route === 'POST /admin/sms/continue') { SMS.requireTexting(who); return send(res, 200, await SMS.continueBatch(ctx.db, S.clean(b.batch, 60))); }
+      if (route === 'POST /admin/sms/retry') { SMS.requireTexting(who); return send(res, 200, await SMS.retryBatch(ctx.db, S.clean(b.batch, 60))); }
       // ── everything below moves money or a family's plan: owners, administrators and the Billing page only ──
       ADMIN.requireBilling(who);
       if (route === 'POST /admin/portal') { const c = S.clean(b.customer, 60); if (!/^cus_/.test(c)) throw S.err(400, 'customer', 'customer id required'); return send(res, 200, { url: await S.portalUrl(stripe, c, SITE + '/backend') }); }
@@ -166,6 +183,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         const sub = await CHECKOUT.ensureEnrollment(stripe, session, log);
         if (!sub) throw S.err(409, 'not_paid', 'That session is not a paid start-month payment.');
         const rec = await ROSTER.record(ctx.db, stripe, session, sub, { log, mode: ctx.mode });
+        await SMS.consentFromSession(ctx.db, session, rec);
         return send(res, 200, { ok: true, subscription: sub.id, player: rec ? rec.player : null });
       }
       if (route === 'POST /admin/record') {
@@ -175,6 +193,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         let sub = session.mode === 'subscription' && session.subscription && typeof session.subscription === 'object' ? session.subscription : null;
         if (!sub && CHECKOUT.isProgramPayment(session)) sub = await CHECKOUT.findEnrollment(stripe, S.customerId(session.customer), session.id);
         const rec = await ROSTER.record(ctx.db, stripe, session, sub, { log, mode: ctx.mode });
+        await SMS.consentFromSession(ctx.db, session, rec);
         return send(res, 200, { ok: !!rec, player: rec ? rec.player : null, what: rec ? rec.what : null });
       }
       if (route === 'POST /admin/charge') { const out = await ADMIN.chargeOnFile(stripe, b, who); logger.info('charge on file', Object.assign({ by: who.email }, out)); return send(res, 200, out); }

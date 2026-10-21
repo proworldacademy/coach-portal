@@ -19,7 +19,7 @@ async function requireStaff(req) {
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
   if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use the backend.');
-  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, owner: true, admin: true, billing: true };
+  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, firstName: String(decoded.name || '').split(' ')[0], role: 'owner', owner: true, admin: true, billing: true, texting: true };
   const doc = await admin.firestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
   const active = !!(rec && rec.active === true);
@@ -27,8 +27,11 @@ async function requireStaff(req) {
   const hasBackend = pages.includes('backend') || pages.some((p) => /^be-/.test(p));
   if (!active || !(rec.owner === true || hasBackend)) throw S.err(403, 'access', 'Your access does not include the backend.');
   const isAdmin = rec.owner === true || rec.role === 'admin';
-  // money moves only for owners, administrators and people with the Billing page ticked on the Dashboard
-  return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: isAdmin, billing: isAdmin || pages.includes('billing') };
+  const role = String(rec.role || '').toLowerCase();
+  const name = rec.name || decoded.name || email;
+  // money moves only for owners, administrators and people with the Billing page ticked on the Dashboard;
+  // texts to families go out from the same people plus the front desk (role 'desk') — coaches only read the history of their groups
+  return { uid: decoded.uid, email, name, firstName: String(name).split(' ')[0], role, owner: rec.owner === true, admin: isAdmin, billing: isAdmin || pages.includes('billing'), texting: isAdmin || role === 'desk' || pages.includes('billing') };
 }
 function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
 

@@ -219,13 +219,14 @@ test('removing a record the engine filed: the player, the parent details, the le
   const session = await paidProgramSession(stripe);
   await CHECKOUT.sessionStatus(stripe, session.id, null, { db, mode: 'test' });
   assert.ok(db._docs.has('players/as-ava-t') && db._docs.has('players/as-ava-t/private/contact') && db._docs.has('enrollments/' + session.id));
+  assert.equal(db._docs.get('players/as-ava-t/private/sms').optIn, false, 'the form was not ticked: recorded as no');
   const queued = [...db._docs.keys()].filter((k) => k.startsWith('outbox/')); assert.equal(queued.length, 1);
   const sub = stripe._db.subscriptions[0];
   // the plan is live in this Stripe mode: a real family — refused until it is cancelled
   await assert.rejects(REMOVE.removeRecord(db, stripe, 'as-ava-t'), (e) => e.status === 409 && e.code === 'plan');
   sub.status = 'canceled';
   const out = await REMOVE.removeRecord(db, stripe, 'as-ava-t');
-  assert.deepEqual(out, { player: 'as-ava-t', name: 'Ava Torres', private: 1, enrollments: 1, outbox: 1 });
+  assert.deepEqual(out, { player: 'as-ava-t', name: 'Ava Torres', private: 2, enrollments: 1, outbox: 1 });   // the contact card and the texting consent
   assert.ok(!db._docs.has('players/as-ava-t') && !db._docs.has('players/as-ava-t/private/contact') && !db._docs.has('enrollments/' + session.id) && !db._docs.has(queued[0]));
   assert.equal(db._docs.has('settings/notify'), true, 'nothing else is touched');
   // a sandbox record while the engine runs live: Stripe does not know the plan, so there is nothing to check — it goes

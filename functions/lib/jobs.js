@@ -16,6 +16,7 @@ const CAT = require('./catalog');
 const S = require('./stripe');
 const CHECKOUT = require('./checkout');
 const ROSTER = require('./roster');
+const SMS = require('./sms');
 
 const RULES = CAL.RULES;
 const LATE = RULES.late_policy;
@@ -47,6 +48,7 @@ async function convertPaidEnrollments(stripe, today, log, ctx) {
     if (!ctx.db) continue;
     try {
       const rec = await ROSTER.record(ctx.db, stripe, session, sub, { log, mode: ctx.mode });
+      await SMS.consentFromSession(ctx.db, session, rec);
       if (rec && rec.fresh) report.recorded.push({ session: session.id, player: rec.player, what: rec.what });
     } catch (e) { report.errors.push({ session: session.id, player: m.player, error: 'roster: ' + e.message }); log(`roster error ${session.id}: ${e.message}`); }
   }
