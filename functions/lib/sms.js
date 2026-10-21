@@ -344,10 +344,23 @@ function signatureOk(secret, headers, body) {
   const want = crypto.createHmac('sha256', secret).update(payload).digest('hex');
   return given.length === want.length && crypto.timingSafeEqual(Buffer.from(given), Buffer.from(want));
 }
+/* Every call JustCall makes is noted (smsWebhookLog: when, the event, what we did — never a text's body or a full number) so the
+   owners can see from the page that the webhook is wired, and what JustCall actually sends. */
+async function noteWebhook(db, headers, body, out) {
+  try {
+    const d = (body && body.data) || {}; const h = (k) => String((headers || {})[k] || '');
+    await db.collection('smsWebhookLog').doc().set({ at: Date.now(), type: String((body && body.type) || ''), ok: !!out.ok, did: out.did || '', error: out.error || '', id: String(d.id || ''), direction: String(d.direction || ''), delivery: String(d.delivery_status || ''), phoneTail: String(d.contact_number || '').slice(-4), dataKeys: Object.keys(d).slice(0, 20), signed: !!h('x-justcall-signature'), version: h('x-justcall-signature-version') });
+  } catch (e) { /* a note only */ }
+}
 async function webhook(db, headers, body, opts) {
   opts = opts || {};
   const s = await NOTIFY.settings(db, true);
-  if (!signatureOk(s.justcallSecret, headers || {}, body || {})) throw S.err(401, 'signature', 'Not from JustCall.');
+  if (!signatureOk(s.justcallSecret, headers || {}, body || {})) { await noteWebhook(db, headers, body, { ok: false, error: 'signature' }); throw S.err(401, 'signature', 'Not from JustCall.'); }
+  const out = await handleEvent(db, body);
+  await noteWebhook(db, headers, body, Object.assign({ ok: true }, out));
+  return out;
+}
+async function handleEvent(db, body) {
   const type = String(body.type || ''); const d = body.data || {}; const out = { type, did: 'nothing' };
   if (type === 'sms.received' || (type === 'sms.sent_received' && /incoming/i.test(d.direction || ''))) {
     const from = e164(d.contact_number || ''); const text = String((d.sms_info && d.sms_info.body) || d.body || '').trim();
@@ -359,7 +372,7 @@ async function webhook(db, headers, body, opts) {
     await db.collection('smsLog').doc().set({ kind: stop ? 'optout' : 'optin', at: Date.now(), phone: from, body: text.slice(0, 200), players: hits.map((r) => r.id), by: 'family', status: stop ? 'stop' : 'start' });
     return Object.assign(out, { did: (stop ? 'opted out' : 'opted in') + ' ' + hits.length + ' player(s)', players: hits.map((r) => r.id) });
   }
-  if (type === 'sms.status_updated' || type === 'sms.sent') {
+  if (/^sms\.(status_updated|delivery_status_updated|sent|updated)$/.test(type) || (type === 'sms.sent_received' && /outgoing|outbound/i.test(d.direction || ''))) {
     const id = String(d.id || ''); const delivery = String(d.delivery_status || d.status || '');
     if (!id || !delivery) return out;
     const hits = (await db.collection('smsLog').where('justcallId', '==', id).get()).docs;

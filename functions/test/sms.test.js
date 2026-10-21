@@ -189,6 +189,10 @@ test('the JustCall webhook: only a signed request counts; STOP switches the fami
   assert.match((await SMS.webhook(db, headers('sms.status_updated'), upd)).did, /delivered on 1/);
   assert.equal(db._docs.get(line[0]).delivery, 'delivered');
   const h = await SMS.history(db, DESK, {}); assert.deepEqual(h.events.map((e) => e.kind).sort(), ['optin', 'optout']);
+  const notes = [...db._docs.entries()].filter(([k]) => k.startsWith('smsWebhookLog/')).map(([, v]) => v);
+  assert.equal(notes.length, 5, 'every call is noted, the refused one too'); assert.equal(notes[0].ok, false); assert.equal(notes[0].error, 'signature'); assert.equal(notes[1].did, 'opted out 1 player(s)'); assert.equal(notes[1].phoneTail, '0101'); assert.ok(!JSON.stringify(notes).includes('STOP') && !JSON.stringify(notes).includes('+15615550101'), 'no body, no full number');
+  const alt = { webhook_url: url, type: 'sms.delivery_status_updated', data: { id: line[1].justcallId, delivery_status: 'failed' } };
+  assert.match((await SMS.webhook(db, headers('sms.delivery_status_updated'), alt)).did, /failed on 1/);
 });
 
 test('a test text goes through the same pipeline and is logged as a test batch', async () => {
