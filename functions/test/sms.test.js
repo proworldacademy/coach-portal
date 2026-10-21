@@ -66,6 +66,11 @@ test('recipients: the phone we would text (consent → contact card → the Play
   assert.equal(by['u10-cy-l'].phone, '+15615550103'); assert.equal(by['u10-cy-l'].phoneSource, 'switch'); assert.equal(by['u10-cy-l'].parent, 'Dee Lee'); assert.equal(by['u10-cy-l'].optIn, true);
   assert.equal(by['as-dee-m'].phone, '+123'); assert.equal(by['as-dee-m'].valid, false);
   assert.equal(by['soc-eli-r'].programLabel, 'Soccer');
+  // "Requested to OPT OUT" on Monday wins over everything, and the roster opt-in never touches them
+  db._docs.set('players/as-ava-t/private/contact', { guardian: 'Jane Torres', phone: '(561) 555-0101', optOut: true, source: 'monday' });
+  const ava = await SMS.recipient(db, 'as-ava-t'); assert.equal(ava.optIn, false); assert.equal(ava.optOut, true); assert.equal(ava.optInSource, 'optout');
+  db._docs.delete('players/as-ava-t/private/sms');
+  assert.equal((await SMS.optInRoster(db, { email: 'o@x' })).players.includes('as-ava-t'), false);
 });
 
 test('the Play by Point roster matches on the full name, on first name + last initial, or on a lone first name — only when unambiguous', async () => {

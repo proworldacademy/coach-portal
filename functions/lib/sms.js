@@ -148,8 +148,9 @@ async function recipients(db) {
     let phone = '', source = '';
     for (const [v, src] of [[sms.phone, 'consent'], [contact.phone, 'contact'], [s && s.phone, 'switch'], [s && s.phone2, 'switch']]) { const n = e164(v); if (n) { phone = n; source = src; break; } }
     const prog = programOf(p);
+    const optOut = contact.optOut === true;                        // "Requested to OPT OUT" on Monday (the contacts import): never texted, whatever else is on file
     return { id: p.id, name: p.name || p.id, first: firstName(p.name), group: p.group || '', program: prog.id, programLabel: prog.label, coach: p.coach || '', coach2: p.coach2 || '', days: p.enroll && Array.isArray(p.enroll.days) ? p.enroll.days : [], status: p.status || 'active', hold: !!(p.enroll && p.enroll.hold),
-      parent: contact.guardian || (s && s.guardian) || '', phone, phoneSource: source, valid: !!phone && validPhone(phone), optIn: sms.optIn === true, optInAt: sms.at || null, optInSource: sms.source || '', optInBy: sms.by || '' };
+      parent: contact.guardian || (s && s.guardian) || '', phone, phoneSource: source, valid: !!phone && validPhone(phone), optOut, optIn: sms.optIn === true && !optOut, optInAt: optOut ? (sms.at || contact.syncedAt || null) : (sms.at || null), optInSource: optOut ? 'optout' : (sms.source || ''), optInBy: sms.by || '' };
   });
   out.sort((a, b) => a.name.localeCompare(b.name));
   return out;
@@ -170,7 +171,7 @@ async function setOptIn(db, pid, on, opts) {
 /* Owners only: the families who came over from Play by Point gave the academy their mobile for exactly these updates. This marks
    every player with a number and no consent record yet as opted in, source 'playbypoint', with the owner's name and the time. */
 async function optInRoster(db, who) {
-  const rows = (await recipients(db)).filter((r) => r.phone && r.valid && !r.optInAt);
+  const rows = (await recipients(db)).filter((r) => r.phone && r.valid && !r.optInAt && !r.optOut);
   let n = 0; for (const r of rows) { await setOptIn(db, r.id, true, { source: 'playbypoint', by: who.email, phone: r.phone }); n++; }
   return { optedIn: n, players: rows.map((r) => r.id) };
 }
