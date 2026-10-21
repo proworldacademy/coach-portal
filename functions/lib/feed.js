@@ -13,6 +13,7 @@ const ROSTER = require('./roster');
 
 const MIN_KEY = 24;
 const TTL_MS = 60 * 1000;
+const CONTACT_READS = 50;                     // parent records read at once
 let cache = { at: 0, body: null };
 
 function forget() { cache = { at: 0, body: null }; }
@@ -57,12 +58,19 @@ async function roster(db, opts) {
   if (!opts.fresh && cache.body && Date.now() - cache.at < TTL_MS) return cache.body;
   const today = CAL.todayET();
   const snap = await db.collection('players').get();
+  const docs = snap.docs.filter((d) => (d.data() || {}).name);
+  // the parents' records, a few dozen reads at a time: with every family the academy has had on the roster (the Monday
+  // import), one read after another would take longer than the concierge waits
+  const contacts = new Map();
+  for (let i = 0; i < docs.length; i += CONTACT_READS) {
+    await Promise.all(docs.slice(i, i + CONTACT_READS).map(async (d) => {
+      try { const cs = await db.doc('players/' + d.id + '/private/contact').get(); contacts.set(d.id, cs.exists ? (cs.data() || {}) : {}); } catch (e) { contacts.set(d.id, {}); }
+    }));
+  }
   const players = [];
-  for (const d of snap.docs) {
+  for (const d of docs) {
     const x = d.data() || {};
-    if (!x.name) continue;
-    let c = {};
-    try { const cs = await db.doc('players/' + d.id + '/private/contact').get(); c = cs.exists ? (cs.data() || {}) : {}; } catch (e) { c = {}; }
+    const c = contacts.get(d.id) || {};
     const { first, last } = ROSTER.splitName(x.name);
     players.push({
       id: d.id, name: x.name, first, last, shortName: ROSTER.shortName(x.name),
