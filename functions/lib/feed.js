@@ -70,12 +70,13 @@ async function roster(db, opts) {
       group: x.group || '', groupLabel: ROSTER.GROUP_LABEL[x.group] || '', coach: x.coach || '', coach2: x.coach2 || '',
       sport: x.sport || (x.group ? 'tennis' : ''), source: x.source || '', since: x.createdAt || null,
       enroll: programOf(x),
-      parent: { name: c.guardian || '', phone: c.phone || '', email: c.email || '' }
+      parent: { name: c.guardian || '', phone: c.phone || '', email: c.email || '', phone2: c.phone2 || '', email2: c.email2 || '', optOut: !!c.optOut }
     });
   }
   players.sort((a, b) => a.name.localeCompare(b.name));
-  // the concierge's shape: one row per player, the parent's details as named columns
-  const rows = players.map((p) => ({ id: p.id, name: p.name, group: p.statusWord, columns: { 'Parent': p.parent.name, 'Phone': p.parent.phone, 'Email': p.parent.email, 'Program': p.enroll.programName || p.groupLabel, 'Coach': p.coach } }));
+  // the concierge's shape: one row per player, the parent's details as named columns; a family that asked not to be
+  // contacted keeps Monday's words on its row, which the concierge reads as an opt-out
+  const rows = players.map((p) => ({ id: p.id, name: p.name, group: p.statusWord + (p.parent.optOut ? ' · Requested to OPT OUT' : ''), columns: { 'Parent': p.parent.name, 'Phone': p.parent.phone, 'Email': p.parent.email, 'Phone 2': p.parent.phone2, 'Email 2': p.parent.email2, 'Program': p.enroll.programName || p.groupLabel, 'Coach': p.coach } }));
   const counts = { players: players.length, active: players.filter((p) => p.statusWord === 'Active').length, upcoming: players.filter((p) => p.statusWord === 'New Players').length, away: players.filter((p) => p.statusWord === 'Away').length, finished: players.filter((p) => p.statusWord === 'Finished').length, withPhone: players.filter((p) => p.parent.phone).length, withEmail: players.filter((p) => p.parent.email).length };
   const body = { at: new Date().toISOString(), today, source: 'proworld-backend', counts, players, rows };
   cache = { at: Date.now(), body };
