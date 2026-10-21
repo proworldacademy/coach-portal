@@ -4,56 +4,52 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="color-scheme" content="dark">
 <title>PROWORLD</title>
 <link rel="icon" href="data:,">
 <script>if (location.hostname === "proworldacademy.github.io") location.replace("https://proworld-coach-portal.web.app/p" + location.search + location.hash);</script>
 <link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <script src="/shared/pages.js"></script>
 <script src="/shared/pwauth.js"></script>
-<script src="/shared/menu.js"></script>
+<script src="/shared/design.js"></script>
 <style>
-/* PROWORLD — the page viewer: the team's reports, plans and prototypes, opened on this site with the PROWORLD sign-in.
-   Each page is a locked file (p/data/<file>.bin); its key comes from the database only for someone who holds the page. */
-:root{--ink:#000;--panel:#0e0e0e;--line:#222;--text:#fff;--muted:#8f9288;--soft:#c9cbc2;--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;--cyan:#A9F3F7;
---display:"Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;--body:"Aeonik Pro","Helvetica Neue",Arial,sans-serif;color-scheme:dark}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#000;--text:#fff}}
-:root[data-theme="dark"]{--ink:#000;--text:#fff}
-*{box-sizing:border-box}
+/* PROWORLD — the page viewer in the redesign (C4 · Round 2, skin "studio"): the team's reports, plans and prototypes, opened
+   on this site with the PROWORLD sign-in. Each page is a locked file (p/data/<file>.bin); its key comes from the database
+   only for someone who holds the page. The chrome is the design's (top bar, a slim title line, the page in a glass frame);
+   the page itself runs untouched in a sandboxed frame. */
 html,body{height:100%}
-body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
-.pv-bar{display:flex;align-items:center;gap:10px;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));height:42px;background:var(--panel);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--soft);flex:0 0 auto;min-width:0}
-.pv-bar a.back{color:var(--lime);text-decoration:none;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:10.5px;white-space:nowrap}
-.pv-bar a.back:hover{text-decoration:underline}
-.pv-bar .nm{color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.pv-bar .st{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;border:1px solid #3a3a3a;color:var(--muted);padding:2px 6px;border-radius:3px;white-space:nowrap}
-.pv-bar .st.proto{color:var(--cyan);border-color:#234a4d}
-.pv-bar .st.plan{color:var(--orchid);border-color:#4d2a4e}
-.pv-bar .st.report,.pv-bar .st.page{color:var(--mint);border-color:#284d36}
-.pv-bar .sp{flex:1}
-.pv-bar .who{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-#pv{flex:1 1 auto;width:100%;border:0;background:#fff;display:block}
+body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overflow:hidden}
+.wrap{max-width:none;width:100%;flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+.pv-line{display:flex;align-items:center;gap:12px;padding:2px 2px 12px;min-width:0;flex:none}
+.pv-line h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(26px,3.4vw,40px);line-height:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pv-line .sp{flex:1}
+.pv-line .who{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pv-line .pill.proto{background:var(--cyan)}.pv-line .pill.plan{background:var(--orchid)}.pv-line .pill.report,.pv-line .pill.page{background:var(--mint)}.pv-line .pill.archive{background:transparent;border:1px solid var(--line-2);color:var(--muted)}
+#pv{flex:1 1 auto;width:100%;min-height:0;border:1px solid var(--line);border-radius:18px;background:#fff;display:block;box-shadow:0 14px 34px -22px rgba(0,0,0,.28)}
 #pv[hidden]{display:none}
 .pv-msg{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .pv-msg[hidden]{display:none}
-.pv-msg .card{width:100%;max-width:520px;background:var(--panel);border:1px solid #272727;border-top:3px solid var(--lime);border-radius:8px;padding:28px}
-.pv-msg h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:34px;line-height:.95;margin:0 0 12px}
-.pv-msg h1 em{font-style:inherit;color:var(--lime)}
-.pv-msg p{color:var(--soft);font-size:14px;line-height:1.55;margin:0 0 12px}
-.pv-msg a{color:var(--lime)}
-.spin{width:16px;height:16px;border:2px solid #333;border-top-color:var(--lime);border-radius:50%;animation:pvspin .8s linear infinite;display:inline-block;vertical-align:-3px;margin-right:8px}
+.pv-msg .card{width:100%;max-width:520px;padding:28px 30px;background:var(--card-2)}
+.pv-msg h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:40px;line-height:.92;margin:0 0 12px}
+.pv-msg h1 em{font-style:inherit;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
+.pv-msg p{color:var(--ink-2);font-size:14px;line-height:1.55;margin:0 0 12px}
+.pv-msg a{color:var(--ink);font-weight:700;text-decoration:underline;text-decoration-color:var(--lime);text-decoration-thickness:2px;text-underline-offset:3px}
+.spin{width:16px;height:16px;border:2px solid rgba(0,0,0,.15);border-top-color:var(--ink);border-radius:50%;animation:pvspin .8s linear infinite;display:inline-block;vertical-align:-3px;margin-right:8px}
 @keyframes pvspin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-@media(max-width:640px){.pv-bar .who{display:none}}
+@media(max-width:640px){.pv-line .who{display:none}.pv-line{padding-bottom:8px}}
 </style>
 </head>
-<body>
-<div class="pv-bar"><a class="back" href="/">← Dashboard</a><span class="nm" id="nm">PROWORLD</span><span class="st" id="st" hidden></span><span class="sp"></span><span class="who" id="who"></span></div>
-<div class="pv-msg" id="msg"><div class="card"><h1>One <em>moment</em></h1><p><span class="spin"></span>Opening the page…</p></div></div>
-<iframe id="pv" title="PROWORLD page" hidden sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads allow-forms allow-modals" referrerpolicy="no-referrer"></iframe>
+<body class="skin-studio sky-short">
+<div class="wrap">
+  <div class="pwd-top" id="pwd-top"></div>
+  <div class="pv-line"><h1 id="nm">PROWORLD</h1><span class="pill" id="st" hidden></span><span class="sp"></span><span class="who" id="who"></span></div>
+  <div class="pv-msg" id="msg"><div class="card"><h1>One <em>moment</em></h1><p><span class="spin"></span>Opening the page…</p></div></div>
+  <iframe id="pv" title="PROWORLD page" hidden sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads allow-forms allow-modals" referrerpolicy="no-referrer"></iframe>
+</div>
 <script>
 (function () {
   "use strict";
@@ -62,6 +58,7 @@ body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);di
   const P = window.PW_PAGES || { PAGES: [], STATUS_LABEL: {} };
   const id = new URLSearchParams(location.search).get("id") || "";
   const page = (P.PAGES || []).find((p) => p.id === id && p.file);
+  window.PWDesign.mount({ skin: "studio", active: id || "/p", title: page ? page.name : "PROWORLD" });
   function show(title, html, state) {
     $("pv").hidden = true; $("pv").removeAttribute("srcdoc");
     const m = $("msg"); m.hidden = false; m.innerHTML = '<div class="card"><h1>' + title + "</h1>" + html + "</div>";
@@ -70,7 +67,7 @@ body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);di
   if (!page) { show("Page <em>not found</em>", "<p>There is no page called “" + esc(id) + "” on the PROWORLD site.</p><p><a href=\"/\">Open the Dashboard →</a></p>", "missing"); return; }
   document.title = page.name + " · PROWORLD";
   $("nm").textContent = page.name; $("who").textContent = page.owner || "";
-  const st = $("st"); st.textContent = (P.STATUS_LABEL || {})[page.status] || page.status || ""; st.className = "st " + (page.status || ""); st.hidden = !st.textContent;
+  const st = $("st"); st.textContent = (P.STATUS_LABEL || {})[page.status] || page.status || ""; st.className = "pill " + (page.status || ""); st.hidden = !st.textContent;
 
   const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
   // The page runs in a sandbox with no access to this site or your sign-in. "about:srcdoc" as its base keeps its own
