@@ -171,7 +171,9 @@ function matchRow(row, roster) {
   if (same.length > 1) { const best = same.slice().sort((a, b) => rank(a) - rank(b)); return { player: best[0], how: 'name', note: 'more than one ' + row.name + ' on the roster' }; }
   const { first, last } = ROSTER.splitName(row.name);
   if (first && last) {
-    const near = roster.byShort[ROSTER.fold(first) + ' ' + ROSTER.fold(last).charAt(0)] || [];
+    /* A roster record that carries only an initial for the last name ("Mireille D.") is the same player as the board's
+       "Mireille Daley". A record with a full, different last name is somebody else, whatever the initial. */
+    const near = (roster.byShort[ROSTER.fold(first) + ' ' + ROSTER.fold(last).charAt(0)] || []).filter((p) => ROSTER.fold(ROSTER.splitName(p.name).last).length <= 1);
     if (near.length === 1) return { player: near[0], how: 'short', note: row.name + ' ↔ ' + near[0].name + ' (please check)' };
     if (near.length > 1) return { player: null, how: 'ambiguous', note: row.name + ' could be ' + near.map((p) => p.name).join(' or ') };
   }
