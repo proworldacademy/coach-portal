@@ -25,12 +25,16 @@ function fakeDb(seed) {
       collection: (sub) => colRef(path + '/' + sub)
     };
   }
-  function colRef(path, filters) {
+  const OPS = { '==': (a, b) => a === b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b, '>': (a, b) => a > b, '<': (a, b) => a < b, '!=': (a, b) => a !== b, 'in': (a, b) => Array.isArray(b) && b.includes(a) };
+  const matches = (k, filters) => filters.every((f) => { const v = getPath(docs.get(k), f.field); return v !== undefined && OPS[f.op](v, f.value); });
+  function colRef(path, filters, group) {
     filters = filters || [];
-    const rows = () => [...docs.keys()].filter((k) => k.startsWith(path + '/') && k.slice(path.length + 1).indexOf('/') < 0).filter((k) => filters.every((f) => getPath(docs.get(k), f.field) === f.value)).map(snapOf);
+    // a collection: the documents one level under `path`; a collection group: every document whose parent collection is called `path`
+    const rows = () => [...docs.keys()].filter((k) => group ? k.split('/').slice(-2, -1)[0] === path : (k.startsWith(path + '/') && k.slice(path.length + 1).indexOf('/') < 0)).filter((k) => matches(k, filters)).map(snapOf);
     return {
       doc: (id) => docRef(path + '/' + (id || ('auto' + String(seq++).padStart(4, '0')))),
-      where: (field, op, value) => { if (op !== '==') throw new Error('fake db: only == is supported'); return colRef(path, filters.concat([{ field, value }])); },
+      where: (field, op, value) => { if (!OPS[op]) throw new Error('fake db: operator not supported: ' + op); return colRef(path, filters.concat([{ field, op, value }]), group); },
+      orderBy: () => colRef(path, filters, group), limit: () => colRef(path, filters, group),
       get: async () => { const d = rows(); return { docs: d, size: d.length, empty: !d.length, forEach: (fn) => d.forEach(fn) }; },
       add: async (data) => { const r = docRef(path + '/auto' + String(seq++).padStart(4, '0')); await r.set(data); return r; }
     };
@@ -39,6 +43,7 @@ function fakeDb(seed) {
     _docs: docs, _writes: writes,
     doc: (path) => docRef(path),
     collection: (path) => colRef(path),
+    collectionGroup: (name) => colRef(name, [], true),
     batch: () => { const ops = []; return { set: (ref, data, opts) => { ops.push(() => apply(ref.path, data, opts)); }, update: (ref, data) => { ops.push(() => apply(ref.path, data, { merge: true })); }, delete: (ref) => { ops.push(() => remove(ref.path)); }, commit: async () => { ops.forEach((f) => f()); } }; }
   };
   return db;

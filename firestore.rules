@@ -187,6 +187,13 @@ service cloud.firestore {
     match /settings/{doc} {
       allow read, write: if !runs() && owner();
     }
+    // familyRequests: what a parent asked the front desk for from the family portal. The engine files them (admin SDK);
+    // the front desk reads them and closes them with a short reply the family sees. Nobody creates or deletes one from here.
+    match /familyRequests/{id} {
+      allow read: if backend();
+      allow update: if !runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'reply', 'repliedAt', 'repliedBy'])
+                    && request.resource.data.state in ['open', 'done'];
+    }
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }
     match /goals/{id}   { allow read, write: if portal(); }

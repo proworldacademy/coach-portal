@@ -21,6 +21,7 @@
       "functions/**",
       "README.md",
       "firestore.rules",
+      "firestore.indexes.json",
       "ai-worker.js"
     ],
     "cleanUrls": true,
