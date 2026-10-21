@@ -242,6 +242,11 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
 .spark circle{transform:none;animation:none;fill:var(--ink)}
 .pending{color:var(--muted);font-size:13px;line-height:1.55}
 .fhead{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+/* print: the open tab only — the coach assignments on paper for the photographer and the coaches */
+@media print{.pwd-lights,.pwd-sky,#pwd-top,#pwd-bar,.hero,.nav,.lib-row,.tick,footer.pwd-foot,.btn-row,.week-bar,.toast,#pwd-pal{display:none!important}
+  body{background:#fff!important}.wrap{max-width:none;padding:0}.tab{display:none}.tab.active{display:block}
+  .card,.coach,.item,.idea{break-inside:avoid;box-shadow:none!important;background:#fff!important;border:1px solid #ccc!important;backdrop-filter:none!important}
+  h1,h2,h3,.h-display em,h1 em{color:#000!important;-webkit-text-stroke:0!important}}
 </style>
 
 <div class="wrap">
@@ -257,15 +262,15 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
 
 <nav class="nav" id="nav" aria-label="Marketing">
   <button class="tab-btn active" data-tab="home">Home</button>
+  <button class="tab-btn" data-tab="assignments">Coach assignments</button>
   <button class="tab-btn" data-tab="fortnight">Plan</button>
+  <button class="tab-btn" data-tab="workflow">Workflow</button>
   <button class="tab-btn" data-tab="ads">Ads</button>
   <button class="tab-btn" data-tab="reports">Reports</button>
   <button type="button" class="lib-btn" id="lib-btn" aria-expanded="false" aria-controls="lib-row">Library <span aria-hidden="true">▾</span></button>
 </nav>
 <nav class="nav lib-row" id="lib-row" hidden aria-label="Library">
-  <button class="tab-btn" data-tab="assignments">Coach Assignments</button>
   <button class="tab-btn" data-tab="database">Content Database &amp; Brief</button>
-  <button class="tab-btn" data-tab="workflow">Workflow</button>
   <button class="tab-btn" data-tab="archive">Content Archive</button>
   <button class="tab-btn" data-tab="kpi">KPI History</button>
   <button class="tab-btn" data-tab="calendar">Calendar</button>
@@ -351,6 +356,7 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
       <button class="btn" onclick="genAssignments()">⚡ Generate assignments</button>
       <button class="btn mint" id="approve-btn" onclick="approveWeek()">✓ Approve &amp; lock</button>
       <button class="btn ghost" onclick="downloadPDF()">PDF brief</button>
+      <button class="btn ghost" onclick="window.print()">Print this week</button>
       <button class="btn ghost cyan" onclick="copyBrief()">Copy as text for Slack</button>
     </div>
     <div class="sync-note" id="recipe-note"></div>
