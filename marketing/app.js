@@ -105,7 +105,25 @@
     // the strategy brief the engine runs follow (edited on the Content Database tab)
     strategy: { focus: [], mix: [], avoid: [], facts: [] },
     // reports posted by the Monday review and the Sunday engine, keyed by "<date>_<by>"
-    reports: {}
+    reports: {},
+    // ── the organism (Oct 2026): nobody ticks anything by hand.
+    // delivery — written every morning by the numbers run: for every item of every week, whether its post went out
+    //   (matched to the real Instagram post, with its numbers) or is missing; for every planned campaign, whether it is live.
+    //   posts: { "<sunday>|<item id>": { status: posted|late|missing, postedAt, postId, title, views, saves, shares, likes, follows, matchedBy, note, by, at } }
+    //   ads:   { "<campaign id>": { status: live|missing|ended, campaign, spend7, leads7, cpl7, firstSeen, note, by, at } }
+    //   extras: [ { date, title, format, coach, note } ]   posts that went out without a plan item (they still count in the archive)
+    delivery: { posts: {}, ads: {}, extras: [], checkedAt: null, by: null },
+    // adPlan — the ads mirror the posts: one campaign per program or event, with its window, phases and creatives;
+    //   built and refreshed by the Sunday engine from the calendar, the competitors' timing (adWatch) and our own cost per lead
+    //   campaigns: [ { id, name, program, event, window: { start, end }, phases: [ { name, start, end, type, offer } ], type,
+    //                 audience, creatives: [ { id, title, format, from, hook, headline, primary, cta, status } ], budgetHint, status, match, note, by, at } ]
+    adPlan: { campaigns: [], updatedAt: null, by: null },
+    // calendar — the season: camps, breaks, tournaments, enrollment windows; when the posts and the ads for each should start
+    //   events: [ { id, name, kind: camp|break|tournament|enrollment|holiday, start, end, postsFrom, adsFrom, note, by } ]
+    calendar: { events: [], updatedAt: null, by: null },
+    // adWatch — what the competitors are advertising, read every Monday with AdWhispr: newest first, keep 12
+    //   [ { date, by, rows: [ { brand, handle, active, newestStart, type, offer, program, format, weeksBefore, note } ] } ]
+    adWatch: []
   };
   const S = {};
   // ── Memory. The record lives in the artifact's shared database (db capability): one document per
@@ -307,10 +325,10 @@
     $("ov-season-sub").textContent = season.theme.includes(" + ") ? season.theme.split(" + ")[1] + " · " + season.when : season.when;
     const d = thisWeek(), nxt = (S.weeks || {})[shiftWS(wsOf(new Date()), 1)];
     if (d) {
-      const tot = d.coaches.reduce((s, c) => s + c.ideas.length, 0), done = d.coaches.reduce((s, c) => s + c.ideas.filter((i) => i.delivered).length, 0);
-      $("ov-videos").textContent = done + "/" + tot; $("ov-videos-sub").textContent = "Delivered · week of " + d.weekDates + (d.locked ? " · approved" : " · draft");
-      const pt = (d.production || []).length, pd = (d.production || []).filter((i) => i.delivered).length;
-      $("ov-prod").textContent = pd + "/" + pt; $("ov-prod-sub").textContent = "Done · ad video + carousels" + (nxt ? " · next week " + (nxt.locked ? "approved" : "drafted") : "");
+      const ws = d.weekStart, tot = d.coaches.reduce((s, c) => s + c.ideas.length, 0), done = d.coaches.reduce((s, c) => s + c.ideas.filter((i) => isDone(ws, i)).length, 0), t = weekTally(d);
+      $("ov-videos").textContent = done + "/" + tot; $("ov-videos-sub").textContent = "Posted · week of " + d.weekDates + (t.missing ? " · " + t.missing + " missing" : "") + (d.locked ? " · approved" : " · draft");
+      const pt = (d.production || []).length, pd = (d.production || []).filter((i) => isDone(ws, i)).length;
+      $("ov-prod").textContent = pd + "/" + pt; $("ov-prod-sub").textContent = "Posted · ad video + carousels" + (nxt ? " · next week " + (nxt.locked ? "approved" : "drafted") : "");
     } else { $("ov-videos").textContent = "—"; $("ov-videos-sub").textContent = "No brief for this week yet — Coach Assignments"; $("ov-prod").textContent = "—"; $("ov-prod-sub").textContent = nxt ? "Next week is " + (nxt.locked ? "approved" : "drafted") : "Ad video + carousels"; }
     $("priorities").innerHTML = S.priorities.map((p, i) => '<div class="pri"><div class="pri-n">' + (i + 1) + '</div><div><div class="pri-t">' + esc(p.t) + '</div><div class="pri-d">' + esc(p.d) + '</div></div></div>').join("");
     const mix = (S.pillars && S.pillars.length ? S.pillars.map((p) => [p.name, p.share]) : PILLAR_MIX);
@@ -378,8 +396,11 @@
     for (let d = 1; d <= last.getDate(); d++) {
       const dt = new Date(y, m, d), dow = dt.getDay();
       const isToday = dt.toDateString() === today.toDateString();
-      const wk = wsOf(dt), w = (S.weeks || {})[wk];
-      html += '<div class="cal-day' + (isToday ? " today" : "") + (w ? (w.locked ? " has-brief" : " has-draft") : "") + '" role="button" tabindex="0" title="Open the week of ' + esc(weekLabel(wk)) + '" onclick="openWeek(\'' + wk + '\')" onkeydown="if(event.key===\'Enter\'){this.click()}"><div class="cal-n">' + d + '</div><div class="cal-tag">' + calTags[dow] + '</div>' + (w ? '<div class="cal-tag ' + (w.locked ? "approved" : "draft") + '">' + (w.locked ? "✓ Brief approved" : "Draft brief") + "</div>" : "") + '</div>';
+      const wk = wsOf(dt), w = (S.weeks || {})[wk], k = isoLocal(dt);
+      const evs = ((S.calendar && S.calendar.events) || []).filter((e) => e.start && e.start <= k && (e.end || e.start) >= k);
+      const ads = ((S.adPlan && S.adPlan.campaigns) || []).filter((c) => c.window && c.window.start && c.window.start <= k && (c.window.end || c.window.start) >= k && c.status !== "ended");
+      const adsFrom = ((S.calendar && S.calendar.events) || []).filter((e) => e.adsFrom === k);
+      html += '<div class="cal-day' + (isToday ? " today" : "") + (w ? (w.locked ? " has-brief" : " has-draft") : "") + (evs.length ? " has-event" : "") + '" role="button" tabindex="0" title="Open the week of ' + esc(weekLabel(wk)) + (evs.length ? " · " + esc(evs.map((e) => e.name).join(", ")) : "") + (ads.length ? " · ads: " + esc(ads.map((c) => c.name).join(", ")) : "") + '" onclick="openWeek(\'' + wk + '\')" onkeydown="if(event.key===\'Enter\'){this.click()}"><div class="cal-n">' + d + '</div><div class="cal-tag">' + calTags[dow] + '</div>' + (w ? '<div class="cal-tag ' + (w.locked ? "approved" : "draft") + '">' + (w.locked ? "✓ Brief approved" : "Draft brief") + "</div>" : "") + evs.map((e) => '<div class="cal-tag event">' + esc(e.name) + "</div>").join("") + adsFrom.map((e) => '<div class="cal-tag ads">Ads start · ' + esc(e.name) + "</div>").join("") + (ads.length ? '<div class="cal-tag ads">' + ads.length + " ad" + (ads.length > 1 ? "s" : "") + " on</div>" : "") + '</div>';
     }
     $("cal-days").innerHTML = html;
   }
@@ -473,6 +494,47 @@
   }
   const isAdItem = (p) => /^ad\b|^ad /i.test(String(p.format || "")) || /\bad video\b/i.test(String(p.format || ""));
   const isPostItem = (p) => /Carousel|Static/i.test(String(p.format || ""));
+
+  // ── The organism: what actually went out. The morning numbers run matches every Instagram post and every live
+  // campaign to its plan item and writes S.delivery; the page only reads it. A tick by hand still counts (an override),
+  // and an item whose day has passed with nothing matched shows as missing even before the run has written a line.
+  const dkey = (ws, id) => ws + "|" + id;
+  const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+  function dayDate(ws, day) { const i = POST_DAYS.indexOf(day); if (i < 0) return null; const d = wsDate(ws); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i + 1); return d; }
+  function deliveryOf(ws, it) { const D = S.delivery && S.delivery.posts; return (D && it && D[dkey(ws, it.id)]) || null; }
+  // state of one planned item: posted | late | missing | today | pending | spare (+ the ledger entry when there is one)
+  function itemState(ws, it) {
+    const e = deliveryOf(ws, it), auto = !!(e && (e.status === "posted" || e.status === "late"));
+    if (it.delivered || auto) return { st: auto && e.status === "late" ? "late" : "posted", e, hand: !auto };
+    const d = dayDate(ws, it.day);
+    if (!d) return { st: "spare", e };
+    if (e && e.status === "missing") return { st: "missing", e };
+    const t0 = startOfToday();
+    if (d.getTime() === t0.getTime()) return { st: "today", e };
+    if (d < t0) return { st: "missing", e };
+    return { st: "pending", e };
+  }
+  const isDone = (ws, it) => { const s = itemState(ws, it).st; return s === "posted" || s === "late"; };
+  function weekTally(w) {
+    const ws = w.weekStart, all = []; (w.coaches || []).forEach((c) => (c.ideas || []).forEach((i) => all.push(i))); (w.production || []).forEach((p) => all.push(p));
+    const t = { total: 0, posted: 0, missing: 0, today: 0, pending: 0, spare: 0, missingItems: [] };
+    all.forEach((it) => { const s = itemState(ws, it).st; if (s === "spare") { t.spare++; return; } t.total++; if (s === "posted" || s === "late") t.posted++; else if (s === "missing") { t.missing++; t.missingItems.push(it); } else if (s === "today") t.today++; else t.pending++; });
+    return t;
+  }
+  const fmtDay = (iso) => { const d = new Date(String(iso).slice(0, 10) + "T12:00:00"); return isNaN(d) ? "" : SM[d.getMonth()] + " " + d.getDate(); };
+  // the chip shown next to an item
+  function stateChip(ws, it) {
+    const r = itemState(ws, it), e = r.e;
+    const nums = e && e.views != null && e.views !== "" ? " · " + Number(e.views).toLocaleString("en-US") + " views" : "";
+    const when = e && e.postedAt ? " " + fmtDay(e.postedAt) : "";
+    const tip = e ? esc((e.title || "") + (e.note ? " — " + e.note : "")) : "";
+    if (r.st === "posted") return '<span class="st done" title="' + (r.hand ? "Ticked by hand" : tip) + '">✓ Posted' + (r.hand ? " · by hand" : when) + nums + "</span>";
+    if (r.st === "late") return '<span class="st done" title="' + tip + '">✓ Posted late' + when + nums + "</span>";
+    if (r.st === "missing") return '<span class="st miss" title="' + (e && e.note ? esc(e.note) : "The day passed and no post matched this") + '">✕ Missing</span>';
+    if (r.st === "today") return '<span class="st today">Today</span>';
+    if (r.st === "spare") return '<span class="st">Spare</span>';
+    return "";
+  }
   function recipeLine() { const r = recipe(); return r.coachVideos + " coach video" + (r.coachVideos === 1 ? "" : "s") + " (" + (r.always.length ? r.always.join(" + ") + " every week, " : "") + (r.coachVideos - r.always.length) + " in rotation) · " + r.adVideos + " ad video" + (r.adVideos === 1 ? "" : "s") + " · " + r.production + " carousel" + (r.production === 1 ? "" : "s") + "/statics = " + (r.coachVideos + r.adVideos + r.production) + " a week (7 posts + " + Math.max(0, r.coachVideos + r.adVideos + r.production - 7) + " spare)"; }
   window.editRecipe = async function () {
     const r = recipe();
@@ -529,13 +591,14 @@
       : '<span class="tag cyan" style="margin:0 8px 0 0">Draft</span>Week of ' + esc(d.weekDates) + " — swap, edit or skip, then approve to lock these ideas out of future weeks.";
     let html = "";
     if (!d.locked && d.warnings && d.warnings.length) html += '<div class="notice warn">Idea bank running low for: ' + esc(d.warnings.join(", ")) + '. <button class="btn orchid xs" onclick="document.getElementById(\'add-idea-section\').scrollIntoView({behavior:\'smooth\'})">Add ideas →</button></div>';
-    const total = d.coaches.reduce((s, c) => s + c.ideas.length, 0), delivered = d.coaches.reduce((s, c) => s + c.ideas.filter((i) => i.delivered).length, 0);
+    const ws = d.weekStart || curWS, tally = weekTally(d), vidTotal = d.coaches.reduce((s, c) => s + c.ideas.length, 0), vidDone = d.coaches.reduce((s, c) => s + c.ideas.filter((i) => isDone(ws, i)).length, 0);
     html += '<div class="card"><div class="card-label">Week of ' + esc(d.weekDates) + (d.theme ? " · " + esc(d.theme) : "") + '</div>';
-    html += '<div class="progress"><div class="bar"><i style="width:' + (total ? Math.round(delivered / total * 100) : 0) + '%"></i></div><div class="pillar-pct">' + delivered + "/" + total + ' delivered</div></div><div class="grid-3">';
+    html += '<div class="progress"><div class="bar"><i style="width:' + (vidTotal ? Math.round(vidDone / vidTotal * 100) : 0) + '%"></i></div><div class="pillar-pct">' + vidDone + "/" + vidTotal + ' posted</div>' + (tally.missing ? '<span class="st miss">' + tally.missing + " missing</span>" : "") + '<span class="small muted">checked every morning against Instagram — nothing to tick by hand</span></div><div class="grid-3">';
     d.coaches.forEach((c, ci) => {
-      html += '<div class="coach"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><div class="coach-name">' + esc(c.name) + '</div><div class="coach-role">' + esc(c.role) + '</div></div><div class="coach-count">' + c.ideas.filter((i) => i.delivered).length + "/" + c.ideas.length + '</div></div>';
+      html += '<div class="coach"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><div class="coach-name">' + esc(c.name) + '</div><div class="coach-role">' + esc(c.role) + '</div></div><div class="coach-count">' + c.ideas.filter((i) => isDone(ws, i)).length + "/" + c.ideas.length + '</div></div>';
       c.ideas.forEach((idea, ii) => {
-        html += '<div class="item' + (idea.delivered ? " done" : "") + '"><div class="chk' + (idea.delivered ? " done" : "") + '" role="checkbox" aria-checked="' + !!idea.delivered + '" tabindex="0" style="width:24px;height:24px;flex-shrink:0" onclick="toggleDelivered(' + ci + "," + ii + ')">' + (idea.delivered ? "✓" : "") + '</div><div class="item-body"><div class="item-title">' + esc(idea.title) + '</div><div class="item-meta">' + esc(idea.format) + " · Post " + esc(idea.day) + '</div><div class="item-desc">' + esc(idea.desc) + '</div>' + (idea.hook ? '<div class="item-hook">' + esc(idea.hook) + '</div>' : "") +
+        const done = isDone(ws, idea), st = itemState(ws, idea).st;
+        html += '<div class="item' + (done ? " done" : "") + (st === "missing" ? " miss" : "") + '"><div class="chk' + (done ? " done" : "") + '" role="checkbox" aria-checked="' + done + '" tabindex="0" title="' + (done ? "Posted" : "Mark posted by hand") + '" style="width:24px;height:24px;flex-shrink:0" onclick="toggleDelivered(' + ci + "," + ii + ')">' + (done ? "✓" : "") + '</div><div class="item-body"><div class="item-title">' + esc(idea.title) + '</div><div class="item-meta">' + esc(idea.format) + " · Post " + esc(idea.day) + '</div> ' + stateChip(ws, idea) + '<div class="item-desc">' + esc(idea.desc) + '</div>' + (idea.hook ? '<div class="item-hook">' + esc(idea.hook) + '</div>' : "") +
           '<div class="item-actions"><button class="btn ghost xs" onclick="swapIdea(' + ci + "," + ii + ')">↻ Swap</button><button class="btn ghost xs" onclick="editIdea(' + ci + "," + ii + ')">✎ Edit</button><button class="btn ghost xs orchid" onclick="skipIdea(' + ci + "," + ii + ')">✕ Skip</button></div></div></div>';
       });
       html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><button class="btn ghost xs" onclick="addExtraIdea(' + ci + ')">+ Add another for ' + esc(c.name) + '</button></div></div>';
@@ -573,11 +636,12 @@
   function renderProduction() {
     const d = cur(), out = $("production-output");
     if (!d || !d.production) { out.innerHTML = ""; return; }
-    const items = d.production, done = items.filter((i) => i.delivered).length;
+    const ws = d.weekStart || curWS, items = d.production, done = items.filter((i) => isDone(ws, i)).length, miss = items.filter((i) => itemState(ws, i).st === "missing").length;
     let html = '<div class="card"><div class="card-label orchid">Production list — non-video content</div><div class="small muted" style="margin-bottom:12px">Everything that isn\'t a coach video: the ad video the photographer shoots, and the carousels and statics designed from the brand template. The photographer\'s shot list, the editor brief and the posting plan on the Workflow tab are built from this week.</div>';
-    html += '<div class="progress"><div class="bar"><i style="width:' + (items.length ? Math.round(done / items.length * 100) : 0) + '%;background:var(--orchid)"></i></div><div class="pillar-pct">' + done + "/" + items.length + ' done</div></div><div class="grid-3">';
+    html += '<div class="progress"><div class="bar"><i style="width:' + (items.length ? Math.round(done / items.length * 100) : 0) + '%;background:var(--orchid)"></i></div><div class="pillar-pct">' + done + "/" + items.length + ' posted</div>' + (miss ? '<span class="st miss">' + miss + " missing</span>" : "") + '</div><div class="grid-3">';
     items.forEach((it, idx) => {
-      html += '<div class="coach orchid"><div class="item' + (it.delivered ? " done" : "") + '" style="margin:0;padding:0;border:0"><div class="chk orchid' + (it.delivered ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.delivered + '" tabindex="0" style="width:24px;height:24px;flex-shrink:0" onclick="toggleProd(' + idx + ')">' + (it.delivered ? "✓" : "") + '</div><div class="item-body"><div class="item-title">' + esc(it.title) + '</div><div class="item-meta">' + esc(it.format) + " · " + esc(it.day) + (it.pillar ? " · " + esc(it.pillar) : "") + '</div><div class="item-desc">' + esc(it.desc) + '</div>' + (it.hook ? '<div class="item-hook">' + esc(it.hook) + '</div>' : "") +
+      const ok = isDone(ws, it), st = itemState(ws, it).st;
+      html += '<div class="coach orchid"><div class="item' + (ok ? " done" : "") + (st === "missing" ? " miss" : "") + '" style="margin:0;padding:0;border:0"><div class="chk orchid' + (ok ? " done" : "") + '" role="checkbox" aria-checked="' + ok + '" tabindex="0" title="' + (ok ? "Posted" : "Mark posted by hand") + '" style="width:24px;height:24px;flex-shrink:0" onclick="toggleProd(' + idx + ')">' + (ok ? "✓" : "") + '</div><div class="item-body"><div class="item-title">' + esc(it.title) + '</div><div class="item-meta">' + esc(it.format) + " · " + esc(it.day) + (it.pillar ? " · " + esc(it.pillar) : "") + '</div> ' + stateChip(ws, it) + '<div class="item-desc">' + esc(it.desc) + '</div>' + (it.hook ? '<div class="item-hook">' + esc(it.hook) + '</div>' : "") +
         '<div class="item-actions"><button class="btn ghost xs" onclick="swapProd(' + idx + ')">↻ Swap</button><button class="btn ghost xs" onclick="editProd(' + idx + ')">✎ Edit</button><button class="btn ghost xs orchid" onclick="skipProd(' + idx + ')">✕ Skip</button></div></div></div></div>';
     });
     out.innerHTML = html + '</div><div style="margin-top:14px"><button class="btn ghost xs" onclick="addExtraProd()">+ Add another production item</button></div></div>';
@@ -624,10 +688,9 @@
   function renderWeeks() {
     const list = weekList(), card = $("approved-card"); card.hidden = list.length === 0;
     $("approved-list").innerHTML = list.map((w) => {
-      const tc = w.coaches.reduce((s, c) => s + (c.ideas || []).length, 0), dc = w.coaches.reduce((s, c) => s + (c.ideas || []).filter((i) => i.delivered).length, 0);
-      const tp = (w.production || []).length, dp = (w.production || []).filter((i) => i.delivered).length;
+      const t = weekTally(w);
       const isCur = w.weekStart === curWS, isThis = w.weekStart === wsOf(new Date());
-      return '<div class="approved-row' + (w.locked ? "" : " draft") + (isCur ? " current" : "") + '"><div><strong>' + esc(w.weekDates) + "</strong>" + (isThis ? ' <span class="tag dim" style="margin:0 0 0 6px">this week</span>' : "") + (w.theme ? ' <span class="small muted">· ' + esc(w.theme) + "</span>" : "") + '<div class="small">' + (w.locked ? "Approved " + new Date(w.approvedAt || w.createdAt).toLocaleDateString() : "Draft — not approved yet") + " · " + (dc + dp) + "/" + (tc + tp) + " delivered (" + dc + "/" + tc + " video · " + dp + "/" + tp + ' production)</div></div><div class="btn-row"><span class="tag ' + (w.locked ? "mint" : "cyan") + '" style="margin:0">' + (w.locked ? "Locked" : "Draft") + '</span>' + (isCur ? '<span class="small muted">open</span>' : '<button class="btn ghost xs" onclick="showWeek(\'' + w.weekStart + '\')">Open</button>') + '<button class="btn ghost xs" onclick="pdfWeek(\'' + w.weekStart + '\')">PDF</button><button class="btn ghost xs muted" onclick="deleteWeek(\'' + w.weekStart + '\')">×</button></div></div>';
+      return '<div class="approved-row' + (w.locked ? "" : " draft") + (isCur ? " current" : "") + '"><div><strong>' + esc(w.weekDates) + "</strong>" + (isThis ? ' <span class="tag dim" style="margin:0 0 0 6px">this week</span>' : "") + (w.theme ? ' <span class="small muted">· ' + esc(w.theme) + "</span>" : "") + '<div class="small">' + (w.locked ? "Approved " + new Date(w.approvedAt || w.createdAt).toLocaleDateString() : "Draft — not approved yet") + " · " + t.posted + "/" + t.total + " posted" + (t.missing ? ' · <span class="st miss">' + t.missing + " missing</span>" : "") + (t.pending + t.today ? " · " + (t.pending + t.today) + " to come" : "") + (t.spare ? " · " + t.spare + " spare" : "") + '</div></div><div class="btn-row"><span class="tag ' + (w.locked ? "mint" : "cyan") + '" style="margin:0">' + (w.locked ? "Locked" : "Draft") + '</span>' + (isCur ? '<span class="small muted">open</span>' : '<button class="btn ghost xs" onclick="showWeek(\'' + w.weekStart + '\')">Open</button>') + '<button class="btn ghost xs" onclick="pdfWeek(\'' + w.weekStart + '\')">PDF</button><button class="btn ghost xs muted" onclick="deleteWeek(\'' + w.weekStart + '\')">×</button></div></div>';
     }).join("");
   }
   window.deleteWeek = async function (ws) {
@@ -819,13 +882,15 @@
     h += '<div class="progress" style="margin-top:14px"><div class="bar"><i style="width:' + (c.planned ? Math.round(c.approved / c.planned * 100) : 0) + '%"></i></div><div class="pillar-pct">' + c.approved + "/" + c.planned + '</div></div></div>';
     [w1, w2].forEach((ws, wi) => {
       const w = S.weeks[ws];
-      h += '<div class="card"><div class="card-label' + (wi ? " cyan" : "") + '">Week ' + (wi + 1) + " · " + esc(weekLabel(ws)) + (w && w.theme ? " · " + esc(w.theme) : "") + (w ? (w.locked ? ' <span class="tag mint" style="margin-left:8px">Locked</span>' : ' <span class="tag cyan" style="margin-left:8px">Draft</span>') : "") + "</div>";
+      const t = w ? weekTally(w) : null;
+      h += '<div class="card"><div class="card-label' + (wi ? " cyan" : "") + '">Week ' + (wi + 1) + " · " + esc(weekLabel(ws)) + (w && w.theme ? " · " + esc(w.theme) : "") + (w ? (w.locked ? ' <span class="tag mint" style="margin-left:8px">Locked</span>' : ' <span class="tag cyan" style="margin-left:8px">Draft</span>') : "") + (t && (t.posted || t.missing) ? ' <span class="small muted" style="font-family:var(--body);font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px">' + t.posted + " of " + t.total + " posted" + (t.missing ? ' · <span class="st miss">' + t.missing + " missing</span>" : "") + "</span>" : "") + "</div>";
       if (!w) { h += '<div class="empty">No brief for this week yet — generate it above.</div></div>'; return; }
       fnItems(ws).forEach((x) => {
         const it = x.it, ex = isExtra(it), ref = "'" + ws + "','" + x.kind + "'," + (x.kind === "idea" ? x.ci + "," + x.ii : x.pi);
-        h += '<div class="fn-row' + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')" onkeydown="if(event.key===\' \'||event.key===\'Enter\'){event.preventDefault();this.click()}">' + (it.approved ? "✓" : "") + '</div>' +
+        const st = itemState(ws, it).st;
+        h += '<div class="fn-row' + (it.approved ? " ok" : "") + (ex ? " extra" : "") + (st === "missing" ? " miss" : st === "posted" || st === "late" ? " posted" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')" onkeydown="if(event.key===\' \'||event.key===\'Enter\'){event.preventDefault();this.click()}">' + (it.approved ? "✓" : "") + '</div>' +
           '<div class="fn-day">' + (ex ? '<span class="tag orchid" style="margin:0">Extra</span>' : esc(it.day)) + '</div>' +
-          '<div class="fn-body"><div class="item-title">' + esc(it.title) + '</div><div class="small muted">' + esc(x.who) + (x.role ? " · " + esc(x.role) : "") + " · " + esc(it.format) + (it.delivered ? ' · <span class="tag mint" style="margin:0">delivered</span>' : "") + '</div>' + (it.hook ? '<div class="item-hook">' + esc(it.hook) + '</div>' : "") + '</div>' +
+          '<div class="fn-body"><div class="item-title">' + esc(it.title) + '</div><div class="small muted">' + esc(x.who) + (x.role ? " · " + esc(x.role) : "") + " · " + esc(it.format) + " " + stateChip(ws, it) + '</div>' + (it.hook ? '<div class="item-hook">' + esc(it.hook) + '</div>' : "") + '</div>' +
           '<div class="item-actions" style="margin:0">' + (ex ? '<button class="btn ghost xs orchid" onclick="useExtra(' + ref + ')">↑ Use instead of…</button>' : '<button class="btn ghost xs" onclick="fnSwap(' + ref + ')">↻ Swap</button>') + '<button class="btn ghost xs" onclick="fnEdit(' + ref + ')">✎</button><button class="btn ghost xs muted" onclick="fnSkip(' + ref + ')">✕</button></div></div>';
       });
       h += "</div>";
@@ -873,7 +938,7 @@
   function renderAll() { renderOverview(); renderAssignments(); renderProduction(); renderWeeks(); renderBankStatus(); renderCadence(); renderCal(); renderArchive(); renderKpiHistory(); renderAds(); renderFortnight(); (window.PW.hooks || []).forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
   window.renderAll = renderAll;
   // Bridge for the engine modules (content database, cadence ramp, workflow briefs)
-  window.PW = { S, save, askForm, askConfirm, openModal, closeModal, esc, $, toast, sundayOf, SM, MONTHS, COACHES, PILLARS, ALREADY_POSTED_IDS, COACH_WEEKLY_COUNT, availableIdeas, availableProd, detectWeekTheme, stripForPDF, deliverFile, cur, thisWeek, curWS: () => curWS, weekList, weekLabel, wsOf, reserved, showWeek, hooks: [], isLive: () => !!db && !readOnly, loadedAt: () => loadedAt, recipe, weekCoaches, buildWeek };
+  window.PW = { S, save, askForm, askConfirm, openModal, closeModal, esc, $, toast, sundayOf, SM, MONTHS, COACHES, PILLARS, ALREADY_POSTED_IDS, COACH_WEEKLY_COUNT, availableIdeas, availableProd, detectWeekTheme, stripForPDF, deliverFile, cur, thisWeek, curWS: () => curWS, weekList, weekLabel, wsOf, reserved, showWeek, hooks: [], isLive: () => !!db && !readOnly, loadedAt: () => loadedAt, recipe, weekCoaches, buildWeek, itemState, isDone, stateChip, weekTally, dayDate, dkey, POST_DAYS, fmtDay, wsDate, shiftWS };
   initLocal();
   showWeek(curWS);
   renderAll();
