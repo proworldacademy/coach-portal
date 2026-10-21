@@ -113,6 +113,26 @@ function programOf(d) {
   if (d.sport === 'fitness') return { id: 'fitness', label: 'Fitness' };
   return { id: '', label: GROUP_PROGRAM[d.group] || '' };
 }
+/* The Play by Point roster names players as "Abby G" where the roster says "Abby Gordon": a row matches on the full name, or on
+   first name + last initial when that is unambiguous, or on a lone first name when that is unambiguous. */
+async function switchRows(db) { try { return (await db.collection('switchRoster').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})); } catch (e) { return []; } }
+function switchIndex(rows) {
+  const ix = { full: {}, short: {}, lone: {}, first: {} };
+  const put = (m, k, r) => { if (!k) return; m[k] = m[k] === undefined ? r : null; };            // a second row on the same key makes it ambiguous
+  for (const r of rows) {
+    const t = fold(r.player).split(' ').filter(Boolean); if (!t.length) continue;
+    put(ix.full, t.join(' '), r);
+    if (t.length > 1) put(ix.short, t[0] + ' ' + t[t.length - 1][0], r); else put(ix.lone, t[0], r);   // "Abby G" → abby g · "Alisa" → alisa
+    put(ix.first, t[0], r);
+  }
+  return ix;
+}
+function switchMatch(ix, name) {
+  const t = fold(name).split(' ').filter(Boolean); if (!t.length) return null;
+  const full = t.join(' '); if (ix.full[full]) return ix.full[full];
+  if (t.length > 1) { const sh = t[0] + ' ' + t[t.length - 1][0]; if (ix.short[sh]) return ix.short[sh]; return ix.lone[t[0]] || null; }   // the roster has the surname, the switch roster only a first name
+  return ix.first[t[0]] || null;                                                                                                            // the roster has only a first name: any one row with it
+}
 async function recipients(db) {
   const players = (await db.collection('players').get()).docs.map((d) => Object.assign({ id: d.id }, d.data())).filter((p) => p.status !== 'finished');
   const priv = {};                                                  // player id → { contact, sms }
@@ -121,11 +141,10 @@ async function recipients(db) {
     if (!priv[pid]) priv[pid] = {};
     if (which === 'contact' || which === 'sms') priv[pid][which] = d.data() || {};
   }
-  const sw = {};                                                    // the Play by Point roster, by player name — the phones most families gave us
-  try { for (const d of (await db.collection('switchRoster').get()).docs) { const r = d.data() || {}; sw[d.id] = r; const k = fold(r.player); if (k) sw['n:' + k] = r; } } catch (e) { /* no switch roster: nothing to fall back on */ }
+  const sw = switchIndex(await switchRows(db));                     // the Play by Point roster, by player name — the phones most families gave us
   const out = players.map((p) => {
     const pv = priv[p.id] || {}; const sms = pv.sms || {}; const contact = pv.contact || {};
-    const s = sw[slug(p.name)] || sw['n:' + fold(p.name)] || null;
+    const s = switchMatch(sw, p.name);
     let phone = '', source = '';
     for (const [v, src] of [[sms.phone, 'consent'], [contact.phone, 'contact'], [s && s.phone, 'switch'], [s && s.phone2, 'switch']]) { const n = e164(v); if (n) { phone = n; source = src; break; } }
     const prog = programOf(p);
@@ -147,6 +166,13 @@ async function setOptIn(db, pid, on, opts) {
   if (on !== true) set.stoppedAt = Date.now();
   await db.doc(`players/${pid}/private/sms`).set(set, { merge: true });
   return set;
+}
+/* Owners only: the families who came over from Play by Point gave the academy their mobile for exactly these updates. This marks
+   every player with a number and no consent record yet as opted in, source 'playbypoint', with the owner's name and the time. */
+async function optInRoster(db, who) {
+  const rows = (await recipients(db)).filter((r) => r.phone && r.valid && !r.optInAt);
+  let n = 0; for (const r of rows) { await setOptIn(db, r.id, true, { source: 'playbypoint', by: who.email, phone: r.phone }); n++; }
+  return { optedIn: n, players: rows.map((r) => r.id) };
 }
 /* The tick on the enrollment form arrives in the checkout session's metadata; the roster record names the player it filed. */
 async function consentFromSession(db, session, rec) {
@@ -304,4 +330,4 @@ async function webhook(db, headers, body, opts) {
   return out;
 }
 
-module.exports = { settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, consentFromSession, send, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };
+module.exports = { settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };

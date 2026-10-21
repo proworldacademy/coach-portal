@@ -68,6 +68,24 @@ test('recipients: the phone we would text (consent → contact card → the Play
   assert.equal(by['soc-eli-r'].programLabel, 'Soccer');
 });
 
+test('the Play by Point roster matches on the full name, on first name + last initial, or on a lone first name — only when unambiguous', async () => {
+  const ix = SMS.switchIndex([{ player: 'Abby G', phone: '1' }, { player: 'Alexander D', phone: '2' }, { player: 'Alexander Davis', phone: '3' }, { player: 'Alisa', phone: '4' }, { player: 'Ben Kim', phone: '5' }, { player: 'Mia', phone: '6' }, { player: 'Mia', phone: '7' }, { player: 'Zoe Chen', phone: '8' }, { player: 'Lu', phone: '9' }]);
+  const m = (n) => { const r = SMS.switchMatch(ix, n); return r ? r.phone : null; };
+  assert.equal(m('Abby Gordon'), '1'); assert.equal(m('Abby G'), '1'); assert.equal(m('Abbey Gordon'), null);
+  assert.equal(m('Alexander Davis'), '3', 'the full name wins'); assert.equal(m('Alexander Dudziak'), null, 'two rows could be "Alexander D"');
+  assert.equal(m('Alisa'), '4'); assert.equal(m('Alisa Petrova'), '4', 'a lone first name on the switch roster');
+  assert.equal(m('Ben K'), '5'); assert.equal(m('Mia Lee'), null, 'two Mias'); assert.equal(m('Mia'), null);
+  assert.equal(m('Zoe Lee'), null, 'a different surname never matches on the first name alone'); assert.equal(m('Zoe'), '8', 'a lone first name on the roster takes the one row with it'); assert.equal(m('Lu Wang'), '9');
+  const db = fakeDb(Object.assign({}, ROSTER, SETTINGS)); wire();
+  db._docs.set('switchRoster/ben-k', { player: 'Ben K', phone: '5615550109' });
+  const rows = await SMS.recipients(db); const ben = rows.find((r) => r.id === 'ft-ben-k'); assert.equal(ben.phoneSource, 'contact', 'the contact card still comes first');
+  db._docs.delete('players/ft-ben-k/private/contact');
+  assert.equal((await SMS.recipient(db, 'ft-ben-k')).phone, '+15615550109');
+  const out = await SMS.optInRoster(db, { email: 'owner@proworldacademy.com' });
+  assert.deepEqual(out.players.sort(), ['ft-ben-k'], 'only players with a number and no consent record yet');
+  assert.equal(db._docs.get('players/ft-ben-k/private/sms').source, 'playbypoint'); assert.equal(db._docs.get('players/as-ava-t/private/sms').source, 'enroll', 'an existing record is left alone');
+});
+
 test('a send: consent and numbers decide who gets it, every recipient gets a log line, placeholders and the footer are in the text, JustCall is called once per number', async () => {
   const db = fakeDb(Object.assign({}, ROSTER, SETTINGS)); const calls = wire();
   const out = await SMS.send(db, DESK, { body: 'Hi {first_name}, {program} at {time} is cancelled.', template: 'rain', recipients: [{ player: 'as-ava-t', vars: { time: '4:00 PM' } }, { player: 'ft-ben-k', vars: { time: '7:45 AM' } }, { player: 'u10-cy-l', vars: { time: '4:30 PM' } }, { player: 'as-dee-m' }, { player: 'nobody' }, { player: 'as-ava-t' }] }, fast);
