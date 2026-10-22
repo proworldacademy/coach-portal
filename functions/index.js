@@ -106,7 +106,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'GET /admin/overview') return send(res, 200, Object.assign({ mode: mode(key), who: who.email, billing: who.billing, owner: who.owner }, await ADMIN.overview(stripe)));
       if (route === 'GET /admin/notices') {
         const ov = await ADMIN.overview(stripe); const out = [];
-        for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'trialing', 'past_due'].includes(s.status) || s.test) continue;   // a plan on its own cycle (the staff test) has no break months const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
+        // a plan on its own cycle (the staff test) has no break months, so it is skipped here
+        for (const s of ov.subscriptions) { if (!s.next || !s.next.date || !['active', 'trialing', 'past_due'].includes(s.status) || s.test) continue; const p = CAL.parts(s.next.date); const text = JOBS.breakMonthNotice(s.program, (s.monthly || 0) * 100, p.y, p.m); if (text) out.push({ subscription: s.id, player: s.player, customer: s.customer, month: s.next.date.slice(0, 7), text }); }
         return send(res, 200, { today: ov.today, notices: out });
       }
       if (route === 'POST /admin/announce') {
