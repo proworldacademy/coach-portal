@@ -56,6 +56,10 @@ test('functions/billing-rules.json is the same file as backend/billing-rules.jso
   assert.equal(a, b, 'copy backend/billing-rules.json into functions/ (the deploy only ships the functions folder)');
 });
 
+test('functions/index.js parses (it is never required by the tests, so a stray comment or brace would only show at deploy)', () => {
+  require('child_process').execFileSync(process.execPath, ['--check', path.join(__dirname, '..', 'index.js')], { stdio: 'pipe' });
+});
+
 test('every catalog line has a lookup key and the lines are unique', () => {
   const lines = CAT.oneTimeLines();
   assert.equal(Object.keys(lines).length, 95);                                              // 94 Play by Point lines + the $1 test private
