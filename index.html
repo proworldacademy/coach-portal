@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>PROWORLD Dashboard</title>
+<title>PROWORLD HQ · Dashboard</title>
 <link rel="icon" href="data:,">
 <script>
   // The old GitHub Pages address of the Coach Portal (proworldacademy.github.io/coach-portal) forwards here.
@@ -103,7 +103,8 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   </section>
 
   <section class="sec" id="lib-sec" hidden>
-    <div class="sec-h"><h2>Everything else</h2><small id="lib-small"></small></div>
+    <a id="library" class="anchor" aria-hidden="true"></a>
+    <div class="sec-h"><h2>Library</h2><small id="lib-small"></small></div>
     <div class="lib-h" id="libh"></div>
     <div class="lib" id="lib"></div>
   </section>
@@ -191,8 +192,8 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (has("coach-portal") && S.sync && S.sync.toCheck > 0) out.push({ id: "board", n: S.sync.toCheck, what: plural(S.sync.toCheck, "roster row to check after the sync", "roster rows to check after the sync"), where: "Coach Board", href: "/portal#/board" });
     if (has("ai-check") && S.checks && (S.checks.due + S.checks.bad) > 0) out.push({ id: "checks", n: S.checks.due + S.checks.bad, what: S.checks.bad ? plural(S.checks.due + S.checks.bad, "AI check due", "AI checks due") + " · " + S.checks.bad + " with a problem" : plural(S.checks.due, "AI check due today", "AI checks due today"), where: "AI check", href: "/checks" });
     if (ctx && ctx.admin && requests.length) { const n = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length; if (n) out.push({ id: "requests", n, what: plural(n, "person asked to get in", "people asked to get in"), where: "Access", href: "#people-sec" }); }
-    if (has("coach-portal") && S.players && S.players.toAssign > 0) out.push({ id: "assign", n: S.players.toAssign, what: plural(S.players.toAssign, "new player needs a coach", "new players need a coach"), where: "Coach Portal", href: "/portal" });
-    if (has("backend") && S.family && S.family.open > 0) out.push({ id: "family", n: S.family.open, what: plural(S.family.open, "family request waiting for the front desk", "family requests waiting for the front desk"), where: "Backend", href: "/backend" });
+    if (has("coach-portal") && S.players && S.players.toAssign > 0) out.push({ id: "assign", n: S.players.toAssign, what: plural(S.players.toAssign, "new player needs a coach", "new players need a coach"), where: "Coaches", href: "/portal" });
+    if (has("backend") && S.family && S.family.open > 0) out.push({ id: "family", n: S.family.open, what: plural(S.family.open, "family request waiting for the front desk", "family requests waiting for the front desk"), where: "Admin", href: "/backend#desk" });
     if ((has("tryouts") || has("coach-portal")) && S.tryouts && S.tryouts.waiting > 0) out.push({ id: "tryouts", n: S.tryouts.waiting, what: plural(S.tryouts.waiting, "try-out waiting for a result or a decision", "try-outs waiting for a result or a decision"), where: "Try-outs", href: "/portal#/tryouts" });
     return out;
   }
@@ -238,17 +239,18 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   const enrollWords = (e) => "<b>" + e.month + "</b> enrolled online this month" + (e.bought ? " · <b>" + e.bought + "</b> bought online" : "") + (e.test ? " · " + e.test + " test" : "");
   function daysToFirst() { const d = new Date(); const first = new Date(d.getFullYear(), d.getMonth() + 1, 1); return Math.max(0, Math.round((first - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / DAY)); }
 
-  // ── today: the tiles ──
-  const ORDER = ["coach-portal", "mkt"];
+  // ── today: the tiles — the four doors first (Admin, Coaches, Clients, Marketing), then the rest ──
+  const ORDER = ["backend", "coach-portal", "clients", "mkt", "ai-check"];
   function tiles() {
-    const mine = PAGES.filter((p) => p.section === "tools" && ctx.has(p.id));
+    const mine = PAGES.filter((p) => p.section === "tools" && !p.hide && ctx.has(p.id));
     mine.sort((a, b) => { const ia = ORDER.indexOf(a.id), ib = ORDER.indexOf(b.id); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib); });
     $("today-small").textContent = mine.length ? mine.length + (mine.length === 1 ? " tool" : " tools") + " in daily use · live numbers" : "";
     $("rail").innerHTML = mine.length ? mine.map(tile).join("") : '<div class="empty" style="grid-column:1/-1">No pages are ticked for you yet. Ask an administrator.</div>';
     D.countUp($("rail")); paintLinks();
   }
   const go = (p) => '<span class="go"><span>' + esc(p.owner) + '</span><span class="ar">→</span></span>';
-  const open = (p) => '<a class="g' + (ORDER.includes(p.id) ? " w3" : "") + '" href="' + esc(p.url) + '" data-tile="' + esc(p.id) + '">';
+  const WIDE = ["backend", "coach-portal", "clients", "mkt"];
+  const open = (p) => '<a class="g' + (WIDE.includes(p.id) ? " w3" : "") + '" href="' + esc(p.url) + '" data-tile="' + esc(p.id) + '">';
   function tile(p) {
     const id = p.id;
     if (id === "coach-portal") {
@@ -256,7 +258,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       let inner;
       if (r) { const rows = Object.keys(GROUP).map((g) => [GROUP[g], r.groups[g] || 0]).filter((x) => x[1] > 0); if (r.noGroup) rows.push(["No group yet", r.noGroup, "lime"]); const max = Math.max.apply(null, rows.map((x) => x[1]).concat([1])); inner = rows.length ? '<div class="bars">' + rows.slice(0, 4).map((x) => "<div><span>" + esc(x[0]) + '</span><i class="' + (x[2] || "") + '" style="--w:' + Math.round(x[1] / max * 100) + '%"></i><span>' + fmt(x[1]) + "</span></div>").join("") + "</div>" : "<p>No active players on the roster yet.</p>"; }
       else inner = "<p>" + esc(p.desc) + "</p>";
-      return open(p) + '<span class="ey"><span>Players · assessments</span>' + pill + "</span><h3>Coach Portal</h3>" + inner + go(p) + "</a>";
+      return open(p) + '<span class="ey"><span>Players · assessments · try-outs · board</span>' + pill + "</span><h3>Coaches</h3>" + inner + go(p) + "</a>";
     }
     if (id === "mkt") {
       const n = S.numbers, w = S.weeks;
@@ -267,7 +269,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (id === "backend") {
       const d = daysToFirst(), e = S.enroll, f = S.family;
       const pill = f ? (f.open ? '<span class="pill lime">' + f.open + " " + plural(f.open, "request", "requests") + "</span>" : '<span class="pill mint">live</span>') : '<span class="pill ghost">loading</span>';
-      return open(p) + '<span class="ey"><span>Enroll · attendance · billing</span>' + pill + '</span><h3>Backend</h3><div class="big"><span data-n="' + d + '">0</span><small>' + plural(d, "day", "days") + " to the 1st</small></div><p>Bills go out on the <b>1st</b>" + (e ? " · " + enrollWords(e) : "") + (f ? " · " + (f.open ? "<b>" + f.open + "</b> family " + plural(f.open, "request", "requests") + " open" : "no family requests open") : "") + "</p>" + go(p) + "</a>";
+      return open(p) + '<span class="ey"><span>Front desk · attendance · billing</span>' + pill + '</span><h3>Admin</h3><div class="big"><span data-n="' + d + '">0</span><small>' + plural(d, "day", "days") + " to the 1st</small></div><p>Bills go out on the <b>1st</b>" + (e ? " · " + enrollWords(e) : "") + (f ? " · " + (f.open ? "<b>" + f.open + "</b> family " + plural(f.open, "request", "requests") + " open" : "no family requests open") : "") + "</p>" + go(p) + "</a>";
     }
     if (id === "ai-check") {
       const c = S.checks;
@@ -287,15 +289,20 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       const pill = t ? (t.waiting ? '<span class="pill lime">' + t.waiting + " waiting</span>" : '<span class="pill mint">all good</span>') : '<span class="pill ghost">loading</span>';
       return open(p) + '<span class="ey"><span>Prospective players</span>' + pill + '</span><h3>Try-outs</h3><div class="big"><span data-n="' + (t ? t.week : 0) + '">0</span><small>this week</small></div><p>' + (t ? (t.today ? "<b>" + t.today + "</b> today · " : "") + (t.waiting ? "<b>" + t.waiting + "</b> " + plural(t.waiting, "needs", "need") + " a result or a decision" : "nothing waiting on a decision") + (t.later ? " · " + t.later + " coming up" : "") : esc(p.desc)) + "</p>" + go(p) + "</a>";
     }
+    if (id === "clients") {
+      const f = S.family, e = S.enroll;
+      const pill = f ? (f.open ? '<span class="pill lime">' + f.open + " " + plural(f.open, "request", "requests") + "</span>" : '<span class="pill cyan">live</span>') : '<span class="pill ghost">loading</span>';
+      return open(p) + '<span class="ey"><span>Links · accounts · requests</span>' + pill + '</span><h3>Clients</h3><div class="big"><span data-n="' + (e ? e.month : 0) + '">0</span><small>enrolled online this month' + (e && e.test ? " · " + e.test + " test" : "") + "</small></div><p>" + (f ? (f.open ? "<b>" + f.open + "</b> family " + plural(f.open, "request", "requests") + " open · " : "No family requests open · ") : "") + "the links to send (enroll, courts, privates), who enrolled online, and a client's account as they see it.</p>" + go(p) + "</a>";
+    }
     if (id === "family") {
       const f = S.family;
       return open(p) + '<span class="ey"><span>Parents · their own account</span>' + (f ? (f.open ? '<span class="pill lime">' + f.open + " open</span>" : '<span class="pill cyan">live</span>') : '<span class="pill cyan">live</span>') + '</span><h3>Family portal</h3><div class="big"><span data-n="' + (f ? f.open : 0) + '">0</span><small>' + plural(f ? f.open : 0, "request", "requests") + " open</small></div><p>A parent signs in with the e-mail on file and sees their players, attendance, reports and bills — and asks the front desk for a court, a private or a plan change.</p>" + go(p) + "</a>";
     }
     if (id === "enroll") {
       const e = S.enroll;
-      return open(p) + '<span class="ey"><span>Public · no sign-in</span><span class="pill cyan">public</span></span><h3>Enroll</h3><div class="big"><span data-n="' + (e ? e.month : 0) + '">0</span><small>enrolled online this month' + (e && e.test ? " · " + e.test + " test" : "") + '</small></div><p>Program → plan → days → first day → parent → agreement → Stripe. Open it to see what a family sees, or send the prefilled link from the backend\'s Enroll tab.</p>' + go(p) + "</a>";
+      return open(p) + '<span class="ey"><span>Public · no sign-in</span><span class="pill cyan">public</span></span><h3>Enroll</h3><div class="big"><span data-n="' + (e ? e.month : 0) + '">0</span><small>enrolled online this month' + (e && e.test ? " · " + e.test + " test" : "") + '</small></div><p>Program → plan → days → first day → parent → agreement → Stripe. Open it to see what a family sees, or send the prefilled link from Admin → Enroll.</p>' + go(p) + "</a>";
     }
-    if (id === "billing") return open(p) + '<span class="ey"><span>On the backend</span><span class="pill orchid">live actions</span></span><h3>Billing</h3><p>Hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link — on Players &amp; billing.</p>' + go(p) + "</a>";
+    if (id === "billing") return open(p) + '<span class="ey"><span>In Admin</span><span class="pill orchid">live actions</span></span><h3>Billing</h3><p>Hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link — on Players &amp; billing.</p>' + go(p) + "</a>";
     if (p.opens === "link") return '<div class="g" data-tile="' + esc(id) + '"><span class="ey"><span>Live · every 5 min</span><span class="pill mint">live</span></span><h3>' + esc(p.short || p.name) + "</h3><p>" + esc(p.desc) + '</p><span class="lk" data-link="' + esc(id) + '"><span class="hint">Checking the link…</span></span></div>';
     return open(p) + '<span class="ey"><span>' + esc(P.STATUS_LABEL[p.status] || p.status) + "</span></span><h3>" + esc(p.short || p.name) + "</h3><p>" + esc(p.desc) + "</p>" + go(p) + "</a>";
   }
@@ -349,6 +356,10 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     $("lib").innerHTML = rows.map((p, i) => '<a class="lr" href="' + esc(p.url) + '" style="animation-delay:' + i * 25 + 'ms" title="' + esc(p.desc) + '"><b>' + esc(p.name) + '</b><span class="t">' + esc(kindOf(p)) + '</span><span class="d">' + esc(dateOf(p.desc)) + "</span><em>→</em></a>").join("");
   }
   $("libh").addEventListener("click", (e) => { const b = e.target.closest("button[data-f]"); if (!b) return; libF = b.getAttribute("data-f"); library(); });
+  // /#library (the Library door in the top bar) lands on the list
+  let libScrolled = false;
+  function libJump() { if (libScrolled || location.hash !== "#library" || $("lib-sec").hidden) return; libScrolled = true; setTimeout(() => $("lib-sec").scrollIntoView({ behavior: "smooth", block: "start" }), 120); }
+  window.addEventListener("hashchange", () => { libScrolled = false; libJump(); });
 
   // ── you own it (owners and administrators) ──
   function own() {
@@ -496,7 +507,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   window.PWAuth.start({}).then((c) => {
     ctx = c; fs = window.PWAuth.fs();
-    greeting(); tiles(); library(); paintNeed(); signals(); loadAll();
+    greeting(); tiles(); library(); libJump(); paintNeed(); signals(); loadAll();
     if (ctx.admin) {
       $("nu-preset").innerHTML = presetOptions("marketing");
       own();
