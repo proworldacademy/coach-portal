@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light">
-<title>ProWorld backend</title>
+<title>ProWorld Admin</title>
 <script>if (location.hostname === "proworldacademy.github.io") location.replace("https://proworld-coach-portal.web.app/backend" + location.search + location.hash);</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23050505'/%3E%3Cpath d='M22 48 30 16h14c7 0 10 4 9 10s-6 10-13 10h-6l-3 12z' fill='%23E2FE78'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/shared/brand.css">
@@ -1259,12 +1259,12 @@ function bindBillingRules(app){
 }
 </script>
 <script>
-/* The redesign's frame (shared/design.js): skin "desk", the Backend marked in the top bar; the last word of each view's title
-   is outlined like every other page's. Nothing above changes. */
+/* The redesign's frame (shared/design.js): skin "desk", the Admin door marked in the top bar (PROWORLD HQ: this page is "Admin";
+   its page id stays `backend`); the last word of each view's title is outlined like every other page's. Nothing above changes. */
 (function () {
   "use strict";
   if (!window.PWDesign) return;
-  PWDesign.mount({ skin: "desk", active: "backend", title: "Backend" });
+  PWDesign.mount({ skin: "desk", active: "backend", title: "Admin" });
   const app = document.getElementById("app"); if (!app || !("MutationObserver" in window)) return;
   const outline = () => app.querySelectorAll(".hero h1").forEach((h) => {
     if (h.dataset.em || h.querySelector("em")) return;
