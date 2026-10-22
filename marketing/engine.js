@@ -187,7 +187,7 @@
   function videoItems(d) { const out = []; d.coaches.forEach((c) => c.ideas.forEach((i) => { if (/Reel|Talking Head|Story/i.test(i.format)) out.push({ who: c.name, role: c.role, idea: i, self: c.name === "Flo" || /Story/i.test(i.format) }); })); (d.production || []).forEach((p) => { if (/^ad\b|ad video/i.test(p.format)) out.push({ who: "Ad video", role: "paid promo — photographer shoots, " + ((S.team && S.team.editor) || "editor").split(" ")[0] + " cuts a 15–30s version too", idea: p, self: false }); else if (/Reel|Story/i.test(p.format)) out.push({ who: "Production", role: "non-video", idea: p, self: /Story/i.test(p.format) }); }); return out; }
   function photoItems(d) { return (d.production || []).filter((p) => /Carousel|Static/i.test(p.format)); }
   function buildBrief(kind) {
-    const d = PW.cur(), T = S.team, wk = d.weekDates, theme = d.theme ? " · Theme: " + d.theme : "";
+    const d = PW.cur(), T = S.team, wk = String(d.weekDates || d.weekStart || ""), theme = d.theme ? " · Theme: " + d.theme : "";
     const doc = { title: "", sub: "Week of " + wk + theme, wk, sections: [] };
     if (kind === "shots") {
       doc.title = "PHOTOGRAPHER SHOT LIST"; const vids = videoItems(d).filter((v) => !v.self), self = videoItems(d).filter((v) => v.self);
