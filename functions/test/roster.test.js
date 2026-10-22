@@ -11,7 +11,7 @@ const { fakeStripe } = require('./fake-stripe');
 const { fakeDb } = require('./fake-db');
 
 const PRICES = [];
-for (const p of CAT.PROGRAMS) for (const pl of p.plans) PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: 'month', interval_count: 1 }, unit_amount: pl.monthly * 100, product: p.product });
+for (const p of CAT.PROGRAMS) for (const pl of p.plans) { const c = CAT.cycleOf(pl); PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: c.interval, interval_count: c.count }, unit_amount: pl.monthly * 100, product: p.product }); }
 for (const [k, l] of Object.entries(CAT.oneTimeLines())) if (!l.byProduct) PRICES.push({ id: 'price_' + k, object: 'price', active: true, lookup_key: k, type: 'one_time', unit_amount: Math.round(l.price * 100), product: l.product });
 const PRODUCTS = { prod_VSwrEVcItQBJ4t: { id: 'prod_VSwrEVcItQBJ4t', default_price: { id: 'price_sparring', type: 'one_time', unit_amount: 5000 } } };
 const family = { player: { first: 'Ava', last: 'Torres', dob: '2014-05-02' }, parent: { name: 'Jane Torres', email: 'Jane.Torres@example.com', phone: '(561) 555-0101' }, agree: true, authorize: true };
@@ -71,6 +71,28 @@ test('a paid enrollment creates the player, the parent details, the note for Mon
   await CHECKOUT.sessionStatus(stripe, session.id, null, { db, mode: 'test' });
   const sweep = await JOBS.convertPaidEnrollments(stripe, '2026-10-14', null, { db, mode: 'test' });
   assert.equal(db._writes.length, before); assert.equal(sent.length, 0); assert.equal(sweep.recorded.length, 0);
+});
+
+test('the tester plan (every 3 days) files like a real enrollment — no group yet, and the desk line and the family text say "every 3 days", never "the 1st"', async () => {
+  const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
+  const db = fakeDb(SETTINGS);
+  const sent = wire();
+  await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'tester', plan: '3d', days: [], start: '2026-10-22', _today: '2026-10-22', idempotency: 'rt' }, family, { player: { first: 'Roger', last: 'Tester', dob: '2015-01-01' } }));
+  const session = stripe._db.sessions[stripe._db.sessions.length - 1];
+  const price = PRICES.find((x) => x.lookup_key === 'tester_3day');
+  const sub = { id: 'sub_tester', object: 'subscription', status: 'active', customer: stripe._db.customers[0].id, created: CAL.unixET('2026-10-22', 10, 0), cancel_at_period_end: false, metadata: Object.assign({}, session.metadata, { session: session.id }), items: { data: [{ id: 'si_t', price, current_period_end: CAL.unixET('2026-10-25', 10, 0) }] } };
+  stripe._db.subscriptions.push(sub);
+  Object.assign(session, { status: 'complete', payment_status: 'paid', mode: 'subscription', subscription: sub, customer: stripe._db.customers[0], customer_details: { email: 'jane.torres@example.com' }, amount_total: 300, line_items: { data: [{ description: 'Tester Program', amount_total: 300 }] } });
+  const st = await CHECKOUT.sessionStatus(stripe, session.id, null, { db, mode: 'live' });
+  assert.equal(st.roster.player, 'new-roger-t'); assert.equal(st.roster.created, true);
+  assert.deepEqual(st.enrollment.next, { date: '2026-10-25', cents: 300 }); assert.equal(st.enrollment.cycle, 'every 3 days');
+  const p = db._docs.get('players/new-roger-t');
+  assert.equal(p.group, ''); assert.equal(p.enroll.program, 'tester'); assert.equal(p.enroll.monthly, 3); assert.deepEqual(p.enroll.next, { date: '2026-10-25', cents: 300 });
+  const deskBlock = sent.find((s) => s.url.endsWith('/desk')).body.blocks[0].text.text;
+  assert.match(deskBlock, /Paid today \$3 · next \$3 on Sun Oct 25 · \$3 every 3 days/);
+  const t = texts(sent);
+  assert.equal(t[0].body, 'ProWorld Academy: Roger is enrolled in Tester, every 3 days, starting Thu Oct 22 at 4:00 PM. Paid today: $3. Next: $3 on Sun Oct 25, then $3 every 3 days. Receipts and your card: see the email from Stripe. ' + NOTIFY.SIGN);
+  assert.ok(!deskBlock.includes('1st') && !t[0].body.includes('1st'));
 });
 
 test('the same name already on the roster (from Monday) is reused — back to active, no duplicate, no second note for Monday', async () => {
