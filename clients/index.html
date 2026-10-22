@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Clients · PROWORLD HQ</title>
+<link rel="icon" href="data:,">
+<script>if (location.hostname === "proworldacademy.github.io") location.replace("https://proworld-coach-portal.web.app/clients" + location.search + location.hash);</script>
+<link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="/shared/pages.js"></script>
+<script src="/shared/pwauth.js"></script>
+<script src="/shared/design.js"></script>
+<style>
+/* PROWORLD HQ — the Clients door (skin "family"): the client side of the academy in one place for the front desk and the
+   owners — the links a family gets (enroll, courts, privates, their account), who enrolled online, what families asked for
+   from their account, and a client's account as they see it. Reads the engine's ledger (enrollments) and the family requests
+   (familyRequests); writes nothing — replies and bookings happen in Admin. Comes with the Admin page (pages.js: with "backend"). */
+.hero .eyebrow{flex-wrap:wrap}
+.lk{display:flex;flex-direction:column;gap:10px}
+.lk .ey{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lk h3{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:24px;line-height:1}
+.lk p{font-size:13px;color:var(--ink-2);line-height:1.5;margin:0}
+.lk code{font-family:var(--body);font-size:12px;color:var(--ink);background:rgba(0,0,0,.05);border-radius:8px;padding:3px 8px;word-break:break-all}
+.lk .rowx{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.lk.soon{border-style:dashed}
+.lk.soon h3{color:var(--muted)}
+.tw{overflow-x:auto}
+.tbl td small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.told{display:inline-flex;gap:4px}
+.told i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.told i.off{background:rgba(0,0,0,.1)}
+.req{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;align-items:start;padding:10px 8px;border-top:1px solid var(--line);font-size:13px}
+.req:first-child{border-top:0}
+.req b{display:block}.req .d{color:var(--muted);font-size:12px}
+.see{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.see{grid-template-columns:minmax(0,1fr)}}
+.see ul{margin:0;padding-left:1.1em;font-size:13.5px;color:var(--ink-2);line-height:1.6}
+.need .ft a{color:var(--ink);font-weight:700;text-decoration:underline;text-decoration-color:var(--lime);text-decoration-thickness:2px;text-underline-offset:3px;white-space:nowrap}
+.need.allclear #open-rows{display:none}
+</style>
+</head>
+<body class="skin-family">
+<div class="wrap">
+  <div class="pwd-top" id="pwd-top"></div>
+  <section class="hero" id="hero">
+    <div>
+      <div class="eyebrow"><i></i><span>Clients · the links, the accounts, the requests</span></div>
+      <h1><span>What a</span> <span><em>client gets.</em></span></h1>
+      <p class="sum">Everything a family can do with us, in one place: the links to send, who enrolled online, what families asked for from their account, and their account as they see it. Replies and bookings happen in Admin.</p>
+    </div>
+    <div class="need" id="side">
+      <div class="ey"><span><i></i>Family requests</span><span><b id="openN">0</b> open</span></div>
+      <div id="open-rows"></div>
+      <div class="clear"><b>All clear.</b><span>No family requests waiting.</span></div>
+      <div class="ft"><span>Reply from Admin → Front desk → Family requests, or by text.</span><a href="/backend#desk">Open the front desk</a></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Send a link</h2><small>one thing each · no sign-in</small></div>
+    <p class="sec-note">A family gets a link from the front desk, the concierge or an ad. Each one does one thing. Everything they buy lands on the roster, the attendance list, the Coach Portal and the channels the same minute.</p>
+    <div class="cards four" id="links">
+      <div class="card lk">
+        <span class="ey"><span>Join a program or camp</span><span class="pill cyan">public</span></span>
+        <h3>Enroll</h3>
+        <p>Program → plan → days → first day → parent → agreement → Stripe. Send it prefilled from Admin → Enroll.</p>
+        <code>proworld-coach-portal.web.app/enroll</code>
+        <span class="rowx"><button type="button" class="btn sm lime" data-copy="https://proworld-coach-portal.web.app/enroll">Copy link</button><a class="btn sm ghost" href="/enroll" target="_blank" rel="noopener">Open</a><a class="btn sm muted" href="/backend#enroll">Prefill in Admin</a></span>
+      </div>
+      <div class="card lk">
+        <span class="ey"><span>See their account</span><span class="pill cyan">public</span></span>
+        <h3>The client account</h3>
+        <p>A parent signs in with the e-mail they enrolled with (Google or an e-mailed link) and sees their players, plan, bills and next charge — and asks us for a court, a private or a change.</p>
+        <code>proworld-coach-portal.web.app/family</code>
+        <span class="rowx"><button type="button" class="btn sm lime" data-copy="https://proworld-coach-portal.web.app/family">Copy link</button><a class="btn sm ghost" href="/family" target="_blank" rel="noopener">Open</a></span>
+      </div>
+      <div class="card lk soon">
+        <span class="ey"><span>Book a court</span><span class="pill ghost">public link next</span></span>
+        <h3>Courts</h3>
+        <p>Today the front desk books it for the family in Admin → Courts and the card on file is charged. The public page, one time slot and done, is next.</p>
+        <span class="rowx"><a class="btn sm ghost" href="/backend#courts">Book it in Admin</a></span>
+      </div>
+      <div class="card lk soon">
+        <span class="ey"><span>Book a private</span><span class="pill ghost">public link next</span></span>
+        <h3>Privates</h3>
+        <p>Today a coach or the front desk books it in Admin → Privates: a lesson pack hour, the card on file, or collected at the desk. The public page is next.</p>
+        <span class="rowx"><a class="btn sm ghost" href="/backend#privates">Book it in Admin</a></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Enrolled online</h2><small id="enr-small">the last 30 days</small></div>
+    <div class="card" style="padding:6px 8px"><div class="tw"><table class="tbl" id="enr"><thead><tr><th>When</th><th>Player</th><th>What</th><th>Starts</th><th>Paid</th><th>Told</th></tr></thead><tbody><tr><td colspan="6" class="hint">Loading…</td></tr></tbody></table></div></div>
+    <p class="hint" style="margin-top:8px">Told: coaches channel · front desk channel · the family's text. Test checkouts are marked. The roster record, the contact card and the Monday note are written by the engine the same minute.</p>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Their account, as they see it</h2><small>no password, nothing to create</small></div>
+    <div class="see">
+      <div class="card">
+        <span class="ey"><span>What a signed-in family sees</span></span>
+        <ul>
+          <li>Their players: group, coach first name, plan, days, status, what happens on the 1st.</li>
+          <li>This month's attendance from the posted lists; the reports the coaches marked as sent.</li>
+          <li>Their purchases, the open invoices, a link to their Stripe account page (card, receipts).</li>
+          <li>A way to ask the front desk for a court, a private, a plan change or anything else — it lands here and in the front-desk channel.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="ey"><span>Look one up</span></span>
+        <p style="font-size:13.5px;color:var(--ink-2);line-height:1.5;margin:0">The staff view of a family's account — balances, the ledger, what bills on the 1st — is Admin → My account. The account itself is matched by the parent's e-mail on the player's contact card; if a family can't get in, that e-mail is the thing to check on the player's sheet.</p>
+        <span class="rowx" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto"><a class="btn sm ghost" href="/backend#account">Admin → My account</a><a class="btn sm muted" href="/backend#players">Players &amp; billing</a></span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="pwd-foot"><b>PROWORLD</b><span>Individually built. Fully connected.</span><span>Clients · reads enrollments and family requests</span></footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  window.PWDesign.mount({ skin: "family", active: "clients", title: "Clients" });
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let toastT; function toast(m, err) { const t = $("toast"); t.textContent = m; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 2800); }
+  const DAY = 864e5;
+  const when = (ms) => { const d = new Date(ms); return isNaN(d) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+  const day = (iso) => { const d = new Date(String(iso || "").slice(0, 10) + "T12:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  const money = (c) => "$" + ((+c || 0) / 100).toLocaleString("en-US", { minimumFractionDigits: (+c || 0) % 100 ? 2 : 0, maximumFractionDigits: 2 });
+  const KINDS = { court: "Court reservation", private: "Private lesson", change: "Plan change", message: "Message" };
+  let fs = null;
+
+  // copy a link
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-copy]"); if (!b) return;
+    const v = b.getAttribute("data-copy");
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast("Link copied — paste it in a text or an e-mail."), () => { window.prompt("Copy the link:", v); });
+  });
+
+  // the engine's ledger: who enrolled or bought online in the last 30 days
+  function paintEnrolled(rows) {
+    const tb = $("enr").querySelector("tbody");
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="hint">Nobody has enrolled online in the last 30 days.</td></tr>'; $("enr-small").textContent = "the last 30 days"; return; }
+    $("enr-small").textContent = rows.length + " in the last 30 days";
+    tb.innerHTML = rows.map((e) => {
+      const told = e.told || {}; const dot = (on, t) => '<i class="' + (on ? "" : "off") + '" title="' + esc(t) + '"></i>';
+      const what = e.what || (e.kind === "trial" ? "Free session" : e.kind === "program" ? [e.programShort, e.planLabel].filter(Boolean).join(" · ") : (e.items || []).join(", "));
+      return "<tr><td>" + esc(when(e.at)) + (e.mode === "test" ? '<small>test checkout</small>' : "") + "</td><td><b>" + esc(e.playerName || "—") + "</b>" + (e.created === false && e.kind === "program" ? "<small>already on the roster</small>" : e.created ? "<small>new on the roster</small>" : "") + "</td><td>" + esc(what) + (e.days && e.days.length ? "<small>" + esc(e.days.join(", ")) + "</small>" : "") + "</td><td>" + esc(e.start ? day(e.start) : "—") + "</td><td>" + (e.paidCents != null ? money(e.paidCents) : "—") + (e.monthly ? "<small>then $" + esc(e.monthly) + " a month</small>" : "") + '</td><td><span class="told">' + dot(told.coaches, "coaches channel") + dot(told.desk, "front desk channel") + dot(told.family, "the family's text") + "</span></td></tr>";
+    }).join("");
+  }
+  // what families asked for from their account
+  function paintRequests(rows) {
+    const el = $("open-rows"), side = $("side");
+    $("openN").textContent = rows.length;
+    side.classList.toggle("allclear", !rows.length);
+    el.innerHTML = rows.map((r) => '<a class="req" href="/backend#desk"><span><b>' + esc(KINDS[r.kind] || r.kind || "Request") + (r.playerName ? " · " + esc(r.playerName) : "") + "</b>" + esc(String(r.text || "").slice(0, 120)) + (String(r.text || "").length > 120 ? "…" : "") + '</span><span class="d">' + esc(r.name || "a family") + "<br>" + esc(when(r.at)) + "</span></a>").join("");
+  }
+
+  window.PWAuth.start({ need: "clients" }).then(() => {
+    fs = window.PWAuth.fs();
+    fs.collection("enrollments").where("at", ">=", Date.now() - 30 * DAY).orderBy("at", "desc").limit(40).onSnapshot((s) => { paintEnrolled(s.docs.map((d) => d.data() || {}).filter((e) => e.done !== false)); }, (e) => { $("enr").querySelector("tbody").innerHTML = '<tr><td colspan="6" class="hint">Couldn\'t read the ledger (' + esc(e.code || e.message) + ").</td></tr>"; });
+    fs.collection("familyRequests").where("state", "==", "open").onSnapshot((s) => { paintRequests(s.docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0))); }, () => { paintRequests([]); });
+  });
+})();
+</script>
+</body>
+</html>
