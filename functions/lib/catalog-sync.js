@@ -29,7 +29,10 @@ const DESCRIPTIONS = {
   prod_VSwrEVcItQBJ4t: 'Sparring session — 1 hour.',
   prod_VSwr73HB9EzSHx: 'Pre-paid private-lesson packages — tennis, fitness and soccer.',
   prod_VSwtDH5VO3FYSZ: 'Court reservation — non-member rate per booking slot (included for members).',
-  prod_VSwuLdnecvHOo2: 'Monthly court-rental membership (1 member, minimum one billing period).'
+  prod_VSwuLdnecvHOo2: 'Monthly court-rental membership (1 member, minimum one billing period).',
+  // the staff test (a real card, $3 every 3 days, a $1 private) — created by hand in the live account on Oct 22, 2026
+  pw_tester_program: 'Not a real program: the academy\'s own test of enrollment, renewals, receipts and texts. Charges a real card $3 every 3 days until cancelled.',
+  pw_tester_lesson: 'Not a real lesson: the academy\'s own $1 test of a private booked and charged to the card on file.'
 };
 const FIRST_MONTH_DESCRIPTION = 'Charged once at enrollment for the training days left in your start month. Tuition then bills on the 1st of each month.';
 const STATEMENT = { fulltime: 'PROWORLD FULL TIME', afterschool: 'PROWORLD AFTERSCHOOL', u10adv: 'PROWORLD 10U ADV', u10path: 'PROWORLD 10U PATHWAY', tots: 'PROWORLD 4 AND UNDER', soccer: 'PROWORLD SOCCER' };
@@ -41,6 +44,7 @@ function expectedProducts() {
   for (const p of CAT.PROGRAMS) names[p.product] = p.name;
   for (const c of CAT.CAMPS) names[c.product] = c.name;
   for (const [tier, t] of Object.entries(CAT.LESSON_TIERS)) names[t.product] = tier === 'Sparring' ? 'Sparring — 1 hour' : (tier.startsWith('FITNESS') ? 'Fitness Session — ' : tier.startsWith('SOCCER') ? 'Soccer Private — ' : 'Private Lesson — ') + tier;
+  names.pw_tester_program = 'Tester Program — staff test (renews every 3 days)';
   names.prod_VSwr73HB9EzSHx = 'Lesson Packages'; names.prod_VSwtDH5VO3FYSZ = 'Court Reservation'; names.prod_VSwuLdnecvHOo2 = 'Monthly Court Rentals (membership)';
   for (const [id, description] of Object.entries(DESCRIPTIONS)) out.push({ id, name: names[id] || id, description, create: false });
   for (const p of CAT.PROGRAMS) if (p.firstMonth) out.push({ id: p.firstMonth, name: `${p.name} — start month (prorated by training days)`, description: FIRST_MONTH_DESCRIPTION, create: true, statement: STATEMENT[p.id] || 'PROWORLD', metadata: { kind: 'first_month', program: p.id, source: 'proworld-backend' } });
@@ -50,8 +54,8 @@ function expectedProducts() {
 /* Every price the engine sells, by lookup key, with what Stripe must say about it. */
 function expectedPrices() {
   const out = [];
-  for (const p of CAT.PROGRAMS) for (const pl of p.plans) out.push({ lookup: pl.lookup, label: p.short + ' · ' + pl.label, cents: pl.monthly * 100, recurring: true, product: p.product });
-  for (const m of CAT.MEMBERSHIP) out.push({ lookup: m.lookup, label: m.label, cents: m.price * 100, recurring: true, product: 'prod_VSwuLdnecvHOo2' });
+  for (const p of CAT.PROGRAMS) for (const pl of p.plans) out.push({ lookup: pl.lookup, label: p.short + ' · ' + pl.label, cents: pl.monthly * 100, recurring: true, cycle: CAT.cycleOf(pl), product: p.product });
+  for (const m of CAT.MEMBERSHIP) out.push({ lookup: m.lookup, label: m.label, cents: m.price * 100, recurring: true, cycle: CAT.cycleOf(null), product: 'prod_VSwuLdnecvHOo2' });
   for (const l of Object.values(CAT.oneTimeLines())) out.push({ lookup: l.lookup, label: l.label, cents: Math.round(l.price * 100), recurring: false, product: l.product, byProduct: !!l.byProduct });
   return out;
 }
@@ -83,8 +87,9 @@ async function checkCatalog(stripe) {
     if (!p) { prices.missing.push({ lookup: w.lookup, label: w.label, cents: w.cents }); continue; }
     const problems = [];
     if (p.unit_amount !== w.cents) problems.push(`$${(p.unit_amount || 0) / 100} in Stripe, catalog says $${w.cents / 100}`);
-    const rec = p.type === 'recurring' && p.recurring && p.recurring.interval === 'month';
-    if (w.recurring && !rec) problems.push('not a monthly price in Stripe');
+    const cy = w.cycle || CAT.cycleOf(null);
+    const rec = p.type === 'recurring' && p.recurring && p.recurring.interval === cy.interval && (p.recurring.interval_count || 1) === cy.count;
+    if (w.recurring && !rec) problems.push(cy.monthly ? 'not a monthly price in Stripe' : `not an every-${cy.count}-${cy.interval} price in Stripe`);
     if (!w.recurring && p.type !== 'one_time') problems.push('not a one-time price in Stripe');
     if (w.product && !w.byProduct && productId(p.product) !== w.product) problems.push('belongs to another product in Stripe');
     if (problems.length) prices.mismatched.push({ lookup: w.lookup, label: w.label, cents: w.cents, stripe: p.unit_amount, problem: problems.join('; ') });

@@ -56,17 +56,22 @@ test('functions/billing-rules.json is the same file as backend/billing-rules.jso
   assert.equal(a, b, 'copy backend/billing-rules.json into functions/ (the deploy only ships the functions folder)');
 });
 
+test('functions/index.js parses (it is never required by the tests, so a stray comment or brace would only show at deploy)', () => {
+  require('child_process').execFileSync(process.execPath, ['--check', path.join(__dirname, '..', 'index.js')], { stdio: 'pipe' });
+});
+
 test('every catalog line has a lookup key and the lines are unique', () => {
   const lines = CAT.oneTimeLines();
-  assert.equal(Object.keys(lines).length, 94);
-  for (const p of CAT.PROGRAMS) for (const pl of p.plans) assert.match(pl.lookup, /_monthly$/);
+  assert.equal(Object.keys(lines).length, 95);                                              // 94 Play by Point lines + the $1 test private
+  for (const p of CAT.PROGRAMS) for (const pl of p.plans) if (!pl.every) assert.match(pl.lookup, /_monthly$/);
+  assert.equal(lines['lesson_tester_1p_60m'].price, 1); assert.equal(lines['lesson_tester_1p_60m'].qbo, 'Test');
   assert.ok(lines['tg26_u10_saturday_dropin'] && lines['tg26_u10_saturday_dropin'].price === 60);
   assert.ok(lines['sparring_1p_60m'].byProduct);
 });
 
 /* ── checkout ── */
 const PRICES = [];
-for (const p of CAT.PROGRAMS) for (const pl of p.plans) PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: 'month', interval_count: 1 }, unit_amount: pl.monthly * 100, product: p.product });
+for (const p of CAT.PROGRAMS) for (const pl of p.plans) { const c = CAT.cycleOf(pl); PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: c.interval, interval_count: c.count }, unit_amount: pl.monthly * 100, product: p.product }); }
 for (const [k, l] of Object.entries(CAT.oneTimeLines())) if (!l.byProduct) PRICES.push({ id: 'price_' + k, object: 'price', active: true, lookup_key: k, type: 'one_time', unit_amount: Math.round(l.price * 100), product: l.product });
 const PRODUCTS = { prod_VSwrEVcItQBJ4t: { id: 'prod_VSwrEVcItQBJ4t', default_price: { id: 'price_sparring', type: 'one_time', unit_amount: 5000 } } };
 const family = { player: { first: 'Ava', last: 'Torres', dob: '2014-05-02' }, parent: { name: 'Jane Torres', email: 'Jane.Torres@example.com', phone: '(561) 555-0101' }, agree: true, authorize: true };
@@ -297,24 +302,24 @@ function liveLikeProducts() {
   for (const e of SYNC.expectedProducts()) if (!e.create) out[e.id] = { id: e.id, object: 'product', active: true, name: e.name, description: e.description + ' Mirrors the Play by Point program line for line.', default_price: e.id === 'prod_VSwrEVcItQBJ4t' ? PRODUCTS.prod_VSwrEVcItQBJ4t.default_price : null };
   return out;
 }
-test('catalog check: 26 products and 112 prices are expected; the sync creates the start-month products and rewrites descriptions, never prices', async () => {
-  assert.equal(SYNC.expectedProducts().length, 26);
-  assert.equal(SYNC.expectedPrices().length, 112);
+test('catalog check: 28 products and 114 prices are expected (26 + 112 Play by Point, plus the staff test); the sync creates the start-month products and rewrites descriptions, never prices', async () => {
+  assert.equal(SYNC.expectedProducts().length, 28);
+  assert.equal(SYNC.expectedPrices().length, 114);
   const stripe = fakeStripe({ prices: PRICES, products: liveLikeProducts() });
   const before = await SYNC.checkCatalog(stripe);
   assert.equal(before.products.missing.length, 6); assert.ok(before.products.missing.every((m) => m.create && /^pw_firstmonth_/.test(m.id)));
-  assert.equal(before.products.stale.length, 20); assert.equal(before.products.ok, 0);
-  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [112, 112, 0, 0]);
-  assert.equal(before.fixable, 26); assert.equal(before.blocking, 0); assert.equal(before.ready, false);
+  assert.equal(before.products.stale.length, 22); assert.equal(before.products.ok, 0);
+  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [114, 114, 0, 0]);
+  assert.equal(before.fixable, 28); assert.equal(before.blocking, 0); assert.equal(before.ready, false);
   const lines = [];
   const out = await SYNC.syncCatalog(stripe, (l) => lines.push(l));
-  assert.equal(out.done.created.length, 6); assert.equal(out.done.updated.length, 20); assert.ok(out.done.portal);
+  assert.equal(out.done.created.length, 6); assert.equal(out.done.updated.length, 22); assert.ok(out.done.portal);
   const made = stripe._db.products.pw_firstmonth_afterschool;
   assert.equal(made.name, 'Afterschool | Fall 2026 — start month (prorated by training days)');
   assert.equal(made.statement_descriptor, 'PROWORLD AFTERSCHOOL'); assert.equal(made.metadata.kind, 'first_month');
   assert.equal(stripe._db.products.prod_VSweKxrlHVGGqf.description, 'Afterschool program · Aug 10 – Dec 18, 2026.');
   assert.ok(!stripe._calls.some((c) => /^prices\.(create|update)/.test(c.name)), 'prices are never written');
-  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 26); assert.equal(out.after.prices.ok, 112);
+  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 28); assert.equal(out.after.prices.ok, 114);
   // a second sync changes nothing
   const again = await SYNC.syncCatalog(stripe);
   assert.deepEqual([again.done.created.length, again.done.updated.length], [0, 0]);
@@ -326,6 +331,44 @@ test('catalog check: 26 products and 112 prices are expected; the sync creates t
   assert.deepEqual(bad.prices.missing.map((m) => m.lookup), ['tg26_u10_saturday_dropin']);
   assert.deepEqual(bad.products.archived.map((a) => a.id), ['prod_VSwtDH5VO3FYSZ']);
   assert.equal(bad.blocking, 3); assert.equal(bad.ready, false);
+  // the staff test's price must carry its own cycle in Stripe (every 3 days), not a month
+  const wrongCycle = PRICES.map((p) => p.lookup_key === 'tester_3day' ? Object.assign({}, p, { recurring: { interval: 'month', interval_count: 1 } }) : p);
+  const wc = await SYNC.checkCatalog(fakeStripe({ prices: wrongCycle, products: liveLikeProducts() }));
+  assert.deepEqual(wc.prices.mismatched.map((m) => m.lookup + ': ' + m.problem), ['tester_3day: not an every-3-day price in Stripe']);
+});
+
+/* ── the staff test: a plan on its own cycle (every 3 days), a real card, no 1st, no proration, no break credits ── */
+test('the tester plan: charged today through a subscription Checkout with no anchor, renews every 3 days, hidden from the public list, no break credit', async () => {
+  const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS });
+  const pub = CAT.publicCatalog();
+  const t = pub.programs.find((p) => p.id === 'tester');
+  assert.equal(t.hidden, true); assert.deepEqual(t.plans[0].every, { interval: 'day', count: 3 });
+  assert.ok(pub.programs.filter((p) => p.hidden).length === 1, 'only the tester is hidden');
+  assert.equal(CAT.cycleWord(CAT.plan('tester', '3d')), 'every 3 days'); assert.equal(CAT.cycleWord(CAT.plan('afterschool', '3')), 'a month');
+  const q = CHECKOUT.monthlyQuote('tester', '3d', '2026-10-22', '2026-10-22', Date.UTC(2026, 9, 22, 14, 0, 0) / 1000);
+  assert.equal(q.mode, 'cycle'); assert.equal(q.dueCents, 300); assert.equal(q.start, '2026-10-22');
+  assert.deepEqual(q.lines, [{ label: 'First 3 days — charged today', cents: 300 }]);
+  assert.deepEqual(q.next, { date: '2026-10-25', cents: 300, note: '', label: 'Oct 25' });
+  assert.match(q.then, /^Then \$3 every 3 days on the same card/);
+  const out = await CHECKOUT.createMonthlySession(stripe, Object.assign({ kind: 'monthly', program: 'tester', plan: '3d', days: [], start: '2026-10-22', _today: '2026-10-22', idempotency: 'tst' }, family, { player: { first: 'Roger', last: 'Tester', dob: '2015-01-01' } }));
+  const p = stripe._calls.find((c) => c.name === 'checkout.sessions.create').args.params;
+  assert.equal(p.mode, 'subscription');
+  assert.equal(p.line_items[0].price, 'price_tester_3day');
+  assert.equal(p.subscription_data.billing_cycle_anchor, undefined); assert.equal(p.subscription_data.proration_behavior, undefined);
+  assert.equal(p.metadata.anchor, ''); assert.equal(p.metadata.days, 'Mon,Tue,Wed,Thu,Fri'); assert.equal(p.metadata.qbo_class, 'Test');
+  assert.ok(p.custom_text.submit.message.startsWith('Due today: First 3 days — charged today. Then $3 every 3 days'));
+  assert.ok(!p.custom_text.submit.message.includes('late fee'), 'the late-fee timeline is a monthly rule');
+  assert.equal(out.quote.mode, 'cycle'); assert.equal(out.quote.dueCents, 300);
+  // the wrong cycle in Stripe refuses the sale
+  const monthlyInStripe = PRICES.map((x) => x.lookup_key === 'tester_3day' ? Object.assign({}, x, { recurring: { interval: 'month', interval_count: 1 } }) : x);
+  await assert.rejects(S.monthlyPlanPrice(fakeStripe({ prices: monthlyInStripe }), 'tester', '3d'), /not an every-3-day price in Stripe/);
+  // the credit job leaves it alone even in the week before a break month
+  const sub = { id: 'sub_t', object: 'subscription', status: 'active', customer: 'cus_t', items: { data: [{ price: PRICES.find((x) => x.lookup_key === 'tester_3day'), current_period_end: CAL.unixET('2026-11-01', 6, 0) }] }, metadata: { player: 'Roger Tester', start: '2026-10-29' } };
+  const credits = await JOBS.applyBreakCredits(fakeStripe({ prices: PRICES, subscriptions: [sub] }), '2026-10-29');
+  assert.equal(credits.credited.length, 0); assert.equal(credits.paused.length, 0); assert.equal(credits.skipped, 1);
+  // what the thank-you page and the Admin say about the next charge: the same $3, not a prorated month
+  const en = CHECKOUT.enrollmentOf(sub, { program: 'tester', plan: '3d', days: 'Mon,Tue,Wed,Thu,Fri', start: '2026-10-29' });
+  assert.deepEqual(en.next, { date: '2026-11-01', cents: 300 }); assert.equal(en.cycle, 'every 3 days');
 });
 
 /* ── moving the families over (the pure parts; the roster itself lives in Firestore) ── */

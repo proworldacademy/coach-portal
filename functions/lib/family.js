@@ -135,9 +135,9 @@ async function billing(stripe, customers, today) {
         if (sub.status === 'canceled' && sub.canceled_at && Date.now() / 1000 - sub.canceled_at > 120 * 86400) continue;
         const { program, plan } = ADMIN.planOf(sub); const m = sub.metadata || {};
         const end = S.periodEnd(sub); const nextDate = end ? CAL.dateOfUnixET(end) : null;
-        const nextCents = plan && nextDate && sub.status !== 'canceled' && !sub.cancel_at_period_end ? CAL.firstChargeCents(plan.monthly * 100, nextDate, m.start) : null;
+        const nextCents = plan && nextDate && sub.status !== 'canceled' && !sub.cancel_at_period_end ? (plan.every ? plan.monthly * 100 : CAL.firstChargeCents(plan.monthly * 100, nextDate, m.start)) : null;
         const li = sub.latest_invoice && typeof sub.latest_invoice === 'object' ? sub.latest_invoice : null;
-        subscriptions.push({ id: sub.id, customer: c.id, player: m.player || '', program: program ? program.short : (m.program || ''), plan: plan ? plan.label : (m.plan_label || ''), days: String(m.days || '').split(',').filter(Boolean), monthly: plan ? plan.monthly : null, status: sub.status, hold: m.hold === 'true', cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection, start: m.start || CAL.dateOfUnixET(sub.created), next: nextDate ? { date: nextDate, cents: nextCents } : null, latestInvoice: li ? { status: li.status, amountDue: li.amount_due, url: li.hosted_invoice_url || null, created: CAL.dateOfUnixET(li.created) } : null });
+        subscriptions.push({ id: sub.id, customer: c.id, player: m.player || '', program: program ? program.short : (m.program || ''), plan: plan ? plan.label : (m.plan_label || ''), days: String(m.days || '').split(',').filter(Boolean), monthly: plan ? plan.monthly : null, cycle: plan ? CAT.cycleWord(plan) : 'a month', status: sub.status, hold: m.hold === 'true', cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection, start: m.start || CAL.dateOfUnixET(sub.created), next: nextDate ? { date: nextDate, cents: nextCents } : null, latestInvoice: li ? { status: li.status, amountDue: li.amount_due, url: li.hosted_invoice_url || null, created: CAL.dateOfUnixET(li.created) } : null });
       }
     } catch (e) { /* a customer with no plans */ }
     try {

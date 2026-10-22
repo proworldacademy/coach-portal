@@ -57,7 +57,13 @@ const PROGRAMS = [
       { id: '4', label: '4 Sessions / month', sub: 'Monthly · 1 session a week', days: 1, monthly: 175, lookup: 'soccer_fall26_4_monthly' },
       { id: '8', label: '8 Sessions / month', sub: 'Monthly · 2 sessions a week', days: 2, monthly: 320, lookup: 'soccer_fall26_8_monthly' },
       { id: '12', label: '12 Sessions / month', sub: 'Monthly · 3 sessions a week', days: 3, monthly: 420, lookup: 'soccer_fall26_12_monthly' }],
-    weekly: null, packs: null, dropin: { label: 'DROP IN', price: 50, lookup: 'soccer_fall26_dropin' }, trial: { label: 'FREE Trial Session', price: 0, lookup: 'soccer_fall26_trial' } }
+    weekly: null, packs: null, dropin: { label: 'DROP IN', price: 50, lookup: 'soccer_fall26_dropin' }, trial: { label: 'FREE Trial Session', price: 0, lookup: 'soccer_fall26_trial' } },
+  /* The academy's own test of the whole flow with a real card: hidden from the public list (reached only through /enroll?p=tester),
+     a real $3 charge that renews every 3 days instead of on the 1st (`every`), no start-month maths, no break credits. */
+  { id: 'tester', name: 'Tester Program — staff test', short: 'Tester', product: 'pw_tester_program', qbo: 'Test', sport: 'Staff test', ages: 'Staff only', time: '4:00–5:00 PM', hidden: true,
+    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'Not a real program: the academy tests enrollment, renewals, receipts and texts here with a real card. $3 every 3 days until cancelled.',
+    plans: [{ id: '3d', label: 'Every 3 days', sub: 'Renews every 3 days · staff test', days: 5, monthly: 3, every: { interval: 'day', count: 3 }, lookup: 'tester_3day' }],
+    weekly: null, packs: null, dropin: null }
 ];
 
 const CAMPS = [
@@ -95,14 +101,19 @@ const LESSON_TIERS = {
   'TIER 80': { key: 't80', product: 'prod_VSwnPDTKvEIqSU', 1: { 30: 40, 60: 80 } },
   'FITNESS 110': { key: 'fit110', product: 'prod_VSwnrF7HlXie9a', 1: { 30: 60, 60: 110 }, 2: { 60: 55 }, 3: { 60: 43.34 }, 4: { 30: 17.5, 60: 35 } },
   'SOCCER 120': { key: 'soc120', product: 'prod_VSwqeDA8h0tdWb', 1: { 45: 100, 60: 120 }, 2: { 60: 75, 90: 100 }, 3: { 60: 60, 90: 76.67 } },
-  'Sparring': { key: 'sparring', product: 'prod_VSwrEVcItQBJ4t', 1: { 60: 50 } }
+  'Sparring': { key: 'sparring', product: 'prod_VSwrEVcItQBJ4t', 1: { 60: 50 } },
+  'TEST $1': { key: 'tester', product: 'pw_tester_lesson', 1: { 60: 1 } }                  // the $1 test private (staff test of the card on file), booked like any other
 };
 const PROS = [
   { name: 'Toño Fernandez', tier: 'TIER 150' }, { name: 'Etienne Dumas', tier: 'TIER 150' }, { name: 'Florian Riglet', tier: 'TIER 150' }, { name: 'Quinnton Vega', tier: 'TIER 150' }, { name: 'Lorenzo Cava', tier: 'TIER 150' }, { name: 'Adam Altschuler', tier: 'TIER 150' }, { name: 'Lan Bale', tier: 'TIER 150' },
   { name: 'Nico Fernandez', tier: 'TIER 120' }, { name: 'Mauricio Paiva', tier: 'TIER 120' }, { name: 'Eric Samuelsson', tier: 'TIER 120' },
   { name: 'Kamryn Taub', tier: 'TIER 100' }, { name: 'Kate Agnew', tier: 'TIER 100' }, { name: 'Robby Talle', tier: 'TIER 80' },
-  { name: 'Tara Malik', tier: 'FITNESS 110' }, { name: 'Jesse Adarme', tier: 'FITNESS 110' }, { name: 'Lukas Hombach', tier: 'SOCCER 120' }, { name: 'Daniel Rila', tier: 'Sparring' }
+  { name: 'Tara Malik', tier: 'FITNESS 110' }, { name: 'Jesse Adarme', tier: 'FITNESS 110' }, { name: 'Lukas Hombach', tier: 'SOCCER 120' }, { name: 'Daniel Rila', tier: 'Sparring' },
+  { name: 'Antonio Torri', tier: 'TEST $1' }
 ];
+/* How a plan renews: on the 1st of the month (the academy's rule) unless the plan carries `every` (the staff test: every 3 days). */
+function cycleOf(plan) { return plan && plan.every ? { interval: plan.every.interval, count: plan.every.count, monthly: false } : { interval: 'month', count: 1, monthly: true }; }
+function cycleWord(plan) { const c = cycleOf(plan); return c.monthly ? 'a month' : `every ${c.count > 1 ? c.count + ' ' : ''}${c.interval}${c.count > 1 ? 's' : ''}`; }
 const COURTS = { clay: { label: 'Clay court · Non Member', price: 20, lookup: 'court_clay_nonmember' }, hard: { label: 'Hard court · Non Member', price: 20, lookup: 'court_hard_nonmember' } };
 const MEMBERSHIP = [{ id: 'm600', label: 'Monthly Court Rentals · $600', price: 600, lookup: 'membership_court_600_monthly' }, { id: 'm900', label: 'Monthly Court Rentals · $900', price: 900, lookup: 'membership_court_900_monthly' }];
 
@@ -120,7 +131,7 @@ function oneTimeLines() {
   for (const l of LESSON_PACKAGES) add(l.lookup, l.price, 'Lesson package · ' + l.label, 'lesson_package', { hours: l.hours, product: 'prod_VSwr73HB9EzSHx', qbo: l.id.startsWith('soc') ? 'Soccer' : l.id.endsWith('_fi') ? 'Fitness' : 'Private lessons' });
   for (const [tier, t] of Object.entries(LESSON_TIERS)) for (const n of [1, 2, 3, 4]) for (const [min, price] of Object.entries(t[n] || {})) {
     if (tier === 'Sparring') add('sparring_1p_60m', 50, 'Sparring · 1 hour', 'lesson', { tier, players: 1, minutes: 60, product: t.product, qbo: 'Private lessons', byProduct: true });
-    else add(`lesson_${t.key}_${n}p_${min}m`, price, `Private lesson · ${tier} · ${n} player${n > 1 ? 's' : ''} · ${min} min${n > 1 ? ' (each)' : ''}`, 'lesson', { tier, players: n, minutes: +min, product: t.product, qbo: tier.startsWith('FITNESS') ? 'Fitness' : tier.startsWith('SOCCER') ? 'Soccer' : 'Private lessons' });
+    else add(`lesson_${t.key}_${n}p_${min}m`, price, `Private lesson · ${tier} · ${n} player${n > 1 ? 's' : ''} · ${min} min${n > 1 ? ' (each)' : ''}`, 'lesson', { tier, players: n, minutes: +min, product: t.product, qbo: tier.startsWith('FITNESS') ? 'Fitness' : tier.startsWith('SOCCER') ? 'Soccer' : tier.startsWith('TEST') ? 'Test' : 'Private lessons' });
   }
   for (const [k, c] of Object.entries(COURTS)) add(c.lookup, c.price, 'Court reservation · ' + c.label, 'court', { court: k, product: 'prod_VSwtDH5VO3FYSZ', qbo: 'Court rentals' });
   return out;
@@ -130,11 +141,11 @@ function program(id) { return PROGRAMS.find((p) => p.id === id) || null; }
 function plan(programId, planId) { const p = program(programId); return p ? p.plans.find((x) => x.id === String(planId)) || null : null; }
 /* What the public page and the backend need, without Stripe ids. */
 function publicCatalog() {
-  return { programs: PROGRAMS.map((p) => ({ id: p.id, name: p.name, short: p.short, sport: p.sport, ages: p.ages, time: p.time, days: p.days, blurb: p.blurb,
-    plans: p.plans.map(({ id, label, sub, days, monthly }) => ({ id, label, sub, days, monthly })), weekly: (p.weekly || []).map(({ id, label, price, lookup }) => ({ id, label, price, lookup })),
+  return { programs: PROGRAMS.map((p) => ({ id: p.id, name: p.name, short: p.short, sport: p.sport, ages: p.ages, time: p.time, days: p.days, blurb: p.blurb, hidden: p.hidden === true,
+    plans: p.plans.map(({ id, label, sub, days, monthly, every }) => Object.assign({ id, label, sub, days, monthly }, every ? { every } : {})), weekly: (p.weekly || []).map(({ id, label, price, lookup }) => ({ id, label, price, lookup })),
     packs: (p.packs || []).map(({ id, sessions, label, price, lookup }) => ({ id, sessions, label, price, lookup })), dropin: p.dropin ? { label: p.dropin.label, price: p.dropin.price, lookup: p.dropin.lookup } : null, trial: p.trial ? { label: p.trial.label, price: p.trial.price, lookup: p.trial.lookup } : null })),
     camps: CAMPS.map((c) => ({ id: c.id, name: c.name, dates: c.dates, ages: c.ages, blurb: c.blurb, options: c.options.map(({ id, label, price, lookup }) => ({ id, label, price, lookup })) })),
     lessonPackages: LESSON_PACKAGES.map(({ id, label, hours, price }) => ({ id, label, hours, price })), pros: PROS, tiers: Object.fromEntries(Object.entries(LESSON_TIERS).map(([k, v]) => [k, { 1: v[1], 2: v[2], 3: v[3], 4: v[4] }])) };
 }
 
-module.exports = { PROGRAMS, CAMPS, LESSON_PACKAGES, LESSON_TIERS, PROS, COURTS, MEMBERSHIP, oneTimeLines, program, plan, publicCatalog };
+module.exports = { PROGRAMS, CAMPS, LESSON_PACKAGES, LESSON_TIERS, PROS, COURTS, MEMBERSHIP, oneTimeLines, program, plan, publicCatalog, cycleOf, cycleWord };

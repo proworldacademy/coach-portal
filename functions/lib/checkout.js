@@ -39,6 +39,7 @@ function monthlyQuote(programId, planId, start, today, now) {
   if (!prog || !plan) throw S.err(400, 'unknown_plan', 'Unknown program or plan.');
   today = today || CAL.todayET();                                                   // a start date is never earlier than today: nobody is billed for days already gone
   now = now || Math.floor(Date.now() / 1000);
+  if (plan.every) return cycleQuote(prog, plan, today);
   const startDate = /^\d{4}-\d{2}-\d{2}$/.test(start || '') && start >= today ? start : today;
   const q = CAL.firstMonthQuote(plan.monthly * 100, startDate);
   if (!q.ok) throw S.err(400, 'no_training_days', q.reason);
@@ -66,6 +67,18 @@ function monthlyQuote(programId, planId, start, today, now) {
     + ` and ${money(plan.monthly * 100)} on the 1st of every month after — months with a school break are prorated automatically. Cancel from your account any time before the 1st.`;
   return { program: prog, plan, start: q.start, startLabel: 'Starts ' + CAL.MONTHS[sp.m] + ' ' + sp.d, lines, dueCents, then, mode, anchor, anchorUnix, next };
 }
+/* A plan with its own cycle (the staff test, every 3 days): the first cycle is charged today and the plan renews from now — no 1st, no
+   proration, no start-month payment. `mode` 'cycle': Checkout creates the subscription itself with no anchor. */
+const DAYS_PER = { day: 1, week: 7, month: 30, year: 365 };
+function cycleQuote(prog, plan, today) {
+  const cents = plan.monthly * 100; const c = CAT.cycleOf(plan);
+  const nextDate = CAL.addDays(today, (DAYS_PER[c.interval] || 1) * c.count);
+  const sp = CAL.parts(today), np = CAL.parts(nextDate);
+  const first = `First ${c.count > 1 ? c.count + ' ' : ''}${c.interval}${c.count > 1 ? 's' : ''} — charged today`;
+  return { program: prog, plan, start: today, startLabel: 'Starts ' + CAL.MONTHS[sp.m] + ' ' + sp.d, lines: [{ label: first, cents }], dueCents: cents,
+    then: `Then ${money(cents)} ${CAT.cycleWord(plan)} on the same card, automatically, until you cancel from your account.`,
+    mode: 'cycle', anchor: null, anchorUnix: null, next: { date: nextDate, cents, note: '', label: CAL.MONTHS[np.m] + ' ' + np.d } };
+}
 
 async function createMonthlySession(stripe, body) {
   const { player, parent, playerName } = validatePeople(body);
@@ -76,10 +89,11 @@ async function createMonthlySession(stripe, body) {
   const sched = plan.days >= prog.days.length ? prog.days : days.sort((a, b) => DOWS.indexOf(a) - DOWS.indexOf(b));
   const q = monthlyQuote(prog.id, plan.id, body.start, body._today, body._now);
   const customer = await S.findOrCreateCustomer(stripe, parent);
-  const meta = { kind: 'program', program: prog.id, program_name: prog.name, plan: plan.id, plan_label: plan.label, days: sched.join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, sms_opt_in: body.smsOptIn === true ? 'yes' : 'no', start: q.start, anchor: String(q.anchorUnix), qbo_class: prog.qbo, source: 'proworld-backend', by: parent.by };
+  const meta = { kind: 'program', program: prog.id, program_name: prog.name, plan: plan.id, plan_label: plan.label, days: sched.join(','), player: playerName, player_dob: player.dob, parent: parent.name, parent_phone: parent.phone, sms_opt_in: body.smsOptIn === true ? 'yes' : 'no', start: q.start, anchor: q.anchorUnix ? String(q.anchorUnix) : '', qbo_class: prog.qbo, source: 'proworld-backend', by: parent.by };
   const description = `${prog.short} · ${plan.label}${sched.length && plan.days < prog.days.length ? ' · ' + sched.join('/') : ''} · ${playerName}`;
   const rules = CAL.RULES.late_policy;
-  const submit = `${q.dueCents > 0 ? 'Due today: ' + q.lines[0].label : q.lines[0].label}. ${q.then} If a payment is not received by the ${rules.grace_until_day}th, a $${rules.late_fee_usd} late fee applies; training pauses on the ${rules.suspend_day}th and the spot is released on the ${rules.remove_day}th if still unpaid.`.slice(0, 1190);
+  const late = q.mode === 'cycle' ? '' : ` If a payment is not received by the ${rules.grace_until_day}th, a $${rules.late_fee_usd} late fee applies; training pauses on the ${rules.suspend_day}th and the spot is released on the ${rules.remove_day}th if still unpaid.`;
+  const submit = `${q.dueCents > 0 ? 'Due today: ' + q.lines[0].label : q.lines[0].label}. ${q.then}${late}`.slice(0, 1190);
   const common = {
     customer: customer.id,
     customer_update: { name: 'auto', address: 'auto' },
@@ -98,6 +112,14 @@ async function createMonthlySession(stripe, body) {
       line_items: [{ price_data: { currency: 'usd', product: prog.firstMonth, unit_amount: q.dueCents }, quantity: 1 }],
       payment_intent_data: { setup_future_usage: 'off_session', description: `${prog.short} · ${q.lines[0].label} · ${playerName}`.slice(0, 1000), metadata: meta },
       invoice_creation: { enabled: true, invoice_data: { description: `${description} — ${q.lines[0].label}`.slice(0, 1500), metadata: meta } },
+      metadata: Object.assign({ price: price.id, description }, meta)
+    }, common), { idempotencyKey: body.idempotency ? 'enroll_' + S.clean(body.idempotency, 60) : undefined });
+  } else if (q.mode === 'cycle') {
+    // The plan's own cycle (the staff test): Checkout creates the subscription now — the first cycle is charged today, the next one follows on its own.
+    session = await stripe.checkout.sessions.create(Object.assign({
+      mode: 'subscription',
+      line_items: [{ price: price.id, quantity: 1 }],
+      subscription_data: { description, metadata: meta },
       metadata: Object.assign({ price: price.id, description }, meta)
     }, common), { idempotencyKey: body.idempotency ? 'enroll_' + S.clean(body.idempotency, 60) : undefined });
   } else {
@@ -213,8 +235,8 @@ function enrollmentOf(sub, m) {
   const end = S.periodEnd(sub);
   const nextDate = end ? CAL.dateOfUnixET(end) : null;
   const prog = CAT.program(m.program); const plan = CAT.plan(m.program, m.plan);
-  let nextCents = null; if (plan && nextDate) nextCents = CAL.firstChargeCents(plan.monthly * 100, nextDate, m.start);
-  return { program: prog ? prog.name : m.program_name, plan: plan ? plan.label : m.plan_label, days: (m.days || '').split(',').filter(Boolean), start: m.start, subscription: sub.id, status: sub.status, next: nextDate ? { date: nextDate, cents: nextCents } : null };
+  let nextCents = null; if (plan && nextDate) nextCents = plan.every ? plan.monthly * 100 : CAL.firstChargeCents(plan.monthly * 100, nextDate, m.start);
+  return { program: prog ? prog.name : m.program_name, plan: plan ? plan.label : m.plan_label, days: (m.days || '').split(',').filter(Boolean), start: m.start, subscription: sub.id, status: sub.status, next: nextDate ? { date: nextDate, cents: nextCents } : null, cycle: plan ? CAT.cycleWord(plan) : 'a month' };
 }
 async function sessionStatus(stripe, id, log, ctx) {
   if (!/^cs_[A-Za-z0-9_]+$/.test(id || '')) throw S.err(400, 'session', 'Bad session id.');
