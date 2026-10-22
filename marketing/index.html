@@ -288,8 +288,8 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
 
 <nav class="nav" id="nav" aria-label="Marketing">
   <button class="tab-btn active" data-tab="home">Home</button>
+  <button class="tab-btn" data-tab="fortnight">2-Week Plan</button>
   <button class="tab-btn" data-tab="assignments">Coach assignments</button>
-  <button class="tab-btn" data-tab="fortnight">Plan</button>
   <button class="tab-btn" data-tab="workflow">Workflow</button>
   <button class="tab-btn" data-tab="ads">Ads</button>
   <button class="tab-btn" data-tab="reports">Reports</button>
@@ -364,14 +364,14 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
 <!-- ═══ TWO-WEEK PLAN ═══ -->
 <section class="tab" id="tab-fortnight">
   <h1 class="h-display page-title">The <em>2-Week Plan</em></h1>
-  <p class="page-sub">Fourteen posts — one a day for two weeks — plus the extras in hand. Tick each one, swap what isn't right, use an extra instead of a weak one, then set both weeks. Nothing set here is ever assigned again.</p>
+  <p class="page-sub">One button builds the next two weeks, Monday to Sunday: every coach's video, the ad videos and the carousels — one post a day, the rest in hand. Tick each one, swap what isn't right, use an extra instead of a weak one, then set both weeks. Nothing set here is ever assigned again.</p>
   <div id="fortnight"></div>
 </section>
 
 <!-- ═══ COACH ASSIGNMENTS ═══ -->
 <section class="tab" id="tab-assignments">
   <h1 class="h-display page-title">Coach <em>Assignments</em></h1>
-  <p class="page-sub">One brief per week, every week saved for everyone. Move between weeks, generate the missing ones, adjust, approve &amp; lock, then send the briefs from the Workflow tab. Nothing assigned once is ever assigned again.</p>
+  <p class="page-sub">The week-by-week view of the 2-week plan — one brief per week, every week saved for everyone. Generate builds the whole two weeks; move between weeks to adjust, approve &amp; lock, then send the briefs from the Workflow tab. Nothing assigned once is ever assigned again.</p>
   <div class="card">
     <div class="card-label">Weekly video brief</div>
     <div class="btn-row" style="margin-bottom:12px">
@@ -384,7 +384,7 @@ label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase
       <input type="text" id="week-theme" placeholder="Weekly theme (auto-detected if blank)">
     </div>
     <div class="btn-row">
-      <button class="btn" onclick="genAssignments()">⚡ Generate assignments</button>
+      <button class="btn" onclick="genAssignments()">⚡ Generate the 2 weeks</button>
       <button class="btn mint" id="approve-btn" onclick="approveWeek()">✓ Approve &amp; lock</button>
       <button class="btn ghost" onclick="downloadPDF()">PDF brief</button>
       <button class="btn ghost" onclick="window.print()">Print this week</button>
