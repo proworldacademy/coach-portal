@@ -10,31 +10,37 @@
 // file:    a page copied onto this site: the locked file p/data/<file>.bin, opened at /p?id=<id> (hash = the view it opens at)
 // with:    a page that comes with another one (no tick box of its own): whoever has that page has this one too
 // section: tools = what we use every day · proto = prototypes & plans · library = playbooks, pages & reports
+// door:    which of the five doors in the top bar marks this page (admin · coaches · clients · marketing · library); none = the Dashboard
+//
+// PROWORLD HQ (Oct 21, 2026): the top bar shows five doors — Dashboard · Admin · Coaches · Clients · Marketing — and the Library.
+// A door is one audience's whole world; its menu lists the views inside it (DOORS below). The pages keep their addresses.
 (function () {
   "use strict";
   const PAGES = [
     // ── Tools — in daily use ──
-    { id: "mkt", section: "tools", name: "Marketing Command Center", short: "Marketing", color: "", status: "here", opens: "site", menu: true, url: "/marketing", owner: "Marketing",
+    { id: "mkt", section: "tools", door: "marketing", name: "Marketing Command Center", short: "Marketing", color: "", status: "here", opens: "site", menu: true, url: "/marketing", owner: "Marketing",
       desc: "Home with this week's numbers and posts, the two-week plan to approve, Meta ads, and the reports the Sunday and Monday runs post. The idea banks, archive and brief live in its Library." },
-    { id: "coach-portal", section: "tools", name: "Coach Portal · Player Assessments", short: "Coach Portal", color: "mint", status: "here", opens: "site", menu: true, url: "/portal", owner: "Coaches · Directors",
+    { id: "coach-portal", section: "tools", door: "coaches", name: "Coach Portal · Player Assessments", short: "Coaches", color: "mint", status: "here", opens: "site", menu: true, url: "/portal", owner: "Coaches · Directors",
       desc: "Every player's quarterly assessment (tennis, fitness, mental, summary), monthly and camp reports, videos, the journal and the follow-up checklist, with the branded PDF for parents." },
-    { id: "tryouts", section: "tools", name: "Try-outs", short: "Try-outs", color: "mint", status: "here", opens: "site", menu: true, url: "/portal#/tryouts", owner: "Front desk · Coaches",
+    { id: "tryouts", section: "tools", door: "coaches", name: "Try-outs", short: "Try-outs", color: "mint", status: "here", opens: "site", menu: false, url: "/portal#/tryouts", owner: "Front desk · Coaches",
       desc: "Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered." },
-    { id: "coach-board", section: "tools", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: true, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
+    { id: "coach-board", section: "tools", door: "coaches", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: false, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
       desc: "Rosters by coach, players with no coach yet, try-outs, the Proworld Standard and the quarter commit — from Monday every morning, with a log of every change. Comes with the Coach Portal." },
-    { id: "backend", section: "tools", name: "ProWorld backend", short: "Backend", color: "", status: "here", opens: "site", menu: true, url: "/backend", owner: "Owners · Front desk · Coaches · Families",
-      desc: "The academy's own system, replacing Play by Point: front desk, enroll, courts, attendance, players & billing, privates, books and the family's account. One player record drives everything — a family that enrolls online is on the roster, in the Coach Portal, on the attendance list and on Monday the same minute, and the coaches are told." },
-    { id: "billing", section: "tools", name: "Billing · live actions", short: "Billing", color: "orchid", status: "here", opens: "site", url: "/backend#players", owner: "Owners · Front desk",
-      desc: "On top of the backend page: hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link. Without this tick the backend shows billing read-only." },
-    { id: "enroll", section: "tools", name: "Public enrollment page", short: "Enroll", color: "mint", status: "live", opens: "site", url: "/enroll", with: "backend", owner: "Families · Front desk",
-      desc: "Where families enroll and pay: program, days, parent, Stripe. Open it to see what a family sees, or send the prefilled link from the backend's Enroll tab. No sign-in needed — it is public. Comes with the backend." },
-    { id: "family", section: "tools", name: "Family portal", short: "Family", color: "cyan", status: "live", opens: "site", url: "/family", with: "backend", owner: "Families · Front desk",
-      desc: "Where a parent signs in with the e-mail on file (Google, or an e-mailed link) and sees their own players, coach and schedule, this month's attendance, the reports the coaches marked as sent, their bills and card — and asks the front desk for a court, a private or a plan change. Requests land in the front-desk channel and on the backend's Front desk tab. Comes with the backend." },
-    { id: "ai-check", section: "tools", name: "AI & Comms Check", short: "AI check", color: "orchid", status: "here", opens: "site", menu: true, url: "/checks", owner: "Owners · Front desk",
+    { id: "backend", section: "tools", door: "admin", name: "ProWorld Admin", short: "Admin", color: "", status: "here", opens: "site", menu: true, url: "/backend", owner: "Owners · Front desk · Coaches",
+      desc: "The academy's own system, replacing Play by Point: front desk, enroll, courts, attendance, players & billing, privates, books, messages. One player record drives everything — a family that enrolls online is on the roster, in the Coach Portal, on the attendance list and on Monday the same minute, and the coaches are told." },
+    { id: "billing", section: "tools", door: "admin", name: "Billing · live actions", short: "Billing", color: "orchid", status: "here", opens: "site", url: "/backend#players", owner: "Owners · Front desk",
+      desc: "On top of the Admin page: hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link. Without this tick Admin shows billing read-only." },
+    { id: "enroll", section: "tools", door: "clients", name: "Public enrollment page", short: "Enroll", color: "mint", status: "live", opens: "site", url: "/enroll", with: "backend", owner: "Clients · Front desk",
+      desc: "Where families enroll and pay: program, days, parent, Stripe. Open it to see what a family sees, or send the prefilled link from Admin's Enroll tab. No sign-in needed — it is public. Comes with Admin." },
+    { id: "clients", section: "tools", door: "clients", name: "Clients", short: "Clients", color: "cyan", status: "here", opens: "site", url: "/clients", with: "backend", owner: "Front desk · Owners",
+      desc: "The client side in one place: the links to send (enroll, courts, privates, the client account), who enrolled online, what families asked for, and a client's account as they see it. Comes with Admin." },
+    { id: "family", section: "tools", door: "clients", hide: true, name: "The client account", short: "Client account", color: "cyan", status: "live", opens: "site", url: "/family", with: "backend", owner: "Clients · Front desk",
+      desc: "Where a parent signs in with the e-mail on file (Google, or an e-mailed link) and sees their own players, coach and schedule, this month's attendance, the reports the coaches marked as sent, their bills and card — and asks the front desk for a court, a private or a plan change. Requests land in the front-desk channel and on Admin's Front desk tab. Comes with Admin." },
+    { id: "ai-check", section: "tools", name: "AI & Comms Check", short: "AI check", color: "orchid", status: "here", opens: "site", menu: false, url: "/checks", owner: "Owners · Front desk",
       desc: "Is everything answering? The 2-minute morning glance at the automatic reports, the weekly test messages on every channel (text, WhatsApp, website, Instagram, Messenger), the monthly accounts that switch it all off, and what’s still missing. Every tick is saved with who and when." },
-    { id: "desk-live", section: "tools", name: "Front Desk · Daily Attendance", short: "Attendance", color: "cyan", status: "live", opens: "link", owner: "Front desk",
+    { id: "desk-live", section: "tools", door: "library", name: "Front Desk · Daily Attendance", short: "Attendance", color: "cyan", status: "live", opens: "link", owner: "Front desk",
       desc: "Today's expected players by session from Monday and the roster, what needs fixing, and the Play by Point check-in compare. Refreshes every 5 minutes. Its own page, opened with a saved link." },
-    { id: "directors-live", section: "tools", name: "Directors Dashboard", short: "Directors", color: "cyan", status: "live", opens: "link", owner: "Directors",
+    { id: "directors-live", section: "tools", door: "library", name: "Directors Dashboard", short: "Directors", color: "cyan", status: "live", opens: "link", owner: "Directors",
       desc: "The roster by director, group and coach, family-contact coverage and the overnight Monday check. Refreshes every 5 minutes. Its own page, opened with a saved link." },
     // ── Prototypes & plans ──
     { id: "comms-plan", section: "proto", name: "Coach Comms Plan", color: "gray", status: "plan", opens: "site", url: "/p?id=comms-plan", file: "comms-plan", owner: "Leadership · Directors",
@@ -71,10 +77,29 @@
     { id: "tennis-tryout", section: "library", name: "Tennis Section Try-Out", color: "gray", status: "archive", opens: "site", url: "/p?id=tennis-tryout", file: "tennis-tryout", owner: "Leadership",
       desc: "The five ways a coach could fill the Tennis part of the quarterly (A–E). Decided Oct 8, 2026: option C is live in the Coach Portal." }
   ];
+  // ── The doors (PROWORLD HQ): what the top bar shows. A door opens its page; its menu lists the views inside it — only the
+  //    ones the person may open (`page` on an item, else the door's). `page` on the door = who sees the door at all.
+  const DOORS = [
+    { id: "admin", name: "Admin", href: "/backend", page: ["backend"], items: [
+      { name: "Front desk", href: "/backend#desk" }, { name: "Enroll · the link", href: "/backend#enroll" }, { name: "Courts", href: "/backend#courts" },
+      { name: "Attendance", href: "/backend#attendance" }, { name: "Players & billing", href: "/backend#players" }, { name: "Privates", href: "/backend#privates" },
+      { name: "Books", href: "/backend#books" }, { name: "Messages", href: "/backend#messages" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" } ] },
+    { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal", "tryouts"], items: [
+      { name: "Players & assessments", href: "/portal", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
+      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
+      { name: "Messages", href: "/backend#messages", page: "backend" }, { name: "Courts", href: "/backend#courts", page: "backend" }, { name: "Privates", href: "/backend#privates", page: "backend" } ] },
+    { id: "clients", name: "Clients", href: "/clients", page: ["backend"], items: [
+      { name: "The client account", href: "/family" }, { name: "Enroll · public link", href: "/enroll" }, { name: "Courts", href: "/backend#courts" },
+      { name: "Privates", href: "/backend#privates" }, { name: "Look up an account", href: "/backend#account" } ] },
+    { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [
+      { name: "Home · the status report", href: "/marketing#home" }, { name: "Coach assignments", href: "/marketing#assignments" }, { name: "Plan", href: "/marketing#fortnight" },
+      { name: "Workflow", href: "/marketing#workflow" }, { name: "Ads", href: "/marketing#ads" }, { name: "Reports", href: "/marketing#reports" } ] },
+    { id: "library", name: "Library", href: "/#library", page: null, items: [] }
+  ];
   const SECTIONS = [
     { id: "tools", label: "Tools — in daily use", color: "" },
-    { id: "proto", label: "Prototypes & plans", color: "cyan" },
-    { id: "library", label: "Playbooks, pages & reports", color: "orchid" }
+    { id: "proto", label: "Library · prototypes & plans", color: "cyan" },
+    { id: "library", label: "Library · playbooks, pages & reports", color: "orchid" }
   ];
   // Outside tools with their own logins. Shown to owners and administrators on the Dashboard.
   const OUTSIDE = [
@@ -108,5 +133,5 @@
   const ALIAS = { "be-owner": "backend", "be-desk": "backend", "be-coach": "backend", "be-parent": "backend" };
   const STATUS_LABEL = { here: "Live", live: "Live", proto: "Prototype", plan: "Plan", page: "Page", report: "Report", archive: "Archive" };
   const OPENS_LABEL = { site: "", claude: "Opens in Claude", link: "Its own page" };
-  window.PW_PAGES = { PAGES, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL };
+  window.PW_PAGES = { PAGES, DOORS, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL };
 })();

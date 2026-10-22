@@ -1,6 +1,7 @@
-/* PROWORLD — the page chrome of the redesign (shared/design.js), used with shared/design.css.
+/* PROWORLD HQ — the page chrome of the redesign (shared/design.js), used with shared/design.css.
    Draws what every redesigned page shares: the six brand lights under the page, the gradient sky at the top (the page's
-   skin), the top bar (wordmark · the pages this person has · a visible "Jump to…" field · the person), the compact bar that
+   skin), the top bar (wordmark · the five doors — Dashboard · Admin · Coaches · Clients · Marketing — and the Library, each
+   door with a menu of the views inside it, from shared/pages.js DOORS · a visible "Jump to…" field · the person), the compact bar that
    slides in once the greeting has scrolled away, the ⌘K jump palette, the ticker of today's signals, and the small motions
    (tiles tilt toward the cursor with a soft flashlight, a lime ripple on press, the sky's bright spot drifting toward the
    cursor, sections rising into place, numbers counting up). Everything respects prefers-reduced-motion.
@@ -28,14 +29,49 @@
   function mine() { return ctx && ctx.has ? P.PAGES.filter((p) => ctx.has(p.id)) : []; }
   function isHere(p) { if (!p.url || external(p)) return false; const path = p.url.split("#")[0].replace(/\/$/, "") || "/"; return !p.url.includes("#") && path === here; }
 
+  // ── the doors (PROWORLD HQ): the top bar shows Dashboard · Admin · Coaches · Clients · Marketing · Library. A door opens its
+  //    page; its menu (shown under it on desktop — phones use the Jump palette) lists the views inside it the person may open. ──
+  const DOORS = P.DOORS || [];
+  const hasAny = (pages) => !pages || !pages.length || !!(ctx && ctx.has && pages.some((id) => ctx.has(id)));
+  const PATH_DOOR = { "/backend": "admin", "/portal": "coaches", "/clients": "clients", "/family": "clients", "/enroll": "clients", "/marketing": "marketing", "/p": "library" };
+  function doorNow() {
+    const id = opts.active && opts.active !== "/" ? opts.active : null;
+    const pg = id ? P.PAGES.find((p) => p.id === id) : null;
+    if (pg) return pg.door || (pg.section !== "tools" ? "library" : null);
+    if (id && DOORS.some((d) => d.id === id)) return id;
+    return PATH_DOOR[here] || null;
+  }
+  function doors() {
+    if (!ctx) return [];
+    const now = doorNow();
+    return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))
+      .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)) }));
+  }
+  let ddEl = null, ddT = null;
+  function ddHide() { if (ddEl) ddEl.classList.remove("on"); }
+  function ddShow(el, d) {
+    if (!d.items.length) { ddHide(); return; }
+    if (!ddEl) {
+      ddEl = document.createElement("div"); ddEl.className = "pwd-dd"; ddEl.id = "pwd-dd"; ddEl.setAttribute("role", "menu"); document.body.appendChild(ddEl);
+      ddEl.addEventListener("mouseenter", () => clearTimeout(ddT)); ddEl.addEventListener("mouseleave", () => { ddT = setTimeout(ddHide, 180); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") ddHide(); });
+      addEventListener("scroll", ddHide, { passive: true }); addEventListener("resize", ddHide, { passive: true });
+      document.addEventListener("click", (e) => { if (!e.target.closest("#pwd-dd, .pwd-strip .door")) ddHide(); });
+    }
+    ddEl.innerHTML = "<b>" + esc(d.name) + "</b>" + d.items.map((it) => '<a role="menuitem" href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("");
+    const r = el.getBoundingClientRect(); ddEl.style.left = Math.max(8, Math.min(r.left, innerWidth - 232)) + "px"; ddEl.style.top = (r.bottom + 6) + "px";
+    ddEl.classList.add("on");
+  }
+
   // ── the top bar ──
   let stripResize = false;
   function stripFit() { const st = $("#pwd-top .pwd-strip"); if (st) st.classList.toggle("fade", st.scrollLeft + st.clientWidth < st.scrollWidth - 2); }
   function drawTop() {
     const top = $("#pwd-top"); if (!top) return;
     const home = opts.active ? opts.active === "/" : here === "/";
-    const items = [{ name: "Dashboard", href: "/", on: home }].concat(mine().filter((p) => p.menu).map((p) => ({ name: p.short || p.name, href: pageHref(p), ext: external(p), on: opts.active ? opts.active === p.id : isHere(p) })));
-    const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD pages">' + (ctx ? items.map((i) => '<a class="' + (i.on ? "on" : "") + '" href="' + esc(i.href) + '"' + (i.ext ? ' target="_blank" rel="noopener"' : "") + (i.on ? ' aria-current="page"' : "") + ">" + esc(i.name) + "</a>").join("") + (home ? "" : '<a class="more" href="/">All pages →</a>') : "") + "</nav>";
+    const ds = doors();
+    const door = (d) => '<span class="door' + (d.on ? " on" : "") + '" data-door="' + esc(d.id) + '"><a class="' + (d.on ? "on" : "") + '" href="' + esc(d.href) + '"' + (d.on ? ' aria-current="page"' : "") + (d.items.length ? ' aria-haspopup="menu"' : "") + ">" + esc(d.name) + "</a></span>";
+    const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>' + ds.map(door).join("") : "") + "</nav>";
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
     const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
     const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
@@ -45,6 +81,12 @@
     // the strip fades on the right only while more pages hide there, and the page you are on is always in view
     const st = top.querySelector(".pwd-strip");
     if (st) {
+      st.querySelectorAll(".door").forEach((el) => {
+        const d = ds.find((x) => x.id === el.getAttribute("data-door")); if (!d) return;
+        el.addEventListener("mouseenter", () => { clearTimeout(ddT); ddShow(el, d); });
+        el.addEventListener("mouseleave", () => { ddT = setTimeout(ddHide, 180); });
+        el.querySelector("a").addEventListener("focus", () => ddShow(el, d));
+      });
       // when the pages don't fit, the Jump field shrinks to its icon first
       top.classList.toggle("tight", st.scrollWidth > st.clientWidth + 2);
       const on = st.querySelector("a.on"); if (on) { const end = on.offsetLeft + on.offsetWidth; if (end > st.clientWidth) st.scrollLeft = end - st.clientWidth + 28; }
@@ -84,7 +126,8 @@
   function items() {
     const kind = (p) => (p.section === "tools" ? "tool" : ({ plan: "plan", report: "report", page: "page", archive: "archive", proto: "prototype" }[p.status] || p.section || ""));
     const base = mine().map((p) => ({ name: p.name, kind: kind(p), href: pageHref(p), ext: external(p) }));
-    const all = [{ name: "Dashboard", kind: "home", href: "/" }].concat(extra, base);
+    const views = []; doors().forEach((d) => d.items.forEach((it) => views.push({ name: d.name + " › " + it.name, kind: "view", href: it.href })));
+    const all = [{ name: "Dashboard", kind: "home", href: "/" }].concat(extra, base, views);
     const seen = new Set(); return all.filter((x) => x.href && !seen.has(x.href) && seen.add(x.href));
   }
   const hl = (name, q) => { const i = name.toLowerCase().indexOf(q); return i < 0 ? esc(name) : esc(name.slice(0, i)) + "<mark>" + esc(name.slice(i, i + q.length)) + "</mark>" + esc(name.slice(i + q.length)); };
