@@ -48,7 +48,8 @@ async function monthlyPlanPrice(stripe, programId, planId) {
   const prog = CAT.program(programId); const plan = CAT.plan(programId, planId);
   if (!prog || !plan) throw err(400, 'unknown_plan', 'Unknown program or plan.');
   const price = (await resolvePrices(stripe, [plan.lookup]))[plan.lookup];
-  if (price.type !== 'recurring' || !price.recurring || price.recurring.interval !== 'month') throw err(409, 'price_type', `${plan.lookup} is not a monthly price in Stripe.`);
+  const cycle = CAT.cycleOf(plan);                   // monthly, or the plan's own cycle (the staff test renews every 3 days)
+  if (price.type !== 'recurring' || !price.recurring || price.recurring.interval !== cycle.interval || (price.recurring.interval_count || 1) !== cycle.count) throw err(409, 'price_type', `${plan.lookup} is not ${cycle.monthly ? 'a monthly' : 'an every-' + cycle.count + '-' + cycle.interval} price in Stripe.`);
   if (price.unit_amount !== plan.monthly * 100) throw err(409, 'price_mismatch', `${plan.lookup}: catalog says $${plan.monthly}, Stripe says $${price.unit_amount / 100}. Not sold until they agree.`);
   if (typeof price.product === 'string' ? price.product !== prog.product : price.product.id !== prog.product) throw err(409, 'price_product', `${plan.lookup} belongs to another product in Stripe.`);
   return { prog, plan, price };

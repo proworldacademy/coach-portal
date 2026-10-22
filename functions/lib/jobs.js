@@ -20,7 +20,7 @@ const SMS = require('./sms');
 
 const RULES = CAL.RULES;
 const LATE = RULES.late_policy;
-const monthlyLookups = () => new Set(CAT.PROGRAMS.flatMap((p) => p.plans.map((x) => x.lookup)));
+const monthlyLookups = () => new Set(CAT.PROGRAMS.flatMap((p) => p.plans.filter((x) => !x.every).map((x) => x.lookup)));   // plans on their own cycle (the staff test) get no break credits
 
 async function phoneOf(stripe, customerId) {
   try { const c = await stripe.customers.retrieve(customerId); return { phone: c.phone || '', name: c.name || '', email: c.email || '' }; } catch (e) { return { phone: '', name: '', email: '' }; }

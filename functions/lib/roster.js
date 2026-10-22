@@ -104,7 +104,8 @@ async function record(db, stripe, session, sub, opts) {
   const days = isProgram ? String(m.days || '').split(',').filter(Boolean) : [];
   const subId = sub ? sub.id : (typeof session.subscription === 'string' ? session.subscription : session.subscription && session.subscription.id) || null;
   const end = sub ? S.periodEnd(sub) : null; const nextDate = end ? CAL.dateOfUnixET(end) : null;
-  const next = plan && nextDate ? { date: nextDate, cents: (() => { const p = CAL.parts(nextDate); return CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); })() } : null;
+  const next = plan && nextDate ? { date: nextDate, cents: plan.every ? plan.monthly * 100 : (() => { const p = CAL.parts(nextDate); return CAL.monthChargeCents(plan.monthly * 100, p.y, p.m, 1); })() } : null;
+  const cycle = plan ? CAT.cycleWord(plan) : 'a month';                                  // "a month", or the plan's own cycle (the staff test: "every 3 days")
   const what = isProgram
     ? `${prog ? prog.short : m.program} · ${plan ? plan.label : m.plan_label || ''}${days.length && plan && prog && plan.days < prog.days.length ? ' · ' + days.join('/') : ''}`
     : purchases.map((p) => p.label + (p.qty > 1 ? ' × ' + p.qty : '')).join(' + ');
@@ -166,13 +167,13 @@ async function record(db, stripe, session, sub, opts) {
       `Group: ${groupWord(groupNow)} · ${coachWord}${created ? ' → assign one and run the first assessment' : back ? ' · back on the roster' : ''}`,
       link ? `<${link}|Open ${first} in the Coach Portal>` : '', 'Enrolled online and paid through Stripe. The front desk has the family’s details.']);
     told.desk = await NOTIFY.slack(db, 'desk', `Enrolled online: ${playerName} — ${what}`, [`*Enrolled online: ${playerName}* — ${what}${m.start ? ' · starts ' + niceDate(m.start) : ''}`,
-      `Paid today ${money(paidCents)}${next ? ' · next ' + (next.cents ? money(next.cents) : 'no charge') + ' on ' + niceDate(next.date) : ''}${plan ? ' · ' + money(plan.monthly * 100) + ' a month' : ''}`,
+      `Paid today ${money(paidCents)}${next ? ' · next ' + (next.cents ? money(next.cents) : 'no charge') + ' on ' + niceDate(next.date) : ''}${plan ? ' · ' + money(plan.monthly * 100) + ' ' + cycle : ''}`,
       `Parent: ${family.name || '—'}${family.phone ? ' · ' + family.phone : ''}${family.email ? ' · ' + family.email : ''}`,
       `Roster: ${created ? 'new record' : 'existing record'} (${groupWord(groupNow)}) · Monday: ${created ? 'goes to LEADS → New Requests with the morning sync' : 'already on the roster'}`,
       [subId ? `<${stripeLink(opts.mode, 'subscriptions', subId)}|Stripe>` : '', link ? `<${link}|Coach Portal>` : ''].filter(Boolean).join(' · ')]);
     const t0 = prog && prog.time ? prog.time.split('–')[0].trim() : '';
     const when = /^\d/.test(t0) ? ' at ' + t0 + (/[AP]M/i.test(t0) ? '' : ' PM') : '';
-    told.family = await NOTIFY.text(db, family.phone, `ProWorld Academy: ${first} is enrolled in ${prog ? prog.short : m.program}${plan ? ', ' + plan.label.toLowerCase() : ''}${days.length && plan && prog && plan.days < prog.days.length ? ' (' + days.join(', ') + ')' : ''}, starting ${niceDate(m.start || today)}${when}. ${paidCents ? 'Paid today: ' + money(paidCents) + '. ' : ''}${next ? 'Next: ' + (next.cents ? money(next.cents) : 'no charge') + ' on ' + niceDate(next.date) + ', then ' + money(plan.monthly * 100) + ' on the 1st of each month. ' : ''}Receipts and your card: see the email from Stripe.`);
+    told.family = await NOTIFY.text(db, family.phone, `ProWorld Academy: ${first} is enrolled in ${prog ? prog.short : m.program}${plan ? ', ' + plan.label.toLowerCase() : ''}${days.length && plan && prog && plan.days < prog.days.length ? ' (' + days.join(', ') + ')' : ''}, starting ${niceDate(m.start || today)}${when}. ${paidCents ? 'Paid today: ' + money(paidCents) + '. ' : ''}${next ? 'Next: ' + (next.cents ? money(next.cents) : 'no charge') + ' on ' + niceDate(next.date) + ', then ' + money(plan.monthly * 100) + (plan.every ? ' ' + cycle : ' on the 1st of each month') + '. ' : ''}Receipts and your card: see the email from Stripe.`);
   } else if (purchases.length) {
     const forCoaches = role && role.kind !== 'lesson';
     if (forCoaches) told.coaches = await NOTIFY.slack(db, 'coaches', `${role.kind === 'camp' ? 'Camp sign-up' : 'New'}: ${playerName} — ${what}`, [`*${role.kind === 'camp' ? 'Camp sign-up' : role.kind === 'pack' ? 'Pack bought' : role.kind === 'weekly' ? 'Week booked' : 'Drop-in'}: ${playerName}* — ${what}`,
