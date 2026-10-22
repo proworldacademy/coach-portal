@@ -2193,7 +2193,8 @@ const PW_CONFIG = {
     const rows = shown.map((p) => {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
         <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
-      if (pf && writable()) return `<button class="rowb" data-act="open-part" data-pid="${esc(p.id)}" data-part="${pf.id}">${who}<div class="chips">${partChips(quarterlyFor(p.id, q), def)}<span class="chip go" style="--pc:${PILLAR[pf.pillar]}">Fill in ${esc(pf.label)}</span></div></button>`;
+      // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
+      if (pf && writable()) return `<div class="arow"><button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${partChips(quarterlyFor(p.id, q), def)}</div></button><div class="pstrip" role="group" aria-label="Open the ${esc(pf.label)} part directly"><button class="pbtn" style="--pc:${PILLAR[pf.pillar]}" data-act="open-part" data-pid="${esc(p.id)}" data-part="${pf.id}"><b>Fill in ${esc(pf.label)}</b><small>opens that part of the ${esc(q)} quarterly</small></button></div></div>`;
       return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? statusChips(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
     }).join('');
     const inactiveN = all.length - all.filter(active).length;
@@ -2201,7 +2202,7 @@ const PW_CONFIG = {
         <span class="flbl">${esc(q)} to do</span>
         ${def.parts.map((x) => `<button class="fchip part" style="--pc:${PILLAR[x.pillar]}" aria-pressed="${!!pf && pf.id === x.id}" data-act="pfilter" data-v="${x.id}">${esc(x.label)} ${list.filter((p) => needs(p, x.id)).length}</button>`).join('')}
         ${pf ? '<button class="fchip" data-act="pfilter" data-v="">Show everyone</button>' : ''}</div>
-        ${pf ? `<p class="hint" style="margin:-4px 0 14px">Players whose ${esc(pf.label)} part isn’t complete for ${esc(q)}. Pick a player to go straight to the ${esc(pf.label)} part — you come back to this list when you finish it.</p>` : ''}` : '';
+        ${pf ? `<p class="hint" style="margin:-4px 0 14px">Players whose ${esc(pf.label)} part isn’t complete for ${esc(q)}. A player’s name opens their profile; “Fill in ${esc(pf.label)}” under the name goes straight to that part — you come back to this list when you finish it.</p>` : ''}` : '';
     const empty = pf ? `Every player’s ${esc(pf.label)} part is complete for ${esc(q)}.` : (S.loaded.players || S.dbState === 'none' ? 'No players in this group yet.' : 'Loading roster…');
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label }])}
       <div class="head"><div><div class="lbl">${esc(g.director || '')}</div><h1 class="title">${emT(g.label)}</h1></div>
