@@ -482,21 +482,29 @@
   window.setWeek = function (offset) { showWeek(shiftWS(wsOf(new Date()), offset)); };
   window.openWeek = function (ws) { const b = document.querySelector('.tab-btn[data-tab="assignments"]'); if (b) b.click(); showWeek(ws); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  // ── The recipe: what one week of content is. 7 posts a week (one a day) plus one spare = 14 every
-  // two weeks plus two in hand. Coach videos: Tonio every week, the rest of the roster in rotation.
-  // One ad video and two carousels/statics come from the production bank. The photographer's shot
-  // list, the editor brief and the posting plan are all built from the week this produces.
-  const RECIPE_DEFAULT = { coachVideos: 5, adVideos: 1, production: 2, always: ["Tonio"], rotation: ["Tara", "Flo", "Nico", "Eric", "Mauri", "Kam", "Robby", "Coach ET", "Quinnton", "Lukas"], anchor: "2026-10-04" };
-  const recipe = () => { const r = Object.assign({}, RECIPE_DEFAULT, S.recipe || {}); r.always = (r.always || []).filter((n) => COACHES.some((c) => c.name === n)); r.rotation = (r.rotation || []).filter((n) => COACHES.some((c) => c.name === n) && !r.always.includes(n)); return r; };
+  // ── The recipe: the unit of content is the FORTNIGHT (Antonio, Oct 22, 2026): one button builds the two weeks
+  // together. Every coach on the roster films once in the two weeks — the `always` coaches (Tonio) every week, the
+  // rotation split in two halves, one half per week, the halves swapping every fortnight. Each week also gets
+  // `adVideos` ad videos and `production` carousels/statics from the production bank. One post a day; whatever is
+  // left over is in hand ("Extra") and can be used instead of a weaker post. Fortnights run from FN_ANCHOR (the Sunday
+  // before Mon Oct 26, 2026) in steps of 14 days; the week keys in the record stay Sundays, nothing migrates.
+  const FN_ANCHOR = "2026-10-25";
+  const RECIPE_DEFAULT = { coachVideos: 6, adVideos: 1, production: 2, always: ["Tonio"], rotation: ["Tara", "Flo", "Nico", "Eric", "Mauri", "Kam", "Robby", "Coach ET", "Quinnton", "Lukas"], anchor: FN_ANCHOR };
+  const recipe = () => { const r = Object.assign({}, RECIPE_DEFAULT, S.recipe || {}); r.always = (r.always || []).filter((n) => COACHES.some((c) => c.name === n)); r.rotation = (r.rotation || []).filter((n) => COACHES.some((c) => c.name === n) && !r.always.includes(n)); r.coachVideos = r.always.length + Math.ceil(r.rotation.length / 2); return r; };
   const POST_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  // who films in a given week: the always-on coaches, then the next names in the rotation (deterministic per week, so two people building the same week get the same answer)
-  function weekCoaches(ws) {
-    const r = recipe(), slots = Math.max(0, r.coachVideos - r.always.length), out = r.always.slice();
-    if (!r.rotation.length || !slots) return out;
-    const idx = Math.round((wsDate(ws) - wsDate(r.anchor)) / (7 * 864e5)), n = r.rotation.length, start = (((idx * slots) % n) + n) % n;
-    for (let i = 0; i < slots && i < n; i++) out.push(r.rotation[(start + i) % n]);
+  // the fortnight a date belongs to (its first Sunday), and the two Sundays of a fortnight
+  const fnStartOf = (d) => { const s = wsDate(wsOf(d)), a = wsDate(FN_ANCHOR), k = Math.floor(Math.round((s - a) / 864e5) / 14); return shiftWS(FN_ANCHOR, 2 * k); };
+  const fnOf = (ws) => fnStartOf(wsDate(ws));
+  const fnPair = (fn) => [fn, shiftWS(fn, 1)];
+  const fnIndex = (fn) => Math.round(Math.round((wsDate(fn) - wsDate(FN_ANCHOR)) / 864e5) / 14);
+  // who films in each week of a fortnight: always-on every week, then half the rotation each week — every coach once in the two weeks
+  function fortnightCoaches(fn) {
+    const r = recipe(), n = r.rotation.length, half = Math.ceil(n / 2), out = {};
+    const start = n ? ((((fnIndex(fn) * half) % n) + n) % n) : 0;
+    fnPair(fn).forEach((ws, wi) => { const names = r.always.slice(); for (let i = 0; i < (wi ? n - half : half) && i < n; i++) names.push(r.rotation[(start + wi * half + i) % n]); out[ws] = names; });
     return out;
   }
+  function weekCoaches(ws) { return fortnightCoaches(fnOf(ws))[ws] || recipe().always.slice(); }
   const isAdItem = (p) => /^ad\b|^ad /i.test(String(p.format || "")) || /\bad video\b/i.test(String(p.format || ""));
   const isPostItem = (p) => /Carousel|Static/i.test(String(p.format || ""));
 
@@ -549,44 +557,67 @@
     if (r.st === "spare") return '<span class="st">Spare</span>';
     return "";
   }
-  function recipeLine() { const r = recipe(); return r.coachVideos + " coach video" + (r.coachVideos === 1 ? "" : "s") + " (" + (r.always.length ? r.always.join(" + ") + " every week, " : "") + (r.coachVideos - r.always.length) + " in rotation) · " + r.adVideos + " ad video" + (r.adVideos === 1 ? "" : "s") + " · " + r.production + " carousel" + (r.production === 1 ? "" : "s") + "/statics = " + (r.coachVideos + r.adVideos + r.production) + " a week (7 posts + " + Math.max(0, r.coachVideos + r.adVideos + r.production - 7) + " spare)"; }
+  function recipeLine() { const r = recipe(), perWeek = r.coachVideos + r.adVideos + r.production, fn = 2 * perWeek; return "every coach once in the two weeks (" + (r.always.length ? r.always.join(" + ") + " every week, " : "") + r.rotation.length + " in rotation) · " + r.adVideos + " ad video" + (r.adVideos === 1 ? "" : "s") + " and " + r.production + " carousel" + (r.production === 1 ? "" : "s") + "/statics a week = " + fn + " items for 14 days (14 posts + " + Math.max(0, fn - 14) + " in hand)"; }
   window.editRecipe = async function () {
     const r = recipe();
-    const f = await askForm("The weekly recipe", [
-      { key: "coachVideos", label: "Coach videos a week", value: String(r.coachVideos) }, { key: "adVideos", label: "Ad videos a week", value: String(r.adVideos) }, { key: "production", label: "Carousels / statics a week", value: String(r.production) },
-      { key: "always", label: "Every week (names, comma-separated)", value: r.always.join(", ") }, { key: "rotation", label: "Rotation order (names, comma-separated)", value: r.rotation.join(", ") }
-    ], "Save recipe", "7 posts a week = 14 every two weeks. Anything above 7 is the spare. Names must match the roster exactly.");
+    const f = await askForm("The 2-week recipe", [
+      { key: "adVideos", label: "Ad videos a week", value: String(r.adVideos) }, { key: "production", label: "Carousels / statics a week", value: String(r.production) },
+      { key: "always", label: "Every week (names, comma-separated)", value: r.always.join(", ") }, { key: "rotation", label: "Everyone else — once in the two weeks (names, comma-separated)", value: r.rotation.join(", ") }
+    ], "Save recipe", "Every coach films once in the two weeks; the names under 'every week' film both weeks. One post a day = 14; anything above is in hand. Names must match the roster exactly.");
     if (!f) return;
     const names = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
-    S.recipe = { coachVideos: Math.max(0, parseInt(f.coachVideos, 10) || 0), adVideos: Math.max(0, parseInt(f.adVideos, 10) || 0), production: Math.max(0, parseInt(f.production, 10) || 0), always: names(f.always), rotation: names(f.rotation), anchor: r.anchor };
-    save("recipe"); renderWeekViews(); toast("Recipe saved — it applies to the next week you generate");
+    const always = names(f.always), rotation = names(f.rotation).filter((x) => !always.includes(x));
+    S.recipe = { coachVideos: always.length + Math.ceil(rotation.length / 2), adVideos: Math.max(0, parseInt(f.adVideos, 10) || 0), production: Math.max(0, parseInt(f.production, 10) || 0), always, rotation, anchor: FN_ANCHOR };
+    save("recipe"); renderWeekViews(); toast("Recipe saved — it applies to the next 2 weeks you generate");
   };
-  function buildWeek(ws, theme, pillar) {
-    const r = recipe(), warnings = [], label = weekLabel(ws);
+  function buildWeek(ws, theme, pillar, names) {
+    const r = recipe(), warnings = [], label = weekLabel(ws), want = names || weekCoaches(ws);
     const coaches = [], used = new Set();
     const take = (n) => { const c = COACHES.find((x) => x.name === n); if (!c || used.has(n)) return false; const avail = availableIdeas(n, ws); if (!avail.length) return false; used.add(n); coaches.push({ name: n, role: c.role, ideas: [pick(avail[0])] }); return true; };
-    weekCoaches(ws).forEach((n) => { if (!take(n)) warnings.push(n + " — bank empty, skipped this week"); });
-    r.rotation.concat(r.always).forEach((n) => { if (coaches.length < r.coachVideos) take(n); });       // fill a skipped slot with the next coach who has ideas
+    want.forEach((n) => { if (!take(n)) warnings.push(n + " — bank empty, skipped this week"); });
+    r.rotation.concat(r.always).forEach((n) => { if (coaches.length < want.length) take(n); });       // fill a skipped slot with the next coach who has ideas
     const prodAvail = availableProd(ws), prefer = (list) => (pillar ? list.filter((p) => p.pillar === pillar) : []).concat(list.filter((p) => !pillar || p.pillar !== pillar));
     const adPicks = prefer(prodAvail.filter(isAdItem)).slice(0, r.adVideos), postPicks = prefer(prodAvail.filter(isPostItem)).slice(0, r.production);
     if (adPicks.length < r.adVideos) warnings.push("Ad videos — " + adPicks.length + " of " + r.adVideos + " in the bank");
     if (postPicks.length < r.production) warnings.push("Carousels/statics — " + postPicks.length + " of " + r.production + " in the bank");
     const production = adPicks.concat(postPicks).map((p) => pick(p, { pillar: p.pillar }));
-    // one post a day: Mon video · Tue carousel · Wed video · Thu ad · Fri video · Sat video · Sun carousel · anything left is the spare
+    // one post a day, the coaches first: Mon video · Tue video · Wed carousel · Thu ad · Fri video · Sat video · Sun video · anything left is in hand (Spare)
     const vids = coaches.map((c) => c.ideas[0]), ad = adPicks.length ? production.find((x) => x.id === adPicks[0].id) : null, posts = postPicks.map((p) => production.find((x) => x.id === p.id));
-    const order = []; [vids[0], posts[0], vids[1], ad, vids[2], vids[3], posts[1]].forEach((it) => { if (it) order.push(it); }); vids.slice(4).forEach((v) => order.push(v)); production.forEach((p) => { if (!order.includes(p)) order.push(p); });
+    const order = []; [vids[0], vids[1], posts[0], ad, vids[2], vids[3], vids[4]].forEach((it) => { if (it) order.push(it); }); vids.slice(5).forEach((v) => order.push(v)); production.forEach((p) => { if (!order.includes(p)) order.push(p); });
     order.forEach((it, i) => { it.day = i < POST_DAYS.length ? POST_DAYS[i] : "Spare"; });
     return { weekStart: ws, weekDates: label, theme, themePillar: pillar, locked: false, createdAt: new Date().toISOString(), coaches, production, warnings };
   }
+  // the one button: both weeks of a fortnight, built together — every coach once, the second week never repeats the first
+  function buildFortnight(fn, themeGiven) {
+    const split = fortnightCoaches(fn);
+    fnPair(fn).forEach((ws) => {
+      let theme = themeGiven || "", pillar;
+      if (!theme) { const t = detectWeekTheme(wsDate(ws)); theme = t.theme; pillar = t.pillar; } else pillar = pillarFromTheme(theme);
+      S.weeks[ws] = buildWeek(ws, theme, pillar, split[ws]);          // saved before the second week is built, so its ids are reserved
+    });
+  }
+  async function confirmFortnight(fn) {
+    const pair = fnPair(fn), have = pair.map((ws) => S.weeks[ws]).filter(Boolean), label = fnLabel(fn);
+    if (have.some((w) => w.locked)) { if (!(await askConfirm("These weeks are set", "The 2 weeks of " + label + " are set and locked. Unlock them and build a fresh plan? Delivered check-offs on the current plan are lost; its ideas go back in the banks.", "Unlock & rebuild", true))) return false; }
+    else if (have.length) { if (!(await askConfirm("Replace the draft", "A draft already exists for " + label + ". Replace it with a fresh plan? Your swaps and edits on it are lost.", "Replace draft", true))) return false; }
+    return true;
+  }
+  window.genFortnight = async function (fn) {
+    fn = fn || curFN;
+    if (!(await confirmFortnight(fn))) return;
+    buildFortnight(fn, "");
+    recomputeUsed(); save("weeks"); curFN = fn; renderWeekViews();
+    toast("The 2 weeks of " + fnLabel(fn) + " are built — tick each post, swap what isn't right, then set both weeks");
+  };
   window.genAssignments = async function () {
-    const ws = curWS, existing = cur(), label = weekLabel(ws);
-    if (existing && existing.locked) { if (!(await askConfirm("This week is approved", "The week of " + label + " is approved and locked. Unlock it and build a fresh draft? Delivered check-offs on the current brief are lost; its ideas go back in the banks.", "Unlock & regenerate", true))) return; }
-    else if (existing) { if (!(await askConfirm("Replace this draft", "A draft already exists for the week of " + label + ". Replace it with a fresh set of ideas? Your swaps and edits on this draft are lost.", "Replace draft", true))) return; }
-    let theme = $("week-theme").value.trim(); let pillar;
-    if (!theme) { const t = detectWeekTheme(wsDate(ws)); theme = t.theme; pillar = t.pillar; $("week-theme").value = theme; } else pillar = pillarFromTheme(theme);
-    S.weeks[ws] = buildWeek(ws, theme, pillar);
-    recomputeUsed(); save("weeks"); renderWeekViews();
-    toast("Draft built for " + label + " — swap, edit or skip, then approve & lock");
+    // the Coach Assignments button builds the whole fortnight the shown week belongs to, then opens the 2-Week Plan
+    const fn = fnOf(curWS);
+    if (!(await confirmFortnight(fn))) return;
+    const theme = $("week-theme").value.trim();
+    buildFortnight(fn, theme);
+    recomputeUsed(); save("weeks"); curFN = fn; renderWeekViews();
+    const b = document.querySelector('.tab-btn[data-tab="fortnight"]'); if (b) b.click(); window.scrollTo({ top: 0, behavior: "smooth" });
+    toast("The 2 weeks of " + fnLabel(fn) + " are built — every coach is in; tick, swap, then set both weeks");
   };
 
   function renderAssignments() {
@@ -596,7 +627,7 @@
     if ($("recipe-note")) $("recipe-note").innerHTML = '<span><strong>Recipe:</strong> ' + esc(recipeLine()) + ' · this week films: ' + esc(weekCoaches(curWS).join(", ")) + '</span> <button class="btn ghost xs" onclick="editRecipe()">✎ Edit recipe</button>';
     if (!d) {
       const others = weekList();
-      out.innerHTML = '<div class="card"><div class="empty">No brief for the week of ' + esc(weekLabel(curWS)) + ' yet. Generate assignments — every coach gets their videos and the production list is built from the banks.' + (others.length ? '<br><span class="small">' + others.length + ' saved week' + (others.length > 1 ? "s" : "") + ' below — open any of them, or use ‹ › to move between weeks.</span>' : "") + "</div></div>";
+      out.innerHTML = '<div class="card"><div class="empty">No brief for the week of ' + esc(weekLabel(curWS)) + ' yet. Generate the 2 weeks — every coach gets a video across the two weeks, the ad videos and the carousels come from the banks, and the whole plan opens on the 2-Week Plan tab.' + (others.length ? '<br><span class="small">' + others.length + ' saved week' + (others.length > 1 ? "s" : "") + ' below — open any of them, or use ‹ › to move between weeks.</span>' : "") + "</div></div>";
       note.innerHTML = ""; ab.disabled = true; ab.textContent = "✓ Approve & lock"; return;
     }
     ab.disabled = !!d.locked; ab.textContent = d.locked ? "✓ Approved & locked" : "✓ Approve & lock";
@@ -873,7 +904,12 @@
   // ───────────────────────── the two-week plan ─────────────────────────
   // The 14 posts the team approves one by one (this week + next week, one a day), plus the extras (the
   // spares) that can take a day when a post falls through. "Set the two weeks" locks both weeks at once.
-  const fnWeeks = () => { const a = wsOf(new Date()); return [a, shiftWS(a, 1)]; };
+  // the fortnight shown: the one that is current four days from now (so from Thursday the next 2 weeks are on screen); ‹ › move by two weeks
+  let curFN = fnStartOf(new Date(Date.now() + 4 * 864e5));
+  const fnWeeks = () => fnPair(curFN);
+  function fnLabel(fn) { const a = wsDate(fn), z = wsDate(shiftWS(fn, 2)); a.setDate(a.getDate() + 1); return SM[a.getMonth()] + " " + a.getDate() + " – " + SM[z.getMonth()] + " " + z.getDate() + ", " + z.getFullYear(); }   // Mon … Sun
+  window.shiftFortnight = function (n) { curFN = shiftWS(curFN, 2 * n); renderFortnight(); };
+  window.goThisFortnight = function () { curFN = fnStartOf(new Date(Date.now() + 4 * 864e5)); renderFortnight(); };
   function fnItems(ws) {
     const w = (S.weeks || {})[ws]; if (!w) return [];
     const out = [];
@@ -891,14 +927,16 @@
   function renderFortnight() {
     const el = $("fortnight"); if (!el) return;
     const [w1, w2] = fnWeeks(), c = fnCounts(), allLocked = [w1, w2].every((ws) => S.weeks[ws] && S.weeks[ws].locked);
-    let h = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="card-label" style="margin-bottom:4px">' + c.approved + " of " + c.planned + ' approved</div><div class="small muted">' + c.planned + " posts planned over the two weeks · " + c.extras + " extra" + (c.extras === 1 ? "" : "s") + ' in hand · tick each post, swap what you don\'t like, then set both weeks.</div></div>' +
-      '<div class="btn-row">' + (c.weeks < 2 ? '<button class="btn" onclick="genMissingFortnight()">⚡ Generate the missing week' + (c.weeks === 0 ? "s" : "") + '</button>' : "") + '<button class="btn ghost sm" onclick="approveAllFortnight()"' + (c.planned && c.approved < c.planned ? "" : " disabled") + '>✓ Approve all</button><button class="btn mint" onclick="setFortnight()"' + (c.weeks === 2 && !allLocked ? "" : " disabled") + '>' + (allLocked ? "✓ Both weeks set" : "Set the two weeks") + '</button></div></div>';
+    const names = Object.values(fortnightCoaches(curFN)).reduce((a, b) => a.concat(b), []).filter((x, i, arr) => arr.indexOf(x) === i);
+    let h = '<div class="card"><div class="btn-row" style="margin-bottom:12px"><button class="btn ghost sm" onclick="shiftFortnight(-1)">‹ Previous 2 weeks</button><button class="btn sm" onclick="goThisFortnight()">Now</button><button class="btn ghost sm" onclick="shiftFortnight(1)">Next 2 weeks ›</button><span class="small muted" style="margin-left:6px"><strong>' + esc(fnLabel(curFN)) + '</strong> · Mon to Sun, two weeks</span></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="card-label" style="margin-bottom:4px">' + c.approved + " of " + c.planned + ' approved</div><div class="small muted">' + (c.weeks ? c.planned + " posts planned over the two weeks · " + c.extras + " extra" + (c.extras === 1 ? "" : "s") + ' in hand · tick each post, swap what you don\'t like, then set both weeks.' : "Nothing built for these two weeks yet — one button builds it all: every coach's video, the ad videos, the carousels, one post a day.") + '</div><div class="small muted" style="margin-top:4px"><strong>Recipe:</strong> ' + esc(recipeLine()) + ' · films: ' + esc(names.join(", ")) + ' <button class="btn ghost xs" onclick="editRecipe()">✎ Edit recipe</button></div></div>' +
+      '<div class="btn-row"><button class="btn" onclick="genFortnight()">⚡ ' + (c.weeks ? "Rebuild the 2 weeks" : "Generate the 2 weeks") + '</button><button class="btn ghost sm" onclick="approveAllFortnight()"' + (c.planned && c.approved < c.planned ? "" : " disabled") + '>✓ Approve all</button><button class="btn mint" onclick="setFortnight()"' + (c.weeks === 2 && !allLocked ? "" : " disabled") + '>' + (allLocked ? "✓ Both weeks set" : "Set the two weeks") + '</button></div></div>';
     h += '<div class="progress" style="margin-top:14px"><div class="bar"><i style="width:' + (c.planned ? Math.round(c.approved / c.planned * 100) : 0) + '%"></i></div><div class="pillar-pct">' + c.approved + "/" + c.planned + '</div></div></div>';
     [w1, w2].forEach((ws, wi) => {
       const w = S.weeks[ws];
       const t = w ? weekTally(w) : null;
       h += '<div class="card"><div class="card-label' + (wi ? " cyan" : "") + '">Week ' + (wi + 1) + " · " + esc(weekLabel(ws)) + (w && w.theme ? " · " + esc(w.theme) : "") + (w ? (w.locked ? ' <span class="tag mint" style="margin-left:8px">Locked</span>' : ' <span class="tag cyan" style="margin-left:8px">Draft</span>') : "") + (t && (t.posted || t.missing) ? ' <span class="small muted" style="font-family:var(--body);font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px">' + t.posted + " of " + t.total + " posted" + (t.missing ? ' · <span class="st miss">' + t.missing + " missing</span>" : "") + "</span>" : "") + "</div>";
-      if (!w) { h += '<div class="empty">No brief for this week yet — generate it above.</div></div>'; return; }
+      if (!w) { h += '<div class="empty">Not built yet — "Generate the 2 weeks" above builds both weeks at once.</div></div>'; return; }
       fnItems(ws).forEach((x) => {
         const it = x.it, ex = isExtra(it), ref = "'" + ws + "','" + x.kind + "'," + (x.kind === "idea" ? x.ci + "," + x.ii : x.pi);
         const st = itemState(ws, it).st;
@@ -922,11 +960,7 @@
     fnWeeks().forEach((ws) => { const w = S.weeks[ws]; if (!w) return; w.locked = true; w.approvedAt = new Date().toISOString(); delete w.warnings; });
     recomputeUsed(); save("weeks"); renderWeekViews(); renderFortnight(); toast("Both weeks set — send the briefs from the Workflow tab");
   };
-  window.genMissingFortnight = function () {
-    let n = 0; fnWeeks().forEach((ws) => { if (S.weeks[ws]) return; const t = detectWeekTheme(wsDate(ws)); S.weeks[ws] = buildWeek(ws, t.theme, t.pillar); n++; });
-    if (!n) { toast("Both weeks already exist"); return; }
-    recomputeUsed(); save("weeks"); renderWeekViews(); renderFortnight(); toast(n + " week" + (n > 1 ? "s" : "") + " built on the recipe — approve the posts one by one");
-  };
+  window.genMissingFortnight = function () { genFortnight(curFN); };
   window.fnSwap = function (ws, kind, a, b) { const w = S.weeks[ws]; if (!w) return; const it = fnGet(ws, kind, a, b); if (!it) return;
     if (kind === "idea") { const c = w.coaches[a], avail = availableIdeas(c.name, ws).filter((i) => i.id !== it.id && !c.ideas.some((x) => x.id === i.id)); if (!avail.length) { toast("No more ideas in " + c.name + "'s bank — add one on Coach Assignments", true); return; } const np = pick(avail[0]); np.day = it.day; c.ideas[b] = np; }
     else { const avail = availableProd(ws).filter((x) => x.id !== it.id && !w.production.some((p) => p.id === x.id) && (/^ad/i.test(it.format || "") ? /^ad/i.test(x.format || "") : isPostItem(x))); if (!avail.length) { toast("Nothing else of that kind in the production bank", true); return; } const np = pick(avail[0], { pillar: avail[0].pillar }); np.day = it.day; w.production[a] = np; }
@@ -952,7 +986,7 @@
   function renderAll() { renderOverview(); renderAssignments(); renderProduction(); renderWeeks(); renderBankStatus(); renderCadence(); renderCal(); renderArchive(); renderKpiHistory(); renderAds(); renderFortnight(); (window.PW.hooks || []).forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
   window.renderAll = renderAll;
   // Bridge for the engine modules (content database, cadence ramp, workflow briefs)
-  window.PW = { S, save, askForm, askConfirm, openModal, closeModal, esc, $, toast, sundayOf, SM, MONTHS, COACHES, PILLARS, ALREADY_POSTED_IDS, COACH_WEEKLY_COUNT, availableIdeas, availableProd, detectWeekTheme, stripForPDF, deliverFile, cur, thisWeek, curWS: () => curWS, weekList, weekLabel, wsOf, reserved, showWeek, hooks: [], isLive: () => !!db && !readOnly, loadedAt: () => loadedAt, recipe, weekCoaches, buildWeek, itemState, isDone, stateChip, weekTally, dayDate, dkey, POST_DAYS, fmtDay, wsDate, shiftWS };
+  window.PW = { S, save, askForm, askConfirm, openModal, closeModal, esc, $, toast, sundayOf, SM, MONTHS, COACHES, PILLARS, ALREADY_POSTED_IDS, COACH_WEEKLY_COUNT, availableIdeas, availableProd, detectWeekTheme, stripForPDF, deliverFile, cur, thisWeek, curWS: () => curWS, weekList, weekLabel, wsOf, reserved, showWeek, hooks: [], isLive: () => !!db && !readOnly, loadedAt: () => loadedAt, recipe, weekCoaches, buildWeek, itemState, isDone, stateChip, weekTally, dayDate, dkey, POST_DAYS, fmtDay, wsDate, shiftWS, FN_ANCHOR, fnStartOf, fnOf, fnPair, fnLabel, fortnightCoaches, buildFortnight, curFN: () => curFN };
   initLocal();
   showWeek(curWS);
   renderAll();
