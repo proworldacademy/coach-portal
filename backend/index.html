@@ -983,6 +983,11 @@ function renderPrivates(app){
     return `<div class="pv-row"><div class="pv-when">${esc(fmtRange(x.start,x.start+x.dur))}</div><div class="pv-who"><span class="pv-ava">${esc(ini(p?p.name:'?'))}</span><div><b>${esc(p?p.name:'?')}</b><div class="m">with ${esc(x.coach)} · ${esc(courtById(x.court).name)}</div></div></div><div class="pv-st">${st}</div></div>`}).join('')}</div>`).join('');
   const draw=()=>{const {ns,ds}=fixChoices();const p=playerById(PV.pid);const pr=price();const pay=payLine();const free=freeCourts();if(PV.court&&!free.some(c=>c.id===PV.court))PV.court='';
     const times=[];for(let h=7;h<=20.5;h+=.5)times.push(h);
+    // the start follows what is still bookable: a past or taken time slides to the next free one, a day with nothing left slides to the next day
+    const okAt=(d,h)=>COURTS.some(c=>c.kind===kindOf()&&slotFree(c.id,d,h,PV.dur/60));
+    for(let tries=0;tries<10&&!times.some(h=>okAt(PV.date,h));tries++)PV.date=iso(addDays(parse(PV.date),1));
+    if(!okAt(PV.date,Number(PV.time))){const first=times.find(h=>okAt(PV.date,h));if(first!==undefined)PV.time=first}
+    const pay2=payLine();const free2=freeCourts();if(PV.court&&!free2.some(c=>c.id===PV.court))PV.court='';
     app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket on the right fills itself in, blocks the court and texts the family when you book.</p></section>
     <section class="section pv-wrap">
       <div class="pv-build">
@@ -994,7 +999,7 @@ function renderPrivates(app){
         </div>
         <div class="pv-step"><div class="pv-k">Day</div><div class="pv-chips dates">${Array.from({length:10},(_,i)=>addDays(TODAY,i)).map(x=>`<button class="pv-chip day${iso(x)===PV.date?' on':''}" data-pv="date" data-v="${iso(x)}"><b>${x.getDate()}</b><small>${DOW[x.getDay()].slice(0,3)}</small></button>`).join('')}</div></div>
         <div class="pv-step"><div class="pv-k">Start</div><div class="pv-chips times">${times.map(h=>{const ok=COURTS.some(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,h,PV.dur/60));return `<button class="pv-chip t${h===Number(PV.time)?' on':''}${ok?'':' off'}" data-pv="time" data-v="${h}" ${ok?'':'disabled'}>${esc(fmtT(h))}</button>`}).join('')}</div></div>
-        <div class="pv-step"><div class="pv-k">Court <span class="muted">· ${free.length} free then</span></div><div class="pv-chips">${`<button class="pv-chip${PV.court?'':' on'}" data-pv="court" data-v="">First open court</button>`+free.map(c=>`<button class="pv-chip${c.id===PV.court?' on':''}" data-pv="court" data-v="${esc(c.id)}">${esc(c.name)}<small>${c.type==='clay'?'clay':c.type==='hard'?'hard':'field'}</small></button>`).join('')}</div></div>
+        <div class="pv-step"><div class="pv-k">Court <span class="muted">· ${free2.length} free then</span></div><div class="pv-chips">${`<button class="pv-chip${PV.court?'':' on'}" data-pv="court" data-v="">First open court</button>`+free2.map(c=>`<button class="pv-chip${c.id===PV.court?' on':''}" data-pv="court" data-v="${esc(c.id)}">${esc(c.name)}<small>${c.type==='clay'?'clay':c.type==='hard'?'hard':'field'}</small></button>`).join('')}</div></div>
       </div>
       <aside class="pv-ticket">
         <div class="pv-tk">Private lesson</div>
@@ -1003,7 +1008,7 @@ function renderPrivates(app){
         <div class="pv-tline"><span class="pv-ava">${esc(ini(PV.coach))}</span><div><small>Coach</small><b>${esc(PV.coach)}</b><span>${esc(PRO(PV.coach).tier)}</span></div></div>
         <div class="pv-tline"><span class="pv-ava">${esc(ini(p?p.name:''))}</span><div><small>Player${pr.n>1?'s':''}</small><b>${p?esc(p.name):'—'}</b><span>${pr.n>1?pr.n+' on court':'1 on court'}</span></div></div>
         <div class="pv-tline"><span class="pv-ava">${PV.court?esc(courtById(PV.court).name.replace(/\D/g,'')||'C'):'·'}</span><div><small>Court</small><b>${PV.court?esc(courtById(PV.court).name):'First open court'}</b><span>${DUR[PV.dur]||PV.dur+' min'}</span></div></div>
-        <div class="pv-pay ${pay.k}"><b>${money(pr.total)}</b>${esc(pay.t)}</div>
+        <div class="pv-pay ${pay2.k}"><b>${money(pr.total)}</b>${esc(pay2.t)}</div>
         <button class="btn pv-book" id="pv-book" ${p?'':'disabled'}>Book the private</button>
         <div class="pv-tfoot">Blocks the court · texts the family · lands on Books</div>
       </aside>
