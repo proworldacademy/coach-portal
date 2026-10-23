@@ -62,7 +62,7 @@ test('functions/index.js parses (it is never required by the tests, so a stray c
 
 test('every catalog line has a lookup key and the lines are unique', () => {
   const lines = CAT.oneTimeLines();
-  assert.equal(Object.keys(lines).length, 95);                                              // 94 Play by Point lines + the $1 test private
+  assert.equal(Object.keys(lines).length, 113);                                              // 94 Play by Point lines + the $1 test private + 18 winter camp lines
   for (const p of CAT.PROGRAMS) for (const pl of p.plans) if (!pl.every) assert.match(pl.lookup, /_monthly$/);
   assert.equal(lines['lesson_tester_1p_60m'].price, 1); assert.equal(lines['lesson_tester_1p_60m'].qbo, 'Test');
   assert.ok(lines['tg26_u10_saturday_dropin'] && lines['tg26_u10_saturday_dropin'].price === 60);
@@ -323,24 +323,27 @@ function liveLikeProducts() {
   for (const e of SYNC.expectedProducts()) if (!e.create) out[e.id] = { id: e.id, object: 'product', active: true, name: e.name, description: e.description + ' Mirrors the Play by Point program line for line.', default_price: e.id === 'prod_VSwrEVcItQBJ4t' ? PRODUCTS.prod_VSwrEVcItQBJ4t.default_price : null };
   return out;
 }
-test('catalog check: 28 products and 114 prices are expected (26 + 112 Play by Point, plus the staff test); the sync creates the start-month products and rewrites descriptions, never prices', async () => {
-  assert.equal(SYNC.expectedProducts().length, 28);
-  assert.equal(SYNC.expectedPrices().length, 114);
+test('catalog check: 31 products and 132 prices are expected (26 + 112 Play by Point, the staff test, the three winter camps); the sync creates the start-month products and rewrites descriptions, never prices', async () => {
+  assert.equal(SYNC.expectedProducts().length, 31);
+  assert.equal(SYNC.expectedPrices().length, 132);
+  const wi = SYNC.expectedPrices().filter((x) => /^wi26_/.test(x.lookup));
+  assert.equal(wi.length, 18); assert.ok(wi.every((x) => !x.recurring && /^prod_VUk/.test(x.product)));
+  assert.equal(wi.find((x) => x.lookup === 'wi26_u10_week').cents, 51500);
   const stripe = fakeStripe({ prices: PRICES, products: liveLikeProducts() });
   const before = await SYNC.checkCatalog(stripe);
   assert.equal(before.products.missing.length, 6); assert.ok(before.products.missing.every((m) => m.create && /^pw_firstmonth_/.test(m.id)));
-  assert.equal(before.products.stale.length, 22); assert.equal(before.products.ok, 0);
-  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [114, 114, 0, 0]);
-  assert.equal(before.fixable, 28); assert.equal(before.blocking, 0); assert.equal(before.ready, false);
+  assert.equal(before.products.stale.length, 25); assert.equal(before.products.ok, 0);
+  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [132, 132, 0, 0]);
+  assert.equal(before.fixable, 31); assert.equal(before.blocking, 0); assert.equal(before.ready, false);
   const lines = [];
   const out = await SYNC.syncCatalog(stripe, (l) => lines.push(l));
-  assert.equal(out.done.created.length, 6); assert.equal(out.done.updated.length, 22); assert.ok(out.done.portal);
+  assert.equal(out.done.created.length, 6); assert.equal(out.done.updated.length, 25); assert.ok(out.done.portal);
   const made = stripe._db.products.pw_firstmonth_afterschool;
   assert.equal(made.name, 'Afterschool | Fall 2026 — start month (prorated by training days)');
   assert.equal(made.statement_descriptor, 'PROWORLD AFTERSCHOOL'); assert.equal(made.metadata.kind, 'first_month');
   assert.equal(stripe._db.products.prod_VSweKxrlHVGGqf.description, 'Afterschool program · Aug 10 – Dec 18, 2026.');
   assert.ok(!stripe._calls.some((c) => /^prices\.(create|update)/.test(c.name)), 'prices are never written');
-  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 28); assert.equal(out.after.prices.ok, 114);
+  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 31); assert.equal(out.after.prices.ok, 132);
   // a second sync changes nothing
   const again = await SYNC.syncCatalog(stripe);
   assert.deepEqual([again.done.created.length, again.done.updated.length], [0, 0]);

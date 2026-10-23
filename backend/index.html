@@ -1213,7 +1213,7 @@ function pickRole(ctx){
 function monthStart(){return iso(new Date(TODAY.getFullYear(),TODAY.getMonth(),1))}
 async function connect(ctx){
   DB.ctx=ctx;DB.fs=PWAuth.fs();if(!DB.fs){render();return}
-  fetch('/api/catalog',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{CATL=c}).catch(()=>{});
+  fetch('/api/catalog',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{CATL=c;if(c&&Array.isArray(c.camps)&&c.camps.length){CAMPS.splice(0,CAMPS.length,...c.camps.map(x=>({id:x.id,name:x.name,dates:x.dates,ages:x.ages,d:x.blurb,options:x.options.map(o=>({id:o.id,l:o.label,p:o.price}))})));if(state.view==='account')render()}}).catch(()=>{});   // the camps on sale come from the engine's catalog (winter, spring, summer land here on their own)
   const fs=DB.fs;let lastRoster=-1;
   const rerender=(why)=>{if(!DB.ready)return;if(state.view==='privates'||state.view==='enroll'||state.view==='messages'){if(why!=='players'||state.players.length===lastRoster)return}if(why==='players')lastRoster=state.players.length;render()};
   try{const d=await fs.doc('backend/state').get();if(d.exists)applyShared(d.data())}catch(e){console.error('backend/state',e)}

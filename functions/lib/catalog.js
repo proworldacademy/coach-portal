@@ -81,7 +81,22 @@ const CAMPS = [
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 125, lookup: 'tg26_u10_half_dropin' }, { id: 'half3', label: '3 HALF DAYS', price: 255, lookup: 'tg26_u10_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 340, lookup: 'tg26_u10_half4' },
       { id: 'full', label: 'FULL DAY – DROP IN', price: 175, lookup: 'tg26_u10_full_dropin' }, { id: 'full3', label: '3 FULL DAYS', price: 450, lookup: 'tg26_u10_full3' }, { id: 'full4', label: '4 FULL DAYS', price: 575, lookup: 'tg26_u10_full4' },
-      { id: 'sat', label: 'SATURDAY DROP IN', price: 60, lookup: 'tg26_u10_saturday_dropin' }] }
+      { id: 'sat', label: 'SATURDAY DROP IN', price: 60, lookup: 'tg26_u10_saturday_dropin' }] },
+  /* Winter 2026 — Dec 21–31, Mon–Thu; closed Fri Dec 25 and Fri Jan 1; Thu Dec 24 and Thu Dec 31 are half days only. WEEKLY = one Mon–Thu week. */
+  { id: 'wi13', name: '13+ | Winter Camp 2026', product: 'prod_VUkyUXYiRwnVcY', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: 'Ages 13–25', blurb: 'Half day: morning tennis + fitness. Full day adds 2–4 PM tennis (Mon–Wed). Dec 24 and 31 half days only.',
+    options: [
+      { id: 'half', label: 'HALF DAY – DROP IN', price: 175, lookup: 'wi26_13plus_half_dropin' }, { id: 'full', label: 'FULL DAY', price: 275, lookup: 'wi26_13plus_full_dropin' },
+      { id: 'half3', label: '3 HALF DAYS', price: 450, lookup: 'wi26_13plus_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 550, lookup: 'wi26_13plus_half4' },
+      { id: 'full3', label: '3 FULL DAYS', price: 715, lookup: 'wi26_13plus_full3' }, { id: 'week', label: 'WEEKLY (Mon–Thu)', price: 795, lookup: 'wi26_13plus_week' }] },
+  { id: 'wiu13', name: 'U-13 | Winter Camp 2026', product: 'prod_VUkyFDuTo7pXai', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: 'Ages 10–12', blurb: 'Half day 9–12, full day 9–3 (Mon–Wed): athletic development, tennis, mental and match analysis. Dec 24 and 31 half days only.',
+    options: [
+      { id: 'half', label: 'HALF DAY – DROP IN', price: 150, lookup: 'wi26_u13_half_dropin' }, { id: 'full', label: 'FULL DAY', price: 250, lookup: 'wi26_u13_full_dropin' },
+      { id: 'half3', label: '3 HALF DAYS', price: 350, lookup: 'wi26_u13_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 400, lookup: 'wi26_u13_half4' },
+      { id: 'full3', label: '3 FULL DAYS', price: 650, lookup: 'wi26_u13_full3' }, { id: 'week', label: 'WEEKLY (Mon–Thu)', price: 720, lookup: 'wi26_u13_week' }] },
+  { id: 'wiu10', name: 'U-10 | Winter Camp 2026', product: 'prod_VUkzheU15PadgU', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: '10 & under', blurb: 'Half day 9–12, full day 9–3 (Mon–Wed): athletic development, tennis, afternoon adventures. Dec 24 and 31 half days only.',
+    options: [
+      { id: 'half', label: 'HALF DAY – DROP IN', price: 125, lookup: 'wi26_u10_half_dropin' }, { id: 'half3', label: '3 HALF DAYS', price: 255, lookup: 'wi26_u10_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 340, lookup: 'wi26_u10_half4' },
+      { id: 'full', label: 'FULL DAY – DROP IN', price: 175, lookup: 'wi26_u10_full_dropin' }, { id: 'full3', label: '3 FULL DAYS', price: 450, lookup: 'wi26_u10_full3' }, { id: 'week', label: 'WEEKLY (Mon–Thu)', price: 515, lookup: 'wi26_u10_week' }] }
 ];
 
 /* Pre-paid lesson packages (hours = lessons on the pack) */
