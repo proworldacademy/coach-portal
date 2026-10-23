@@ -556,7 +556,8 @@ const stripeFee=a=>Math.round((a*.029+.30)*100)/100;
    otherwise the line stays "due" for the front desk to collect, or is marked paid by cash/other. */
 async function chargeCard(c,opts){const p=c.pid?playerById(c.pid):null;const customer=p&&p.customer;
   if(opts&&opts.manual){c.status='paid';c.paidHow=opts.manual;return true}
-  if(customer&&c.lookup){if(!(LIVE&&LIVE.billing)){toast('Live billing actions need the Billing page — ask an owner.');return false}
+  if(customer&&c.lookup){if(!LIVE){try{LIVE=await liveApi('/api/admin/overview')}catch(e){}}   // the Privates tab can be the first thing opened — the engine's answer (who may bill) is loaded on demand, not only by the Players tab
+    if(!(LIVE&&LIVE.billing)){toast('Live billing actions need the Billing page — ask an owner.');return false}
     try{const r=await liveApi('/api/admin/charge',{customer,lookup:c.lookup,qty:c.qty||1,description:c.item,player:p.name});c.invoice=r.invoice;c.url=r.url;c.status=r.paid?'paid':'open';if(!r.paid){toast('The card was declined — the invoice is open in Stripe'+(r.error?' ('+r.error+')':'')+'.');return false}c.paidHow='card on file';notify('Email',p.email||'family','Receipt · '+c.item+' · '+money(c.amount)+' — sent by Stripe');return true}catch(e){toast(e.message);return false}}
   if(customer&&!c.lookup){toast('This line has no Stripe item — mark it paid by cash/other.');return false}
   toast('No card on file for '+(p?p.name:'this family')+' — send the enrollment link, or mark it paid by cash/other.');return false}
@@ -1214,6 +1215,7 @@ function monthStart(){return iso(new Date(TODAY.getFullYear(),TODAY.getMonth(),1
 async function connect(ctx){
   DB.ctx=ctx;DB.fs=PWAuth.fs();if(!DB.fs){render();return}
   fetch('/api/catalog',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{CATL=c}).catch(()=>{});
+  liveApi('/api/admin/overview').then(r=>{if(!LIVE)LIVE=r}).catch(()=>{});   // so a private booked before the Players tab was ever opened still charges the card on file
   const fs=DB.fs;let lastRoster=-1;
   const rerender=(why)=>{if(!DB.ready)return;if(state.view==='privates'||state.view==='enroll'||state.view==='messages'){if(why!=='players'||state.players.length===lastRoster)return}if(why==='players')lastRoster=state.players.length;render()};
   try{const d=await fs.doc('backend/state').get();if(d.exists)applyShared(d.data())}catch(e){console.error('backend/state',e)}
