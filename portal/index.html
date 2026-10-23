@@ -2144,14 +2144,15 @@ const PW_CONFIG = {
       <div class="sub"><b>${act.length}</b> active ${act.length === 1 ? 'player' : 'players'} · <b>${qd}</b> of ${qt} ${esc(q)} quarterlies done${nOpen ? ` · <b>${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up` : ''}.</div></div></div>`;
     return `${notice()}${head}${empty}${remind}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
       ${homeTryouts()}
+      <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
+      <div class="groups">${cards}</div>
+      <div class="sect" style="margin-top:28px"><h2>The numbers</h2></div>
       <div class="stats">
         <div class="stat lead"><div class="lbl">${esc(q)} quarterlies</div><b>${qd}<span class="of">of ${qt} players</span></b></div>
         <div class="stat"><div class="lbl">Active players</div><b>${act.length}</b></div>
         ${EDITION === 'web' ? `<div class="stat"><div class="lbl">${esc(mo)} monthly reports</div><b>${md}<span class="of">of ${mt}</span></b></div>` : `<div class="stat"><div class="lbl">Assessments on file</div><b>${finals.length}</b></div>`}
         <div class="stat"><div class="lbl">Finished this month</div><b>${thisMonth}</b></div>
       </div>
-      <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
-      <div class="groups">${cards}</div>
       <div class="sect"><h2>Latest activity</h2></div>
       ${recent ? `<div class="list">${recent}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'No assessments yet. Open a group, choose a player and start the first one.' : 'Loading…'}</div>`}`;
   }

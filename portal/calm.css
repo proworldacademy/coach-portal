@@ -75,3 +75,8 @@ body.skin-coach button.notice.sync .go{text-decoration:none;background:var(--lim
 body.skin-coach .furow{background:transparent;box-shadow:none;border-top:1px solid var(--line)}
 body.skin-coach .furow.ok,body.skin-coach .furow.calm{box-shadow:none}
 body.skin-coach .npl-list .fchip{background:#F6F6F2}
+
+/* ── the numbers sit under the groups now (Antonio, Oct 23 evening): smaller tiles, the groups carry the page ── */
+body.skin-coach .stats{margin-bottom:34px}
+body.skin-coach .stat b{font-size:38px}
+body.skin-coach .groups{margin-bottom:6px}
