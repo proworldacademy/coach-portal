@@ -183,12 +183,21 @@ async function ensureEnrollment(stripe, session, log) {
   log(`enrollment ${session.id}: plan ${sub.id} for ${m.player}, first invoice ${CAL.dateOfUnixET(anchor)}`);
   return sub;
 }
-/* Any paid one-time Checkout that saved a card (camps, packs, lessons): make that card the family's card on file, once. */
-async function ensureCardOnFile(stripe, session) {
-  if (!session || session.mode !== 'payment' || session.payment_status !== 'paid') return null;
-  const pm = paymentMethodOf(session);
-  const c = session.customer && typeof session.customer === 'object' ? session.customer : null;
-  if (!pm || !c || (c.invoice_settings && c.invoice_settings.default_payment_method)) return null;
+/* Any paid Checkout that saved a card makes that card the family's card on file, once — a one-time payment (camps, packs, lessons)
+   through its payment intent, or a subscription Checkout created (a start on a 1st, the staff test) through the plan's own card.
+   Without this, the card sits on the plan only and a private, a camp or a drop-in charged to the file would fail. */
+async function ensureCardOnFile(stripe, session, sub) {
+  if (!session || !session.customer) return null;
+  let pm = null;
+  if (session.mode === 'payment' && session.payment_status === 'paid') pm = paymentMethodOf(session);
+  else if (session.mode === 'subscription') {
+    const s = sub || (session.subscription && typeof session.subscription === 'object' ? session.subscription : null);
+    const d = s && s.default_payment_method;
+    pm = typeof d === 'string' ? d : d && d.id || null;
+  }
+  if (!pm) return null;
+  const c = typeof session.customer === 'object' ? session.customer : await stripe.customers.retrieve(session.customer);
+  if (!c || (c.invoice_settings && c.invoice_settings.default_payment_method)) return null;
   await stripe.customers.update(c.id, { invoice_settings: { default_payment_method: pm } });
   return pm;
 }
@@ -247,6 +256,7 @@ async function sessionStatus(stripe, id, log, ctx) {
   if (s.mode === 'subscription' && s.subscription) {
     sub = s.subscription;
     out.enrollment = enrollmentOf(sub, sub.metadata || {});
+    try { await ensureCardOnFile(stripe, s, sub); } catch (e) { /* the plan still charges its own card; the next sweep tries again */ }
   } else if (isProgramPayment(s)) {
     try { sub = await ensureEnrollment(stripe, s, log); if (sub) out.enrollment = enrollmentOf(sub, Object.assign({}, s.metadata, sub.metadata || {})); }
     catch (e) { out.enrollment = { pending: true, program: s.metadata.program_name, plan: s.metadata.plan_label, days: (s.metadata.days || '').split(',').filter(Boolean), start: s.metadata.start, error: e.message }; }
