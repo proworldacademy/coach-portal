@@ -145,7 +145,7 @@ const e={program:params.get('p')||null,kind:null,plan:params.get('plan')||null,o
 if(e.program&&e.plan)e.kind='monthly';
 
 function load(){
-  fetch('/api/catalog',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('catalog '+r.status);return r.json()}).then(c=>{CAT=c;if(e.program&&!PROG(e.program)){e.program=null;e.kind=null;e.plan=null}if(e.kind==='monthly'){const P=PROG(e.program);const pl=P&&P.plans.find(x=>x.id===e.plan);if(!pl){e.kind=null;e.plan=null}else if(pl.days>=P.days.length)e.days=P.days.slice();else e.days=e.days.filter(d=>P.days.includes(d)).slice(0,pl.days)}render();if(e.kind==='monthly')refreshQuote()})
+  fetch('/api/catalog',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('catalog '+r.status);return r.json()}).then(c=>{CAT=c;if(e.program&&!PROG(e.program)){e.program=null;e.kind=null;e.plan=null}if(e.kind==='monthly'){const P=PROG(e.program);const pl=P&&P.plans.find(x=>x.id===e.plan);if(!pl){e.kind=null;e.plan=null}else if(pl.days>=P.days.length)e.days=P.days.slice();else e.days=e.days.filter(d=>P.days.includes(d)).slice(0,pl.days)}if(e.camp&&!CAMP(e.camp))e.camp=null;else if(e.camp)e.kind='camp';render();if(e.kind==='monthly')refreshQuote();if(e.camp)setTimeout(()=>reveal('s-camp'),150)})
   .catch(()=>{$('#app').innerHTML='<section class="hero"><h1>One <em>moment</em></h1><p>The enrollment page couldn\'t reach the academy\'s system. Reload in a minute, or call the front desk at (561) 403-0008 and we\'ll enroll you over the phone.</p></section>'});
 }
 const PROG=id=>CAT&&CAT.programs.find(p=>p.id===id);
