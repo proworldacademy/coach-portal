@@ -226,6 +226,27 @@ test('thank-you page status for a completed enrollment', async () => {
   assert.equal(stripe._db.portalConfigs[0].features.subscription_cancel.mode, 'at_period_end');
 });
 
+test('a subscription Checkout (a 1st-of-month start, the staff test) puts the plan\'s card on the family\'s file, once — so a private or a camp can be charged to it', async () => {
+  const stripe = fakeStripe({ prices: PRICES, products: PRODUCTS, customers: [{ id: 'cus_sub', object: 'customer', email: 'jane.torres@example.com', invoice_settings: { default_payment_method: null } }] });
+  const sub = { id: 'sub_c', status: 'active', default_payment_method: 'pm_on_plan', metadata: { program: 'tester', plan: '3d', days: 'Mon,Tue,Wed,Thu,Fri', start: '2026-10-22', player: 'Roger Tester' }, items: { data: [{ current_period_end: CAL.unixET('2026-10-25', 16, 0) }] } };
+  stripe._db.sessions.push({ id: 'cs_sub', status: 'complete', payment_status: 'paid', mode: 'subscription', amount_total: 300, metadata: { player: 'Roger Tester' }, customer: stripe._db.customers[0], customer_details: { email: 'jane.torres@example.com' }, subscription: sub, line_items: { data: [] } });
+  const st = await CHECKOUT.sessionStatus(stripe, 'cs_sub');
+  assert.equal(st.enrollment.cycle, 'every 3 days');
+  assert.equal(stripe._db.customers[0].invoice_settings.default_payment_method, 'pm_on_plan');
+  // opening the page again changes nothing; a family that already has a card on file keeps it
+  const n = stripe._calls.filter((c) => c.name === 'customers.update').length;
+  await CHECKOUT.sessionStatus(stripe, 'cs_sub');
+  assert.equal(stripe._calls.filter((c) => c.name === 'customers.update').length, n);
+  stripe._db.customers[0].invoice_settings.default_payment_method = 'pm_older';
+  await CHECKOUT.ensureCardOnFile(stripe, stripe._db.sessions[stripe._db.sessions.length - 1], sub);
+  assert.equal(stripe._db.customers[0].invoice_settings.default_payment_method, 'pm_older');
+  // the nightly sweep does the same when the family never reached the thank-you page (the customer comes as an id there)
+  const stripe2 = fakeStripe({ prices: PRICES, products: PRODUCTS, customers: [{ id: 'cus_sub2', object: 'customer', email: 'x@example.com', invoice_settings: {} }], subscriptions: [Object.assign({}, sub, { id: 'sub_d', customer: 'cus_sub2' })] });
+  stripe2._db.sessions.push({ id: 'cs_sub2', status: 'complete', payment_status: 'paid', mode: 'subscription', created: Math.floor(Date.now() / 1000) - 3600, amount_total: 300, metadata: { player: 'Roger Tester' }, customer: 'cus_sub2', subscription: Object.assign({}, sub, { id: 'sub_d', customer: 'cus_sub2' }) });
+  await JOBS.convertPaidEnrollments(stripe2, '2026-10-23');
+  assert.equal(stripe2._db.customers[0].invoice_settings.default_payment_method, 'pm_on_plan');
+});
+
 /* ── the timed rules ── */
 function sub(id, lookup, periodEnd, extra) { const price = PRICES.find((p) => p.lookup_key === lookup); return Object.assign({ id, object: 'subscription', status: 'active', customer: 'cus_' + id, metadata: { player: 'P ' + id }, items: { data: [{ id: 'si_' + id, price, current_period_end: periodEnd }] } }, extra || {}); }
 
