@@ -1,0 +1,70 @@
+/* Coach Portal · "In between" (Antonio, Oct 23, 2026 — version 2 of the Coach Portal design proposal, with a plain grey background).
+   A layer on top of /shared/design.css and the portal's own styles: nothing in the page changes, only how it looks.
+   The rules: a flat warm grey page and white cards (no sky, no drifting lights, no live blur); bubbles stay — black with lime
+   for whatever is selected; one pale colour per group as a tag instead of a stripe; status as short bubbles — grey = to do,
+   pale lime = started, lime = done, amber = needs a person; the brand's mint · cyan · orchid are retired on this page so lime
+   means something again; fewer accents, fewer words. Loaded last, so everything here wins. Step 1 of 4 (CSS only). */
+
+/* ── the page ── */
+html,body.skin-coach{background:#F1F1ED!important}
+body.skin-coach .pwd-sky,body.skin-coach .pwd-lights{display:none!important}
+body.skin-coach{--card:#fff;--card-2:#fff;--line:#E7E7E2;--line-2:#DADAD4;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.05);--r:20px;--r2:14px}
+body.skin-coach .stat,body.skin-coach .group,body.skin-coach .list,body.skin-coach .panel,body.skin-coach .start,body.skin-coach .notice,
+body.skin-coach .vcard,body.skin-coach .jentry,body.skin-coach .recap,body.skin-coach .follow,body.skin-coach .lockbar,body.skin-coach .ptab,
+body.skin-coach .tab,body.skin-coach .fchip,body.skin-coach .btn,body.skin-coach .search input,body.skin-coach .sec-tabs,body.skin-coach .dock{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.skin-coach .stat,body.skin-coach .group,body.skin-coach .list,body.skin-coach .panel,body.skin-coach .start,body.skin-coach .notice,
+body.skin-coach .vcard,body.skin-coach .jentry,body.skin-coach .recap,body.skin-coach .follow,body.skin-coach .lockbar{background:#fff;border-color:transparent}
+body.skin-coach .sec-tabs{background:#F1F1ED}
+body.skin-coach .dock{background:#fff;border-top:0;box-shadow:0 -8px 28px rgba(0,0,0,.06)}
+
+/* ── the title: one weight, no outlined word, no lime highlighter ── */
+body.skin-coach h1.title em,body.skin-coach .title em{color:var(--ink);-webkit-text-stroke:0;paint-order:normal}
+body.skin-coach h1.title{font-size:clamp(40px,5.2vw,64px)}
+body.skin-coach .head .sub b{background:none;padding:0}
+
+/* ── bubbles: tabs, filters, buttons ── */
+body.skin-coach .tab,body.skin-coach .fchip,body.skin-coach .btn{background:#fff;border-color:transparent;color:var(--ink)}
+body.skin-coach .tab:hover,body.skin-coach .fchip:hover,body.skin-coach .btn:hover{border-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+body.skin-coach .tab[aria-selected="true"],body.skin-coach .fchip[aria-pressed="true"]{background:var(--ink);color:var(--lime)}
+body.skin-coach .search input{background-color:#fff;border-color:transparent}
+body.skin-coach .search input:focus{box-shadow:0 0 0 2px var(--ink)}
+
+/* ── the numbers: white tiles, the lead one no longer a lime block ── */
+body.skin-coach .stat.lead{background:#fff;color:var(--ink)}
+body.skin-coach .stat.lead .lbl,body.skin-coach .stat.lead .of{color:var(--muted);opacity:1}
+
+/* ── groups: the stripe goes, the name wears the group's colour as a pale tag ── */
+body.skin-coach .group::before{display:none}
+body.skin-coach .group .gname{font-family:var(--body);font-style:normal;font-weight:700;text-transform:none;font-size:13px;line-height:1;letter-spacing:0;
+  background:color-mix(in srgb,var(--gc,var(--lime)) 38%,#fff);color:var(--ink);border-radius:999px;padding:8px 13px;display:inline-block}
+body.skin-coach .group .count{font-size:40px}
+body.skin-coach .group .meter i{background:var(--ink)}
+
+/* ── status: short bubbles, one language ── */
+body.skin-coach .chip{background:#EFEFEA;border:0;color:#6B6B68;font-size:11.5px;letter-spacing:.2px;text-transform:none;padding:5px 11px;font-weight:700}
+body.skin-coach .chip.done,body.skin-coach .chip.ready,body.skin-coach .chip.sent{background:var(--lime);color:var(--ink)}
+body.skin-coach .chip.draft{background:#F3FFC4;color:var(--ink);border:0}
+body.skin-coach .chip.warn{background:#FFF1D6;color:#7A5200;border:0}
+body.skin-coach .chip.tier{background:transparent;border:1px solid var(--line-2);color:var(--muted)}
+body.skin-coach .chip.go{background:var(--ink);color:var(--lime)}
+body.skin-coach .rowb .pchips{display:none}              /* the T F M S letter boxes: the draft bubble already says where a quarterly stands */
+body.skin-coach .pill{background:#EFEFEA;color:var(--ink);letter-spacing:.3px;text-transform:none;font-size:11.5px}
+body.skin-coach button.notice.remind{background:#fff;border-color:transparent}
+body.skin-coach button.notice.remind span{text-decoration:none;background:var(--lime);border-radius:999px;padding:4px 10px}
+
+/* ── the assessment: one colour for "selected", no coloured bands or stripes ── */
+body.skin-coach [style*="--pc:"]{--pc:var(--lime)!important}
+body.skin-coach .sec-tab{background:#fff;border-color:transparent}
+body.skin-coach .sec-tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--lime);box-shadow:none}
+body.skin-coach .banner{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+body.skin-coach .fhead{border-left:0;background:#fff;border-radius:14px}
+body.skin-coach .start.rec{border-color:var(--ink);box-shadow:var(--shadow)}
+body.skin-coach .ptab,body.skin-coach .pbtn,body.skin-coach .fchip.part,body.skin-coach .recap .rc{box-shadow:none}
+body.skin-coach .ptab[aria-selected="true"],body.skin-coach .fchip.part[aria-pressed="true"],body.skin-coach .sg[aria-checked="true"]{background:var(--ink);border-color:var(--ink);color:var(--lime);box-shadow:none}
+body.skin-coach .pbtn{border-color:transparent;background:#fff;box-shadow:var(--shadow)}
+body.skin-coach .pbtn.done{background:#F3FFC4}
+body.skin-coach .pc.done{background:var(--lime);border-color:var(--lime)}
+body.skin-coach [data-stop]:focus-within{background:transparent;box-shadow:none}
+body.skin-coach input,body.skin-coach select,body.skin-coach textarea,body.skin-coach .field input,body.skin-coach .field select,body.skin-coach .field textarea{background:#fff;border-color:var(--line-2)}
+body.skin-coach input:focus,body.skin-coach select:focus,body.skin-coach textarea:focus{box-shadow:0 0 0 2px var(--ink) inset}
+body.skin-coach .rb[aria-checked="true"],body.skin-coach .pip.on{color:var(--lime)}
