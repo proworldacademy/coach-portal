@@ -7,7 +7,13 @@
       "source": "functions",
       "codebase": "billing",
       "runtime": "nodejs22",
-      "ignore": ["node_modules", ".git", "test", "*.test.js", "*.md"]
+      "ignore": [
+        "node_modules",
+        ".git",
+        "test",
+        "*.test.js",
+        "*.md"
+      ]
     }
   ],
   "hosting": {
@@ -54,6 +60,24 @@
           {
             "key": "X-Frame-Options",
             "value": "DENY"
+          }
+        ]
+      },
+      {
+        "source": "/shared/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/marketing/*.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600, must-revalidate"
           }
         ]
       }
