@@ -98,3 +98,5 @@ body.skin-coach details.others summary::-webkit-details-marker{display:none}
 body.skin-coach details.others summary::after{content:"▾";font-size:11px;color:var(--muted)}
 body.skin-coach details.others[open] summary::after{content:"▴"}
 body.skin-coach details.others .starts{margin-top:12px}
+body.skin-coach .starts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+body.skin-coach .start.rec.wide{flex:none}
