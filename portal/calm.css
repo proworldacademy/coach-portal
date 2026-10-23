@@ -68,3 +68,10 @@ body.skin-coach [data-stop]:focus-within{background:transparent;box-shadow:none}
 body.skin-coach input,body.skin-coach select,body.skin-coach textarea,body.skin-coach .field input,body.skin-coach .field select,body.skin-coach .field textarea{background:#fff;border-color:var(--line-2)}
 body.skin-coach input:focus,body.skin-coach select:focus,body.skin-coach textarea:focus{box-shadow:0 0 0 2px var(--ink) inset}
 body.skin-coach .rb[aria-checked="true"],body.skin-coach .pip.on{color:var(--lime)}
+
+/* ── the notices on home and the journal: no coloured stripes; a lime bubble where there was an underline ── */
+body.skin-coach button.notice.sync,body.skin-coach button.notice.sync.calm,body.skin-coach .notice.npl,body.skin-coach .jentry.coach,body.skin-coach .jentry.player,body.skin-coach .dcoach{box-shadow:var(--shadow)}
+body.skin-coach button.notice.sync .go{text-decoration:none;background:var(--lime);border-radius:999px;padding:4px 10px}
+body.skin-coach .furow{background:transparent;box-shadow:none;border-top:1px solid var(--line)}
+body.skin-coach .furow.ok,body.skin-coach .furow.calm{box-shadow:none}
+body.skin-coach .npl-list .fchip{background:#F6F6F2}
