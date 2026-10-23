@@ -311,6 +311,7 @@ table.grid td.half{border-right:1px dashed var(--line)}
 @media (max-width:920px){#toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 70px)}}
 .foot-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:48px;max-width:70ch}
 </style>
+<link rel="stylesheet" href="/backend/calm.css"><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, soft status tints; the Privates ticket -->
 </head>
 <body class="skin-desk">
 <div class="wrap">
@@ -956,26 +957,71 @@ function addPlayerSheet(app){openModal(`<h3>Add player</h3><p class="sub">From a
 
 /* ====================== PRIVATES ====================== */
 function renderPrivates(app){
-  const upcoming=state.privates.filter(x=>x.date>=iso(TODAY)).sort((a,b)=>(a.date+String(a.start).padStart(4,'0')).localeCompare(b.date+String(b.start).padStart(4,'0')));
-  const pOpts=state.players.filter(p=>p.status!=='tryout').sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${esc(p.id)}">${esc(p.name)} — ${p.program?PROG(p.program).short:'no program'}${p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':''}</option>`).join('');
-  let dOpts='';for(let i=0;i<10;i++){const x=addDays(TODAY,i);dOpts+=`<option value="${iso(x)}">${fmtDate(x)}</option>`}
+  /* Privates, the "ticket" version (Antonio, Oct 23): pick the coach, the player, how many on court, the day, the start and the
+     length as bubbles; a black ticket on the right builds itself as you pick (who · when · where · what it costs and how it is
+     paid) and carries the Book button. Below, the upcoming lessons as a day-by-day agenda. Same booking logic as before:
+     lesson pack hour → flex pack session → card on file → to collect at the front desk; blocks the court; texts the family. */
   const DUR={30:'30 min',45:'45 min',60:'1 hour',90:'1.5 hours',120:'2 hours'};
-  app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Coaches book their own lessons here at their tier rate. The system already knows if the player has a lesson pack — it uses an hour, or charges the card on file (for families enrolled online), or leaves it for the front desk to collect. It blocks the court and texts the parent. Nothing to reconcile.</p></section>
-  <section class="section"><div class="form"><div class="field"><label for="pv-coach">Pro <span class="muted" id="pv-tier"></span></label><select id="pv-coach">${PROS.map(c=>`<option value="${esc(c.name)}">${esc(c.name)} · ${esc(c.tier)}</option>`).join('')}</select></div><div class="field"><label for="pv-player">Player</label><select id="pv-player">${pOpts||'<option value="">— the roster is loading —</option>'}</select></div><div class="field"><label for="pv-n">Players on court</label><select id="pv-n"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div><div class="field"><label for="pv-date">Date</label><select id="pv-date">${dOpts}</select></div><div class="field"><label for="pv-time">Start</label><select id="pv-time">${timeOptions(15,7,20.5)}</select></div><div class="field"><label for="pv-dur">Length</label><select id="pv-dur"></select></div><div class="field"><label for="pv-court">Court <span class="muted" id="pv-free"></span></label><select id="pv-court"><option value="">First open court</option></select></div><div class="field wide"><label>How it's paid</label><div id="pv-how" class="paybox"></div></div></div><div class="actions"><button class="btn lime" id="pv-book">Book the private</button></div></section>
-  <section class="section"><h2>Upcoming</h2>${upcoming.length?`<table class="tablelist"><tbody>${upcoming.map(x=>{const p=playerById(x.pid);return `<tr><td><b>${esc(p?p.name:'?')}</b><div class="m">with ${esc(x.coach)} · ${courtById(x.court).name}</div></td><td>${fmtDate(parse(x.date))}<div class="m">${fmtRange(x.start,x.start+x.dur)}</div></td><td>${x.billed==='pack'?'<span class="pill info">pack hour</span>':x.billed==='card'?'<span class="pill lime">charged '+money(x.amount)+'</span>':'<span class="pill warn">'+money(x.amount)+' to collect</span>'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">No privates booked yet.</p>'}</section>`;
-  const tier=()=>LESSON_TIERS[PRO($('#pv-coach').value).tier];
-  const durs=()=>{const t=tier();const nsel=$('#pv-n');const avail=Object.keys(t);[...nsel.options].forEach(o=>o.disabled=!avail.includes(o.value));if(!avail.includes(nsel.value))nsel.value=avail[0];const d=$('#pv-dur');const prev=d.value;const ds=Object.keys(t[nsel.value]).map(Number).sort((a,b)=>a-b);d.innerHTML=ds.map(m=>`<option value="${m}">${DUR[m]||m+' min'}</option>`).join('');d.value=ds.includes(Number(prev))?prev:(ds.includes(60)?'60':String(ds[0]));$('#pv-tier').textContent='· '+PRO($('#pv-coach').value).tier};
-  const price=()=>{const t=tier();const n=$('#pv-n').value,m=Number($('#pv-dur').value);const each=t[n][m];return {each,total:Math.round(each*Number(n)*100)/100,hours:m/60,n:Number(n),min:m}};
-  const how=()=>{const p=playerById($('#pv-player').value);if(!p)return;const pr=price();const box=$('#pv-how');const n=Number($('#pv-n').value);if(p.privPack>=pr.hours){box.className='paybox pack';box.innerHTML=`<b>Uses ${pr.hours} hour${pr.hours===1?'':'s'} from the lesson pack</b> — ${Math.round((p.privPack-pr.hours)*100)/100} left after, no charge.`}else if(p.plan==='flex'&&p.packLeft>0){box.className='paybox pack';box.innerHTML=`<b>Uses 1 session from the ${p.packTotal}-session pack</b> — ${p.packLeft-1} left after, no charge.`}else if(p.customer){box.className='paybox card';box.innerHTML=`<b>${money(pr.total)}</b> to the card on file${n>1?' — '+money(pr.each)+' each × '+n:''}.`}else{box.className='paybox';box.innerHTML=`<b>${money(pr.total)}</b> to collect at the front desk — no card on file${n>1?' — '+money(pr.each)+' each × '+n:''}.`}};
-  const courts=()=>{const date=$('#pv-date').value,start=Number($('#pv-time').value),dur=Number($('#pv-dur').value)/60;const sel=$('#pv-court');const prev=sel.value;const kind=PRO($('#pv-coach').value).tier==='SOCCER 120'?'soccer':'tennis';const free=COURTS.filter(c=>c.kind===kind&&slotFree(c.id,date,start,dur));sel.innerHTML='<option value="">First open court</option>'+free.map(c=>`<option value="${c.id}">${c.name} · ${c.type==='clay'?'clay':c.type==='hard'?'hard':'field'}</option>`).join('');if(free.some(c=>c.id===prev))sel.value=prev;$('#pv-free').textContent='· '+free.length+' free at that time'};
-  $('#pv-coach').onchange=()=>{durs();how();courts()};$('#pv-n').onchange=()=>{durs();how();courts()};$('#pv-player').onchange=()=>{const p=playerById($('#pv-player').value);if(p&&!p.contactLoaded)loadContact(p.id);how()};$('#pv-dur').onchange=()=>{how();courts()};$('#pv-date').onchange=courts;$('#pv-time').onchange=courts;durs();how();courts();
-  $('#pv-book').onclick=async()=>{const coach=$('#pv-coach').value,pid=$('#pv-player').value,date=$('#pv-date').value,start=Number($('#pv-time').value),dur=Number($('#pv-dur').value)/60;let court=$('#pv-court').value;const p=playerById(pid);if(!p){toast('Pick a player.');return}const kind=PRO(coach).tier==='SOCCER 120'?'soccer':'tennis';if(!court){const c=COURTS.find(c=>c.kind===kind&&slotFree(c.id,date,start,dur));if(!c){toast('No open court at that time.');return}court=c.id}else if(!slotFree(court,date,start,dur)){toast(courtById(court).name+' isn\'t free then.');return}
-    const pr=price();const btn=$('#pv-book');btn.disabled=true;let billed='due',cid=null,amount=0,packType=null;
-    if(p.privPack>=pr.hours){ov(pid).privUsed=Math.round(((ov(pid).privUsed||0)+pr.hours)*100)/100;billed='pack';packType='priv'}else if(p.plan==='flex'&&p.packLeft>0){ov(pid).packUsed=(ov(pid).packUsed||0)+1;billed='pack';packType='flex'}else{amount=pr.total;const c=addCharge(pid,'Private with '+coach+' · '+fmtDate(parse(date))+' · '+durText(dur)+(pr.n>1?' · '+pr.n+' players':''),amount,'due','private',PRO(coach).tier==='SOCCER 120'?'Soccer':PRO(coach).tier==='FITNESS 110'?'Fitness':'Private lessons',null,{lookup:lookupFor('lesson',PRO(coach).tier,{n:pr.n,min:pr.min}),qty:pr.n});cid=c.id;if(p.customer){const ok=await chargeCard(c);billed=ok?'card':'due'}}
-    const bid='b'+uid();state.blocks.push({id:bid,label:'Private · '+coach.split(' ')[0],courts:[court],dows:[parse(date).getDay()],start,end:start+dur,from:date,until:date,private:true});
-    state.privates.push({id:'PV-'+uid(),pid,coach,date,start,dur,court,billed,packType,amount,blockId:bid,cid});if(!p.contactLoaded)await loadContact(pid);
-    notify('SMS',phoneFmt(p.phone)||'family',p.name.split(' ')[0]+': private with '+coach+' '+fmtDate(parse(date))+' '+fmtRange(start,start+dur)+' on '+courtById(court).name+'. '+(billed==='pack'?'Pack hour used.':billed==='card'?money(amount)+' charged to your card on file.':money(amount)+' is due at the front desk.'),{phone:p.phone});
-    rebuildPlayers();save();renderPrivates(app);toast('Booked '+courtById(court).name+' · '+(billed==='pack'?'pack hour used':billed==='card'?money(amount)+' charged':money(amount)+' to collect')+'.')};
+  const PV=state.pv=state.pv||{coach:PROS[0].name,pid:'',n:'1',date:iso(TODAY),time:15,dur:60,court:''};
+  if(!PRO(PV.coach))PV.coach=PROS[0].name;
+  const roster=state.players.filter(p=>p.status!=='tryout').sort((a,b)=>a.name.localeCompare(b.name));
+  if(!PV.pid||!playerById(PV.pid))PV.pid=roster[0]?roster[0].id:'';
+  const tier=()=>LESSON_TIERS[PRO(PV.coach).tier];
+  const kindOf=()=>PRO(PV.coach).tier==='SOCCER 120'?'soccer':'tennis';
+  const fixChoices=()=>{const t=tier();const ns=Object.keys(t);if(!ns.includes(PV.n))PV.n=ns[0];const ds=Object.keys(t[PV.n]).map(Number).sort((a,b)=>a-b);if(!ds.includes(Number(PV.dur)))PV.dur=ds.includes(60)?60:ds[0];return {ns,ds}};
+  const price=()=>{const t=tier();const each=t[PV.n][PV.dur];return {each,total:Math.round(each*Number(PV.n)*100)/100,hours:PV.dur/60,n:Number(PV.n),min:PV.dur}};
+  const freeCourts=()=>COURTS.filter(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,Number(PV.time),PV.dur/60));
+  const payLine=()=>{const p=playerById(PV.pid);if(!p)return {k:'',t:'Pick a player'};const pr=price();
+    if(p.privPack>=pr.hours)return {k:'pack',t:`Uses ${pr.hours} hour${pr.hours===1?'':'s'} of the lesson pack · ${Math.round((p.privPack-pr.hours)*100)/100} left after`};
+    if(p.plan==='flex'&&p.packLeft>0)return {k:'pack',t:`Uses 1 session of the ${p.packTotal}-session pack · ${p.packLeft-1} left after`};
+    if(p.customer)return {k:'card',t:`${money(pr.total)} to the card on file${pr.n>1?' · '+money(pr.each)+' each × '+pr.n:''}`};
+    return {k:'due',t:`${money(pr.total)} to collect at the front desk${pr.n>1?' · '+money(pr.each)+' each × '+pr.n:''}`}};
+  const ini=n=>String(n||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+  const upcoming=state.privates.filter(x=>x.date>=iso(TODAY)).sort((a,b)=>(a.date+String(a.start).padStart(4,'0')).localeCompare(b.date+String(b.start).padStart(4,'0')));
+  const byDay={};upcoming.forEach(x=>{(byDay[x.date]=byDay[x.date]||[]).push(x)});
+  const agenda=Object.keys(byDay).sort().map(d=>`<div class="pv-day"><div class="pv-dayh">${esc(fmtDate(parse(d)))}${d===iso(TODAY)?' <span class="pv-today">Today</span>':''}</div>${byDay[d].map(x=>{const p=playerById(x.pid);const st=x.billed==='pack'?'<span class="pill ok">pack hour</span>':x.billed==='card'?'<span class="pill ok">charged '+money(x.amount)+'</span>':'<span class="pill warn">'+money(x.amount)+' to collect</span>';
+    return `<div class="pv-row"><div class="pv-when">${esc(fmtRange(x.start,x.start+x.dur))}</div><div class="pv-who"><span class="pv-ava">${esc(ini(p?p.name:'?'))}</span><div><b>${esc(p?p.name:'?')}</b><div class="m">with ${esc(x.coach)} · ${esc(courtById(x.court).name)}</div></div></div><div class="pv-st">${st}</div></div>`}).join('')}</div>`).join('');
+  const draw=()=>{const {ns,ds}=fixChoices();const p=playerById(PV.pid);const pr=price();const pay=payLine();const free=freeCourts();if(PV.court&&!free.some(c=>c.id===PV.court))PV.court='';
+    const times=[];for(let h=7;h<=20.5;h+=.5)times.push(h);
+    app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket on the right fills itself in, blocks the court and texts the family when you book.</p></section>
+    <section class="section pv-wrap">
+      <div class="pv-build">
+        <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-chips">${PROS.map(c=>`<button class="pv-chip${c.name===PV.coach?' on':''}" data-pv="coach" data-v="${esc(c.name)}"><span class="pv-ava sm">${esc(ini(c.name))}</span>${esc(c.name)}<small>${esc(c.tier)}</small></button>`).join('')}</div></div>
+        <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'}</small>`:'<small>The roster is loading…</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
+        <div class="pv-grid">
+          <div class="pv-step"><div class="pv-k">On court</div><div class="pv-chips">${['1','2','3','4'].map(n=>`<button class="pv-chip num${n===PV.n?' on':''}" data-pv="n" data-v="${n}" ${ns.includes(n)?'':'disabled'}>${n}</button>`).join('')}</div></div>
+          <div class="pv-step"><div class="pv-k">Length</div><div class="pv-chips">${ds.map(m=>`<button class="pv-chip${m===Number(PV.dur)?' on':''}" data-pv="dur" data-v="${m}">${DUR[m]||m+' min'}</button>`).join('')}</div></div>
+        </div>
+        <div class="pv-step"><div class="pv-k">Day</div><div class="pv-chips dates">${Array.from({length:10},(_,i)=>addDays(TODAY,i)).map(x=>`<button class="pv-chip day${iso(x)===PV.date?' on':''}" data-pv="date" data-v="${iso(x)}"><b>${x.getDate()}</b><small>${DOW[x.getDay()].slice(0,3)}</small></button>`).join('')}</div></div>
+        <div class="pv-step"><div class="pv-k">Start</div><div class="pv-chips times">${times.map(h=>{const ok=COURTS.some(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,h,PV.dur/60));return `<button class="pv-chip t${h===Number(PV.time)?' on':''}${ok?'':' off'}" data-pv="time" data-v="${h}" ${ok?'':'disabled'}>${esc(fmtT(h))}</button>`}).join('')}</div></div>
+        <div class="pv-step"><div class="pv-k">Court <span class="muted">· ${free.length} free then</span></div><div class="pv-chips">${`<button class="pv-chip${PV.court?'':' on'}" data-pv="court" data-v="">First open court</button>`+free.map(c=>`<button class="pv-chip${c.id===PV.court?' on':''}" data-pv="court" data-v="${esc(c.id)}">${esc(c.name)}<small>${c.type==='clay'?'clay':c.type==='hard'?'hard':'field'}</small></button>`).join('')}</div></div>
+      </div>
+      <aside class="pv-ticket">
+        <div class="pv-tk">Private lesson</div>
+        <div class="pv-tbig">${esc(fmtRange(Number(PV.time),Number(PV.time)+PV.dur/60))}</div>
+        <div class="pv-tdate">${esc(fmtDate(parse(PV.date)))}</div>
+        <div class="pv-tline"><span class="pv-ava">${esc(ini(PV.coach))}</span><div><small>Coach</small><b>${esc(PV.coach)}</b><span>${esc(PRO(PV.coach).tier)}</span></div></div>
+        <div class="pv-tline"><span class="pv-ava">${esc(ini(p?p.name:''))}</span><div><small>Player${pr.n>1?'s':''}</small><b>${p?esc(p.name):'—'}</b><span>${pr.n>1?pr.n+' on court':'1 on court'}</span></div></div>
+        <div class="pv-tline"><span class="pv-ava">${PV.court?esc(courtById(PV.court).name.replace(/\D/g,'')||'C'):'·'}</span><div><small>Court</small><b>${PV.court?esc(courtById(PV.court).name):'First open court'}</b><span>${DUR[PV.dur]||PV.dur+' min'}</span></div></div>
+        <div class="pv-pay ${pay.k}"><b>${money(pr.total)}</b>${esc(pay.t)}</div>
+        <button class="btn pv-book" id="pv-book" ${p?'':'disabled'}>Book the private</button>
+        <div class="pv-tfoot">Blocks the court · texts the family · lands on Books</div>
+      </aside>
+    </section>
+    <section class="section"><h2>Upcoming</h2>${agenda||'<p class="muted">No privates booked yet.</p>'}</section>`;
+    app.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{const k=b.dataset.pv,v=b.dataset.v;PV[k]=k==='time'?Number(v):k==='dur'?Number(v):v;if(k==='coach'||k==='n'||k==='dur'||k==='date')PV.court='';save();draw()});
+    const q=$('#pv-q'),list=$('#pv-list');
+    q.oninput=()=>{const t=q.value.trim().toLowerCase();if(!t){list.hidden=true;return}const hits=roster.filter(x=>x.name.toLowerCase().includes(t)).slice(0,8);list.innerHTML=hits.map(x=>`<button data-pid="${esc(x.id)}"><b>${esc(x.name)}</b><small>${x.program?esc(PROG(x.program).short):'no program'}</small></button>`).join('')||'<div class="m" style="padding:10px 12px">No one by that name</div>';list.hidden=false;
+      list.querySelectorAll('[data-pid]').forEach(h=>h.onclick=()=>{PV.pid=h.dataset.pid;const pl=playerById(PV.pid);if(pl&&!pl.contactLoaded)loadContact(pl.id).then(draw);save();draw()})};
+    $('#pv-book').onclick=async()=>{const coach=PV.coach,pid=PV.pid,date=PV.date,start=Number(PV.time),dur=PV.dur/60;let court=PV.court;const p=playerById(pid);if(!p){toast('Pick a player.');return}const kind=kindOf();if(!court){const c=COURTS.find(c=>c.kind===kind&&slotFree(c.id,date,start,dur));if(!c){toast('No open court at that time.');return}court=c.id}else if(!slotFree(court,date,start,dur)){toast(courtById(court).name+' isn\'t free then.');return}
+      const pr=price();const btn=$('#pv-book');btn.disabled=true;btn.textContent='Booking…';let billed='due',cid=null,amount=0,packType=null;
+      if(p.privPack>=pr.hours){ov(pid).privUsed=Math.round(((ov(pid).privUsed||0)+pr.hours)*100)/100;billed='pack';packType='priv'}else if(p.plan==='flex'&&p.packLeft>0){ov(pid).packUsed=(ov(pid).packUsed||0)+1;billed='pack';packType='flex'}else{amount=pr.total;const c=addCharge(pid,'Private with '+coach+' · '+fmtDate(parse(date))+' · '+durText(dur)+(pr.n>1?' · '+pr.n+' players':''),amount,'due','private',PRO(coach).tier==='SOCCER 120'?'Soccer':PRO(coach).tier==='FITNESS 110'?'Fitness':'Private lessons',null,{lookup:lookupFor('lesson',PRO(coach).tier,{n:pr.n,min:pr.min}),qty:pr.n});cid=c.id;if(p.customer){const ok=await chargeCard(c);billed=ok?'card':'due'}}
+      const bid='b'+uid();state.blocks.push({id:bid,label:'Private · '+coach.split(' ')[0],courts:[court],dows:[parse(date).getDay()],start,end:start+dur,from:date,until:date,private:true});
+      state.privates.push({id:'PV-'+uid(),pid,coach,date,start,dur,court,billed,packType,amount,blockId:bid,cid});if(!p.contactLoaded)await loadContact(pid);
+      notify('SMS',phoneFmt(p.phone)||'family',p.name.split(' ')[0]+': private with '+coach+' '+fmtDate(parse(date))+' '+fmtRange(start,start+dur)+' on '+courtById(court).name+'. '+(billed==='pack'?'Pack hour used.':billed==='card'?money(amount)+' charged to your card on file.':money(amount)+' is due at the front desk.'),{phone:p.phone});
+      rebuildPlayers();save();renderPrivates(app);toast('Booked '+courtById(court).name+' · '+(billed==='pack'?'pack hour used':billed==='card'?money(amount)+' charged':money(amount)+' to collect')+'.')};
+  };
+  draw();
 }
 
 /* ====================== MY ACCOUNT (parent) ====================== */

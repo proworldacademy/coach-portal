@@ -1,0 +1,106 @@
+/* Admin / backend · the "In between" look (Antonio, Oct 23, 2026) — the same layer as /portal/calm.css, for the backend page.
+   Flat warm-grey page, white cards, no sky and no live blur; bubbles stay (black + lime = selected); status in soft brand
+   tints (mint = paid / all good · lime = needs you · cyan = information · orchid = new); fewer accents. Loaded last.
+   Also holds the Privates "ticket" view (Coaches → Privates). Scoped to body.skin-desk so nothing else on HQ changes. */
+
+/* ── the page ── */
+html,body.skin-desk{background:#F1F1ED!important}
+body.skin-desk .pwd-sky,body.skin-desk .pwd-lights{display:none!important}
+body.skin-desk{--card:#fff;--card-2:#fff;--line:#E7E7E2;--line-2:#DADAD4;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.05)}
+body.skin-desk .stat,body.skin-desk .menu-row,body.skin-desk .opt,body.skin-desk .chip,body.skin-desk .date,body.skin-desk .seg,body.skin-desk .facts li,
+body.skin-desk .recon .r,body.skin-desk .offer,body.skin-desk .paybox,body.skin-desk .note,body.skin-desk .who select,body.skin-desk .tabs button,body.skin-desk .btn,
+body.skin-desk .panel,body.skin-desk .card,body.skin-desk .sheet,body.skin-desk .staffpanel,body.skin-desk .modal,body.skin-desk .tablelist{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.skin-desk .stat,body.skin-desk .menu-row,body.skin-desk .opt,body.skin-desk .facts li,body.skin-desk .recon .r,body.skin-desk .offer,body.skin-desk .paybox,body.skin-desk .note,body.skin-desk .panel,body.skin-desk .card{background:#fff;border-color:transparent;box-shadow:var(--shadow)}
+body.skin-desk .hero h1{font-size:clamp(40px,5.4vw,66px)}
+body.skin-desk .hero p{font-size:15px;color:var(--muted)}
+body.skin-desk main a:not(.btn){text-decoration-color:rgba(0,0,0,.25)}
+
+/* ── bubbles ── */
+body.skin-desk .tabs button,body.skin-desk .chip,body.skin-desk .date,body.skin-desk .btn,body.skin-desk .who select{background:#fff;border-color:transparent;color:var(--ink);box-shadow:none}
+body.skin-desk .tabs button:hover,body.skin-desk .chip:hover,body.skin-desk .date:hover,body.skin-desk .btn:hover{border-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+body.skin-desk .tabs button[aria-current="page"],body.skin-desk .chip[aria-pressed="true"],body.skin-desk .date[aria-pressed="true"],body.skin-desk .seg button[aria-pressed="true"],
+body.skin-desk .menu-row[aria-pressed="true"],body.skin-desk .opt[aria-pressed="true"]{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+body.skin-desk .menu-row[aria-pressed="true"] .meta,body.skin-desk .menu-row[aria-pressed="true"] .blurb,body.skin-desk .menu-row[aria-pressed="true"] .price span,body.skin-desk .opt[aria-pressed="true"] .d{color:rgba(255,255,255,.72)}
+body.skin-desk .seg{background:#fff;border-color:transparent}
+body.skin-desk .btn.pri,body.skin-desk .btn.lime,body.skin-desk .selbar .btn{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+body.skin-desk .btn.ghost{background:#fff}
+
+/* ── status, softly ── */
+body.skin-desk .stat.warn{background:#fff}
+body.skin-desk .stat.warn b{color:var(--ink)}
+body.skin-desk .pill{border-color:transparent;background:#EFEFEA;color:#6B6B68;letter-spacing:.3px;text-transform:none;font-size:11.5px;padding:4px 10px}
+body.skin-desk .pill.ok{background:#DDFDE7;color:#0E3B22}
+body.skin-desk .pill.warn,body.skin-desk .pill.lime{background:#F1FFC2;color:#2B3A00}
+body.skin-desk .pill.info{background:#E2FBFC;color:#0E3B3D}
+body.skin-desk .facts li.ok{background:#DDFDE7}
+body.skin-desk .recon .r.bad{background:#F1FFC2}body.skin-desk .recon .r.pack{background:#E2FBFC}body.skin-desk .recon .r.ok{background:#DDFDE7}
+body.skin-desk .offer.camp{background:#E2FBFC}
+body.skin-desk .paybox.pack{background:#E2FBFC}body.skin-desk .paybox.card{background:#F1FFC2}
+body.skin-desk .todo li .k{background:#D9D9D3;box-shadow:none}body.skin-desk .todo li .k.info{background:#A9F3F7}body.skin-desk .todo li .k.ok{background:#94FCB1}body.skin-desk .todo li .k.lime{background:#E2FE78}
+body.skin-desk .note{background:#fff}
+/* the courts grid keeps its meaning, in pastels */
+body.skin-desk .cell{background:#fff}
+body.skin-desk .cell.academy{background:#E2FBFC}body.skin-desk .cell.event{background:#E2FBFC}
+body.skin-desk .cell.private{background:#DDFDE7}body.skin-desk .cell.family,body.skin-desk .cell.mine{background:#F9E2F8}
+body.skin-desk .cell.sel{background:var(--lime)!important}
+body.skin-desk .pc i{background:#94FCB1}body.skin-desk .pc.guest{background:#F9E2F8}body.skin-desk .pc.unexpected{background:#F1FFC2;border-color:transparent}
+body.skin-desk .coach button:hover{background:var(--ink);color:var(--lime)}
+
+/* ── Privates · the ticket ── */
+body.skin-desk .pv-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;margin-top:22px}
+@media(max-width:920px){body.skin-desk .pv-wrap{grid-template-columns:1fr}}
+body.skin-desk .pv-build{display:grid;gap:18px}
+body.skin-desk .pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:560px){body.skin-desk .pv-grid{grid-template-columns:1fr}}
+body.skin-desk .pv-k{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:8px}
+body.skin-desk .pv-chips{display:flex;gap:8px;flex-wrap:wrap}
+body.skin-desk .pv-chip{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 8px;border-radius:999px;background:#fff;color:var(--ink);font:700 13.5px var(--body);border:0;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s,box-shadow .15s}
+body.skin-desk .pv-chip:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+body.skin-desk .pv-chip small{font-weight:400;color:var(--muted);font-size:12px}
+body.skin-desk .pv-chip.on{background:var(--ink);color:var(--lime)}
+body.skin-desk .pv-chip.on small{color:rgba(226,254,120,.75)}
+body.skin-desk .pv-chip:disabled,body.skin-desk .pv-chip.off{opacity:.35;cursor:not-allowed;box-shadow:none;transform:none}
+body.skin-desk .pv-chip.num{width:40px;justify-content:center;padding:0}
+body.skin-desk .pv-chip.t{padding:0 12px;font-size:12.5px;height:34px}
+body.skin-desk .pv-chip.day{flex-direction:column;gap:0;height:56px;width:56px;padding:0;justify-content:center;line-height:1}
+body.skin-desk .pv-chip.day b{font-family:var(--display);font-style:italic;font-weight:800;font-size:22px}
+body.skin-desk .pv-chip.day small{font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+body.skin-desk .pv-chips.dates,body.skin-desk .pv-chips.times{max-height:132px;overflow:auto;padding:2px}
+body.skin-desk .pv-ava{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--lime);display:inline-flex;align-items:center;justify-content:center;font:italic 800 12px var(--display);flex:none}
+body.skin-desk .pv-chip.on .pv-ava{background:var(--lime);color:var(--ink)}
+body.skin-desk .pv-ava.sm{width:26px;height:26px;font-size:11px}
+body.skin-desk .pv-pick{position:relative;background:#fff;border-radius:18px;box-shadow:var(--shadow);padding:10px 12px;display:grid;gap:8px}
+body.skin-desk .pv-search{height:40px;border:0;background:#F3F3EF;border-radius:999px;padding:0 16px;font:inherit;width:100%}
+body.skin-desk .pv-search:focus{outline:none;box-shadow:0 0 0 2px var(--ink)}
+body.skin-desk .pv-sel{display:flex;align-items:center;gap:10px;padding:4px 6px;font-size:14px}
+body.skin-desk .pv-sel small{color:var(--muted);font-size:12px;margin-left:8px}
+body.skin-desk .pv-list{position:absolute;left:12px;right:12px;top:58px;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.14);z-index:5;overflow:hidden}
+body.skin-desk .pv-list button{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;border:0;background:none;text-align:left;font:inherit;cursor:pointer}
+body.skin-desk .pv-list button:hover{background:#F3F3EF}
+body.skin-desk .pv-list small{color:var(--muted);font-size:12px}
+body.skin-desk .pv-ticket{position:sticky;top:84px;background:var(--ink);color:#fff;border-radius:24px;padding:22px 22px 18px;box-shadow:0 24px 60px -24px rgba(0,0,0,.5);display:grid;gap:12px}
+body.skin-desk .pv-tk{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--lime)}
+body.skin-desk .pv-tbig{font-family:var(--display);font-style:italic;font-weight:800;font-size:44px;line-height:.95;letter-spacing:-.005em}
+body.skin-desk .pv-tdate{font-size:14px;color:rgba(255,255,255,.72);margin-top:-6px}
+body.skin-desk .pv-tline{display:flex;align-items:center;gap:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}
+body.skin-desk .pv-tline .pv-ava{background:#fff;color:var(--ink)}
+body.skin-desk .pv-tline small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:700}
+body.skin-desk .pv-tline b{display:block;font-size:15px}
+body.skin-desk .pv-tline span{font-size:12.5px;color:rgba(255,255,255,.7)}
+body.skin-desk .pv-pay{margin-top:6px;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.08);font-size:13px;line-height:1.4;color:rgba(255,255,255,.85)}
+body.skin-desk .pv-pay b{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:30px;line-height:1;color:#fff;margin-bottom:4px}
+body.skin-desk .pv-pay.pack{background:rgba(148,252,177,.18)}body.skin-desk .pv-pay.pack b{color:#94FCB1}
+body.skin-desk .pv-pay.card{background:rgba(226,254,120,.16)}body.skin-desk .pv-pay.card b{color:var(--lime)}
+body.skin-desk .pv-pay.due b{color:#F8A95C}
+body.skin-desk .btn.pv-book{background:var(--lime);color:var(--ink);border:0;height:48px;font:italic 800 18px var(--display);text-transform:uppercase;letter-spacing:.01em;border-radius:999px}
+body.skin-desk .btn.pv-book:disabled{opacity:.45}
+body.skin-desk .pv-tfoot{font-size:11.5px;color:rgba(255,255,255,.5);text-align:center}
+/* the agenda */
+body.skin-desk .pv-day{background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:6px 18px 8px;margin-bottom:12px}
+body.skin-desk .pv-dayh{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:20px;padding:12px 0 6px;display:flex;align-items:center;gap:10px}
+body.skin-desk .pv-today{font:700 10.5px var(--body);letter-spacing:.14em;background:var(--lime);border-radius:999px;padding:3px 9px}
+body.skin-desk .pv-row{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+body.skin-desk .pv-when{font-family:var(--display);font-style:italic;font-weight:800;font-size:19px;line-height:1}
+body.skin-desk .pv-who{display:flex;align-items:center;gap:10px;min-width:0}
+body.skin-desk .pv-who .m{font-size:12.5px;color:var(--muted)}
+@media(max-width:560px){body.skin-desk .pv-row{grid-template-columns:1fr;gap:6px}body.skin-desk .pv-ticket{position:static}}
