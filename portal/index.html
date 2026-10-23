@@ -1626,6 +1626,23 @@ const PW_CONFIG = {
   const followChip = (a) => (!tracked(a) ? '' : !isSent(a) ? sentChip(a) : meetingOpen(a) ? meetChip(a) : '');
   const openCount = () => { const fu = followUps(); return new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size; };
   function draftChip(a, def, short) { return multi(def) && allDone(a, def) ? `<span class="chip ready">${esc(short)}Ready to finalize</span>` : `<span class="chip draft">${esc(short)}Draft ${a.progress || 0}%</span>`; }
+  /* One word per player on the lists (Antonio, Oct 23): what is due now is the current quarterly and the current month's report.
+     Both final → "Up to date" (mint). Anything started → "Working on it" (lime). Anything not even begun → "Missing" (orchid).
+     The detail — which part, which report — lives on the player's page, not on the list. */
+  function dueNow(p) {
+    const q = curQ(), m = mLabel(new Date()); const mine = playerAssess(p.id);
+    const fq = quarterlyFor(p.id, q); const fm = mine.find((a) => a.period === m && a.type === 'monthly');
+    const state = (a) => (!a ? 'missing' : a.status === 'final' ? 'done' : 'working');
+    const items = p.group === 'camp' ? [] : [{ what: q + ' quarterly', a: fq, st: state(fq) }].concat(EDITION === 'web' ? [{ what: m + ' monthly', a: fm, st: state(fm) }] : []);
+    const overall = items.some((x) => x.st === 'missing') ? 'missing' : items.some((x) => x.st === 'working') ? 'working' : 'done';
+    return { items, overall, missing: items.filter((x) => x.st === 'missing').map((x) => x.what), working: items.filter((x) => x.st === 'working').map((x) => x.what) };
+  }
+  const STATUS_WORD = { done: 'Up to date', working: 'Working on it', missing: 'Missing' };
+  function statusBubble(p) {
+    if (p.group === 'camp') { const n = playerAssess(p.id).filter((a) => a.status === 'final').length; return `<span class="chip${n ? ' st-done' : ''}">${n} report${n === 1 ? '' : 's'}</span>`; }
+    const d = dueNow(p); const tip = d.overall === 'done' ? 'Quarterly and monthly report are final' : (d.missing.length ? 'Not started: ' + d.missing.join(', ') : '') + (d.missing.length && d.working.length ? ' · ' : '') + (d.working.length ? 'In progress: ' + d.working.join(', ') : '');
+    return `<span class="chip st-${d.overall}" title="${esc(tip)}">${STATUS_WORD[d.overall]}</span>`;
+  }
   function statusChips(p) {
     const q = curQ(), m = mLabel(new Date()); const mine = playerAssess(p.id); const out = [];
     if (p.group !== 'camp') {
@@ -2191,21 +2208,18 @@ const PW_CONFIG = {
     const fc = S.ui.coachFilter !== undefined && S.ui.coachFilter !== null && S.ui.coachFilterGroup === gid ? S.ui.coachFilter : null;
     const pf = multi(def) && S.ui.partFilter && S.ui.partFilterGroup === gid ? def.parts.find((x) => x.id === S.ui.partFilter) : null;
     const needs = (p, pid) => { const a = quarterlyFor(p.id, q); if (a && a.status === 'final') return false; const st = a && a.parts && a.parts[pid]; return !(st && st.done); };
-    const shown = list.filter((p) => (fc === null ? true : (p.coach || '') === fc)).filter((p) => !pf || needs(p, pf.id)).sort((a, b) => a.name.localeCompare(b.name));
+    const shown = list.filter((p) => (fc === null ? true : (p.coach || '') === fc)).sort((a, b) => a.name.localeCompare(b.name));
     const rows = shown.map((p) => {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
         <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
       // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
-      if (pf && writable()) return `<div class="arow"><button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${partChips(quarterlyFor(p.id, q), def)}</div></button><div class="pstrip" role="group" aria-label="Open the ${esc(pf.label)} part directly"><button class="pbtn" style="--pc:${PILLAR[pf.pillar]}" data-act="open-part" data-pid="${esc(p.id)}" data-part="${pf.id}"><b>Fill in ${esc(pf.label)}</b><small>opens that part of the ${esc(q)} quarterly</small></button></div></div>`;
-      return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? statusChips(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
+      return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
     }).join('');
     const inactiveN = all.length - all.filter(active).length;
-    const todo = multi(def) && gid !== 'camp' ? `<div class="filters" role="group" aria-label="Show players who still need one part">
-        <span class="flbl">${esc(q)} to do</span>
-        ${def.parts.map((x) => `<button class="fchip part" style="--pc:${PILLAR[x.pillar]}" aria-pressed="${!!pf && pf.id === x.id}" data-act="pfilter" data-v="${x.id}">${esc(x.label)} ${list.filter((p) => needs(p, x.id)).length}</button>`).join('')}
-        ${pf ? '<button class="fchip" data-act="pfilter" data-v="">Show everyone</button>' : ''}</div>
-        ${pf ? `<p class="hint" style="margin:-4px 0 14px">Players whose ${esc(pf.label)} part isn’t complete for ${esc(q)}. A player’s name opens their profile; “Fill in ${esc(pf.label)}” under the name goes straight to that part — you come back to this list when you finish it.</p>` : ''}` : '';
-    const empty = pf ? `Every player’s ${esc(pf.label)} part is complete for ${esc(q)}.` : (S.loaded.players || S.dbState === 'none' ? 'No players in this group yet.' : 'Loading roster…');
+    // what is due now, in one line (Antonio, Oct 23): the current quarterly and this month's report, and how many players have not started
+    const tally = list.filter(active).map(dueNow); const nMiss = tally.filter((d) => d.overall === 'missing').length, nWork = tally.filter((d) => d.overall === 'working').length, nDone = tally.filter((d) => d.overall === 'done').length;
+    const todo = gid !== 'camp' && list.length ? `<p class="hint due-line"><b>Due now:</b> ${esc(q)} quarterly${EDITION === 'web' ? ` and the ${esc(mLabel(new Date()))} monthly report` : ''} · <span class="chip st-missing">${nMiss} missing</span> <span class="chip st-working">${nWork} working on it</span> <span class="chip st-done">${nDone} up to date</span></p>` : '';
+    const empty = S.loaded.players || S.dbState === 'none' ? 'No players in this group yet.' : 'Loading roster…';
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label }])}
       <div class="head"><div><div class="lbl">${esc(g.director || '')}</div><h1 class="title">${emT(g.label)}</h1></div>
         <div class="rowx">${gid !== 'camp' ? `<label class="qsel" for="g_q">Quarter <select id="g_q" data-act="setq">${quarterOptions().map((o) => `<option ${o === q ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>` : ''}${writable() ? `<button class="btn pri" data-act="toggle-add">Add player</button>` : ''}</div></div>
@@ -2272,7 +2286,9 @@ const PW_CONFIG = {
   function tabAssess(p) {
     const g = group(p.group); const rec = p.group === 'camp' ? ['camp_snapshot', 'camp_performance'] : [g.form || 'quarterly_hp', 'monthly'];
     const order = rec.concat(FORM_ORDER.filter((t) => !rec.includes(t)));
-    const starts = writable() ? `<div class="sect"><h2>Start or continue an assessment</h2></div><div class="starts">${order.map((t) => startCard(t, rec.includes(t))).join('')}</div>` : '';
+    const others = order.filter((t) => !rec.includes(t));
+    const starts = writable() ? `<div class="sect"><h2>Start or continue an assessment</h2></div><div class="starts">${rec.map((t) => startCard(t, true)).join('')}</div>
+      ${others.length ? `<details class="others"><summary>Other reports <span class="muted">${others.length}</span></summary><div class="starts">${others.map((t) => startCard(t, false)).join('')}</div></details>` : ''}` : '';
     const mine = playerAssess(p.id); const rows = mine.map((a) => rowAssess(a, false, true)).join('');
     return `${starts}<div class="sect"><h2>On file</h2><span class="muted" style="font-size:12px">${mine.filter((a) => a.status === 'final').length} final · ${mine.filter((a) => a.status !== 'final').length} draft</span></div>
       ${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing on file for this player yet.' : 'Loading…'}</div>`}`;

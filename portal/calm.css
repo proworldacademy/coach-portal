@@ -80,3 +80,21 @@ body.skin-coach .npl-list .fchip{background:#F6F6F2}
 body.skin-coach .stats{margin-bottom:34px}
 body.skin-coach .stat b{font-size:38px}
 body.skin-coach .groups{margin-bottom:6px}
+
+/* ── one word per player (Antonio, Oct 23): the three brand colours, softly ── */
+body.skin-coach .chip.st-done{background:#DDFDE7;color:#0E3B22}        /* mint · up to date */
+body.skin-coach .chip.st-working{background:#F1FFC2;color:#2B3A00}     /* lime · working on it */
+body.skin-coach .chip.st-missing{background:#F9E2F8;color:#5B1A5C}     /* orchid · missing */
+body.skin-coach .due-line{margin:-6px 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+body.skin-coach .due-line b{color:var(--ink)}
+/* ── the player page: two clean cards, the suggested one on a pale lime ground; the rest folded away ── */
+body.skin-coach .start .pbtns{display:none}
+body.skin-coach .start{border:0;padding:16px 18px;min-width:220px}
+body.skin-coach .start.rec{background:#F6FFD6;border:0;box-shadow:var(--shadow)}
+body.skin-coach .start.rec.wide{flex:1 1 320px}
+body.skin-coach details.others{margin:-8px 0 26px}
+body.skin-coach details.others summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:9px 15px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow)}
+body.skin-coach details.others summary::-webkit-details-marker{display:none}
+body.skin-coach details.others summary::after{content:"▾";font-size:11px;color:var(--muted)}
+body.skin-coach details.others[open] summary::after{content:"▴"}
+body.skin-coach details.others .starts{margin-top:12px}
