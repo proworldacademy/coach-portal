@@ -100,3 +100,9 @@ body.skin-coach details.others[open] summary::after{content:"▴"}
 body.skin-coach details.others .starts{margin-top:12px}
 body.skin-coach .starts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 body.skin-coach .start.rec.wide{flex:none}
+/* ── owners: delete one report from a player's file (two taps) ── */
+body.skin-coach .ownrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 12px 12px 60px}
+body.skin-coach .ownrow .hint{font-size:12px;margin:0}
+body.skin-coach .btn.danger{color:#8a2a2a}
+body.skin-coach .btn.danger:hover{background:#FBE9E9}
+@media(max-width:560px){body.skin-coach .ownrow{padding-left:12px}}

@@ -2197,7 +2197,9 @@ const PW_CONFIG = {
     const row = `<button class="rowb" ${goAttr(r)}>
       <div class="who"><span class="dot" style="background:${PILLAR[def.pillar]}"></span><div style="min-width:0"><div class="nm">${esc(withPlayer ? nm : def.title)}</div><small>${esc(withPlayer ? def.short + ' · ' : '')}${esc(a.period || '')}${a.coach ? ' · ' + esc(a.coach) : ''}</small></div></div>
       <div class="mid muted" style="font-size:12px">Updated ${esc(fmtDate(a.updatedAt))}</div><div class="chips">${st}</div></button>`;
-    return withParts && multi(def) && a.status !== 'final' && writable() ? `<div class="arow">${row}${partStrip(a, def)}</div>` : row;
+    // owners only (Antonio, Oct 23): take one report off a player's file — a draft to start over, or a final filed by mistake — two taps, nothing else on the player is touched
+    const own = withParts && EDITION === 'web' && WEB.isOwner ? `<div class="ownrow"><button class="btn ghost sm danger" data-act="del-assess" data-id="${esc(a.id)}">Delete this ${a.status === 'final' ? 'report' : 'draft'}</button><span class="hint">Owners only · removes this one ${esc(def.short)} for ${esc(a.period || '')} and nothing else</span></div>` : '';
+    return withParts && ((multi(def) && a.status !== 'final' && writable()) || own) ? `<div class="arow">${row}${multi(def) && a.status !== 'final' && writable() ? partStrip(a, def) : ''}${own}</div>` : row;
   }
 
   /* ───────────── view: group ───────────── */
@@ -3077,6 +3079,9 @@ const PW_CONFIG = {
     else if (act === 'try-check' && S.route.id) { b.disabled = true; await tryPatch(S.route.id, { checks: { [b.getAttribute('data-c')]: { done: true, by: String(tryName()).slice(0, 80), at: Date.now() } } }); }
     else if (act === 'try-uncheck' && S.route.id) { b.disabled = true; await tryPatch(S.route.id, { checks: { [b.getAttribute('data-c')]: { done: false, by: '', at: null } } }); }
     else if (act === 'try-status' && S.route.id) { const v = b.getAttribute('data-v'); b.disabled = true; await tryPatch(S.route.id, { status: v, statusBy: String(tryName()).slice(0, 80), statusAt: Date.now() }); toast(v === 'came' ? 'Recorded. Next: feedback to the family, then the decision.' : v === 'planned' ? 'Back to planned.' : `Recorded as ${TRY_STATUS[v].toLowerCase()}.`); }
+    else if (act === 'del-assess') twoStep(b, 'da' + b.getAttribute('data-id'), async () => { const id = b.getAttribute('data-id'); if (!WEB.isOwner) return; b.disabled = true;
+      try { try { await S.db.doc(`assessments/${id}/body/values`).delete(); } catch (e) { /* no body yet */ } await S.db.doc(`assessments/${id}`).delete(); toast('Report deleted. The player starts that one from zero.'); render(); }
+      catch (e) { b.disabled = false; toast('Could not delete: ' + (e.message || e)); } });
     else if (act === 'del-try' && S.route.id) twoStep(b, 'dt' + S.route.id, async () => { try { await S.db.doc('tryouts/' + S.route.id).delete(); toast('Try-out deleted.'); go({ view: 'tryouts' }); } catch (e) { dbFail(e); } });
     else if (act === 'toggle-edit') { S.ui.editing = !S.ui.editing; render(); }
     else if (act === 'parent-info' && S.route.pid) {   // parent details stay closed until someone asks; read fresh each time, never kept on the page
