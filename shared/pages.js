@@ -42,6 +42,9 @@
       desc: "Today's expected players by session from Monday and the roster, what needs fixing, and the Play by Point check-in compare. Refreshes every 5 minutes. Its own page, opened with a saved link." },
     { id: "directors-live", section: "tools", door: "library", name: "Directors Dashboard", short: "Directors", color: "cyan", status: "live", opens: "link", owner: "Directors",
       desc: "The roster by director, group and coach, family-contact coverage and the overnight Monday check. Refreshes every 5 minutes. Its own page, opened with a saved link." },
+    // ── Start here ──
+    { id: "start", section: "library", door: "library", name: "Start here · how HQ works", short: "Start here", color: "mint", status: "page", opens: "site", url: "/start", owner: "Everyone",
+      desc: "The one-page tour of PROWORLD HQ: the top bar and how to move, the Dashboard, every door and its tabs, the Library, what runs by itself, and the five screens each role uses most — sized to the doors the reader holds. Opens for everyone on the staff list." },
     // ── Prototypes & plans ──
     { id: "comms-plan", section: "proto", name: "Coach Comms Plan", color: "gray", status: "plan", opens: "site", url: "/p?id=comms-plan", file: "comms-plan", owner: "Leadership · Directors",
       desc: "Aug 18, 2026 — how coaches talk to families: JustCall for calls and texts on one number per coach, Pipedrive as the family record, WhatsApp for video, the six-week rollout with owners, the running cost and the open items. Since then: the whole team went live on JustCall (Sept 24) and the coverage engine nudges coaches and posts the 8 AM digest." },
@@ -119,10 +122,10 @@
   const all = PAGES.filter((p) => !p.with).map((p) => p.id);
   // Starting points when you add a person. After that, tick or untick any page for that person.
   const PRESETS = {
-    marketing: { label: "Marketing", pages: ["mkt", "leads", "soccer", "pipeline", "thanksgiving", "sunday-preview", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
-    editor: { label: "Video editor", pages: ["mkt"] },
-    coach: { label: "Coach", pages: ["coach-portal", "tryouts", "backend"] },
-    desk: { label: "Front desk", pages: ["tryouts", "desk-live", "ai-check", "backend", "billing", "attendance", "leads", "inbox-brief"] },
+    marketing: { label: "Marketing", pages: ["start", "mkt", "leads", "soccer", "pipeline", "thanksgiving", "sunday-preview", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
+    editor: { label: "Video editor", pages: ["start", "mkt"] },
+    coach: { label: "Coach", pages: ["start", "coach-portal", "tryouts", "backend"] },
+    desk: { label: "Front desk", pages: ["start", "tryouts", "desk-live", "ai-check", "backend", "billing", "attendance", "leads", "inbox-brief"] },
     admin: { label: "Administrator", pages: all, admin: true },
     none: { label: "Nothing yet", pages: [] }
   };

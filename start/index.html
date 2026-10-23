@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Start here · PROWORLD HQ</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="/shared/pages.js"></script>
+<script src="/shared/pwauth.js"></script>
+<script src="/shared/design.js"></script>
+<style>
+/* PROWORLD HQ — "Start here": the one-page tour of the site, sized to the person reading it. Every door, tab and menu comes
+   from shared/pages.js (the same list the top bar reads), so a door the person does not hold is simply not on this page, and a
+   view added to a door shows up here on its own. The look is shared/design.css (skin "home"); the words are the only content. */
+.hero .sum{max-width:600px}
+.need .rows{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px}
+.need .rows a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 6px;border-radius:12px;color:inherit}
+.need .rows a:hover{background:rgba(0,0,0,.05)}
+.need .rows .av{width:30px;height:30px;font-size:12px;letter-spacing:.2px}
+.need .rows b{display:block;font-size:14px}.need .rows .d{font-size:12px;color:var(--muted)}
+.need .rows em{font-style:normal;color:var(--ink);font-weight:700}
+.sec{margin-top:34px}
+.sec .lead{color:var(--ink-2);font-size:14.5px;line-height:1.55;max-width:760px;margin:-6px 0 16px}
+.tour{background:var(--card);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(12px);padding:6px 8px}
+.tour .row{grid-template-columns:200px minmax(0,1fr) minmax(0,1fr) auto}
+.tour .row.h{display:grid}
+.tour .row .cell b{white-space:normal}
+.tour .row .cell .d{white-space:normal;color:var(--ink-2)}
+.tour .row .go{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:var(--ink);white-space:nowrap}
+.tour a.row:hover .go{text-decoration:underline;text-decoration-color:var(--lime);text-decoration-thickness:2px;text-underline-offset:3px}
+@media(max-width:860px){.tour .row{grid-template-columns:minmax(0,1fr)}.tour .row.h{display:none}.tour .row .go{justify-self:start}}
+.bar-demo{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--ink);color:#fff;border-radius:999px;padding:8px 12px;font-size:12.5px;font-weight:700;margin:12px 0 18px;max-width:760px}
+.bar-demo span{padding:6px 11px;border-radius:999px;background:rgba(255,255,255,.1)}
+.bar-demo span.on{background:var(--lime);color:var(--ink)}
+.bar-demo .sp{flex:1;min-width:8px;background:transparent;padding:0}
+.bar-demo kbd{font:700 11px var(--body);background:rgba(255,255,255,.14);padding:4px 7px;border-radius:7px}
+.habits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:900px){.habits{grid-template-columns:minmax(0,1fr)}}
+.habits .card h3{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:22px;line-height:1}
+.habits .card p{color:var(--ink-2);font-size:13.5px;line-height:1.5;margin:0}
+.five{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.five a.card{color:inherit;text-decoration:none}
+.five a.card:hover{transform:translateY(-2px)}
+.five .card .k{font-family:var(--display);font-style:italic;font-weight:800;font-size:34px;line-height:1;color:var(--ink)}
+.five .card b{font-size:15px}
+.five .card p{color:var(--ink-2);font-size:13px;line-height:1.5;margin:0}
+.five .card .where{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:var(--muted);margin-top:auto}
+.walk ol{margin:0;padding:0;list-style:none;counter-reset:w;display:grid;gap:10px}
+.walk li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;backdrop-filter:blur(10px)}
+.walk li::before{counter-increment:w;content:counter(w);font-family:var(--display);font-style:italic;font-weight:800;font-size:30px;line-height:1;color:var(--ink)}
+.walk li b{display:block;font-size:14.5px}.walk li span{font-size:13px;color:var(--ink-2);line-height:1.5}
+.walk li small{display:inline-block;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-left:8px}
+.jobs .row{grid-template-columns:200px 150px minmax(0,1fr)}
+@media(max-width:860px){.jobs .row{grid-template-columns:minmax(0,1fr)}}
+.last{background:var(--ink);color:#fff;border-radius:22px;padding:26px 28px;margin-top:34px}
+.last h2{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:34px;line-height:1;color:var(--lime);margin-bottom:12px}
+.last p{color:rgba(255,255,255,.78);font-size:14.5px;line-height:1.55;max-width:760px;margin:0}
+.last b{color:#fff}
+.hid{display:none}
+</style>
+</head>
+<body class="skin-home">
+<div class="wrap">
+  <div class="pwd-top" id="pwd-top"></div>
+  <section class="hero" id="hero">
+    <div>
+      <div class="eyebrow"><i></i><span>Start here · how PROWORLD HQ works</span></div>
+      <h1><span>Start</span> <span><em>here.</em></span></h1>
+      <p class="sum" id="sum">One site, one Google sign-in, five doors. This page shows the doors you hold, what every tab behind them does, and the five things you will do most.</p>
+    </div>
+    <div class="need" id="mine">
+      <div class="ey"><span><i></i>Your doors</span><span><b id="doorN">0</b> open to you</span></div>
+      <div class="rows" id="doorRows"></div>
+      <div class="ft"><span id="who">Signing in…</span><u>Click a door to go</u></div>
+    </div>
+  </section>
+
+  <section class="sec" id="move">
+    <div class="sec-h"><h2>How to move</h2><small>the top bar is the same on every page</small></div>
+    <div class="bar-demo" aria-hidden="true"><span class="on">Dashboard</span><span>Admin ▾</span><span>Coaches ▾</span><span>Clients ▾</span><span>Marketing ▾</span><span>Library</span><span class="sp"></span><kbd>⌘K</kbd><span>You · Sign out</span></div>
+    <div class="habits">
+      <div class="card"><h3>Doors and menus</h3><p>Click a door to open it. Rest on a door with a small arrow and its menu drops down with the views inside, so Admin → Messages or Coaches → Try-outs is one click. You only see the doors and views you have been given.</p></div>
+      <div class="card"><h3>Jump anywhere</h3><p>Press <b>⌘K</b> (Ctrl+K on Windows) or click the search and type a page, a report or a view. Inside a page the tabs are the pills under the title; the top bar never changes.</p></div>
+      <div class="card"><h3>Every screen has an address</h3><p>Admin → Messages is /backend#messages. Paste a link in Slack and it opens exactly that screen. On a phone the bar folds to the essentials and the Dashboard tiles do the same job as the doors.</p></div>
+    </div>
+  </section>
+
+  <section class="sec" id="dash">
+    <div class="sec-h"><h2>The Dashboard</h2><small>a morning glance, top to bottom</small></div>
+    <p class="lead">It tells you what needs a human today and opens everything else in one click. Read it top to bottom.</p>
+    <div class="tour" id="dashRows"></div>
+  </section>
+
+  <div id="doorSections"></div>
+
+  <section class="sec" id="lib">
+    <div class="sec-h"><h2>Library</h2><small>plans, pages and reports, on the site</small></div>
+    <p class="lead">The bottom of the Dashboard: everything written for the team, behind the same sign-in. Filter by Plans, Reports or Pages; each opens in the page viewer with its date and owner.</p>
+    <div class="tour" id="libRows"></div>
+  </section>
+
+  <section class="sec" id="runs">
+    <div class="sec-h"><h2>What runs by itself</h2><small>nobody starts these</small></div>
+    <div class="tour jobs" id="jobRows"></div>
+  </section>
+
+  <section class="sec" id="five">
+    <div class="sec-h"><h2 id="fiveH">Your everyday five</h2><small id="fiveS">the screens you will use most</small></div>
+    <div class="five" id="fiveCards"></div>
+  </section>
+
+  <section class="sec walk hid" id="walk">
+    <div class="sec-h"><h2>The 20-minute walkthrough</h2><small>owners: the order to show it in</small></div>
+    <p class="lead">Show it live, on their own sign-in, so they see their own doors. One sentence per stop; let them click.</p>
+    <ol id="walkList"></ol>
+  </section>
+
+  <div class="last"><h2>Three things to remember</h2><p><b>⌘K finds anything.</b> <b>Every screen has its own address</b> you can paste in Slack. <b>Nothing on this site charges a card</b> except the family themselves, on Stripe, through the enrollment link. Replies to texts stay in JustCall; a family that writes STOP is switched off by itself.</p></div>
+
+  <footer class="pwd-foot"><b>PROWORLD</b><span>Individually built. Fully connected.</span><span>Start here · reads the page list only</span></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  window.PWDesign.mount({ skin: "home", active: "start", title: "Start here" });
+  const $ = (s, r) => (r || document).querySelector(s);
+  const esc = window.PWDesign.esc;
+  const P = window.PW_PAGES;
+
+  /* What each view is for, in plain words — the one place these sentences live. Keyed by the view's address. */
+  const VIEWS = {
+    "/backend#desk": ["Today in one screen: players expected, sessions posted, what needs a human, family requests, what was paid through Stripe", "Start the day here; work the “Needs a human” list"],
+    "/backend#enroll": ["Builds the prefilled enrollment link: program, plan, days, player and parent", "Send the link by text or e-mail; the parent confirms and pays on Stripe and is on the roster the same minute"],
+    "/backend#courts": ["The court grid: 18 courts and 2 fields by the half hour", "Drag across a run of courts to block them; book a rental for a family; release a court"],
+    "/backend#attendance": ["The list the coaches used to write in Notes, by session and court", "Tap who is here, move players between courts, post the list — posting flags drop-ins and no-shows and writes the summary to Slack"],
+    "/backend#players": ["Every player with plan, days, coach, attendance this month and what bills on the 1st; the live Stripe panel; the catalog check; the move-over list from Play by Point", "Open a player: days, card on file, hold or release, charge, send the account link"],
+    "/backend#privates": ["A coach books a lesson at their tier rate", "Pick coach, player, date and length; it uses a lesson pack or charges the card on file and blocks the court"],
+    "/backend#books": ["What QuickBooks receives: revenue by class, payments by day, fees, top renters", "Read; the reconciliation view"],
+    "/backend#messages": ["Texts to families from the academy line (JustCall)", "Pick recipients by program, coach, day or court, write or pick a template, preview, send; Sent shows every text and its delivery; only opted-in families are texted"],
+    "/backend#account": ["A family's account as the parent sees it: plan, balance, attendance, camps", "Look a family up when they call"],
+    "/portal": ["Every player with group, coach and status; a player's page holds the quarterly assessment, the reports, videos and the journal", "Search a player, fill in the part you coach, mark a report sent to the family"],
+    "/portal#/tryouts": ["Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered", "Add a try-out, record the result, convert it to an enrollment"],
+    "/portal#/board": ["Rosters by coach, players with no coach yet, the Proworld Standard, refreshed from Monday every morning with a change log", "Assign the players without a coach; see what changed overnight"],
+    "/family": ["Where a parent signs in with the e-mail on file and sees their players, coach, schedule, attendance, reports, bills and card", "Copy the link for a family; the account matches by the parent's e-mail"],
+    "/enroll": ["The public enrollment page: program, plan, days, parent, agreement, Stripe — no sign-in", "Copy the link, or prefill it from Admin → Enroll"],
+    "/marketing#home": ["The status report: what went out against the plan week by week, the ad plan at a glance, whether the runs ran", "Read on Monday; approve what is waiting"],
+    "/marketing#assignments": ["Who is filmed when, for the photographer", "Print it; hand it over"],
+    "/marketing#fortnight": ["The unit of work: every planned post for the next two weeks, every coach once", "Approve, edit or drop a post; one button rebuilds both weeks"],
+    "/marketing#workflow": ["How a post goes from idea to published and who does what", "Reference"],
+    "/marketing#ads": ["The ad plan that mirrors the post plan, the season calendar, the competitors' ads", "Decide spend; see cost per lead"],
+    "/marketing#reports": ["What the Sunday and Monday runs posted", "Read"]
+  };
+  const DOOR_LEAD = {
+    admin: "Admin replaced Play by Point. Staff never type a card: the family enters it once on Stripe through the enrollment link, and every renewal, pack, private and drop-in after that charges the card on file. Bills go out on the 1st; the engine prorates mid-month starts and school breaks and runs the late policy on its own ($50 fee on the 6th, hold on the 10th, spot released on the 15th).",
+    coaches: "The Coach Portal is where a player is seen as a player: the roster by group and coach, the quarterly assessments, the reports that go home. Coaches live here; the front desk mostly comes in for try-outs.",
+    clients: "The family side seen from the inside: the links a family can use without any sign-in, who came in through them, what families asked for, and a client's account exactly as they see it. Replies and bookings happen in Admin; this is the map.",
+    marketing: "Instagram and Meta ads, with the numbers refreshed every morning and two automatic runs doing the heavy lifting: Sunday builds the next two weeks, Monday judges the week."
+  };
+  const DASH = [
+    ["Greeting + “Needs you”", "The short list waiting on a person today: posts not approved, AI checks due, a new player without a coach, a family request", "Click a row to go there; tick it when done and it stays out of the way until tomorrow", "/"],
+    ["The ticker", "Live signals under the greeting: active players, what is missing from the plan, bills going out on the 1st", "Read only — a red dot means something is missing", "/"],
+    ["Today — the big tiles", "Admin, Coaches, Clients, Marketing with live numbers inside: days to the 1st, players per group, enrolled online this month, posts to approve", "Click the tile to open the door", "/"],
+    ["The smaller tiles", "AI check, Try-outs, Coach Board and the two live boards (Attendance, Directors)", "Numbers first, click to open", "/"],
+    ["Library", "Every plan, page and report, filtered by Plans / Reports / Pages", "Open one; owners can add a saved link", "/#library"],
+    ["People & access", "The grid of who holds which page (owners and administrators)", "Tick or untick a page per person; add a person with a starting preset", "/#people-sec"],
+    ["Outside tools", "The logins that live elsewhere: Instagram, Meta Ads, Metricool, Monday, Slack, Pipedrive, Play by Point, Canva, Webflow, QuickBooks, Drive", "Shortcuts; each has its own login", "/#outside-sec"],
+    ["What runs by itself", "The automatic jobs and their times", "Nothing to do — the list of what you never have to remember", "/#runs-sec"]
+  ];
+  const JOBS = [
+    ["Billing engine", "5:05 AM, daily", "Files paid enrollments on the roster, applies the break-month credits before the 1st, runs the late policy, releases holds when paid, reconciles every plan with Stripe"],
+    ["Monday sync", "6:22 AM, daily", "Monday's roster changes into the Coach Portal, the portal's changes onto Monday, the Coach Board and its change log"],
+    ["Numbers", "6:54 AM, daily", "Instagram and Meta ads figures from Metricool onto the Marketing home and the Ads tab"],
+    ["Concierge roster", "2:00 AM, daily", "The AI concierge refreshes who is enrolled from this site's roster feed and checks itself at 7 AM"],
+    ["Monday review", "Mondays, 8:52 AM", "Judges the week against the plan, queues requests for Sunday, posts the weekly report under Marketing → Reports"],
+    ["Sunday engine", "Sundays, 5:52 PM", "Reads the results and the brief, refills the idea banks, builds the next two weeks, posts the report"]
+  ];
+  const FIVE = {
+    owner: ["Owner", "the screens an owner opens most", [
+      ["Dashboard", "The “Needs you” list and the ticker; People & access when someone joins or leaves", "/"],
+      ["Books", "Revenue by class, payments by day, what QuickBooks receives", "/backend#books"],
+      ["Players & billing", "The live Stripe panel, what bills on the 1st, unpaid invoices, holds", "/backend#players"],
+      ["Coach Board", "Players without a coach, what changed overnight", "/portal#/board"],
+      ["Marketing → Home", "The status report on Mondays; approve what is waiting", "/marketing#home"]]],
+    desk: ["Front desk", "sales, registrations, the phone line", [
+      ["Enroll", "Send a family its prefilled link; the parent pays on Stripe and is on the roster the same minute", "/backend#enroll"],
+      ["Players & billing", "Who enrolled, who is on hold, send an account link, the Play by Point move-over list", "/backend#players"],
+      ["Messages", "A rain update or a reminder to a group; the Sent tab for what went out", "/backend#messages"],
+      ["Try-outs", "Log the call, the date, the decision", "/portal#/tryouts"],
+      ["Clients", "The family requests, and a client's account when a parent cannot get in", "/clients"]]],
+    coach: ["Coach", "the screens a coach opens most", [
+      ["Players", "Your players, their assessments, the reports that go home", "/portal"],
+      ["Attendance", "Tap who is here, post the list", "/backend#attendance"],
+      ["Try-outs", "What we saw, the group offered", "/portal#/tryouts"],
+      ["Coach Board", "Your roster from Monday, players without a coach", "/portal#/board"],
+      ["Privates", "Book a lesson at your tier rate", "/backend#privates"]]],
+    marketing: ["Marketing", "the screens the marketing team opens most", [
+      ["Home", "The status report; approve what is waiting", "/marketing#home"],
+      ["2-Week Plan", "Every planned post, every coach once", "/marketing#fortnight"],
+      ["Ads", "The ad plan, the season calendar, the competitors", "/marketing#ads"],
+      ["Reports", "What the Sunday and Monday runs posted", "/marketing#reports"],
+      ["Library", "The idea banks, the archive, the KPI history", "/marketing#database"]]]
+  };
+  const WALK = [
+    ["Dashboard", "The greeting and the “Needs you” list, the ticker, the four doors, then straight to the bottom: People & access and What runs by itself. The point: this page decides who sees what, and most of the work runs on its own.", "3 min"],
+    ["Admin → Front desk", "The morning screen; what “Needs a human” means.", "2 min"],
+    ["Admin → Enroll", "Build a link for a real family together, send it to your own phone, open it, stop before paying. The point: staff never type a card.", "3 min"],
+    ["Admin → Players & billing", "Open a player: days, card on file, next charge; the Live Stripe panel; the move-over list with its Copy link / Email / Text buttons.", "3 min"],
+    ["Admin → Messages", "Pick “Everyone scheduled today”, read the counts, pick the Rain template, watch the preview, do not send. The point: only opted-in families are texted, and every text is logged under Sent.", "3 min"],
+    ["Admin → Attendance and Courts", "The coaches' list and the court grid, both read-only for most people.", "2 min"],
+    ["Coaches", "One player's assessment page and the Coach Board; for the front desk only Try-outs.", "2 min"],
+    ["Clients", "The four links and the client account as a parent sees it.", "1 min"],
+    ["Marketing", "Home as the Monday report; approve one post.", "1 min"]
+  ];
+
+  const ini = (s) => String(s || "").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+  const rowsHtml = (rows, head) => '<div class="row h"><span>' + head.map(esc).join("</span><span>") + "</span><span></span></div>" + rows.map((r) => '<a class="row" href="' + esc(r[3]) + '"><div class="cell"><b>' + esc(r[0]) + '</b></div><div class="cell"><span class="d">' + esc(r[1]) + '</span></div><div class="cell"><span class="d">' + esc(r[2]) + '</span></div><span class="go">Open →</span></a>').join("");
+
+  function draw(ctx) {
+    const has = (id) => !id || ctx.has(id);
+    const doors = P.DOORS.filter((d) => d.id !== "library" && (d.page || []).some(has));
+    // the hero card: the doors this person holds, with how many views each one opens
+    $("#doorN").textContent = String(doors.length + 2);                                   // the Dashboard, the doors held, the Library
+    const AV = { admin: "Ad", coaches: "Co", clients: "Cl", marketing: "Mk" };
+    $("#doorRows").innerHTML = '<a href="/"><span class="av">D</span><span><b>Dashboard</b><span class="d">what needs you today, the live numbers</span></span><em>→</em></a>' +
+      doors.map((d) => { const n = d.items.filter((it) => has(it.page || null) && (it.page || (d.page || []).some(has))).length; return '<a href="' + esc(d.href) + '"><span class="av">' + esc(AV[d.id] || d.name[0]) + '</span><span><b>' + esc(d.name) + '</b><span class="d">' + n + " view" + (n === 1 ? "" : "s") + " in its menu</span></span><em>→</em></a>"; }).join("") +
+      '<a href="/#library"><span class="av">L</span><span><b>Library</b><span class="d">plans, pages and reports</span></span><em>→</em></a>';
+    $("#who").textContent = (ctx.owner ? "Owner — every door is yours" : ctx.admin ? "Administrator" : "Signed in as " + (ctx.name || ctx.email));
+    $("#sum").textContent = "One site, one Google sign-in, five doors. " + (ctx.owner ? "You hold every door: this page walks through all of them, " : "This page shows the " + (doors.length + 1) + " doors you hold, ") + "what every tab behind them does, and the five things you will do most.";
+    // the Dashboard, row by row
+    $("#dashRows").innerHTML = rowsHtml(DASH, ["Part of the page", "What it is", "What you do with it"]);
+    // one section per door the person holds; every view the menu would show them, with the plain-words line
+    $("#doorSections").innerHTML = doors.map((d) => {
+      const items = d.items.filter((it) => has(it.page || null) && (it.page || (d.page || []).some(has)));
+      const rows = items.map((it) => { const v = VIEWS[it.href] || ["", ""]; return [it.name, v[0], v[1], it.href]; });
+      return '<section class="sec" id="door-' + esc(d.id) + '"><div class="sec-h"><h2>' + esc(d.name) + '</h2><small>' + rows.length + ' view' + (rows.length === 1 ? "" : "s") + ' · <a href="' + esc(d.href) + '">open the door →</a></small></div><p class="lead">' + esc(DOOR_LEAD[d.id] || "") + '</p><div class="tour">' + rowsHtml(rows, ["View", "What it is", "What you do there"]) + "</div>" +
+        (d.id === "admin" ? '<p class="lead" style="margin-top:14px">The “View as” selector at the top right of Admin shows the page the way a front-desk person, a coach or a parent sees it. Owners and administrators see every tab; a person with the Billing page can move money; everyone else sees billing read-only.</p>' : "") + "</section>";
+    }).join("");
+    // the Library: the pages this person may open
+    const lib = P.PAGES.filter((p) => (p.section === "proto" || p.section === "library") && !p.hide && ctx.has(p.id));
+    $("#libRows").innerHTML = lib.length ? rowsHtml(lib.map((p) => [p.name, p.desc, P.STATUS_LABEL[p.status] || p.status, p.opens === "link" ? "/#library" : p.url]), ["Page", "What it is", "Kind"]) : '<div class="row"><span class="d">No Library pages are on your list yet.</span></div>';
+    $("#jobRows").innerHTML = '<div class="row h"><span>Job</span><span>When (ET)</span><span>What it does</span></div>' + JOBS.map((j) => '<div class="row"><div class="cell"><b>' + esc(j[0]) + '</b></div><div class="cell"><span class="d">' + esc(j[1]) + '</span></div><div class="cell"><span class="d">' + esc(j[2]) + '</span></div></div>').join("");
+    // the everyday five, by who they are
+    const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
+    const kind = ctx.owner || ctx.admin ? "owner" : ctx.has("backend") && (role === "desk" || ctx.has("billing")) ? "desk" : ctx.has("coach-portal") ? "coach" : ctx.has("mkt") ? "marketing" : ctx.has("backend") ? "desk" : "owner";
+    const f = FIVE[kind];
+    $("#fiveH").textContent = "Your everyday five"; $("#fiveS").textContent = f[1];
+    $("#fiveCards").innerHTML = f[2].map((c, i) => '<a class="card" href="' + esc(c[2]) + '"><span class="k">' + (i + 1) + '</span><b>' + esc(c[0]) + '</b><p>' + esc(c[1]) + '</p><span class="where">' + esc(c[2].replace("/backend#", "Admin → ").replace("/portal#/", "Coaches → ").replace("/marketing#", "Marketing → ").replace(/^\/portal$/, "Coaches → Players").replace(/^\/clients$/, "Clients").replace(/^\/$/, "Dashboard")) + "</span></a>").join("");
+    // the walkthrough: for the people who give it
+    const walk = $("#walk"); walk.classList.toggle("hid", !(ctx.owner || ctx.admin));
+    $("#walkList").innerHTML = WALK.map((w) => "<li><div><b>" + esc(w[0]) + "<small>" + esc(w[2]) + "</small></b><span>" + esc(w[1]) + "</span></div></li>").join("");
+    window.PWDesign.countUp(document);
+  }
+  window.PWAuth.start({}).then(draw);
+})();
+</script>
+</body>
+</html>
