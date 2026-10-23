@@ -35,6 +35,18 @@ img{display:block;max-width:100%}
 @keyframes pwd-f2{to{transform:translate(-16vw,-12vh) scale(.9)}}
 @keyframes pwd-f3{to{transform:translate(-20vw,-16vh) scale(1.2)}}
 .pwd-lights::after{content:"";position:absolute;inset:0;background:rgba(236,238,235,.44)}
+/* ── calm mode: phones, anything without a mouse, and people who asked for less motion. The look stays — the same lights, the
+   same sky, the same glass — but nothing moves on its own and nothing is blurred live: the six blurred lights were repainted
+   every frame (blur(110px) on half-screen layers), the sky and its mist drifted for ever, and every card re-blurred whatever
+   scrolled behind it. On a phone that meant ~7 frames a second and a laggy scroll (Antonio, Oct 22, 2026). ── */
+@media (max-width:720px),(pointer:coarse),(prefers-reduced-motion:reduce){
+  .pwd-lights i{animation:none!important;filter:blur(48px);will-change:auto;opacity:.3}
+  .pwd-lights .k4,.pwd-lights .k5,.pwd-lights .k6{display:none}
+  .pwd-sky,.pwd-sky::before{animation:none!important}
+  .pwd-sky::before{filter:none;opacity:.8}
+  *,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  :root{--card:rgba(255,255,255,.86);--card-2:rgba(255,255,255,.96)}
+}
 /* ── the sky: the page's gradient, built like the brand pack's three — green (mint · lime · deep green), warm (orange · pink ·
    orchid · lime) and blue (deep blue · sky · light cyan) — as drifting clouds of colour with a slow white mist over them, fading
    into the grey; its bright spot follows the cursor. A skin only sets the colours. ── */
