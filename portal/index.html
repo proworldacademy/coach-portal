@@ -2004,7 +2004,7 @@ const PW_CONFIG = {
   function paintViewTabs() {
     const el = $('#vtabs'); if (!el) return;
     const on = EDITION === 'web' ? WEB.stage === 'in' : !!S.db; el.hidden = !on; if (!on) { el.innerHTML = ''; const f = $('#fupill'); if (f) f.hidden = true; return; }
-    const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : 'home';
+    const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : 'home';
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
       : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }], ['followup', 'Follow-up', { view: 'followup' }]].concat(EDITION === 'web' && WEB.isOwner ? [['commit', 'Standard & commit', { view: 'commit' }]] : []).concat(EDITION === 'web' && WEB.isAdmin ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
