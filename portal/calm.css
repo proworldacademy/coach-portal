@@ -106,3 +106,6 @@ body.skin-coach .ownrow .hint{font-size:12px;margin:0}
 body.skin-coach .btn.danger{color:#8a2a2a}
 body.skin-coach .btn.danger:hover{background:#FBE9E9}
 @media(max-width:560px){body.skin-coach .ownrow{padding-left:12px}}
+/* ── Coach Board, reordered (Antonio, Oct 23 evening): sync line → numbers → coaches → no coach → try-outs; the change log last; standard & commit on their own owners' page ── */
+body.skin-coach .lnk{background:none;border:0;padding:0;font:inherit;color:var(--ink);text-decoration:underline;cursor:pointer}
+body.skin-coach .log{margin-top:6px}

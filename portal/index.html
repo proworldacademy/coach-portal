@@ -1669,11 +1669,12 @@ const PW_CONFIG = {
     if (p[0] === 'tryouts') return p[1] === 'new' ? { view: 'tryouts', add: true } : { view: 'tryouts' };
     if (p[0] === 't' && p[1]) return { view: 'tryout', id: p[1] };
     if (p[0] === 'board') return { view: 'board' };
+    if (p[0] === 'commit') return { view: 'commit' };
     return { view: 'home' };
   }
   const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part]);
   const enc = encodeURIComponent;
-  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : '#/');
+  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : '#/');
   async function go(r, fromHistory) {
     if (E) { try { await flushEd(E, true); } catch (e) { /* keep navigating */ } }
     if (EDITION === 'web' && typeof WEB !== 'undefined' && WEB.tryoutsOnly && r.view !== 'tryouts' && r.view !== 'tryout') r = { view: 'tryouts' };   // try-outs-only access (front desk)
@@ -2006,7 +2007,7 @@ const PW_CONFIG = {
     const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : 'home';
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
-      : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }], ['followup', 'Follow-up', { view: 'followup' }]].concat(EDITION === 'web' && WEB.isAdmin ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
+      : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }], ['followup', 'Follow-up', { view: 'followup' }]].concat(EDITION === 'web' && WEB.isOwner ? [['commit', 'Standard & commit', { view: 'commit' }]] : []).concat(EDITION === 'web' && WEB.isAdmin ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
     el.innerHTML = items.map(([k, label, r]) => `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
     if (window.PWDesign) {
       PWDesign.active(sec === 'tryouts' ? 'tryouts' : sec === 'board' ? 'coach-board' : 'coach-portal');
@@ -2124,7 +2125,7 @@ const PW_CONFIG = {
   function render() {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
-    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : viewHome()}</div>`;
+    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
   }
   const notice = () => S.dbState === 'none' && EDITION !== 'web' ? `<div class="notice">This view can’t reach the shared database, so nothing is loaded and nothing will save. Open the portal from your Claude artifacts while signed in to work with live data.</div>` : '';
@@ -3523,18 +3524,21 @@ const PW_CONFIG = {
       ${other > 0 ? `<p class="hint" style="margin:-18px 0 30px">${other} active player${other === 1 ? ' is' : 's are'} in none of the three programs (9:00, other times or no schedule).</p>` : ''}
       ${t ? '' : `<p class="hint" style="margin:-18px 0 30px">${own ? 'No targets yet: set them with “Set targets”.' : 'No targets set yet.'}</p>`}`;
   }
+  function boardData() {
+    const B = S.board, items = (B && B.items) || [];
+    const act = items.filter((x) => x.g === 'active' && x.st === 'active');
+    return { B, items, act };
+  }
   function viewBoard() {
-    const B = S.board, cfg = S.syncCfg || {}, live = cfg.mode === 'live', own = EDITION === 'web' && WEB.isOwner;
+    const { B, items, act } = boardData(); const cfg = S.syncCfg || {}, live = cfg.mode === 'live', own = EDITION === 'web' && WEB.isOwner;
     const top = `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Coach Board' }])}
       <div class="head"><div><div class="lbl">From Monday${B && B.at ? ' · synced ' + esc(fmtWhen(B.at)) : ''}</div><h1 class="title">Coach <em>Board.</em></h1>
-        <div class="sub">Rosters by coach, players with no coach yet, try-outs, the standard we hold ourselves to and the quarter commit. Monday is the source: the board refreshes every morning, and the change log below says what moved.</div></div></div>`;
+        <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. Monday is the source and the board refreshes every morning.</div></div></div>`;
     const modeBox = own ? `<div class="follow">${live
       ? `<div class="furow ok"><div><b>The Monday sync is on</b><div class="hint">Every morning Monday’s changes reach the roster, and the portal’s changes go to Monday.</div></div><button class="btn sm ghost" data-act="sync-mode" data-v="preview">Back to preview</button></div>`
       : `<div class="furow"><div><b>Preview · owners only</b><div class="hint">The sync writes this board and the change log, but changes nothing on the roster or on Monday. Read the latest log, then turn it on.</div></div><button class="btn pri" data-act="sync-mode" data-v="live">Turn on the sync</button></div>`}</div>`
       : (live || !B ? '' : '<div class="notice">The Monday sync is in preview: the change log shows what it would do; the roster isn’t changed yet.</div>');
     if (!B) return `${top}${modeBox}<div class="empty" style="margin-bottom:30px">${S.loaded.board ? 'Nothing here yet. The board fills in after the first morning sync from Monday.' : 'Loading…'}</div>${logSection()}`;
-    const items = B.items || [];
-    const act = items.filter((x) => x.g === 'active' && x.st === 'active');
     const byCoach = new Map(); act.filter((x) => x.lead).forEach((x) => { if (!byCoach.has(x.lead)) byCoach.set(x.lead, []); byCoach.get(x.lead).push(x); });
     const coaches = Array.from(byCoach.entries()).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
     const sortP = (a, b) => String(a.f + ' ' + (a.l || '')).localeCompare(String(b.f + ' ' + (b.l || '')));
@@ -3549,10 +3553,11 @@ const PW_CONFIG = {
       [(cl.portalOnly || []).map((x) => x.name), 'In the portal, not found on Monday', 'Check the name matches Monday, or add them there.'], [cl.gone, 'Linked Monday row is gone', 'Archived or moved to another board.']]
       .filter((c) => c[0] && c[0].length);
     const today = todayISO();
-    return `${top}${modeBox}
+    const l0 = (S.syncLogs || [])[0];
+    const syncLine = l0 ? `<p class="hint due-line"><b>Last sync:</b> ${esc(fmtWhen(l0.at || B.at))}${un.length ? ` · <span class="chip st-missing">${un.length} with no coach</span>` : ' · <span class="chip st-done">everyone has a coach</span>'}${clean.length ? ` · ${clean.reduce((n, c) => n + c[0].length, 0)} to clean up on Monday` : ''}</p>` : '';
+    return `${top}${modeBox}${syncLine}
       <div class="stats"><div class="stat lead"><div class="lbl">Active on Monday</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs</div><b>${tries.length}</b></div></div>
-      ${logSection()}
       <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">lead coach on Monday · players with their daily schedule</span></div>
       ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps">${list.slice().sort(sortP).map((x) => boardPlayer(x, x.asst && x.asst !== x.lead ? ['with ' + x.asst] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No lead coaches on Monday yet.</div>'}
       <div class="sect"><h2>No coach yet</h2><span class="muted" style="font-size:12px">${un.length} active on Monday with no lead coach · by daily schedule</span></div>
@@ -3560,11 +3565,23 @@ const PW_CONFIG = {
       <div class="sect"><h2>Try-outs on Monday</h2><span class="muted" style="font-size:12px">${tries.length}</span></div>
       ${tries.length ? `<div class="list" style="margin-bottom:30px">${tries.map((x) => `<div class="rowb"><div class="who"><span class="ava when">${esc(x.td ? (x.td === today ? 'Today' : dayLabel(x.td)) : 'No date')}${x.tt ? `<small>${esc(timeLabel(x.tt))}</small>` : ''}</span><div style="min-width:0"><div class="nm">${esc(x.f + (x.l ? ' ' + x.l : ''))}</div><small>${esc([x.age, x.lead ? 'Coach ' + x.lead : ''].filter(Boolean).join(' · ') || 'Details on Monday')}</small></div></div><div class="mid"></div><div class="chips">${x.td && x.td < today ? '<span class="chip warn">Date passed · still a try-out</span>' : ''}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No try-outs on Monday.</div>'}
       ${away.length ? `<div class="sect"><h2>Marked away</h2><span class="muted" style="font-size:12px">still in Monday’s Active group</span></div><div class="bps flat" style="margin-bottom:30px">${away.map((x) => boardPlayer(x, x.st === 'finished' ? ['finished'] : [])).join('')}</div>` : ''}
-      ${clean.length ? `<div class="sect"><h2>Clean-up on Monday</h2></div><div class="list clean" style="margin-bottom:30px">${clean.map(([l, t, h]) => `<div class="crow"><div><b>${esc(t)}</b>${h ? `<div class="hint">${esc(h)}</div>` : ''}</div><div class="cnames">${l.map((n) => { const pp = t.startsWith('In the portal') ? (cl.portalOnly || []).find((x) => x.name === n) : null; return pp && player(pp.pid) ? `<button class="fchip" ${goAttr({ view: 'player', pid: pp.pid })}>${esc(n)}</button>` : `<span class="fchip">${esc(n)}</span>`; }).join('')}</div></div>`).join('')}</div>` : ''}
+      ${own && clean.length ? `<div class="sect"><h2>Clean-up on Monday</h2><span class="muted" style="font-size:12px">owners only</span></div><div class="list clean" style="margin-bottom:30px">${clean.map(([l, t, h]) => `<div class="crow"><div><b>${esc(t)}</b>${h ? `<div class="hint">${esc(h)}</div>` : ''}</div><div class="cnames">${l.map((n) => { const pp = t.startsWith('In the portal') ? (cl.portalOnly || []).find((x) => x.name === n) : null; return pp && player(pp.pid) ? `<button class="fchip" ${goAttr({ view: 'player', pid: pp.pid })}>${esc(n)}</button>` : `<span class="fchip">${esc(n)}</span>`; }).join('')}</div></div>`).join('')}</div>` : ''}
+      ${logSection()}
+      <p class="hint bfoot">Source: Monday · General Attendance board · synced every morning. Coaches are Monday’s LEAD COACH and ASSISTANT COACH columns.${own ? ` The Proworld Standard and the quarter commit live on <button class="lnk" ${goAttr({ view: 'commit' })}>Standard &amp; commit</button>.` : ''}</p>`;
+  }
+  /* owners: the standard we hold ourselves to and the quarter commit (moved off the Coach Board, Oct 23) */
+  function viewCommit() {
+    const own = EDITION === 'web' && WEB.isOwner;
+    const top = `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Standard & commit' }])}
+      <div class="head"><div><div class="lbl">Owners</div><h1 class="title">Standard <em>&amp; commit.</em></h1>
+        <div class="sub">How fast families hear from us, and the numbers we committed to this quarter. Counted from Monday every morning.</div></div></div>`;
+    if (!own) return `${top}<div class="empty" style="margin-bottom:30px">This page is for the owners.</div>`;
+    const { B, act } = boardData();
+    return `${top}
       <div class="sect"><h2>The Proworld Standard</h2><span class="muted" style="font-size:12px">how fast families hear from us</span></div>
       <div class="list std" style="margin-bottom:30px"><div class="srow sh"><div>Situation</div><div>Our standard</div><div>Best in the business</div></div>${STANDARD.map(([a, b, c]) => `<div class="srow"><div><b>${esc(a)}</b></div><div>${esc(b)}</div><div class="muted">${esc(c)}</div></div>`).join('')}</div>
-      ${commitTiles(act)}
-      <p class="hint bfoot">Source: Monday · General Attendance board · synced every morning. Coaches are Monday’s LEAD COACH and ASSISTANT COACH columns.</p>`;
+      ${B ? commitTiles(act) : `<div class="sect"><h2>Quarter commit</h2></div><div class="empty" style="margin-bottom:30px">${S.loaded.board ? 'The numbers arrive with the first morning sync from Monday.' : 'Loading…'}</div>`}
+      <p class="hint bfoot">Source: Monday · General Attendance board · synced every morning.</p>`;
   }
 
 })();
