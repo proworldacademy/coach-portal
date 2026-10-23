@@ -45,6 +45,7 @@ async function convertPaidEnrollments(stripe, today, log, ctx) {
       sub = typeof session.subscription === 'object' ? session.subscription : null;
       if (!sub) { try { sub = await stripe.subscriptions.retrieve(session.subscription, { expand: ['items.data.price'] }); } catch (e) { sub = { id: session.subscription }; } }
       if (sub && ['canceled', 'incomplete_expired'].includes(sub.status)) continue;      // a plan already cancelled (a test, a change of mind) is never put back on the roster
+      try { await CHECKOUT.ensureCardOnFile(stripe, session, sub); } catch (e) { log(`card on file ${session.id}: ${e.message}`); }   // the plan's card becomes the family's card on file
     } else if (!(session.mode === 'payment' && session.payment_status === 'paid')) continue;
     if (!ctx.db) continue;
     try {
