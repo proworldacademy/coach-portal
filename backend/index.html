@@ -360,6 +360,7 @@ table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
 .bub.in{align-self:flex-start;background:#efefea;color:var(--ink);border-bottom-left-radius:6px}
 .bub .meta{font-size:11px;opacity:.7}.bub.out .meta{color:var(--lime);opacity:1}.bub .meta b{color:#ffb4b4}
 .bub.sys{align-self:center;background:transparent;color:var(--muted);font-size:12.5px;max-width:80%;text-align:center}
+.bub.ev{align-self:center;background:transparent!important;border:0!important;box-shadow:none!important;padding:0 6px;max-width:90%;text-align:center;color:var(--muted);font-size:12px}
 .composer{padding:12px 18px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;background:#fff}
 .composer .to{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .composer .to .chip.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
@@ -1335,9 +1336,10 @@ function drawThreads(app,body){
   const when=t=>{if(!t)return '';const d=new Date(t);const today=iso(d)===iso(TODAY);return today?d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):fmtDate(d)};
   const dayOf=t=>{const d=new Date(t);return iso(d)===iso(TODAY)?'Today':iso(d)===iso(addDays(TODAY,-1))?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})};
   const cfg=SMSD.settings||{};const tpl=cfg.templates||[];
-  let bubbles='',lastDay='';for(const l of lines){const dy=dayOf(l.at);if(dy!==lastDay){bubbles+=`<div class="tday">${esc(dy)}</div>`;lastDay=dy}
+  let bubbles='',lastDay='',lastEv='';for(const l of lines){const dy=dayOf(l.at);if(dy!==lastDay){bubbles+=`<div class="tday">${esc(dy)}</div>`;lastDay=dy}
     if(l.dir==='out')bubbles+=`<div class="bub out"><span class="txt">${esc(String(l.body||'').split('\n')[0])}</span><span class="meta">${l.label&&cur.kind==='all'?esc(l.label)+' · ':''}sent ${l.c.sent}${l.c.delivered?' · '+l.c.delivered+' delivered':''}${l.c.failed?' · <b>'+l.c.failed+' failed</b>':''}${l.c.skipped?' · '+l.c.skipped+' skipped':''}${l.c.queued?' · '+l.c.queued+' sending':''} · ${esc(l.by||'')} · ${esc(when(l.at))}</span></div>`;
-    else bubbles+=`<div class="bub in${l.kind!=='reply'?' sys':''}"><span class="txt">${esc(l.kind==='optout'?'STOP':l.kind==='optin'?'START':l.body)}</span><span class="meta">${esc(l.who||'')}${l.kind==='optout'?' · opted out, not texted again':l.kind==='optin'?' · opted back in':''} · ${esc(when(l.at))}</span></div>`}
+    else if(l.kind!=='reply'){const key=l.kind+'|'+(l.who||'')+'|'+dy;if(key===lastEv)continue;lastEv=key;bubbles+=`<div class="bub ev"><span class="txt">${esc(l.who||'')} ${l.kind==='optout'?'replied STOP · opted out, not texted again':'replied START · opted back in'} · ${esc(when(l.at))}</span></div>`}
+    else bubbles+=`<div class="bub in"><span class="txt">${esc(l.body)}</span><span class="meta">${esc(l.who||'')} · ${esc(when(l.at))}</span></div>`}
   if(!lines.length)bubbles=`<div class="tday">Nothing yet</div><div class="bub sys"><span class="txt">${cur.kind==='family'?'No text to this family yet.':'No text to this group yet. The first one starts the thread.'}</span></div>`;
   const text=MSG.ttext||'';const seg=smsSegments(text+(cfg.footer===false?'':'\n'+FOOTER_OF(cfg.senderName||'ProWorld Academy')));
   body.innerHTML=`<div class="threads"><div class="tlist card">
