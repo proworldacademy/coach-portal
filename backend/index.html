@@ -533,7 +533,7 @@ function notify(channel,to,subject,opts){state.notifications.unshift({channel,to
   if(channel==='Slack')liveApi('/api/admin/announce',{which:/coach/.test(to)?'coaches':'desk',text:subject,lines:opts&&opts.lines||null}).catch(()=>{});
   if(channel==='SMS'&&opts&&opts.phone)liveApi('/api/admin/text',{phone:opts.phone,body:subject}).catch(()=>{})}
 
-const ROLES={owner:{label:'Owner (everything)',tabs:['desk','enroll','courts','attendance','players','messages','privates','books','account']},desk:{label:'Front desk',tabs:['desk','players','messages','attendance','courts','enroll','books']},coach:{label:'Coach',tabs:['attendance','privates','courts','messages']},parent:{label:'Parent',tabs:['account','enroll','courts']}};
+const ROLES={owner:{label:'Owner (everything)',tabs:['desk','enroll','courts','attendance','players','messages','privates','books','account']},director:{label:'Tennis director',tabs:['attendance','players','courts','messages','privates','desk','enroll','books']},desk:{label:'Front desk',tabs:['desk','players','attendance','courts','enroll','books']},coach:{label:'Coach',tabs:['attendance','players','privates']},parent:{label:'Parent',tabs:['account','enroll','courts']}};   // Antonio, Oct 24: Messages and Courts for directors; coaches see attendance, players & billing, privates
 const TABS={desk:'Front desk',enroll:'Enroll',courts:'Courts',attendance:'Attendance',players:'Players & billing',messages:'Messages',privates:'Privates',books:'Books',account:'My account'};
 (function initRole(){const h=location.hash.replace('#','');if(ROLES[h])state.role=h;if(!ROLES[state.role])state.role='owner';if(TABS[h]){if(!ROLES[state.role].tabs.includes(h))state.role='owner';state.view=h}if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0]})();
 
@@ -598,8 +598,8 @@ function postSheet(sheet,sess){
 }
 
 /* ====================== SHELL ====================== */
-function setRole(r){state.role=r;state.roleChosen=true;location.hash=r;if(!ROLES[r].tabs.includes(state.view))state.view=ROLES[r].tabs[0];save();render()}
-function setView(v){state.view=v;if(v==='enroll'&&state.enroll.done)state.enroll=emptyEnroll();if(parse(state.courtsDate)<TODAY)state.courtsDate=iso(TODAY);closeModal();save();render();window.scrollTo({top:0,behavior:'auto'})}
+function setRole(r){if(!ROLES[r])return;state.role=r;state.roleChosen=true;location.hash=r;if(window.PWCTX)pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0];save();render()}   // never above what the staff record allows
+function setView(v){if(window.PWCTX){pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(v))return}state.view=v;if(v==='enroll'&&state.enroll.done)state.enroll=emptyEnroll();if(parse(state.courtsDate)<TODAY)state.courtsDate=iso(TODAY);closeModal();save();render();window.scrollTo({top:0,behavior:'auto'})}
 window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ROLES[h]&&h!==state.role)setRole(h)});
 function render(){const sel=$('#role');sel.innerHTML=Object.keys(ROLES).map(k=>`<option value="${k}" ${k===state.role?'selected':''}>${ROLES[k].label}</option>`).join('');sel.onchange=()=>setRole(sel.value);const nav=$('#modes');nav.innerHTML=ROLES[state.role].tabs.map(t=>`<button data-view="${t}" aria-current="${t===state.view?'page':'false'}">${TABS[t]}</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.view));({desk:renderDesk,enroll:renderEnroll,courts:renderCourts,attendance:renderAttendance,players:renderPlayers,messages:renderMessages,privates:renderPrivates,books:renderBooks,account:renderAccount})[state.view]($('#app'))}
 function openModal(inner){$('#modal').innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${inner}</div></div>`;$('#scrim').onclick=ev=>{if(ev.target.id==='scrim')closeModal()};const c=$('#m-close');if(c)c.onclick=closeModal}
@@ -1257,9 +1257,13 @@ async function smsPlayerBlock(pid){const el=$('#ps-sms');if(!el)return;try{const
 
 /* ====================== SIGN-IN + THE DATABASE (the site's one PROWORLD sign-in) ====================== */
 function pickRole(ctx){
-  if(ROLES[location.hash.replace('#','')]||TABS[location.hash.replace('#','')]||state.roleChosen)return;
+  // the most this person may see, from their staff record (the database rules decide what they can read; this decides the tabs)
   const r=String(ctx&&ctx.rec&&ctx.rec.role||'').toLowerCase();
-  state.role=(ctx&&(ctx.owner||ctx.admin))?'owner':r==='coach'?'coach':r==='desk'?'desk':'owner';
+  const max=(ctx&&(ctx.owner||ctx.admin))?'owner':(ctx&&ctx.director)||r==='director'?'director':r==='desk'?'desk':'coach';
+  const rank={coach:1,parent:1,desk:2,director:3,owner:4};
+  const asked=ROLES[location.hash.replace('#','')]||TABS[location.hash.replace('#','')]||state.roleChosen;
+  if(!asked||!ROLES[state.role]||rank[state.role]>rank[max])state.role=max;
+  if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0];
 }
 function monthStart(){return iso(new Date(TODAY.getFullYear(),TODAY.getMonth(),1))}
 async function connect(ctx){

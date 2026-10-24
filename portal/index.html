@@ -1765,7 +1765,7 @@ const PW_CONFIG = {
      that is enforced by the database rules (firestore.rules), not by this page.
      ───────────────────────────────────────────────────────────────────────────── */
   const CFG = (typeof PW_CONFIG === 'object' && PW_CONFIG) || {};
-  const WEB = { auth: null, fs: null, user: null, email: '', isAdmin: false, isOwner: false, staff: null, stage: 'boot', note: '', lag: 0, gate: [], core: [], admin: [], staffList: [], requests: [], asked: false, busy: '', dead: false, seq: 0 };
+  const WEB = { auth: null, fs: null, user: null, email: '', isAdmin: false, isOwner: false, isDirector: false, staff: null, stage: 'boot', note: '', lag: 0, gate: [], core: [], admin: [], staffList: [], requests: [], asked: false, busy: '', dead: false, seq: 0 };
   const cfgReady = () => { const f = CFG.firebase || {}; return !!(f.apiKey && f.projectId) && !/^PASTE/i.test(f.apiKey) && !/^PASTE/i.test(f.projectId); };
   const EMAIL_LINK = CFG.emailLink === true;   // emailed sign-in links are an opt-in extra; Google sign-in is always there
   const canDelete = () => (EDITION === 'web' ? WEB.isAdmin : writable());
@@ -1843,9 +1843,9 @@ const PW_CONFIG = {
     watch('followup', 'on', (put) => S.db.collection('assessments').where('followUp', '==', true).onSnapshot((s) => put(rowsOf(s)), () => {}));   // finished reports with something still open, whatever the quarter
     const one = r.view === 'edit' || r.view === 'report' ? r.id : '';
     watch('one', one, (put) => S.db.doc('assessments/' + one).onSnapshot((d) => put(d.exists ? [Object.assign({ id: d.id }, d.data())] : []), () => {}));
-    if (r.view === 'staff' && WEB.isAdmin) { if (!WEB.admin.length) {
+    if (r.view === 'staff' && EDITION === 'web') { if (!WEB.admin.length) {
       WEB.admin.push(WEB.fs.collection('staff').onSnapshot((s) => { WEB.staffList = rowsOf(s); if (S.route.view === 'staff') softRender(); }, () => {}));
-      WEB.admin.push(WEB.fs.collection('requests').onSnapshot((s) => { WEB.requests = rowsOf(s); if (S.route.view === 'staff') softRender(); }, () => {})); } }
+      if (WEB.isDirector) WEB.admin.push(WEB.fs.collection('requests').onSnapshot((s) => { WEB.requests = rowsOf(s); if (S.route.view === 'staff') softRender(); }, () => {})); } }
     else off(WEB.admin);
   }
   const softRender = () => { if (busy()) S.pendingRender = true; else render(); };
@@ -1892,7 +1892,7 @@ const PW_CONFIG = {
   function leaveApp() { closeEditor(); unsubscribePlayer(); off(WEB.core); off(WEB.admin); Object.keys(AQ.stop).forEach((k) => { try { AQ.stop[k](); } catch (e) { /* noop */ } }); AQ.sets = {}; AQ.stop = {}; AQ.key = {}; S.db = null; S.players = []; S.groups = []; S.assess = []; S.tryouts = []; S.board = null; S.syncLogs = []; S.outbox = []; S.syncCfg = null; S.ui.parentOpen = null; S.ui.parentData = null; S.loaded = {}; S.dbState = 'none'; S.sample = null; const d = $('#dock'); if (d) d.hidden = true; }
   function onUser(u) {
     off(WEB.gate); if (WEB.stage === 'in') leaveApp();
-    WEB.user = u || null; WEB.email = u ? String(u.email || '').trim().toLowerCase() : ''; WEB.isAdmin = false; WEB.isOwner = false; WEB.staff = null; WEB.asked = false;
+    WEB.user = u || null; WEB.email = u ? String(u.email || '').trim().toLowerCase() : ''; WEB.isAdmin = false; WEB.isOwner = false; WEB.isDirector = false; WEB.staff = null; WEB.asked = false;
     if (!u) { if (WEB.stage !== 'confirm') WEB.stage = 'out'; paintLive(); paintUser(); renderGate(); return; }
     if (!WEB.email || WEB.email.includes('/') || !u.emailVerified) { WEB.stage = 'unverified'; paintUser(); renderGate(); return; }
     if (!lsGet('pw_coach') && u.displayName) lsSet('pw_coach', String(u.displayName).trim().split(/\s+/)[0]);
@@ -1913,8 +1913,8 @@ const PW_CONFIG = {
         // give the owner an ordinary staff record too, so they also get in when offline and show up in Staff & access
         if (ok) WEB.fs.doc('staff/' + WEB.email).set({ email: WEB.email, name: String(u.displayName || ''), role: 'admin', active: true, owner: true, addedAt: Date.now() }).catch(() => {});
       }
-      WEB.staff = rec; WEB.isAdmin = admin; WEB.isOwner = ok && admin && (!rec || rec.active !== true || rec.owner === true);   // the sync settings are owner-only (the rules decide; this only shows the switch)
-      if (ok) { if (WEB.stage !== 'in') enterApp(); else { paintUser(); if (S.route.view === 'staff' && !WEB.isAdmin) go({ view: 'home' }); } return; }
+      WEB.staff = rec; WEB.isAdmin = admin; WEB.isDirector = admin || (ok && !!rec && rec.role === 'director'); WEB.isOwner = ok && admin && (!rec || rec.active !== true || rec.owner === true);   // the sync settings are owner-only (the rules decide; this only shows the switch)
+      if (ok) { if (WEB.stage !== 'in') enterApp(); else { paintUser(); if (false) go({ view: 'home' }); } return; }
       if (WEB.stage === 'in') leaveApp(); WEB.stage = 'pending'; fileRequest(); paintUser(); renderGate();
     };
     // my own staff record, live: approval lets me in the moment an administrator grants it, and removal shuts the door just as fast
@@ -2008,8 +2008,9 @@ const PW_CONFIG = {
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
       : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }]]
-        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates']] : [])
-        .concat(EDITION === 'web' && WEB.isAdmin ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
+        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance']] : [])
+        .concat(EDITION === 'web' && WEB.isDirector ? [['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts']] : [])   // directors (Antonio, Oct 24)
+        .concat(EDITION === 'web' ? [['privates', 'Privates', '/backend#privates'], ['staff', 'Staff & access', { view: 'staff' }]] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
     if (window.PWDesign) {
@@ -2031,30 +2032,31 @@ const PW_CONFIG = {
 
   /* ───────────── administrators: staff list, requests, import, backup ───────────── */
   function viewStaff() {
-    if (!WEB.isAdmin) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">Only administrators can manage staff.</div>`;
+    const manage = WEB.isDirector;   // everyone sees the team; directors manage it (Antonio, Oct 24)
+    const ROLE_WORD = { admin: 'Administrator', director: 'Tennis director', desk: 'Front desk' };
     const reqs = WEB.requests.filter((r) => !WEB.staffList.some((s) => s.id === r.email && s.active === true)).sort((a, b) => (a.at || 0) - (b.at || 0));
     const reqRows = reqs.map((r) => `<div class="rowb srow"><div class="who"><span class="ava">${esc(initials(r.name || r.email))}</span><div style="min-width:0"><div class="nm">${esc(r.name || 'No name given')}</div><small>${esc(r.email)} · asked ${esc(fmtDate(r.at))}</small></div></div>
       <div class="chips"><button class="btn sm pri" data-wact="approve" data-uid="${esc(r.id)}">Approve</button><button class="btn sm ghost" data-wact="decline" data-uid="${esc(r.id)}">Decline</button></div></div>`).join('');
     const staff = WEB.staffList.slice().sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
     const staffRows = staff.filter((s) => s.owner === true).map((s) => `<div class="rowb srow"><div class="who"><span class="ava">${esc(initials(s.name || s.id))}</span><div style="min-width:0"><div class="nm">${esc(s.name || s.id)}</div><small>${esc(s.id)} · Owner · always an administrator</small></div></div><div class="chips"><span class="chip done">Owner</span></div></div>`).join('')
       + staff.filter((s) => s.owner !== true).map((s) => `<div class="rowb srow"><div class="who"><span class="ava">${esc(initials(s.name || s.id))}</span><div style="min-width:0"><div class="nm">${esc(s.name || s.id)}${s.active === true ? '' : ' <span class="muted">(access off)</span>'}</div><small>${esc(s.id)}</small></div></div>
-      <div class="chips"><select aria-label="Role for ${esc(s.id)}" data-wchange="role" data-id="${esc(s.id)}" style="width:auto"><option value="coach" ${s.role === 'admin' ? '' : 'selected'}>Coach</option><option value="admin" ${s.role === 'admin' ? 'selected' : ''}>Administrator</option></select>
-      <button class="btn sm ghost" data-wact="toggle-staff" data-id="${esc(s.id)}">${s.active === true ? 'Turn access off' : 'Turn access on'}</button><button class="btn sm ghost danger" data-wact="remove-staff" data-id="${esc(s.id)}">Remove</button></div></div>`).join('');
+      <div class="chips">${manage ? `<input aria-label="Shows on players as" data-wchange="coachAs" data-id="${esc(s.id)}" value="${esc(s.coachAs || '')}" placeholder="on players as…" title="The name on player records that means this person (their first name if empty)" style="width:120px;height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 10px;font-size:12.5px"><select aria-label="Role for ${esc(s.id)}" data-wchange="role" data-id="${esc(s.id)}" style="width:auto"><option value="coach" ${['admin', 'director', 'desk'].includes(s.role) ? '' : 'selected'}>Coach</option><option value="desk" ${s.role === 'desk' ? 'selected' : ''}>Front desk</option><option value="director" ${s.role === 'director' ? 'selected' : ''}>Tennis director</option>${WEB.isAdmin ? `<option value="admin" ${s.role === 'admin' ? 'selected' : ''}>Administrator</option>` : ''}</select>
+      <button class="btn sm ghost" data-wact="toggle-staff" data-id="${esc(s.id)}">${s.active === true ? 'Turn access off' : 'Turn access on'}</button><button class="btn sm ghost danger" data-wact="remove-staff" data-id="${esc(s.id)}">Remove</button>` : `<span class="chip">${esc(ROLE_WORD[s.role] || 'Coach')}</span>`}</div></div>`).join('');
     return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Staff & access' }])}
-      <div class="head"><div><div class="lbl">Administrators only</div><h1 class="title">Staff &amp; <em>access.</em></h1><div class="sub">Coaches sign in with their own Google account${EMAIL_LINK ? ' or an emailed link' : ''}. Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
-      <div class="sect"><h2>Waiting for approval</h2><span class="muted" style="font-size:12px">${reqs.length}</span></div>
+      <div class="head"><div><div class="lbl">${manage ? 'Directors manage access' : 'The team'}</div><h1 class="title">Staff &amp; <em>access.</em></h1><div class="sub">Coaches sign in with their own Google account${EMAIL_LINK ? ' or an emailed link' : ''}. Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
+      ${manage ? `<div class="sect"><h2>Waiting for approval</h2><span class="muted" style="font-size:12px">${reqs.length}</span></div>
       ${reqRows ? `<div class="list" style="margin-bottom:26px">${reqRows}</div>` : '<div class="empty" style="margin-bottom:26px">Nobody is waiting. When a coach signs in for the first time they appear here.</div>'}
       <div class="sect"><h2>Add someone before they sign in</h2></div>
       <form class="panel stack" data-wform="add-staff" style="margin-bottom:26px"><div class="grid2">
         <div class="field"><label for="ws_email">Email they will sign in with</label><input id="ws_email" name="email" type="email" required autocomplete="off"></div>
         <div class="field"><label for="ws_name">Name</label><input id="ws_name" name="name" type="text" autocomplete="off"></div>
-        <div class="field"><label for="ws_role">Role</label><select id="ws_role" name="role"><option value="coach">Coach — fills in assessments</option><option value="admin">Administrator — also manages staff, deletes records, imports and backs up</option></select></div></div>
-        <div class="rowx"><button class="btn pri" type="submit">Add to staff</button></div></form>
+        <div class="field"><label for="ws_role">Role</label><select id="ws_role" name="role"><option value="coach">Coach — their own players, assessments, try-outs, attendance, privates</option><option value="desk">Front desk — try-outs, attendance, texts</option><option value="director">Tennis director — everything inside Coaches, assigns coaches, Messages, Courts, manages access</option>${WEB.isAdmin ? '<option value="admin">Administrator — also deletes records, imports and backs up</option>' : ''}</select></div></div>
+        <div class="rowx"><button class="btn pri" type="submit">Add to staff</button></div></form>` : ''}
       <div class="sect"><h2>Staff</h2><span class="muted" style="font-size:12px">${staff.filter((s) => s.active === true).length} with access</span></div>
       <div class="list" style="margin-bottom:26px">${staffRows}</div>
-      <div class="sect"><h2>Data</h2></div>
+      ${WEB.isAdmin ? `<div class="sect"><h2>Data</h2></div>
       <div class="panel stack"><div class="rowx"><label class="btn" for="w_import">Import a data file…</label><input id="w_import" type="file" accept="application/json,.json" data-wchange="import" hidden><button class="btn" data-wact="backup">Download a backup</button></div>
-        <p class="hint">Import reads a ProWorld data file (roster, groups, past assessments) from this device and writes it into the database — existing records with the same id are replaced. A backup downloads everything as one file; keep it somewhere private, it contains player records.</p><div id="w_importbox"></div></div>`;
+        <p class="hint">Import reads a ProWorld data file (roster, groups, past assessments) from this device and writes it into the database — existing records with the same id are replaced. A backup downloads everything as one file; keep it somewhere private, it contains player records.</p><div id="w_importbox"></div></div>` : ''}`;
   }
   const IMPORT_OK = /^(groups|players|videos|journal|goals)\/[A-Za-z0-9_.~:@+\-]{1,200}$|^assessments\/[A-Za-z0-9_.~:@+\-]{1,200}(\/body\/values)?$/;
   let IMPORT = null;
@@ -2113,14 +2115,14 @@ const PW_CONFIG = {
   });
   document.addEventListener('change', async (ev) => {
     if (EDITION !== 'web') return; const t = ev.target; const k = t.getAttribute && t.getAttribute('data-wchange'); if (!k) return;
-    try { if (k === 'role') await WEB.fs.doc('staff/' + t.getAttribute('data-id')).set({ role: t.value === 'admin' ? 'admin' : 'coach' }, { merge: true }); else if (k === 'import') readImport(t.files && t.files[0]); } catch (e) { dbFail(fsError(e)); }
+    try { if (k === 'role') await WEB.fs.doc('staff/' + t.getAttribute('data-id')).set({ role: ['admin', 'director', 'desk'].includes(t.value) && (t.value !== 'admin' || WEB.isAdmin) ? t.value : 'coach' }, { merge: true }); else if (k === 'coachAs') await WEB.fs.doc('staff/' + t.getAttribute('data-id')).set({ coachAs: String(t.value || '').trim().slice(0, 40) }, { merge: true }); else if (k === 'import') readImport(t.files && t.files[0]); } catch (e) { dbFail(fsError(e)); }
   });
   document.addEventListener('submit', async (ev) => {
     if (EDITION !== 'web') return; const f = ev.target.closest('[data-wform]'); if (!f) return; ev.preventDefault(); const kind = f.getAttribute('data-wform'); const fd = new FormData(f); const val = (k) => String(fd.get(k) || '').trim();
     try {
       if (kind === 'link' && EMAIL_LINK) { WEB.note = ''; WEB.busy = 'link'; const em = val('email').toLowerCase(); try { await WEB.auth.sendSignInLinkToEmail(em, { url: location.origin + location.pathname, handleCodeInApp: true }); lsSet('pw_signin_email', em); WEB.stage = 'sent'; } catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; renderGate(); }
       else if (kind === 'confirm' && EMAIL_LINK) { try { await WEB.auth.signInWithEmailLink(val('email').toLowerCase(), location.href); cleanUrl(); } catch (e) { WEB.note = 'That didn’t match the link. Check the address, or ask for a new link.'; renderGate(); } }
-      else if (kind === 'add-staff') { const em = val('email').toLowerCase(); if (!em || em.includes('/')) return; await WEB.fs.doc('staff/' + em).set({ email: em, name: val('name'), role: val('role') === 'admin' ? 'admin' : 'coach', active: true, addedBy: WEB.email, addedAt: Date.now() }); f.reset(); toast(`${em} added. They can sign in now.`); }
+      else if (kind === 'add-staff') { const em = val('email').toLowerCase(); if (!em || em.includes('/')) return; await WEB.fs.doc('staff/' + em).set({ email: em, name: val('name'), role: ['admin', 'director', 'desk'].includes(val('role')) && (val('role') !== 'admin' || WEB.isAdmin) ? val('role') : 'coach', active: true, addedBy: WEB.email, addedAt: Date.now() }); f.reset(); toast(`${em} added. They can sign in now.`); }
     } catch (e) { dbFail(fsError(e)); }
   });
 
@@ -2219,6 +2221,7 @@ const PW_CONFIG = {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
         <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
       // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
+      if (!mine(p)) return `<div class="rowb locked" title="${esc(p.coach ? 'Coach ' + p.coach + '’s player' : 'No coach yet — ask a director')}">${who}<div class="chips"><span class="chip">${esc(p.coach ? 'with ' + p.coach : 'no coach')}</span></div></div>`;
       return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${p.pbpNote && /^Added/.test(p.pbpNote) ? '<span class="chip st-working" title="' + esc(p.pbpNote) + '">new · Play by Point</span>' : p.pbpNote && /^Not in/.test(p.pbpNote) ? '<span class="chip st-missing" title="' + esc(p.pbpNote) + '">not in Play by Point</span>' : ''}${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
     }).join('');
     const inactiveN = all.length - all.filter(active).length;
@@ -2257,6 +2260,7 @@ const PW_CONFIG = {
   /* ───────────── view: player ───────────── */
   function viewPlayer(pid, tab) {
     const p = player(pid);
+    if (p && !mine(p)) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: group(p.group).label, r: { view: 'group', gid: p.group } }, { t: p.name }])}<div class="head"><div><h1 class="title">${esc(p.name)}</h1><div class="sub">${esc(p.coach ? 'This player is with Coach ' + p.coach + (p.coach2 ? ' and ' + p.coach2 : '') + '.' : 'This player has no coach yet.')} A director can put your name on the record.</div></div></div>`;
     if (!p) return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">${S.loaded.players || S.dbState === 'none' ? 'This player isn’t on the roster.' : 'Loading player…'}</div>`;
     const g = group(p.group);
     const tabs = [['assessments', 'Assessments'], ['videos', 'Videos'], ['journal', 'Journal']].map(([k, t]) => `<button class="tab" role="tab" aria-selected="${tab === k}" ${goAttr({ view: 'player', pid, tab: k })}>${t}</button>`).join('');
@@ -3232,7 +3236,7 @@ const PW_CONFIG = {
   function runSearch(q) {
     const r = $('#results'); if (!r) return; const s = String(q || '').trim().toLowerCase(); if (!s) { closeResults(); return; }
     const hits = S.players.filter((p) => active(p) && p.name.toLowerCase().includes(s)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
-    r.hidden = false; r.innerHTML = hits.length ? hits.map((p) => `<button ${goAttr({ view: 'player', pid: p.id })}><span>${esc(p.name)}</span><small>${esc(group(p.group).label)}${p.coach ? ' · ' + esc(p.coach) : ''}</small></button>`).join('') : '<div class="muted" style="padding:10px;font-size:13px">No player by that name.</div>';
+    r.hidden = false; r.innerHTML = hits.length ? hits.map((p) => mine(p) ? `<button ${goAttr({ view: 'player', pid: p.id })}><span>${esc(p.name)}</span><small>${esc(group(p.group).label)}${p.coach ? ' · ' + esc(p.coach) : ''}</small></button>` : `<div class="locked" style="padding:10px 12px;opacity:.6"><span>${esc(p.name)}</span><small style="display:block">${esc(group(p.group).label)} · ${esc(p.coach ? 'with ' + p.coach : 'no coach')}</small></div>`).join('') : '<div class="muted" style="padding:10px;font-size:13px">No player by that name.</div>';
   }
   document.addEventListener('click', (ev) => { if (!ev.target.closest('.search')) closeResults(); });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { closeResults(); if (DICT) stopDictation(false);   /* Escape also ends the Mac's own dictation; the box stays ready until Done */ const q = $('#q'); if (q && document.activeElement === q) q.blur(); } });
@@ -3526,6 +3530,21 @@ const PW_CONFIG = {
         return `<div class="ctile${has && n >= +goal ? ' hit' : ''}"><div class="lbl">${esc(l)}</div><b>${n}${has ? `<span class="of">→ ${esc(goal)}</span>` : ''}</b>${has ? `<div class="meter"><i style="width:${pct}%"></i></div>` : ''}<small>${esc(how)}</small></div>`; }).join('')}</div>
       ${other > 0 ? `<p class="hint" style="margin:-18px 0 30px">${other} active player${other === 1 ? ' is' : 's are'} in none of the three groups.</p>` : ''}
       ${t ? '' : `<p class="hint" style="margin:-18px 0 30px">${own ? 'No targets yet: set them with “Set targets”.' : 'No targets set yet.'}</p>`}`;
+  }
+  /* Whose players are these? A director sees and opens everyone; a coach opens only players with their name on the record
+     (coach or second coach). The name on players is a first name or nickname ("Toño"); the staff record can pin it with coachAs. */
+  const nameKey = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+  function myCoachKeys() {
+    if (EDITION !== 'web') return null;
+    const r = WEB.staff || {}; const keys = [];
+    if (r.coachAs) keys.push(nameKey(r.coachAs));
+    const full = String(r.name || (WEB.user && WEB.user.displayName) || '').trim(); if (full) keys.push(nameKey(full.split(/\s+/)[0]));
+    return keys.filter(Boolean);
+  }
+  function mine(p) {
+    if (EDITION !== 'web' || WEB.isDirector) return true;
+    const keys = myCoachKeys(); if (!keys || !keys.length) return false;
+    return [p.coach, p.coach2].some((c) => c && keys.includes(nameKey(c)));
   }
   const RETIRED = ['Paolo'];   // no longer with the academy (Antonio, Oct 23): their players show with no coach until Monday is fixed
   const retired = (n) => { const x = String(n || '').trim().toLowerCase(); return !!x && RETIRED.some((r) => x === r.toLowerCase() || x.startsWith(r.toLowerCase() + ' ')); };

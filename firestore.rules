@@ -50,6 +50,9 @@ service cloud.firestore {
         && staffRec().active == true;
     }
     function admin() { return owner() || (onStaff() && staffRec().role == 'admin'); }
+    // A tennis director (Antonio, Oct 24): everything inside Coaches — assigns coaches, edits players, Messages, Courts, and
+    // manages who has access. An administrator or owner counts as one. Everyone else on the Coach Portal is a coach: their own players.
+    function director() { return admin() || (onStaff() && staffRec().role == 'director'); }
     // A page ticked for this person on the Dashboard (or, for an older record with no page list, the Coach Portal and Try-outs).
     function hasPage(p) {
       return owner() || (onStaff() && (('pages' in staffRec()) ? (p in staffRec().pages) : (p in ['coach-portal', 'tryouts'])));
@@ -71,22 +74,22 @@ service cloud.firestore {
     // people only — never their own entry, never an owner, never makes anyone an owner — and hands out only pages they
     // hold themselves, so nobody but an owner can unlock Marketing, Finance or anything else they don't have.
     match /staff/{email} {
-      allow get: if admin() || (verified() && me() == email);
-      allow list: if admin();
-      allow create, update: if owner() || (admin()
+      allow get: if onStaff() || (verified() && me() == email);   // everyone on the team sees who is on the team (Oct 24)
+      allow list: if onStaff();
+      allow create, update: if owner() || (director()
         && email != me()
         && request.resource.data.get('owner', false) != true
         && (resource == null || resource.data.get('owner', false) != true)
         && request.resource.data.get('pages', []).toSet().difference(myPages().toSet()).size() == 0);
-      allow delete: if owner() || (admin()
+      allow delete: if owner() || (director()
         && email != me()
         && resource.data.get('owner', false) != true
         && resource.data.get('pages', []).toSet().difference(myPages().toSet()).size() == 0);
     }
     // "Please let me in" notes from people who signed in but are not on the list yet.
     match /requests/{uid} {
-      allow get: if admin() || (verified() && request.auth.uid == uid);
-      allow list, delete: if admin();
+      allow get: if director() || (verified() && request.auth.uid == uid);
+      allow list, delete: if director();
       allow create, update: if verified()
         && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['email', 'name', 'at'])
@@ -98,7 +101,7 @@ service cloud.firestore {
     // ── Coach Portal ──
     match /groups/{id} {
       allow read: if tryoutsOk();
-      allow write: if portal() && admin();
+      allow write: if portal() && director();
     }
     // Players — the one roster. Written by the morning Monday sync (the runs account: Monday's fields only, never deletes),
     // the Coach Portal, the front desk on the backend, and the billing engine (a family that enrolls online: it writes with the
@@ -108,10 +111,10 @@ service cloud.firestore {
       allow read: if runs() || portal() || backend();
       allow create: if (runs()
         && request.resource.data.keys().hasOnly(['name', 'shortName', 'group', 'tier', 'coach', 'coach2', 'fitness', 'status', 'source',
-                                                 'mondayId', 'monday', 'createdAt', 'updatedAt', 'createdBy'])) || (!runs() && (portal() || backend()));
+                                                 'mondayId', 'monday', 'createdAt', 'updatedAt', 'createdBy'])) || (!runs() && ((portal() && director()) || backend()));
       allow update: if (runs()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'mondayId', 'monday', 'updatedAt']))
-        || (!runs() && portal())
+        || (!runs() && portal() && director())   // a player's coach, group, tier, status: directors (Oct 24); coaches write assessments, not the record
         || (!runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['group', 'coach', 'coach2', 'status', 'sport', 'updatedAt']));
       allow delete: if portal() && admin();
       // Parent name, email and phone: from Monday (the sync), from the enrollment page (the engine) or typed at the front desk.
@@ -196,8 +199,8 @@ service cloud.firestore {
     }
     // Messages (texts to families from the backend): the engine writes the batches and one line per recipient (admin SDK);
     // staff read them for the Sent history and a player's profile. Consent lives in players/<id>/private/sms, engine-written.
-    match /smsBatches/{id} { allow read: if backend() || portal(); }
-    match /smsLog/{id}     { allow read: if backend() || portal(); }
+    match /smsBatches/{id} { allow read: if director(); }   // Messages: directors (Antonio, Oct 24)
+    match /smsLog/{id}     { allow read: if director(); }
     match /smsWebhookLog/{id} { allow read: if backend(); }     // what JustCall's webhook sent and what the engine did with it (no bodies, no full numbers)
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }

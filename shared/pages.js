@@ -125,6 +125,7 @@
     marketing: { label: "Marketing", pages: ["start", "mkt", "leads", "soccer", "pipeline", "thanksgiving", "sunday-preview", "ads-audit", "inbox-audit", "cult", "alo", "launch"] },
     editor: { label: "Video editor", pages: ["start", "mkt"] },
     coach: { label: "Coach", pages: ["start", "coach-portal", "tryouts", "backend"] },
+    director: { label: "Tennis director", pages: ["start", "coach-portal", "tryouts", "backend", "attendance"], director: true },   // role "director" on the staff record: everything inside Coaches (Oct 24)
     desk: { label: "Front desk", pages: ["start", "tryouts", "desk-live", "ai-check", "backend", "billing", "attendance", "leads", "inbox-brief"] },
     admin: { label: "Administrator", pages: all, admin: true },
     none: { label: "Nothing yet", pages: [] }

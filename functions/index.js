@@ -10,6 +10,7 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
+const BACKUP = require('./lib/backup');
 const CAL = require('./lib/calendar');
 const CAT = require('./lib/catalog');
 const S = require('./lib/stripe');
@@ -128,6 +129,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         try { await ctx.db.collection('smsLog').doc().set({ at: Date.now(), sentAt: ok ? Date.now() : null, by: who.email, byName: who.name || '', player: fam.id, playerName: fam.name || '', group: fam.group || '', coach: fam.coach || '', phone, body: S.clean(b.body, 600), status: ok ? 'sent' : 'failed', reason: ok ? '' : 'justcall', batch: 'direct' }); } catch (e) { /* the text went; the log line is best effort */ }
         return send(res, 200, { ok });
       }
+      if (route === 'GET /admin/backup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BACKUP.status()); }                 // the nightly copies of the database
+      if (route === 'POST /admin/backup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BACKUP.run(log)); }                  // one now
       if (route === 'GET /admin/catalog') return send(res, 200, Object.assign({ mode: mode(key) }, await SYNC.checkCatalog(stripe)));
       if (route === 'POST /admin/catalog/sync') {
         // Makes the Stripe account behind the key carry the catalog: start-month products, family-facing descriptions, the portal. Never prices.
@@ -256,4 +259,10 @@ exports.dailyBilling = onSchedule({ schedule: '5 5 * * *', timeZone: CAL.TZ, reg
   if (plans.created.length || plans.recorded.length || plans.errors.length) logger.info('dailyBilling plans', plans);
   logger.info('dailyBilling done', { today, mode: ctx.mode, plans: { checked: plans.checked, created: plans.created.length, recorded: plans.recorded.length, errors: plans.errors.length }, credits: { checked: credits.checked, credited: credits.credited.length, paused: credits.paused.length, told: credits.told, errors: credits.errors.length }, late: { checked: late.checked, failed: late.failed.length, lateFees: late.lateFees.length, holds: late.holds.length, cancelled: late.cancelled.length, errors: late.errors.length }, holds: { checked: holds.checked, released: holds.released.length, errors: holds.errors.length }, roster: { checked: roster.checked, updated: roster.updated.length, finished: roster.finished.length } });
   if (plans.errors.length || credits.errors.length || late.errors.length || holds.errors.length) logger.error('dailyBilling errors', { plans: plans.errors, credits: credits.errors, late: late.errors, holds: holds.errors });
+});
+
+/* The nightly copy of the whole database to the backups bucket (lib/backup.js). 04:40 ET, after the billing run. */
+exports.nightlyBackup = onSchedule({ schedule: '40 4 * * *', timeZone: CAL.TZ, region: REGION, retryCount: 2, timeoutSeconds: 300, memory: '256MiB' }, async () => {
+  try { const out = await BACKUP.run((l) => logger.info('backup: ' + l)); logger.info('nightlyBackup started', out); }
+  catch (e) { logger.error('nightlyBackup failed', { message: e.message }); throw e; }
 });
