@@ -84,7 +84,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
 
   <section class="sec" id="move">
     <div class="sec-h"><h2>How to move</h2><small>the top bar is the same on every page</small></div>
-    <div class="bar-demo" aria-hidden="true"><span class="on">Dashboard</span><span>Admin ▾</span><span>Coaches ▾</span><span>Clients ▾</span><span>Marketing ▾</span><span>Library</span><span class="sp"></span><kbd>⌘K</kbd><span>You · Sign out</span></div>
+    <div class="bar-demo" aria-hidden="true" id="barDemo"><span class="on">Dashboard</span><span>Admin ▾</span><span>Coaches ▾</span><span>Clients ▾</span><span>Marketing ▾</span><span>Library</span><span class="sp"></span><kbd>⌘K</kbd><span>You · Sign out</span></div>
     <div class="habits">
       <div class="card"><h3>Doors and menus</h3><p>Click a door to open it. Rest on a door with a small arrow and its menu drops down with the views inside, so Admin → Messages or Coaches → Try-outs is one click. You only see the doors and views you have been given.</p></div>
       <div class="card"><h3>Jump anywhere</h3><p>Press <b>⌘K</b> (Ctrl+K on Windows) or click the search and type a page, a report or a view. Inside a page the tabs are the pills under the title; the top bar never changes.</p></div>
@@ -268,6 +268,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
     const AV = { admin: "Ad", coaches: "Co", clients: "Cl", marketing: "Mk" };
     const coachSide = !ctx.owner && !ctx.admin && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");
     document.body.classList.toggle("coach-side", coachSide);
+    if (coachSide) { $("#barDemo").innerHTML = '<span class="on">Coaches ▾</span><span class="sp"></span><kbd>⌘K</kbd><span>You · Sign out</span>'; const hb = $("#move .habits"); if (hb) hb.innerHTML = '<div class="card"><h3>One door</h3><p>Coaches is your whole site. Rest on it and its menu drops down: Players, Try-outs, Coach Board, Attendance, Privates' + (isDirector ? ", Messages, Courts" : "") + ', and this guide. Inside a page the tabs are the pills under the title.</p></div><div class="card"><h3>Jump anywhere</h3><p>Press <b>⌘K</b> (Ctrl+K on Windows) or click the search and type a player or a screen.</p></div><div class="card"><h3>Every screen has an address</h3><p>Paste a link in Slack and it opens exactly that screen. On a phone, add the site to your home screen and it opens like an app.</p></div>'; }
     $("#doorN").textContent = String(coachSide ? 1 : doors.length + 2);
     $("#doorRows").innerHTML = (coachSide ? "" : '<a href="/"><span class="av">D</span><span><b>Dashboard</b><span class="d">what needs you today, the live numbers</span></span><em>→</em></a>') +
       doors.map((d) => { const n = d.items.filter((it) => has(it.page || null) && (it.page || (d.page || []).some(has))).length; return '<a href="' + esc(d.href) + '"><span class="av">' + esc(AV[d.id] || d.name[0]) + '</span><span><b>' + esc(d.name) + '</b><span class="d">' + n + " view" + (n === 1 ? "" : "s") + " in its menu</span></span><em>→</em></a>"; }).join("") +
