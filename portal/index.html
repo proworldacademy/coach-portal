@@ -2260,7 +2260,7 @@ const PW_CONFIG = {
   /* ───────────── view: player ───────────── */
   function viewPlayer(pid, tab) {
     const p = player(pid);
-    if (p && !mine(p)) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: group(p.group).label, r: { view: 'group', gid: p.group } }, { t: p.name }])}<div class="head"><div><h1 class="title">${esc(p.name)}</h1><div class="sub">${esc(p.coach ? 'This player is with Coach ' + p.coach + (p.coach2 ? ' and ' + p.coach2 : '') + '.' : 'This player has no coach yet.')} A director can put your name on the record.</div></div></div>`;
+    if (p && !mine(p)) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: group(p.group).label, r: { view: 'group', gid: p.group } }, { t: p.name }])}<div class="head"><div><h1 class="title">${esc(p.name)}</h1><div class="sub">${esc(p.coach ? 'This player is with Coach ' + p.coach + (p.coach2 ? ' and ' + p.coach2 : '') + '.' : 'This player has no coach yet.')} A director can put your name on the record, or claim the player here.</div></div></div><div class="rowx" style="margin-top:10px"><button class="btn pri" data-act="claim-player" data-id="${esc(p.id)}">${p.coach ? 'Add me as second coach' : 'This is my player'}</button></div>`;
     if (!p) return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">${S.loaded.players || S.dbState === 'none' ? 'This player isn’t on the roster.' : 'Loading player…'}</div>`;
     const g = group(p.group);
     const tabs = [['assessments', 'Assessments'], ['videos', 'Videos'], ['journal', 'Journal']].map(([k, t]) => `<button class="tab" role="tab" aria-selected="${tab === k}" ${goAttr({ view: 'player', pid, tab: k })}>${t}</button>`).join('');
@@ -3107,6 +3107,13 @@ const PW_CONFIG = {
     }
     else if (act === 'log-open') { const id = b.getAttribute('data-id'); S.ui.logOpen = S.ui.logOpen === id ? null : id; render(); }
     else if (act === 'log-all') { S.ui.logAll = !S.ui.logAll; render(); }
+    else if (act === 'claim-player') {
+      // a coach puts their own name on a player: as the coach when there is none, as the second coach otherwise (the rules allow only these two keys)
+      const p = player(b.getAttribute('data-id')); if (!p || !S.db) return;
+      const me = (WEB.staff && WEB.staff.coachAs) || String((WEB.staff && WEB.staff.name) || (WEB.user && WEB.user.displayName) || '').trim().split(/\s+/)[0]; if (!me) { toast('Add your name on Staff & access first.'); return; }
+      const patch = p.coach ? { coach2: me, updatedAt: Date.now() } : { coach: me, updatedAt: Date.now() };
+      try { await S.db.doc('players/' + p.id).update(patch); toast(`${p.name} is now with you.`); } catch (e) { toast('Could not save: ' + e.message); }
+    }
     else if (act === 'targets-edit') { S.ui.editTargets = !S.ui.editTargets; render(); }
     else if (act === 'fcoach') { const v = b.getAttribute('data-v'); S.ui.coachFilter = v === '__all' ? null : v; S.ui.coachFilterGroup = S.route.gid; render(); }
     else if (act === 'pfilter') { const v = b.getAttribute('data-v'); S.ui.partFilter = v && !(S.ui.partFilter === v && S.ui.partFilterGroup === S.route.gid) ? v : null; S.ui.partFilterGroup = S.route.gid; saveUi(); render(); }
