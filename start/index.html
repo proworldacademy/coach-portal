@@ -63,6 +63,7 @@
 .last p{color:rgba(255,255,255,.78);font-size:14.5px;line-height:1.55;max-width:760px;margin:0}
 .last b{color:#fff}
 .hid{display:none}
+body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side #walk,body.coach-side .last{display:none}
 </style>
 </head>
 <body class="skin-home">
@@ -265,11 +266,14 @@
     // the hero card: the doors this person holds, with how many views each one opens
     $("#doorN").textContent = String(doors.length + 2);                                   // the Dashboard, the doors held, the Library
     const AV = { admin: "Ad", coaches: "Co", clients: "Cl", marketing: "Mk" };
-    $("#doorRows").innerHTML = '<a href="/"><span class="av">D</span><span><b>Dashboard</b><span class="d">what needs you today, the live numbers</span></span><em>→</em></a>' +
+    const coachSide = !ctx.owner && !ctx.admin && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");
+    document.body.classList.toggle("coach-side", coachSide);
+    $("#doorN").textContent = String(coachSide ? 1 : doors.length + 2);
+    $("#doorRows").innerHTML = (coachSide ? "" : '<a href="/"><span class="av">D</span><span><b>Dashboard</b><span class="d">what needs you today, the live numbers</span></span><em>→</em></a>') +
       doors.map((d) => { const n = d.items.filter((it) => has(it.page || null) && (it.page || (d.page || []).some(has))).length; return '<a href="' + esc(d.href) + '"><span class="av">' + esc(AV[d.id] || d.name[0]) + '</span><span><b>' + esc(d.name) + '</b><span class="d">' + n + " view" + (n === 1 ? "" : "s") + " in its menu</span></span><em>→</em></a>"; }).join("") +
-      '<a href="/#library"><span class="av">L</span><span><b>Library</b><span class="d">plans, pages and reports</span></span><em>→</em></a>';
+      (coachSide ? "" : '<a href="/#library"><span class="av">L</span><span><b>Library</b><span class="d">plans, pages and reports</span></span><em>→</em></a>');
     $("#who").textContent = (ctx.owner ? "Owner — every door is yours" : ctx.admin ? "Administrator" : "Signed in as " + (ctx.name || ctx.email));
-    $("#sum").textContent = "One site, one Google sign-in, five doors. " + (ctx.owner ? "You hold every door: this page walks through all of them, " : "This page shows the " + (doors.length + 1) + " doors you hold, ") + "what every tab behind them does, and the five things you will do most.";
+    $("#sum").textContent = coachSide ? "One site, one Google sign-in, one door: Coaches. This page shows every screen behind it in plain words, then your week step by step." : "One site, one Google sign-in, five doors. " + (ctx.owner ? "You hold every door: this page walks through all of them, " : "This page shows the " + (doors.length + 1) + " doors you hold, ") + "what every tab behind them does, and the five things you will do most.";
     // the Dashboard, row by row
     $("#dashRows").innerHTML = rowsHtml(DASH, ["Part of the page", "What it is", "What you do with it"]);
     // one section per door the person holds; every view the menu would show them, with the plain-words line

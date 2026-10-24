@@ -41,16 +41,22 @@
     if (id && DOORS.some((d) => d.id === id)) return id;
     return PATH_DOOR[here] || null;
   }
+  // Coaches and tennis directors live in the Coaches door only (Antonio, Oct 24): no Dashboard, no Admin, no Clients, no Library.
+  // They hold the backend page only for what Coaches links to (attendance, messages, courts, privates). Start here is their guide.
+  function coachSide() {
+    if (!ctx || ctx.owner || ctx.admin) return false;
+    const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
+    return (role === "coach" || role === "director" || role === "") && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");
+  }
   function doors() {
     if (!ctx) return [];
     const now = doorNow();
-    // Coaches and tennis directors hold the backend page only for what the Coaches door links to (attendance, messages, courts,
-    // privates), so the Admin door itself stays closed to them; Messages and Courts inside Coaches are for directors (Antonio, Oct 24).
     const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
-    const coachSide = !ctx.owner && !ctx.admin && (role === "coach" || role === "director" || role === "") && !ctx.has("billing");
+    const cs = coachSide();
     const director = !!(ctx.owner || ctx.admin || ctx.director || role === "director");
     const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
-    return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : d.id === "admin" && coachSide ? false : hasAny(d.page))
+    if (cs) return DOORS.filter((d) => d.id === "coaches").map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id || now === null, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(!director && directorOnly(it))).concat(ctx.has("start") ? [{ name: "Start here · the guide", href: "/start" }] : []) }));
+    return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))
       .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(d.id === "coaches" && !director && directorOnly(it))) }));
   }
   let ddEl = null, ddT = null;
@@ -77,11 +83,11 @@
     const home = opts.active ? opts.active === "/" : here === "/";
     const ds = doors();
     const door = (d) => '<span class="door' + (d.on ? " on" : "") + '" data-door="' + esc(d.id) + '"><a class="' + (d.on ? "on" : "") + '" href="' + esc(d.href) + '"' + (d.on ? ' aria-current="page"' : "") + (d.items.length ? ' aria-haspopup="menu"' : "") + ">" + esc(d.name) + "</a></span>";
-    const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>' + ds.map(door).join("") : "") + "</nav>";
+    const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? (coachSide() ? "" : '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>') + ds.map(door).join("") : "") + "</nav>";
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
     const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
     const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
-    top.innerHTML = '<a class="pwd-mark" href="/" aria-label="PROWORLD Dashboard"></a>' + strip + jump + who;
+    top.innerHTML = '<a class="pwd-mark" href="' + (coachSide() ? "/portal" : "/") + '" aria-label="PROWORLD"></a>' + strip + jump + who;
     const out = top.querySelector("[data-out]"); if (out) out.addEventListener("click", () => window.PWAuth && window.PWAuth.signOut());
     const me = top.querySelector("[data-me]"); if (me) me.addEventListener("click", (e) => { e.stopPropagation(); me.parentNode.classList.toggle("open"); });
     // the strip fades on the right only while more pages hide there, and the page you are on is always in view
@@ -133,7 +139,7 @@
     const kind = (p) => (p.section === "tools" ? "tool" : ({ plan: "plan", report: "report", page: "page", archive: "archive", proto: "prototype" }[p.status] || p.section || ""));
     const base = mine().map((p) => ({ name: p.name, kind: kind(p), href: pageHref(p), ext: external(p) }));
     const views = []; doors().forEach((d) => d.items.forEach((it) => views.push({ name: d.name + " › " + it.name, kind: "view", href: it.href })));
-    const all = [{ name: "Dashboard", kind: "home", href: "/" }].concat(extra, base, views);
+    const all = (coachSide() ? [] : [{ name: "Dashboard", kind: "home", href: "/" }]).concat(extra, coachSide() ? [] : base, views);
     const seen = new Set(); return all.filter((x) => x.href && !seen.has(x.href) && seen.add(x.href));
   }
   const hl = (name, q) => { const i = name.toLowerCase().indexOf(q); return i < 0 ? esc(name) : esc(name.slice(0, i)) + "<mark>" + esc(name.slice(i, i + q.length)) + "</mark>" + esc(name.slice(i + q.length)); };
@@ -219,7 +225,9 @@
     };
     if (document.body) run(); else document.addEventListener("DOMContentLoaded", run, { once: true });
   }
-  window.addEventListener("pw:auth", (e) => { ctx = e.detail; if (mounted) drawTop(); });
+  // a coach or director who lands on the Dashboard goes to the Coaches door: that is their whole site
+  function landing() { if (coachSide() && (here === "/" || here === "") && !location.hash) location.replace("/portal"); }
+  window.addEventListener("pw:auth", (e) => { ctx = e.detail; landing(); if (mounted) drawTop(); });
   window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; if (mounted) drawTop(); });
   // a page with several views (the Coach Portal's assessments / try-outs / board) re-marks the strip as the view changes
   function active(id) { opts.active = id; if (mounted) drawTop(); }
