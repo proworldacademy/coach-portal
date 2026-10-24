@@ -2219,7 +2219,7 @@ const PW_CONFIG = {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
         <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
       // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
-      return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
+      return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${p.pbpNote && /^Added/.test(p.pbpNote) ? '<span class="chip st-working" title="' + esc(p.pbpNote) + '">new · Play by Point</span>' : p.pbpNote && /^Not in/.test(p.pbpNote) ? '<span class="chip st-missing" title="' + esc(p.pbpNote) + '">not in Play by Point</span>' : ''}${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
     }).join('');
     const inactiveN = all.length - all.filter(active).length;
     // what is due now, in one line (Antonio, Oct 23): the current quarterly and this month's report, and how many players have not started
@@ -3547,7 +3547,6 @@ const PW_CONFIG = {
     const un = act.filter((p) => !p.coach);
     const gl = (gid) => { const g = groups().find((x) => x.id === gid); return g ? g.label : (gid || 'No group'); };
     const GIDS = groups().map((g) => g.id).concat(['']);
-    const pbpChip = (p) => (p.pbpNote ? `<span class="chip ${/^Not in/.test(p.pbpNote) ? 'st-missing' : /^Added/.test(p.pbpNote) ? 'st-working' : 'st-done'}" title="${esc(p.pbpNote)}">${/^Not in/.test(p.pbpNote) ? 'not in Play by Point' : /^Added/.test(p.pbpNote) ? 'new' : ''}</span>` : '');
     const bp = (p, extra) => `<button class="bp" ${goAttr({ view: 'player', pid: p.id })}><span class="pn">${esc(p.name)}</span>${[gl(p.group)].concat(extra || []).filter(Boolean).length ? `<small>${esc([gl(p.group)].concat(extra || []).filter(Boolean).join(' · '))}</small>` : ''}</button>`;
     const T = tryouts(); const tries = T.today.concat(T.week, T.later);
     const today = todayISO();
