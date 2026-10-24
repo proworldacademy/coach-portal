@@ -2008,7 +2008,7 @@ const PW_CONFIG = {
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
       : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }]]
-        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance']] : [])
+        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['billing', 'Players & billing', '/backend#players']] : [])
         .concat(EDITION === 'web' && WEB.isDirector ? [['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts']] : [])   // directors (Antonio, Oct 24)
         .concat(EDITION === 'web' ? [['privates', 'Privates', '/backend#privates'], ['staff', 'Staff & access', { view: 'staff' }]] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
