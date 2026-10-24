@@ -114,6 +114,19 @@ body.sky-short .pwd-sky{height:min(50vh,420px)}
 .pwd-me .out:hover{border-color:var(--ink);color:var(--ink)}
 .pwd-top.tight .pwd-jump{min-width:0}.pwd-top.tight .pwd-jump span{display:none}.pwd-top.tight .pwd-me .role{display:none}
 @media(max-width:900px){.pwd-strip{display:none}.pwd-jump{min-width:0}.pwd-jump span{display:none}}
+/* the phone menu: a button with three lines next to the search; it opens the doors and their views as a sheet under the bar */
+.pwd-burger{display:none;flex-direction:column;justify-content:center;gap:4px;width:40px;height:40px;border-radius:999px;border:1px solid var(--line-2);background:var(--card);backdrop-filter:blur(10px);padding:0 11px;flex:none;cursor:pointer;transition:border-color .2s}
+.pwd-burger span{display:block;height:2px;border-radius:2px;background:var(--ink);transition:transform .25s var(--ease),opacity .2s}
+.pwd-burger.on span:nth-child(1){transform:translateY(6px) rotate(45deg)}.pwd-burger.on span:nth-child(2){opacity:0}.pwd-burger.on span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.pwd-menu{display:none;position:fixed;z-index:65;left:12px;right:12px;top:calc(76px + env(safe-area-inset-top,0px));max-height:calc(100vh - 100px);overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line-2);box-shadow:0 24px 60px -20px rgba(0,0,0,.35)}
+.pwd-menu.on{display:block;animation:pwd-up .3s var(--ease) both}
+.pwd-menu a.d{display:block;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:.5px;font-size:20px;color:var(--ink);padding:10px 12px;border-radius:12px}
+.pwd-menu a.d.on{background:var(--ink);color:var(--lime)}
+.pwd-menu .sub{display:flex;flex-wrap:wrap;gap:6px;padding:2px 12px 12px}
+.pwd-menu .sub a{font-size:12.5px;font-weight:600;color:var(--ink-2);border:1px solid var(--line-2);border-radius:999px;padding:6px 11px;background:#fff}
+.pwd-menu .sub a:active{background:var(--ink);color:var(--lime)}
+@media(max-width:900px){.pwd-burger{display:flex}}
+@media(max-width:560px){.pwd-burger{width:36px;height:36px;padding:0 10px}.pwd-menu{top:calc(64px + env(safe-area-inset-top,0px))}}
 /* on a phone the person is a bubble with their initials; a tap opens the name and Sign out */
 @media(max-width:560px){.pwd-top{height:60px;gap:8px}.pwd-mark{width:104px}.pwd-jump kbd{display:none}.pwd-jump{padding:8px 10px}
   .pwd-me{padding:0;border:0;background:none;backdrop-filter:none;max-width:none}.pwd-av{width:36px;height:36px;font-size:14px;cursor:pointer}

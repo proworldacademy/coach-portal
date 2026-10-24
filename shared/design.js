@@ -87,7 +87,20 @@
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
     const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
     const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
-    top.innerHTML = '<a class="pwd-mark" href="' + (coachSide() ? "/portal" : "/") + '" aria-label="PROWORLD"></a>' + strip + jump + who;
+    // on a phone the strip is hidden; a menu button opens the same doors and their views as a sheet (Lorenzo, Oct 24)
+    const burger = ctx && opts.strip !== false ? '<button class="pwd-burger" type="button" data-burger aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>' : "";
+    top.innerHTML = '<a class="pwd-mark" href="' + (coachSide() ? "/portal" : "/") + '" aria-label="PROWORLD"></a>' + strip + jump + burger + who;
+    const bb = top.querySelector("[data-burger]");
+    if (bb) {
+      let sheet = $("#pwd-menu");
+      if (!sheet) { sheet = document.createElement("div"); sheet.className = "pwd-menu"; sheet.id = "pwd-menu"; sheet.setAttribute("role", "menu"); document.body.appendChild(sheet); }
+      sheet.innerHTML = (coachSide() ? "" : '<a class="d' + (home ? " on" : "") + '" href="/">Dashboard</a>') + ds.map((d) => '<a class="d' + (d.on ? " on" : "") + '" href="' + esc(d.href) + '">' + esc(d.name) + "</a>" + (d.items.length ? '<div class="sub">' + d.items.map((it) => '<a href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("") + "</div>" : "")).join("");
+      const setOpen = (on) => { sheet.classList.toggle("on", on); bb.classList.toggle("on", on); bb.setAttribute("aria-expanded", on ? "true" : "false"); document.documentElement.classList.toggle("pwd-menu-open", on); };
+      bb.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!sheet.classList.contains("on")); });
+      sheet.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
+      document.addEventListener("click", (e) => { if (sheet.classList.contains("on") && !sheet.contains(e.target) && !bb.contains(e.target)) setOpen(false); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+    }
     const out = top.querySelector("[data-out]"); if (out) out.addEventListener("click", () => window.PWAuth && window.PWAuth.signOut());
     const me = top.querySelector("[data-me]"); if (me) me.addEventListener("click", (e) => { e.stopPropagation(); me.parentNode.classList.toggle("open"); });
     // the strip fades on the right only while more pages hide there, and the page you are on is always in view
