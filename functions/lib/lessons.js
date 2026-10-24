@@ -1,8 +1,8 @@
 /* Private lessons: who hears what, and when (Antonio, Oct 24).
    - The moment a private is booked on the backend: the coach gets a text, the coaches' Slack gets a line, the family gets its
      confirmation (the page already sends that one).
-   - Reminders, the usual schedule for lessons: the evening before (6 PM ET) and one hour before. Both to the family (only if they
-     opted in to texts) and to the coach (their mobile on the staff record, Staff & access → Mobile).
+   - One reminder, an hour before, to the family (only if they opted in to texts) and to the coach (their mobile on the staff
+     record, Staff & access → Mobile). Antonio's call, Oct 24: confirmation at booking + one hour before, nothing the evening before.
    - A cancellation texts both.
    The lessons live in backend/state.privates (the page's shared state); what has been sent is kept in lessonReminders/<lesson id>
    so the page can rewrite its state freely. Runs every 15 minutes (index.js: lessonReminders). */
@@ -71,8 +71,9 @@ async function remind(db, now, log) {
     const fam = byPid[pv.pid]; const famName = fam ? first(fam.name) : 'your player';
     const when = `${fmtDay(pv.date)} ${fmtT(Number(pv.start))}–${fmtT(Number(pv.start) + (Number(pv.dur) || 1))} · ${courtName(pv.court)}`;
     const eveBefore = etEpoch(pv.date, 18) - 24 * 3600e3;   // 6 PM the day before
+    // Antonio, Oct 24: a confirmation the moment it is booked (the page and /lesson/booked do that) and one reminder an hour before. No evening-before text.
+    void eveBefore;
     const steps = [
-      { key: 'dayBefore', due: now >= eveBefore && now < eveBefore + 3600e3 && startAt > now, fam: `Reminder: ${famName} has a private with ${first(pv.coach)} tomorrow, ${when}.`, coach: `Tomorrow: private with ${fam ? fam.name : pv.pid}, ${when}.` },
       { key: 'hourBefore', due: startAt - now <= 3600e3 && startAt - now > 1800e3, fam: `${famName}'s private with ${first(pv.coach)} starts in an hour · ${courtName(pv.court)}.`, coach: `In an hour: ${fam ? fam.name : pv.pid} · ${courtName(pv.court)}.` }
     ];
     for (const s of steps) {
