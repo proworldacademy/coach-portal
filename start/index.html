@@ -262,7 +262,8 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
     const has = (id) => !id || ctx.has(id);
     const isDirector = !!(ctx.owner || ctx.admin || ctx.director || String((ctx.rec && ctx.rec.role) || "").toLowerCase() === "director");
     const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
-    const doors = P.DOORS.filter((d) => d.id !== "library" && (d.page || []).some(has)).map((d) => (d.id === "coaches" && !isDirector ? Object.assign({}, d, { items: d.items.filter((it) => !directorOnly(it)) }) : d));
+    const coachOnly = !ctx.owner && !ctx.admin && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");   // coaches and tennis directors: the Coaches door is the whole site
+    const doors = P.DOORS.filter((d) => d.id !== "library" && (d.page || []).some(has)).filter((d) => !coachOnly || d.id === "coaches").map((d) => (d.id === "coaches" && !isDirector ? Object.assign({}, d, { items: d.items.filter((it) => !directorOnly(it)) }) : d));
     // the hero card: the doors this person holds, with how many views each one opens
     $("#doorN").textContent = String(doors.length + 2);                                   // the Dashboard, the doors held, the Library
     const AV = { admin: "Ad", coaches: "Co", clients: "Cl", marketing: "Mk" };
