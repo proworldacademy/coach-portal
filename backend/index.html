@@ -1071,7 +1071,7 @@ function renderPrivates(app){
   if(PV.coach&&!PRO(PV.coach))PV.coach='';
   const PROX=n=>PRO(n)||PROS[0];   // the tier used for the chips before a coach is picked (prices are owners-only anyway)
   const roster=state.players.filter(p=>p.status!=='tryout').sort((a,b)=>a.name.localeCompare(b.name));
-  if(!PV.pid||!playerById(PV.pid))PV.pid=roster[0]?roster[0].id:'';
+  if(PV.pid&&!playerById(PV.pid))PV.pid='';   // no default player either: type the name
   const tier=()=>LESSON_TIERS[PROX(PV.coach).tier];
   const kindOf=()=>PROX(PV.coach).tier==='SOCCER 120'?'soccer':'tennis';
   const fixChoices=()=>{const t=tier();const ns=Object.keys(t);if(!ns.includes(PV.n))PV.n=ns[0];const ds=Object.keys(t[PV.n]).map(Number).sort((a,b)=>a-b);if(!ds.includes(Number(PV.dur)))PV.dur=ds.includes(60)?60:ds[0];return {ns,ds}};
@@ -1103,7 +1103,7 @@ function renderPrivates(app){
     <section class="section pv-wrap">
       <div class="pv-build">
         <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-pick">${coachLocked?'':`<input id="pv-cq" class="pv-search" type="search" placeholder="Type a coach's name…" autocomplete="off" value="">`}<div class="pv-sel">${PV.coach?`<span class="pv-ava sm">${esc(ini(PV.coach))}</span><b>${esc(PV.coach)}</b>${seeMoney?`<small>${esc(PROX(PV.coach).tier)}</small>`:''}`:'<small>No coach picked yet</small>'}</div><div id="pv-clist" class="pv-list" hidden></div></div></div>
-        <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${seeMoney?(p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'):''}</small>`:'<small>The roster is loading…</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
+        <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${seeMoney?(p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'):''}</small>`:'<small>No player picked yet</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
         <div class="pv-grid">
           <div class="pv-step"><div class="pv-k">Players on court</div><div class="pv-chips">${['1','2','3','4'].map(n=>`<button class="pv-chip num${n===PV.n?' on':''}" data-pv="n" data-v="${n}" ${ns.includes(n)?'':'disabled'}>${n}</button>`).join('')}</div></div>
           <div class="pv-step"><div class="pv-k">Length</div><div class="pv-chips">${ds.map(m=>`<button class="pv-chip${m===Number(PV.dur)?' on':''}" data-pv="dur" data-v="${m}">${DUR[m]||m+' min'}</button>`).join('')}</div></div>
