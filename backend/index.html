@@ -354,7 +354,8 @@ table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
 .thead .r{margin-left:auto;display:flex;gap:8px;align-items:center}
 .bubbles{flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(#fff,#fafaf8)}
 .tday{align-self:center;font-size:11.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin:6px 0}
-.bub{max-width:66%;padding:11px 15px;border-radius:18px;font-size:14.5px;line-height:1.4;display:flex;flex-direction:column;gap:5px}
+.bub{max-width:66%;padding:11px 15px;border-radius:18px;font-size:14.5px;line-height:1.4;display:flex;flex-direction:column;gap:5px;flex:none}
+.tday{flex:none}
 .bub .txt{white-space:pre-wrap;word-break:break-word}
 .bub.out{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:6px}
 .bub.in{align-self:flex-start;background:#efefea;color:var(--ink);border-bottom-left-radius:6px}
@@ -1321,7 +1322,8 @@ function threadLines(t){const h=SMSH||{batches:[],logs:[],events:[]};const ids=n
     const match=t.kind==='all'||t.kind==='family'||(b.thread&&b.thread===t.key)||(!b.thread&&mine.length>=Math.max(1,Math.floor(ls.length*.8)));if(!match)continue;
     const c={sent:mine.filter(l=>l.status==='sent').length,failed:mine.filter(l=>l.status==='failed').length,skipped:mine.filter(l=>l.status==='skipped').length,queued:mine.filter(l=>l.status==='queued').length,delivered:mine.filter(l=>/deliver/i.test(l.delivery||'')).length};
     lines.push({dir:'out',at:b.at,body:(mine[0]&&mine[0].body)||b.text,by:b.byName||b.by,c,batch:b.id,label:b.threadLabel||''})}
-  for(const e of (h.events||[])){if(!e.players||!e.players.some(id=>ids.has(id))&&t.kind!=='all')continue;if(t.kind!=='all'&&!(e.players||[]).some(id=>ids.has(id)))continue;const p=state.players.find(x=>(e.players||[]).includes(x.id));lines.push({dir:'in',at:e.at,body:e.body,kind:e.kind,who:p?((p.parent||'')+(p.parent?' · ':'')+p.name):phoneFmt(e.phone)})}
+  // replies: only from families on the roster, only in that family's thread and their groups' — never the whole JustCall inbox (Antonio, Oct 24)
+  if(t.kind!=='all'){const seenId=new Set();for(const e of (h.events||[])){if(!e.players||!e.players.some(id=>ids.has(id)))continue;const k=e.justcallId||(e.phone+'|'+e.body+'|'+Math.round((e.at||0)/60000));if(seenId.has(k))continue;seenId.add(k);const p=state.players.find(x=>(e.players||[]).includes(x.id));lines.push({dir:'in',at:e.at,body:e.body,kind:e.kind,who:p?((p.parent||'')+(p.parent?' · ':'')+p.name):phoneFmt(e.phone)})}}
   lines.sort((a,b)=>(a.at||0)-(b.at||0));return lines}
 function drawThreads(app,body){
   const rows=smsRows();const all=threadList(rows);const can=smsCanSend();

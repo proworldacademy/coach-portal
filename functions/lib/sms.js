@@ -325,7 +325,7 @@ async function history(db, who, q) {
   const col = db.collection('smsLog');
   let all = (await (pid ? col.where('player', '==', pid) : col.orderBy('at', 'desc').limit(limit)).get()).docs.map((d) => Object.assign({ id: d.id }, d.data()));
   let logs = all.filter((l) => l.batch);
-  const events = pid ? [] : all.filter((l) => !l.batch && l.kind).map((l) => ({ id: l.id, kind: l.kind, at: l.at, phone: l.phone, body: l.body, players: l.players || [] })).sort((a, b) => (b.at || 0) - (a.at || 0));
+  const events = pid ? [] : all.filter((l) => !l.batch && l.kind).map((l) => ({ id: l.id, kind: l.kind, at: l.at, phone: l.phone, body: l.body, players: l.players || [], justcallId: l.justcallId || '' })).sort((a, b) => (b.at || 0) - (a.at || 0));
   if (!who.texting) { const me = fold(who.firstName || firstName(who.name)); logs = me ? logs.filter((l) => fold(l.coach) === me) : []; }
   logs.sort((a, b) => (b.at || 0) - (a.at || 0));
   logs = logs.slice(0, limit);
@@ -372,8 +372,12 @@ async function handleEvent(db, body) {
     const stop = STOP_WORDS.test(text), start = !stop && START_WORDS.test(text);
     const hits = (await recipients(db)).filter((r) => r.phone === from);
     if (!stop && !start) {
-      // a reply from a family (Oct 24): kept as a line so the Messages threads show it; the JustCall inbox has it too
-      await db.collection('smsLog').doc().set({ kind: 'reply', at: Date.now(), phone: from, body: text.slice(0, 600), players: hits.map((r) => r.id), by: 'family', status: 'reply', justcallId: String(d.id || '') });
+      // a reply from a family on the roster (Oct 24): kept as a line so that family's thread shows it. A text from a number that is
+      // not a family (a prospect, a vendor) stays in the JustCall inbox only — the coaches' Messages page is for the families.
+      if (!hits.length) return Object.assign(out, { did: 'kept in JustCall only (not a family on the roster)' });
+      const jid = String(d.id || '');
+      if (jid && !(await db.collection('smsLog').where('justcallId', '==', jid).limit(1).get()).empty) return Object.assign(out, { did: 'already kept' });   // JustCall sends two events per text
+      await db.collection('smsLog').doc().set({ kind: 'reply', at: Date.now(), phone: from, body: text.slice(0, 600), players: hits.map((r) => r.id), by: 'family', status: 'reply', justcallId: jid });
       return Object.assign(out, { did: 'reply kept for ' + hits.length + ' player(s)', players: hits.map((r) => r.id) });
     }
     for (const r of hits) await setOptIn(db, r.id, start, { source: stop ? 'stop' : 'start', by: 'family', phone: from });
