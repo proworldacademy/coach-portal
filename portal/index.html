@@ -3509,10 +3509,10 @@ const PW_CONFIG = {
     ['Proactive updates (nobody asked)', 'New and trial families: every 3 days in the first month · full time: weekly · part time: every two weeks · privates: monthly', 'About half of preventable churn happens in the first 90 days: the trial cadence is the retention tool'],
   ];
   function commitTiles(act) {
-    const t = (S.syncCfg && S.syncCfg.targets) || null; const u8 = (x) => /^U8$|^U10$/i.test(String(x.age || '').trim());
-    const u10 = act.filter(u8).length, ft = act.filter((x) => !u8(x) && isMorning(x.sch)).length, as = act.filter((x) => !u8(x) && !isMorning(x.sch) && /4:00/.test(String(x.sch || ''))).length;
-    const tiles = [['Mornings (Full Time)', ft, t && t.ft, '7:45 / 9:30 / 2:00 schedules on Monday'], ['Afterschool 4PM', as, t && t.as, '4:00 schedule, not the U8 age group'],
-      ['10 & Under', u10, t && t.u10, 'U8 age group on Monday'], ['Academy total', act.length, t && t.total, 'everyone active on Monday']];
+    const t = (S.syncCfg && S.syncCfg.targets) || null;
+    const u10 = act.filter((x) => x.group === 'u10').length, ft = act.filter((x) => x.group === 'ft').length, as = act.filter((x) => x.group === 'as').length;
+    const tiles = [['Mornings (Full Time)', ft, t && t.ft, 'the Full Time group'], ['Afterschool 4PM', as, t && t.as, 'the Afterschool group'],
+      ['10 & Under', u10, t && t.u10, 'the 10 & Under group'], ['Academy total', act.length, t && t.total, 'every active player']];
     const own = EDITION === 'web' && WEB.isOwner;
     const form = own && S.ui.editTargets ? `<form class="panel stack" data-form="targets" style="margin-bottom:14px"><div class="grid2">
         ${[['ft', 'Mornings (Full Time)'], ['as', 'Afterschool 4PM'], ['u10', '10 & Under'], ['total', 'Academy total']].map(([k, l]) => `<div class="field"><label for="tg_${k}">${l}</label><input id="tg_${k}" name="${k}" type="number" min="0" max="9999" value="${t && t[k] != null ? esc(t[k]) : ''}" required></div>`).join('')}
@@ -3524,55 +3524,47 @@ const PW_CONFIG = {
       ${t && (t.until || t.note) ? `<p class="hint" style="margin:-6px 0 12px">${esc(['Net active players' + (t.until ? ' by ' + fmtISO(t.until) : ''), t.note].filter(Boolean).join(' · '))}</p>` : ''}${form}
       <div class="commit">${tiles.map(([l, n, goal, how]) => { const has = goal !== undefined && goal !== null && goal !== '' && !isNaN(+goal); const pct = has && +goal > 0 ? Math.min(100, Math.round(n / +goal * 100)) : 0;
         return `<div class="ctile${has && n >= +goal ? ' hit' : ''}"><div class="lbl">${esc(l)}</div><b>${n}${has ? `<span class="of">→ ${esc(goal)}</span>` : ''}</b>${has ? `<div class="meter"><i style="width:${pct}%"></i></div>` : ''}<small>${esc(how)}</small></div>`; }).join('')}</div>
-      ${other > 0 ? `<p class="hint" style="margin:-18px 0 30px">${other} active player${other === 1 ? ' is' : 's are'} in none of the three programs (9:00, other times or no schedule).</p>` : ''}
+      ${other > 0 ? `<p class="hint" style="margin:-18px 0 30px">${other} active player${other === 1 ? ' is' : 's are'} in none of the three groups.</p>` : ''}
       ${t ? '' : `<p class="hint" style="margin:-18px 0 30px">${own ? 'No targets yet: set them with “Set targets”.' : 'No targets set yet.'}</p>`}`;
   }
   const RETIRED = ['Paolo'];   // no longer with the academy (Antonio, Oct 23): their players show with no coach until Monday is fixed
   const retired = (n) => { const x = String(n || '').trim().toLowerCase(); return !!x && RETIRED.some((r) => x === r.toLowerCase() || x.startsWith(r.toLowerCase() + ' ')); };
   function boardData() {
-    const B = S.board, items = ((B && B.items) || []).map((x) => (retired(x.lead) || retired(x.asst) ? Object.assign({}, x, { lead: retired(x.lead) ? '' : x.lead, asst: retired(x.asst) ? '' : x.asst }) : x));
-    const act = items.filter((x) => x.g === 'active' && x.st === 'active');
-    return { B, items, act };
+    // Since Oct 23 the board reads the roster itself (Play by Point is the official list; Monday is retired). Kept for the owners' page.
+    const act = S.players.filter(active).filter((p) => !/soccer/i.test(String(p.group || '')));
+    return { B: S.players.length ? { at: null } : null, items: [], act };
   }
   function viewBoard() {
-    const { B, items, act } = boardData(); const cfg = S.syncCfg || {}, live = cfg.mode === 'live', own = EDITION === 'web' && WEB.isOwner;
+    const own = EDITION === 'web' && WEB.isOwner;
     const top = `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Coach Board' }])}
-      <div class="head"><div><div class="lbl">From Monday${B && B.at ? ' · synced ' + esc(fmtWhen(B.at)) : ''}</div><h1 class="title">Coach <em>Board.</em></h1>
-        <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. Monday is the source and the board refreshes every morning.</div></div></div>`;
-    const modeBox = own ? `<div class="follow">${live
-      ? `<div class="furow ok"><div><b>The Monday sync is on</b><div class="hint">Every morning Monday’s changes reach the roster, and the portal’s changes go to Monday.</div></div><button class="btn sm ghost" data-act="sync-mode" data-v="preview">Back to preview</button></div>`
-      : `<div class="furow"><div><b>Preview · owners only</b><div class="hint">The sync writes this board and the change log, but changes nothing on the roster or on Monday. Read the latest log, then turn it on.</div></div><button class="btn pri" data-act="sync-mode" data-v="live">Turn on the sync</button></div>`}</div>`
-      : (live || !B ? '' : '<div class="notice">The Monday sync is in preview: the change log shows what it would do; the roster isn’t changed yet.</div>');
-    if (!B) return `${top}${modeBox}<div class="empty" style="margin-bottom:30px">${S.loaded.board ? 'Nothing here yet. The board fills in after the first morning sync from Monday.' : 'Loading…'}</div>${logSection()}`;
-    const byCoach = new Map(); act.filter((x) => x.lead).forEach((x) => { if (!byCoach.has(x.lead)) byCoach.set(x.lead, []); byCoach.get(x.lead).push(x); });
+      <div class="head"><div><div class="lbl">From the roster · Play by Point is the list</div><h1 class="title">Coach <em>Board.</em></h1>
+        <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. Set a player’s coach on their page; this board follows.</div></div></div>`;
+    if (!S.loaded.players) return `${top}<div class="empty" style="margin-bottom:30px">Loading…</div>`;
+    const { act } = boardData();
+    const sortP = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
+    const byCoach = new Map(); act.filter((p) => p.coach).forEach((p) => { if (!byCoach.has(p.coach)) byCoach.set(p.coach, []); byCoach.get(p.coach).push(p); });
     const coaches = Array.from(byCoach.entries()).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
-    const sortP = (a, b) => String(a.f + ' ' + (a.l || '')).localeCompare(String(b.f + ' ' + (b.l || '')));
-    const un = act.filter((x) => !x.lead);
-    const bucket = (s) => (!s ? 'No schedule' : isMorning(s) ? 'Mornings · 7:45 / 9:30 / 2:00' : /4:00/.test(s) ? '4:00 PM' : /9:00/.test(s) ? '9:00 AM' : 'Other times');
-    const BUCKETS = ['4:00 PM', '9:00 AM', 'Mornings · 7:45 / 9:30 / 2:00', 'Other times', 'No schedule'];
-    const tries = items.filter((x) => x.g === 'tryouts').sort((a, b) => String(a.td || '9999').localeCompare(String(b.td || '9999')) || String(a.tt || '').localeCompare(String(b.tt || '')));
-    const away = items.filter((x) => x.g === 'active' && (x.st === 'away' || x.st === 'finished')).sort(sortP);
-    const cl = B.cleanup || {};
-    const clean = [[cl.dupes, 'On Monday more than once', 'The same child has more than one row. Keep one.'], [cl.noLast, 'No last name on Monday', ''],
-      [cl.noSchedule, 'Active with no daily schedule', ''], [cl.notOnAccounting, 'In “Not on accounting board”', 'Attending, but not on the accounting board yet.'],
-      [(cl.portalOnly || []).map((x) => x.name), 'In the portal, not found on Monday', 'Check the name matches Monday, or add them there.'], [cl.gone, 'Linked Monday row is gone', 'Archived or moved to another board.']]
-      .filter((c) => c[0] && c[0].length);
+    const un = act.filter((p) => !p.coach);
+    const gl = (gid) => { const g = groups().find((x) => x.id === gid); return g ? g.label : (gid || 'No group'); };
+    const GIDS = groups().map((g) => g.id).concat(['']);
+    const pbpChip = (p) => (p.pbpNote ? `<span class="chip ${/^Not in/.test(p.pbpNote) ? 'st-missing' : /^Added/.test(p.pbpNote) ? 'st-working' : 'st-done'}" title="${esc(p.pbpNote)}">${/^Not in/.test(p.pbpNote) ? 'not in Play by Point' : /^Added/.test(p.pbpNote) ? 'new' : ''}</span>` : '');
+    const bp = (p, extra) => `<button class="bp" ${goAttr({ view: 'player', pid: p.id })}><span class="pn">${esc(p.name)}</span>${[gl(p.group)].concat(extra || []).filter(Boolean).length ? `<small>${esc([gl(p.group)].concat(extra || []).filter(Boolean).join(' · '))}</small>` : ''}</button>`;
+    const T = tryouts(); const tries = T.today.concat(T.week, T.later);
     const today = todayISO();
-    const l0 = (S.syncLogs || [])[0];
-    const syncLine = l0 ? `<p class="hint due-line"><b>Last sync:</b> ${esc(fmtWhen(l0.at || B.at))}${un.length ? ` · <span class="chip st-missing">${un.length} with no coach</span>` : ' · <span class="chip st-done">everyone has a coach</span>'}${clean.length ? ` · ${clean.reduce((n, c) => n + c[0].length, 0)} to clean up on Monday` : ''}</p>` : '';
-    return `${top}${modeBox}${syncLine}
-      <div class="stats"><div class="stat lead"><div class="lbl">Active on Monday</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
-        <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs</div><b>${tries.length}</b></div></div>
-      <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">lead coach on Monday · players with their daily schedule</span></div>
-      ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps">${list.slice().sort(sortP).map((x) => boardPlayer(x, x.asst && x.asst !== x.lead ? ['with ' + x.asst] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No lead coaches on Monday yet.</div>'}
-      <div class="sect"><h2>No coach yet</h2><span class="muted" style="font-size:12px">${un.length} active on Monday with no lead coach · by daily schedule</span></div>
-      ${un.length ? `<div class="buckets">${BUCKETS.map((k) => { const l = un.filter((x) => bucket(x.sch) === k).sort(sortP); return l.length ? `<div class="bucket"><div class="bh"><b>${esc(k)}</b><span>${l.length}</span></div><div class="bps">${l.map((x) => boardPlayer(x)).join('')}</div></div>` : ''; }).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">Every active player has a lead coach.</div>'}
-      <div class="sect"><h2>Try-outs on Monday</h2><span class="muted" style="font-size:12px">${tries.length}</span></div>
-      ${tries.length ? `<div class="list" style="margin-bottom:30px">${tries.map((x) => `<div class="rowb"><div class="who"><span class="ava when">${esc(x.td ? (x.td === today ? 'Today' : dayLabel(x.td)) : 'No date')}${x.tt ? `<small>${esc(timeLabel(x.tt))}</small>` : ''}</span><div style="min-width:0"><div class="nm">${esc(x.f + (x.l ? ' ' + x.l : ''))}</div><small>${esc([x.age, x.lead ? 'Coach ' + x.lead : ''].filter(Boolean).join(' · ') || 'Details on Monday')}</small></div></div><div class="mid"></div><div class="chips">${x.td && x.td < today ? '<span class="chip warn">Date passed · still a try-out</span>' : ''}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No try-outs on Monday.</div>'}
-      ${away.length ? `<div class="sect"><h2>Marked away</h2><span class="muted" style="font-size:12px">still in Monday’s Active group</span></div><div class="bps flat" style="margin-bottom:30px">${away.map((x) => boardPlayer(x, x.st === 'finished' ? ['finished'] : [])).join('')}</div>` : ''}
-      ${own && clean.length ? `<div class="sect"><h2>Clean-up on Monday</h2><span class="muted" style="font-size:12px">owners only</span></div><div class="list clean" style="margin-bottom:30px">${clean.map(([l, t, h]) => `<div class="crow"><div><b>${esc(t)}</b>${h ? `<div class="hint">${esc(h)}</div>` : ''}</div><div class="cnames">${l.map((n) => { const pp = t.startsWith('In the portal') ? (cl.portalOnly || []).find((x) => x.name === n) : null; return pp && player(pp.pid) ? `<button class="fchip" ${goAttr({ view: 'player', pid: pp.pid })}>${esc(n)}</button>` : `<span class="fchip">${esc(n)}</span>`; }).join('')}</div></div>`).join('')}</div>` : ''}
-      ${logSection()}
-      <p class="hint bfoot">Source: Monday · General Attendance board · synced every morning. Coaches are Monday’s LEAD COACH and ASSISTANT COACH columns.${own ? ` The Proworld Standard and the quarter commit live on <button class="lnk" ${goAttr({ view: 'commit' })}>Standard &amp; commit</button>.` : ''}</p>`;
+    const newOnes = act.filter((p) => p.pbpNote && /^Added/.test(p.pbpNote));
+    const awayNow = S.players.filter((p) => p.status === 'away' && p.pbpNote && /^Not in/.test(p.pbpNote));
+    const syncLine = `<p class="hint due-line"><b>The list:</b> Play by Point, checked Oct 23 · ${un.length ? `<span class="chip st-missing">${un.length} with no coach</span>` : '<span class="chip st-done">everyone has a coach</span>'}${newOnes.length ? ` · <span class="chip st-working">${newOnes.length} new, no coach yet</span>` : ''}${awayNow.length ? ` · ${awayNow.length} set to Away for the coaches to decide` : ''}</p>`;
+    return `${top}${syncLine}
+      <div class="stats"><div class="stat lead"><div class="lbl">Active players</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
+        <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs coming</div><b>${tries.length}</b></div></div>
+      <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">primary coach · players with their group</span></div>
+      ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps">${list.slice().sort(sortP).map((p) => bp(p, p.coach2 && p.coach2 !== p.coach ? ['with ' + p.coach2] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No primary coaches set yet.</div>'}
+      <div class="sect"><h2>No coach yet</h2><span class="muted" style="font-size:12px">${un.length} active with no primary coach · by group</span></div>
+      ${un.length ? `<div class="buckets">${GIDS.map((gid) => { const l = un.filter((p) => (p.group || '') === gid).sort(sortP); return l.length ? `<div class="bucket"><div class="bh"><b>${esc(gl(gid))}</b><span>${l.length}</span></div><div class="bps">${l.map((p) => bp(p, p.pbpNote && /^Added/.test(p.pbpNote) ? ['new from Play by Point'] : [])).join('')}</div></div>` : ''; }).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">Every active player has a primary coach.</div>'}
+      <div class="sect"><h2>Try-outs coming</h2><span class="muted" style="font-size:12px">${tries.length}</span></div>
+      ${tries.length ? `<div class="list" style="margin-bottom:30px">${tries.map((t) => `<div class="rowb"><div class="who"><span class="ava when">${esc(t.date ? (t.date === today ? 'Today' : dayLabel(t.date)) : 'No date')}${t.time ? `<small>${esc(timeLabel(t.time))}</small>` : ''}</span><div style="min-width:0"><div class="nm">${esc(t.name || 'Unnamed')}</div><small>${esc([tryGroupLabel(t), t.coach ? 'Coach ' + t.coach : ''].filter(Boolean).join(' · ') || 'Details on the try-out')}</small></div></div><div class="mid"></div><div class="chips"><button class="btn sm ghost" ${goAttr({ view: 'tryout', id: t.id })}>Open</button></div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No try-outs booked.</div>'}
+      ${awayNow.length ? `<div class="sect"><h2>Set to Away · coaches decide</h2><span class="muted" style="font-size:12px">on the roster, not in Play by Point on Oct 23</span></div><div class="bps flat" style="margin-bottom:30px">${awayNow.sort(sortP).map((p) => bp(p, [/duplicate of (.+)$/.test(p.pbpNote) ? 'looks like a duplicate' : 'not in Play by Point'])).join('')}</div>` : ''}
+      <p class="hint bfoot">The roster is the source. Play by Point is the official list of who is enrolled; a player who is not there sits in Away until a coach brings them back.${own ? ` The Proworld Standard and the quarter commit live on <button class="lnk" ${goAttr({ view: 'commit' })}>Standard &amp; commit</button>.` : ''}</p>`;
   }
   /* owners: the standard we hold ourselves to and the quarter commit (moved off the Coach Board, Oct 23) */
   function viewCommit() {
