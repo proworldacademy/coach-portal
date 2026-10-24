@@ -115,7 +115,6 @@ service cloud.firestore {
       allow update: if (runs()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'mondayId', 'monday', 'updatedAt']))
         || (!runs() && portal() && director())   // a player's coach, group, tier, status: directors (Oct 24); coaches write assessments, not the record
-        || (!runs() && portal() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coach', 'coach2', 'updatedAt']))   // a coach may put their own name on a player (Antonio, Oct 24)
         || (!runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['group', 'coach', 'coach2', 'status', 'sport', 'updatedAt']));
       allow delete: if portal() && admin();
       // Parent name, email and phone: from Monday (the sync), from the enrollment page (the engine) or typed at the front desk.
