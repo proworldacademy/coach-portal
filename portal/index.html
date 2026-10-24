@@ -3463,6 +3463,8 @@ const PW_CONFIG = {
     return W.filter(([k]) => (c || {})[k]).map(([k, one, many]) => `${c[k]} ${c[k] === 1 ? one : many}`);
   }
   function syncStrip() {
+    return '';   // Monday is retired (Oct 24): the roster is Play by Point's list; nothing to show here
+    // eslint-disable-next-line no-unreachable
     const last = S.syncLogs[0], B = S.board; if (!last && !B) return '';
     const bad = !!last && last.ok === false; const stale = !!B && !!B.at && Date.now() - B.at > 36 * 3600e3;
     const pv = (last && last.mode === 'preview') || (!!B && B.mode === 'preview');
@@ -3474,7 +3476,7 @@ const PW_CONFIG = {
   }
   function notPlacedPanel() {
     const list = S.players.filter((p) => active(p) && !p.group && p.sport !== 'soccer').sort((a, b) => String(a.name).localeCompare(String(b.name))); if (!list.length) return '';
-    return `<div class="notice npl"><b>${list.length} new, not in a group yet.</b> ${list.length === 1 ? 'This player' : 'They'} came from Monday or enrolled online without a group. Open the player → Edit player → Group.
+    return `<div class="notice npl"><b>${list.length} new, not in a group yet.</b> ${list.length === 1 ? 'This player' : 'They'} came from Play by Point or enrolled online without a group. Open the player → Edit player → Group.
       <div class="npl-list">${list.slice(0, 16).map((p) => `<button class="fchip" ${goAttr({ view: 'player', pid: p.id })}>${esc(p.name)}</button>`).join('')}${list.length > 16 ? `<span class="chip">+${list.length - 16}</span>` : ''}</div></div>`;
   }
 
