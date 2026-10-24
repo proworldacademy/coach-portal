@@ -54,6 +54,26 @@ async function slack(db, which, text, lines) {
   } catch (e) { console.error('slack error', e.message); return false; }
 }
 
+/* A direct message to one person on Slack (the coaches' reminders, Antonio Oct 24). Needs a Slack bot token on settings/notify.slackBotToken
+   (an owner pastes it on Messages → Settings → Coach alerts; scopes chat:write, im:write, users:read, users:read.email). */
+async function slackDm(db, userId, text) {
+  try {
+    const s = await settings(db); const tok = String(s.slackBotToken || ''); if (!tok || !userId) return false;
+    const f = net(); if (!f) return false;
+    const res = await f('https://slack.com/api/chat.postMessage', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json; charset=utf-8' }, body: JSON.stringify({ channel: userId, text: String(text).slice(0, 2000) }) });
+    const j = await res.json().catch(() => ({})); if (!j.ok) console.error('slack dm failed', j.error || res.status); return !!j.ok;
+  } catch (e) { console.error('slack dm error', e.message); return false; }
+}
+/* The Slack user id behind an e-mail (to link each coach's personal Slack once). */
+async function slackUserByEmail(db, email) {
+  try {
+    const s = await settings(db); const tok = String(s.slackBotToken || ''); if (!tok || !email) return null;
+    const f = net(); if (!f) return null;
+    const res = await f('https://slack.com/api/users.lookupByEmail?email=' + encodeURIComponent(email), { headers: { Authorization: 'Bearer ' + tok } });
+    const j = await res.json().catch(() => ({})); return j.ok && j.user ? { id: j.user.id, name: j.user.real_name || j.user.name || '' } : null;
+  } catch (e) { return null; }
+}
+
 /* A text to a family. Only when texts are switched on and the JustCall keys are set. Returns true when sent. */
 async function text(db, to, body) {
   try {
@@ -84,4 +104,4 @@ async function test(db, phone) {
   return out;
 }
 
-module.exports = { settings, forget, e164, slack, text, test, SIGN, FRONT_DESK, _useFetch };
+module.exports = { settings, forget, e164, slack, slackDm, slackUserByEmail, text, test, SIGN, FRONT_DESK, _useFetch };

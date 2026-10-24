@@ -26,12 +26,20 @@ function fmtT(h) { const H = Math.floor(h), M = Math.round((h - H) * 60); const 
 function fmtDay(dateStr) { const [y, m, d] = dateStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }); }
 function first(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
 
-async function staffPhoneFor(db, coachName) {
+async function staffFor(db, coachName) {
   const want = fold(first(coachName)); if (!want) return null;
   const snap = await db.collection('staff').where('active', '==', true).get();
-  for (const d of snap.docs) { const r = d.data() || {}; const names = [r.coachAs, first(r.name)].map(fold).filter(Boolean); if (names.includes(want) && r.phone) return { phone: NOTIFY.e164(r.phone), name: r.name || d.id, email: d.id }; }
+  for (const d of snap.docs) { const r = d.data() || {}; const names = [r.coachAs, first(r.name)].map(fold).filter(Boolean); if (names.includes(want)) return { phone: r.phone ? NOTIFY.e164(r.phone) : '', slackId: r.slackId || '', name: r.name || d.id, email: d.id }; }
   return null;
 }
+/* The coach hears it on their personal Slack (Antonio, Oct 24); a text only when there is no Slack link yet but a mobile is on file. */
+async function tellCoach(db, coachName, text) {
+  const c = await staffFor(db, coachName); if (!c) return { how: 'none' };
+  if (c.slackId && await NOTIFY.slackDm(db, c.slackId, text)) return { how: 'slack' };
+  if (c.phone && await NOTIFY.text(db, c.phone, text)) return { how: 'text' };
+  return { how: 'none' };
+}
+const staffPhoneFor = staffFor;
 function courtName(courtId) { const n = String(courtId || ''); return /^\d+$/.test(n) ? 'Court ' + n : (n === 'f1' || n === 'f2' ? 'Field ' + n.slice(1) : n); }
 
 /* Booked: a text to the coach and a line in the coaches' Slack. The page texts the family. */
@@ -40,9 +48,8 @@ async function booked(db, who, body) {
   const start = Number(body.start), dur = Number(body.dur) || 1, court = courtName(body.court);
   if (!coach || !player || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(start)) return { ok: false, reason: 'incomplete' };
   const line = `${player} · ${fmtDay(date)} ${fmtT(start)}–${fmtT(start + dur)} · ${court}`;
-  const out = { ok: true, coachText: false, slack: false };
-  const c = await staffPhoneFor(db, coach);
-  if (c && c.phone) out.coachText = await NOTIFY.text(db, c.phone, `Private booked: ${line}. Booked by ${first(who.name) || who.email}.`);
+  const out = { ok: true, slack: false };
+  out.coach = (await tellCoach(db, coach, `Private booked: ${line}. Booked by ${first(who.name) || who.email}.`)).how;
   out.slack = await NOTIFY.slack(db, 'coaches', `Private booked · ${coach} · ${line} — ${who.name || who.email}`);
   return out;
 }
@@ -52,8 +59,8 @@ async function cancelled(db, who, body) {
   const coach = String(body.coach || '').slice(0, 60), player = String(body.player || '').slice(0, 80), date = String(body.date || '').slice(0, 10);
   const start = Number(body.start), dur = Number(body.dur) || 1;
   const line = `${player} · ${fmtDay(date)} ${fmtT(start)}–${fmtT(start + dur)}`;
-  const out = { ok: true, coachText: false };
-  const c = await staffPhoneFor(db, coach); if (c && c.phone) out.coachText = await NOTIFY.text(db, c.phone, `Private cancelled: ${line}.`);
+  const out = { ok: true };
+  out.coach = (await tellCoach(db, coach, `Private cancelled: ${line}.`)).how;
   await NOTIFY.slack(db, 'coaches', `Private cancelled · ${coach} · ${line} — ${who.name || who.email}`);
   return out;
 }
@@ -81,7 +88,7 @@ async function remind(db, now, log) {
       const mark = { [s.key]: Date.now() };
       try {
         if (fam && fam.phone && fam.valid && fam.optIn) { if (await NOTIFY.text(db, fam.phone, s.fam)) out.sent++; else out.skipped++; } else out.skipped++;
-        const c = await staffPhoneFor(db, pv.coach); if (c && c.phone) { if (await NOTIFY.text(db, c.phone, s.coach)) out.sent++; else out.skipped++; }
+        const how = (await tellCoach(db, pv.coach, s.coach)).how; if (how !== 'none') out.sent++; else out.skipped++;
         await ref.set(mark, { merge: true });
         if (log) log(`${s.key} · ${pv.id} · ${when}`);
       } catch (e) { out.errors.push(pv.id + ': ' + e.message); }
@@ -90,4 +97,10 @@ async function remind(db, now, log) {
   return out;
 }
 
-module.exports = { booked, cancelled, remind, etEpoch };
+/* Link every active staff member's personal Slack by their sign-in e-mail (owners, from Messages → Settings → Coach alerts). */
+async function linkSlack(db) {
+  const snap = await db.collection('staff').where('active', '==', true).get(); const out = { linked: [], missing: [] };
+  for (const d of snap.docs) { const r = d.data() || {}; const u = await NOTIFY.slackUserByEmail(db, d.id); if (u) { await d.ref.set({ slackId: u.id, slackName: u.name }, { merge: true }); out.linked.push({ email: d.id, name: r.name || d.id, slack: u.name }); } else out.missing.push({ email: d.id, name: r.name || d.id }); }
+  return out;
+}
+module.exports = { booked, cancelled, remind, etEpoch, linkSlack };
