@@ -334,6 +334,45 @@ table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
 .tagrow input[readonly]{color:var(--muted);background:var(--surface)}
 .tagpanel .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #tag-new-label{height:36px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:13.5px;background:#fff}
+
+/* ── Messages as threads (Option A, Oct 24) ── */
+.threads{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;margin-top:22px;height:min(720px,78vh)}
+.tlist{display:flex;flex-direction:column;overflow:hidden;padding:10px}
+.tfind input{width:100%;height:40px;border-radius:12px;border:0;background:#f4f4f0;padding:0 14px;font:inherit;font-size:14px;margin-bottom:8px}
+.trows{overflow:auto;display:flex;flex-direction:column;gap:2px}
+.trow{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 10px;border-radius:14px;border:0;background:transparent;text-align:left;font:inherit;cursor:pointer;color:var(--ink)}
+.trow:hover{background:#f7f7f3}.trow.on{background:#f1f1ec}
+.tav{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--ink);flex:none}
+.tav.big{width:36px;height:36px}
+.tmain b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tmain small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.twhen{font-size:11.5px;color:var(--muted);align-self:start;margin-top:2px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tdot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 2px var(--ink);display:inline-block}
+.tview{display:flex;flex-direction:column;overflow:hidden}
+.thead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.thead b{font-size:16px}.thead small{color:var(--muted);font-size:13px}
+.thead .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.bubbles{flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(#fff,#fafaf8)}
+.tday{align-self:center;font-size:11.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin:6px 0}
+.bub{max-width:66%;padding:11px 15px;border-radius:18px;font-size:14.5px;line-height:1.4;display:flex;flex-direction:column;gap:5px}
+.bub .txt{white-space:pre-wrap;word-break:break-word}
+.bub.out{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:6px}
+.bub.in{align-self:flex-start;background:#efefea;color:var(--ink);border-bottom-left-radius:6px}
+.bub .meta{font-size:11px;opacity:.7}.bub.out .meta{color:var(--lime);opacity:1}.bub .meta b{color:#ffb4b4}
+.bub.sys{align-self:center;background:transparent;color:var(--muted);font-size:12.5px;max-width:80%;text-align:center}
+.composer{padding:12px 18px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;background:#fff}
+.composer .to{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.composer .to .chip.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+.composer .cnt{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.composer .tpl{display:flex;gap:6px;flex-wrap:wrap}
+.tchip{height:30px;padding:0 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.tchip:hover{border-color:var(--ink)}
+.composer .box{display:flex;align-items:flex-end;gap:10px}
+.composer textarea{flex:1;min-height:46px;max-height:160px;border-radius:16px;border:0;background:#f4f4f0;padding:12px 16px;font:inherit;font-size:14.5px;resize:none;line-height:1.4}
+.composer textarea:focus{outline:2px solid var(--ink)}
+.composer .send{width:46px;height:46px;border-radius:50%;border:0;background:var(--ink);color:var(--lime);font-size:20px;font-weight:700;cursor:pointer;flex:none}
+.composer .send:disabled{opacity:.35;cursor:default}
+@media(max-width:900px){.threads{grid-template-columns:1fr;height:auto}.tlist{max-height:40vh}.tview{min-height:60vh}}
 </style>
 <link rel="stylesheet" href="/backend/calm.css"><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, soft status tints; the Privates ticket -->
 </head>
@@ -1166,7 +1205,7 @@ function renderDesk(app){
    also does the sending — the JustCall keys never reach this page. Nobody is texted without opt-in: those rows are counted
    and skipped, never sent. The draft and the selection live in this browser only. */
 const MSG_KEY='pw-backend-msg';
-const MSG={tab:'compose',sel:[],text:'',template:'',date:iso(TODAY),fills:{time:'',court:''},via:{},preview:'',q:'',open:{}};
+const MSG={tab:'threads',sel:[],text:'',template:'',date:iso(TODAY),fills:{time:'',court:''},via:{},preview:'',q:'',open:{},thread:'',tq:'',ttext:''};
 try{const j=JSON.parse(localStorage.getItem(MSG_KEY)||'{}');for(const k of ['sel','text','template','fills'])if(j[k]!==undefined)MSG[k]=j[k]}catch(e){}
 function msgSave(){try{localStorage.setItem(MSG_KEY,JSON.stringify({sel:MSG.sel,text:MSG.text,template:MSG.template,fills:MSG.fills}))}catch(e){}}
 let SMSD=null,SMSD_AT=0,SMSH=null,SMS_LOADING=false;
@@ -1199,15 +1238,15 @@ function smsFinal(p){const cfg=SMSD&&SMSD.settings||{};const t=smsRender(MSG.tex
 
 async function renderMessages(app){
   if(!SMSD){app.innerHTML=`<section class="hero"><h1>Messages.</h1><p>Loading the families on file…</p></section>`;await smsLoad();if(!SMSD||state.view!=='messages')return}
-  const can=smsCanSend();if(!can&&MSG.tab!=='sent')MSG.tab='sent';
-  const tabs=can?[['compose','Compose'],['sent','Sent'],['templates','Templates'],['settings','Settings']]:[['sent','Sent']];
-  app.innerHTML=`<section class="hero"><h1>Messages.</h1><p>${can?'Texts to families from the academy\'s line — a rain update, a court change, a reminder. Pick who, write or pick the message, send. Only families who opted in are texted; replies stay in the JustCall inbox.':'What the front desk has texted the families of your players. Replies stay in the JustCall inbox.'}</p></section>
+  const can=smsCanSend();if(!can&&!['threads','sent'].includes(MSG.tab))MSG.tab='threads';
+  const tabs=can?[['threads','Threads'],['compose','Custom audience'],['templates','Templates'],['settings','Settings']]:[['threads','Threads']];
+  app.innerHTML=`<section class="hero"><h1>Messages.</h1><p>${can?'One thread per group and per family. Pick a thread, write at the bottom, send: the academy\'s number does the sending, only families who opted in are texted, and their replies come back into the thread.':'What went out to the families of your players, and what they answered.'}</p></section>
   <div class="search" style="margin-top:22px"><div class="seg">${tabs.map(([k,l])=>`<button data-mtab="${k}" aria-pressed="${MSG.tab===k}">${l}</button>`).join('')}</div>${SMSD.line&&SMSD.line.connected?`<span class="pill ok">JustCall connected${SMSD.line.from?' · '+esc(phoneFmt(SMSD.line.from)):''}</span>`:can?'<span class="pill warn">JustCall not connected</span>':''}<a class="btn xs ghost" style="margin-left:auto" href="${esc(SMSD.settings&&SMSD.settings.inboxUrl||'https://app.justcall.io')}" target="_blank" rel="noopener">Open JustCall inbox</a><button class="btn xs ghost" id="msg-refresh">Refresh</button></div>
   ${SMSD.error?`<p class="note">${esc(SMSD.error)}</p>`:''}
   <div id="msg-body"></div>`;
   app.querySelectorAll('[data-mtab]').forEach(b=>b.onclick=()=>{MSG.tab=b.dataset.mtab;renderMessages(app)});
   $('#msg-refresh').onclick=async()=>{SMSH=null;await smsLoad(true);renderMessages(app)};
-  ({compose:drawCompose,sent:drawSent,templates:drawTemplates,settings:drawSmsSettings})[MSG.tab](app,$('#msg-body'));
+  ({threads:drawThreads,compose:drawCompose,sent:drawSent,templates:drawTemplates,settings:drawSmsSettings})[MSG.tab](app,$('#msg-body'));
 }
 
 /* ---- Compose ---- */
@@ -1260,12 +1299,66 @@ function smsConfirm(app,body,willSend,notIn,noNum,previewFor){
   openModal(`<h3>Send to ${willSend.length} player${willSend.length===1?'':'s'}?</h3><p class="sub">${notIn.length?notIn.length+' not opted in and ':''}${noNum.length?noNum.length+' without a valid number ':''}${notIn.length||noNum.length?'are skipped. ':''}Each family gets its own text from ${esc(SMSD.line&&SMSD.line.from?phoneFmt(SMSD.line.from):'the academy line')}.</p>
   <div class="note" style="white-space:pre-wrap;font-size:14px">${esc(final)}</div><p class="policy">Sent one by one, a few at a time; failures are retried three times and listed under Sent.</p>
   <div class="actions"><button class="btn lime" id="m-go">Send now</button><button class="btn ghost" id="m-close">Back</button></div>`);
-  $('#m-go').onclick=async()=>{closeModal();const recipients=willSend.map(p=>({player:p.id,vars:smsVars(p)}));const prog=$('#msg-progress');prog.innerHTML='<p class="note">Sending…</p>';$('#msg-send').disabled=true;
-    try{let out=await liveApi('/api/admin/sms/send',{body:MSG.text,template:MSG.template,recipients});let guard=0;
+  $('#m-go').onclick=async()=>{closeModal();const recipients=willSend.map(p=>({player:p.id,vars:smsVars(p)}));const prog=$('#msg-progress');prog.innerHTML='<p class="note">Sending…</p>';const sendBtn=$('#msg-send')||$('#t-send');if(sendBtn)sendBtn.disabled=true;
+    try{let out=await liveApi('/api/admin/sms/send',{body:MSG.text,template:MSG.template,recipients,thread:MSG.sendThread||'',threadLabel:MSG.sendThreadLabel||''});let guard=0;
       while(out.state!=='done'&&guard<60){prog.innerHTML=`<p class="note">Sending… ${out.sent+out.failed} of ${out.total-out.skipped}</p>`;out=await liveApi('/api/admin/sms/continue',{batch:out.batch});guard++}
       prog.innerHTML=`<p class="note"><b>Sent ${out.sent}${out.skipped?', skipped '+out.skipped+' (not opted in or no valid number)':''}${out.failed?', <span style="color:var(--orchid)">failed '+out.failed+'</span> — see Sent to retry':''}.</b></p>`;
-      SMSH=null;toast('Sent to '+out.sent+' famil'+(out.sent===1?'y':'ies')+'.');MSG.sel=[];MSG.via={};msgSave();setTimeout(()=>{MSG.tab='sent';renderMessages(app)},1500)}
-    catch(e){prog.innerHTML=`<p class="note" style="color:var(--orchid)">${esc(e.message)}</p>`;$('#msg-send').disabled=false}};
+      SMSH=null;toast('Sent to '+out.sent+' famil'+(out.sent===1?'y':'ies')+'.');MSG.sel=[];MSG.via={};if(MSG.sendThread){MSG.text='';MSG.ttext='';MSG.thread=MSG.sendThread}msgSave();setTimeout(()=>{MSG.tab='threads';renderMessages(app)},900)}
+    catch(e){prog.innerHTML=`<p class="note" style="color:var(--orchid)">${esc(e.message)}</p>`;if(sendBtn)sendBtn.disabled=false}};
+}
+
+/* ---- Threads (Option A, Antonio Oct 24): one conversation per group and per family ---- */
+function threadList(rows){const {groups,day}=smsGroups(rows);const fam=rows.filter(p=>p.status==='active'||p.status==='away');
+  const th=[];th.push({key:'all',label:'Everything sent',sub:'every text, every group',ids:fam.map(p=>p.id),kind:'all',color:'#efefea',ini:'All'});
+  for(const g of groups)th.push({key:g.key,label:g.label,sub:g.n+' player'+(g.n===1?'':'s'),ids:g.ids,kind:g.kind,color:g.kind==='coach'?'var(--mints)':'var(--cyans)',ini:g.label.replace(/^Coach /,'').split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase()});
+  for(const d of day)th.push({key:d.key,label:d.label,sub:d.n+' today',ids:d.ids,kind:d.kind,color:'var(--orchids)',ini:d.kind==='court'?'C'+(d.court||''):'Day',time:d.time||'',court:d.court||''});
+  for(const p of fam)th.push({key:'f:'+p.id,label:p.parent||p.name,sub:p.parent?p.name:(p.programLabel||''),ids:[p.id],kind:'family',color:'#efefea',ini:(p.parent||p.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase(),pid:p.id});
+  return th}
+function threadLines(t){const h=SMSH||{batches:[],logs:[],events:[]};const ids=new Set(t.ids);const lines=[];
+  const byBatch={};for(const l of h.logs)(byBatch[l.batch]=byBatch[l.batch]||[]).push(l);
+  for(const b of h.batches){const ls=byBatch[b.id]||[];const mine=t.kind==='all'?ls:ls.filter(l=>ids.has(l.player));if(!mine.length)continue;
+    const match=t.kind==='all'||t.kind==='family'||(b.thread&&b.thread===t.key)||(!b.thread&&mine.length>=Math.max(1,Math.floor(ls.length*.8)));if(!match)continue;
+    const c={sent:mine.filter(l=>l.status==='sent').length,failed:mine.filter(l=>l.status==='failed').length,skipped:mine.filter(l=>l.status==='skipped').length,queued:mine.filter(l=>l.status==='queued').length,delivered:mine.filter(l=>/deliver/i.test(l.delivery||'')).length};
+    lines.push({dir:'out',at:b.at,body:(mine[0]&&mine[0].body)||b.text,by:b.byName||b.by,c,batch:b.id,label:b.threadLabel||''})}
+  for(const e of (h.events||[])){if(!e.players||!e.players.some(id=>ids.has(id))&&t.kind!=='all')continue;if(t.kind!=='all'&&!(e.players||[]).some(id=>ids.has(id)))continue;const p=state.players.find(x=>(e.players||[]).includes(x.id));lines.push({dir:'in',at:e.at,body:e.body,kind:e.kind,who:p?((p.parent||'')+(p.parent?' · ':'')+p.name):phoneFmt(e.phone)})}
+  lines.sort((a,b)=>(a.at||0)-(b.at||0));return lines}
+function drawThreads(app,body){
+  const rows=smsRows();const all=threadList(rows);const can=smsCanSend();
+  if(!SMSH){body.innerHTML='<p class="muted" style="margin-top:22px">Loading the conversations…</p>';liveApi('/api/admin/sms/history').then(h=>{SMSH=h;if(MSG.tab==='threads')drawThreads(app,body)}).catch(e=>{body.innerHTML=`<p class="note">${esc(e.message)}</p>`});return}
+  const last={};for(const t of all){const ls=threadLines(t);t.n=ls.length;t.last=ls[ls.length-1]||null;t.unread=ls.some(l=>l.dir==='in'&&l.kind==='reply'&&(l.at||0)>(Number(localStorage.getItem('pw-msg-seen-'+t.key))||0))}
+  const q=MSG.tq.trim().toLowerCase();
+  let list=all.filter(t=>t.kind!=='family'||t.n||q);if(q)list=list.filter(t=>t.label.toLowerCase().includes(q)||(t.sub||'').toLowerCase().includes(q));
+  const order=t=>t.kind==='all'?3e15:(t.last?t.last.at:0)+(t.kind==='family'?0:1e12);list.sort((a,b)=>order(b)-order(a));
+  if(!MSG.thread||!all.find(t=>t.key===MSG.thread))MSG.thread=(list[0]||all[0]).key;
+  const cur=all.find(t=>t.key===MSG.thread);const lines=threadLines(cur);try{localStorage.setItem('pw-msg-seen-'+cur.key,String(Date.now()))}catch(e){}
+  const members=rows.filter(p=>cur.ids.includes(p.id));const willSend=members.filter(p=>p.phone&&p.valid&&p.optIn),notIn=members.filter(p=>!(p.phone&&p.valid&&p.optIn));
+  const when=t=>{if(!t)return '';const d=new Date(t);const today=iso(d)===iso(TODAY);return today?d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):fmtDate(d)};
+  const dayOf=t=>{const d=new Date(t);return iso(d)===iso(TODAY)?'Today':iso(d)===iso(addDays(TODAY,-1))?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})};
+  const cfg=SMSD.settings||{};const tpl=cfg.templates||[];
+  let bubbles='',lastDay='';for(const l of lines){const dy=dayOf(l.at);if(dy!==lastDay){bubbles+=`<div class="tday">${esc(dy)}</div>`;lastDay=dy}
+    if(l.dir==='out')bubbles+=`<div class="bub out"><span class="txt">${esc(String(l.body||'').split('\n')[0])}</span><span class="meta">${l.label&&cur.kind==='all'?esc(l.label)+' · ':''}sent ${l.c.sent}${l.c.delivered?' · '+l.c.delivered+' delivered':''}${l.c.failed?' · <b>'+l.c.failed+' failed</b>':''}${l.c.skipped?' · '+l.c.skipped+' skipped':''}${l.c.queued?' · '+l.c.queued+' sending':''} · ${esc(l.by||'')} · ${esc(when(l.at))}</span></div>`;
+    else bubbles+=`<div class="bub in${l.kind!=='reply'?' sys':''}"><span class="txt">${esc(l.kind==='optout'?'STOP':l.kind==='optin'?'START':l.body)}</span><span class="meta">${esc(l.who||'')}${l.kind==='optout'?' · opted out, not texted again':l.kind==='optin'?' · opted back in':''} · ${esc(when(l.at))}</span></div>`}
+  if(!lines.length)bubbles=`<div class="tday">Nothing yet</div><div class="bub sys"><span class="txt">${cur.kind==='family'?'No text to this family yet.':'No text to this group yet. The first one starts the thread.'}</span></div>`;
+  const text=MSG.ttext||'';const seg=smsSegments(text+(cfg.footer===false?'':'\n'+FOOTER_OF(cfg.senderName||'ProWorld Academy')));
+  body.innerHTML=`<div class="threads"><div class="tlist card">
+    <div class="tfind"><input id="t-q" placeholder="Search a family or a group" value="${esc(MSG.tq)}" autocomplete="off"></div>
+    <div class="trows">${list.map(t=>`<button class="trow${t.key===cur.key?' on':''}" data-t="${esc(t.key)}"><span class="tav" style="background:${t.color}">${esc(t.ini)}</span><span class="tmain"><b>${esc(t.label)}</b><small>${t.last?esc((t.last.dir==='out'?'You: ':'')+String(t.last.body||'').split('\n')[0]):esc(t.sub||'')}</small></span><span class="twhen">${t.last?esc(when(t.last.at)):''}${t.unread?'<i class="tdot"></i>':''}</span></button>`).join('')||'<p class="muted mini" style="padding:12px">No one matches.</p>'}</div></div>
+   <div class="tview card">
+    <div class="thead"><span class="tav big" style="background:${cur.color}">${esc(cur.ini)}</span><div><b>${esc(cur.label)}</b><br><small>${cur.kind==='family'?esc(cur.sub||''):members.length+' player'+(members.length===1?'':'s')+' · '+willSend.length+' famil'+(willSend.length===1?'y':'ies')+' opted in'+(notIn.length?' · '+notIn.length+' skipped':'')}</small></div><div class="r">${willSend.length?`<span class="pill ok">${willSend.length} will get it</span>`:''}${notIn.length?`<span class="pill">${notIn.length} not opted in</span>`:''}${cur.kind!=='all'?`<button class="btn xs ghost" data-who="1">Who</button>`:''}</div></div>
+    <div class="bubbles" id="t-bubbles">${bubbles}</div>
+    ${can&&cur.kind!=='all'?`<div class="composer"><div class="to">To: <span class="chip sm on">${esc(cur.label)}</span>${cur.kind!=='family'?`<button class="chip sm" data-custom="1">+ add a coach, a day, a court or a family</button>`:''}<span class="cnt">${willSend.length} famil${willSend.length===1?'y':'ies'} · opted in only · ${seg.segs} segment${seg.segs===1?'':'s'}</span></div>
+      <div class="tpl">${tpl.map(t=>`<button class="tchip" data-tpl="${esc(t.id)}">${esc(t.name)}</button>`).join('')}<button class="tchip" data-tpl="" title="Templates">+ template</button></div>
+      <div class="box"><textarea id="t-text" rows="1" maxlength="1200" placeholder="Write to ${esc(cur.label)}…">${esc(text)}</textarea><button class="send" id="t-send" ${willSend.length&&text.trim()?'':'disabled'} title="Send">↑</button></div>
+      <div class="hint" style="margin:4px 2px 0">Placeholders work: {first_name} {program} {time} {court}. The footer and STOP handling are added by the system.</div></div>`:can?`<div class="composer"><div class="hint">Pick a group or a family on the left to write to it, or use Custom audience for a one-off mix.</div></div>`:''}
+   </div></div>`;
+  body.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{MSG.thread=b.dataset.t;MSG.ttext='';drawThreads(app,body)});
+  const qi=$('#t-q');qi.oninput=()=>{MSG.tq=qi.value;drawThreads(app,body);const i=$('#t-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)};
+  const bb=$('#t-bubbles');if(bb)bb.scrollTop=bb.scrollHeight;
+  const who=body.querySelector('[data-who]');if(who)who.onclick=()=>openModal(`<h3>${esc(cur.label)}</h3><p class="sub">${members.length} player${members.length===1?'':'s'}</p><table class="tablelist"><thead><tr><th>Player</th><th>Parent</th><th>Texts</th></tr></thead><tbody>${members.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.parent||'')}<div class="m">${p.phone?esc(phoneFmt(p.phone)):'no number'}</div></td><td>${p.optIn&&p.valid?'<span class="pill ok">opted in</span>':p.optOut?'<span class="pill warn">opted out</span>':!p.phone||!p.valid?'<span class="pill warn">no valid number</span>':'<span class="pill">not opted in</span>'}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="btn ghost sm" id="m-close">Back</button></div>`);
+  const custom=body.querySelector('[data-custom]');if(custom)custom.onclick=()=>{MSG.sel=members.map(p=>p.id);MSG.via={};msgSave();MSG.tab='compose';renderMessages(app)};
+  body.querySelectorAll('[data-tpl]').forEach(b=>b.onclick=()=>{if(!b.dataset.tpl){MSG.tab='templates';renderMessages(app);return}const t=tpl.find(x=>x.id===b.dataset.tpl);if(t){MSG.ttext=t.text;MSG.template=t.id;drawThreads(app,body);const ta=$('#t-text');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}}});
+  const ta=$('#t-text');if(ta){const grow=()=>{ta.style.height='auto';ta.style.height=Math.min(160,ta.scrollHeight)+'px'};grow();ta.oninput=()=>{MSG.ttext=ta.value;grow();const sb=$('#t-send');if(sb)sb.disabled=!(willSend.length&&ta.value.trim())};ta.onkeydown=ev=>{if((ev.metaKey||ev.ctrlKey)&&ev.key==='Enter'){ev.preventDefault();const sb=$('#t-send');if(sb&&!sb.disabled)sb.click()}}}
+  const sb=$('#t-send');if(sb)sb.onclick=()=>{MSG.text=MSG.ttext;MSG.sendThread=cur.key;MSG.sendThreadLabel=cur.label;MSG.via={};for(const p of willSend)if(cur.time||cur.court)MSG.via[p.id]={time:cur.time||'',court:cur.court||''};const preview=willSend[0]||null;const holder=document.createElement('div');holder.id='msg-progress';body.appendChild(holder);const fake={disabled:false};smsConfirm(app,body,willSend,notIn.filter(p=>p.phone&&p.valid),notIn.filter(p=>!p.phone||!p.valid),preview)};
 }
 
 /* ---- Sent ---- */

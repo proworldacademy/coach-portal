@@ -244,7 +244,7 @@ async function send(db, who, body, opts) {
   const counts = { total: rows.length, sent: 0, failed: 0, skipped: rows.filter((r) => r.status === 'skipped').length, queued: rows.filter((r) => r.status === 'queued').length };
   const seg = segments(render(text, { first_name: 'Alexander', program: 'Afterschool', time: '4:00 PM', court: '12' }) + footer);
   let batch = db.batch(); let n = 0;
-  batch.set(batchRef, { at: now, by: who.email, byName: who.name || who.email, text, footer: cfg.footer ? FOOTER(cfg.senderName) : '', template: cleanText(body.template, 40), segments: seg.segments, encoding: seg.encoding, state: counts.queued ? 'sending' : 'done', counts, doneAt: counts.queued ? null : now }); n++;
+  batch.set(batchRef, { at: now, by: who.email, byName: who.name || who.email, text, footer: cfg.footer ? FOOTER(cfg.senderName) : '', template: cleanText(body.template, 40), thread: cleanText(body.thread, 80), threadLabel: cleanText(body.threadLabel, 80), segments: seg.segments, encoding: seg.encoding, state: counts.queued ? 'sending' : 'done', counts, doneAt: counts.queued ? null : now }); n++;
   for (const r of rows) { batch.set(db.collection('smsLog').doc(), r); n++; if (n >= 400) { await batch.commit(); batch = db.batch(); n = 0; } }
   if (n) await batch.commit();
   const out = await continueBatch(db, batchRef.id, opts);
@@ -333,7 +333,7 @@ async function history(db, who, q) {
   const batches = [];
   for (const id of ids) { const d = await db.doc('smsBatches/' + id).get(); if (d.exists) batches.push(Object.assign({ id }, d.data())); }
   batches.sort((a, b) => (b.at || 0) - (a.at || 0));
-  return { batches, events: events.slice(0, 50), logs: logs.map((l) => ({ id: l.id, batch: l.batch, at: l.at, sentAt: l.sentAt || null, by: l.byName || l.by, player: l.player, playerName: l.playerName, group: l.group, coach: l.coach, phone: l.phone, body: l.body, status: l.status, reason: l.reason || '', error: l.error || '', delivery: l.delivery || '', attempts: l.attempts || 0 })) };
+  return { batches, events: events.slice(0, 300), logs: logs.map((l) => ({ id: l.id, batch: l.batch, at: l.at, sentAt: l.sentAt || null, by: l.byName || l.by, player: l.player, playerName: l.playerName, group: l.group, coach: l.coach, phone: l.phone, body: l.body, status: l.status, reason: l.reason || '', error: l.error || '', delivery: l.delivery || '', attempts: l.attempts || 0 })) };
 }
 
 /* ---- the JustCall webhook: STOP / START from a family, delivery updates for what we sent ---- */
@@ -370,8 +370,12 @@ async function handleEvent(db, body) {
     const from = e164(d.contact_number || ''); const text = String((d.sms_info && d.sms_info.body) || d.body || '').trim();
     if (!from) return out;
     const stop = STOP_WORDS.test(text), start = !stop && START_WORDS.test(text);
-    if (!stop && !start) return Object.assign(out, { did: 'kept (a reply, read in the JustCall inbox)' });
     const hits = (await recipients(db)).filter((r) => r.phone === from);
+    if (!stop && !start) {
+      // a reply from a family (Oct 24): kept as a line so the Messages threads show it; the JustCall inbox has it too
+      await db.collection('smsLog').doc().set({ kind: 'reply', at: Date.now(), phone: from, body: text.slice(0, 600), players: hits.map((r) => r.id), by: 'family', status: 'reply', justcallId: String(d.id || '') });
+      return Object.assign(out, { did: 'reply kept for ' + hits.length + ' player(s)', players: hits.map((r) => r.id) });
+    }
     for (const r of hits) await setOptIn(db, r.id, start, { source: stop ? 'stop' : 'start', by: 'family', phone: from });
     await db.collection('smsLog').doc().set({ kind: stop ? 'optout' : 'optin', at: Date.now(), phone: from, body: text.slice(0, 200), players: hits.map((r) => r.id), by: 'family', status: stop ? 'stop' : 'start' });
     return Object.assign(out, { did: (stop ? 'opted out' : 'opted in') + ' ' + hits.length + ' player(s)', players: hits.map((r) => r.id) });
