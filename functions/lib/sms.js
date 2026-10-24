@@ -75,7 +75,7 @@ async function settings(db) {
   try { const snap = await db.doc('settings/sms').get(); d = snap.exists ? (snap.data() || {}) : {}; } catch (e) { d = {}; }
   const templates = Array.isArray(d.templates) && d.templates.length ? d.templates : DEFAULT_TEMPLATES;
   let from = ''; try { from = (await NOTIFY.settings(db)).justcallNumber || ''; } catch (e) { from = ''; }
-  return { senderName: cleanText(d.senderName, 60) || DEFAULT_SENDER, footer: d.footer !== false, inboxUrl: /^https:\/\/[^\s"']+$/.test(d.inboxUrl || '') ? d.inboxUrl : inboxFor(from), templates: templates.map((t) => ({ id: slug(t.id || t.name) || 'template', name: cleanText(t.name, 40) || 'Template', text: cleanText(t.text, MAX_BODY) })), updatedAt: d.updatedAt || null, by: d.by || '' };
+  return { threads: d.threads && typeof d.threads === 'object' ? d.threads : {}, senderName: cleanText(d.senderName, 60) || DEFAULT_SENDER, footer: d.footer !== false, inboxUrl: /^https:\/\/[^\s"']+$/.test(d.inboxUrl || '') ? d.inboxUrl : inboxFor(from), templates: templates.map((t) => ({ id: slug(t.id || t.name) || 'template', name: cleanText(t.name, 40) || 'Template', text: cleanText(t.text, MAX_BODY) })), updatedAt: d.updatedAt || null, by: d.by || '' };
 }
 async function saveSettings(db, patch, who) {
   const cur = await settings(db);
@@ -336,6 +336,27 @@ async function history(db, who, q) {
   return { batches, events: events.slice(0, 300), logs: logs.map((l) => ({ id: l.id, batch: l.batch, at: l.at, sentAt: l.sentAt || null, by: l.byName || l.by, player: l.player, playerName: l.playerName, group: l.group, coach: l.coach, phone: l.phone, body: l.body, status: l.status, reason: l.reason || '', error: l.error || '', delivery: l.delivery || '', attempts: l.attempts || 0 })) };
 }
 
+/* ---- Threads housekeeping (Antonio, Oct 24): remove one message from a thread, clear a thread, archive it. Nothing is deleted:
+   smsLog and smsBatches stay as the record; the page just stops showing it. A coach may remove what they sent; a director anything. ---- */
+async function hideBatch(db, who, batchId) {
+  requireTexting(who);
+  const ref = db.doc('smsBatches/' + batchId); const snap = await ref.get(); if (!snap.exists) throw S.err(404, 'batch', 'No such message.');
+  const b = snap.data() || {}; if (!who.director && !who.admin && b.by !== who.email) throw S.err(403, 'own', 'You can remove only what you sent; a director can remove anything.');
+  await ref.set({ hidden: true, hiddenBy: who.email, hiddenAt: Date.now() }, { merge: true });
+  return { ok: true, batch: batchId };
+}
+async function threadAction(db, who, thread, action) {
+  requireTexting(who);
+  const key = cleanText(thread, 80); if (!key) throw S.err(400, 'thread', 'Which thread?');
+  if (!['clear', 'archive', 'unarchive'].includes(action)) throw S.err(400, 'action', 'clear, archive or unarchive.');
+  if (!who.director && !who.admin && action !== 'archive') throw S.err(403, 'director', 'Clearing a thread is for the directors.');
+  const cur = await settings(db); const threads = Object.assign({}, cur.threads); const t = Object.assign({}, threads[key] || {});
+  if (action === 'clear') t.clearedAt = Date.now(); if (action === 'archive') t.archivedAt = Date.now(); if (action === 'unarchive') delete t.archivedAt;
+  t.by = who.email; threads[key] = t;
+  await db.doc('settings/sms').set({ threads, updatedAt: Date.now() }, { merge: true });
+  return { ok: true, thread: key, state: t };
+}
+
 /* ---- the JustCall webhook: STOP / START from a family, delivery updates for what we sent ---- */
 function signatureOk(secret, headers, body) {
   if (!secret) return false;
@@ -394,4 +415,4 @@ async function handleEvent(db, body) {
   return out;
 }
 
-module.exports = { findId, shapeOf, settings, saveSettings, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };
+module.exports = { findId, shapeOf, settings, saveSettings, hideBatch, threadAction, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };

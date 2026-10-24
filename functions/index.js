@@ -169,6 +169,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
       if (route === 'POST /admin/sms/test') { const out = await SMS.testSend(ctx.db, who, b.phone, b.body); logger.info('sms test', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       if (route === 'POST /admin/sms/send') { const out = await SMS.send(ctx.db, who, b); logger.info('sms batch', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       if (route === 'POST /admin/sms/continue') { SMS.requireTexting(who); return send(res, 200, await SMS.continueBatch(ctx.db, S.clean(b.batch, 60))); }
+      if (route === 'POST /admin/sms/hide') return send(res, 200, await SMS.hideBatch(ctx.db, who, S.clean(b.batch, 60)));
+      if (route === 'POST /admin/sms/thread') return send(res, 200, await SMS.threadAction(ctx.db, who, S.clean(b.thread, 80), S.clean(b.action, 20)));
       if (route === 'POST /admin/sms/retry') { SMS.requireTexting(who); return send(res, 200, await SMS.retryBatch(ctx.db, S.clean(b.batch, 60))); }
       // ── everything below moves money or a family's plan: owners, administrators and the Billing page only ──
       ADMIN.requireBilling(who);
