@@ -145,7 +145,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
   const VIEWS = {
     "/backend#desk": ["Today in one screen: players expected, sessions posted, what needs a human, family requests, what was paid through Stripe", "Start the day here; work the “Needs a human” list"],
     "/backend#enroll": ["Builds the prefilled enrollment link: program, plan, days, player and parent", "Send the link by text or e-mail; the parent confirms and pays on Stripe and is on the roster the same minute"],
-    "/backend#courts": ["The court grid: 18 courts and 2 fields by the half hour", "Drag across a run of courts to block them; book a rental for a family; release a court"],
+    "/backend#courts": ["The court grid: 18 courts and 2 fields by the half hour, one cell per block with its name, time and colour; a clock line for now", "Drag across a run of courts and pick a category (Academy, Tournament, a group of your own); tap a block to release it; Colours & categories to rename, recolour or add one"],
     "/backend#attendance": ["The list the coaches used to write in Notes, by session and court", "Tap who is here, move players between courts, post the list — posting flags drop-ins and no-shows and writes the summary to Slack"],
     "/backend#players": ["Every player with plan, days, coach, attendance this month and what bills on the 1st; the live Stripe panel; the catalog check; the move-over list from Play by Point", "Open a player: days, card on file, hold or release, charge, send the account link"],
     "/backend#privates": ["A coach books a lesson at their tier rate", "Pick coach, player, date and length; it uses a lesson pack or charges the card on file and blocks the court"],
@@ -238,7 +238,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
       ["Staff & access", "Everyone on the team with their role. Approve a coach who signed in for the first time, pick Coach or Tennis director, turn access off for someone on leave. The “on players as…” box pins the name used on player records.", "/portal#/staff"],
       ["Players and reports", "What a coach sees, for every player: the suggested report, the parts, the reports already sent. Open any player; start or read any report.", "/portal"],
       ["Messages", "A text to the families of a program, a coach, a day or a court: rain, a reminder, a change. Pick the recipients, write or pick a template, preview, send. Only opted-in families are texted; Sent shows every text.", "/backend#messages"],
-      ["Courts", "The grid: 18 courts and 2 fields by the half hour. Block a run of courts for a clinic, release one, see the rentals.", "/backend#courts"],
+      ["Courts", "The grid: 18 courts and 2 fields by the half hour, every block in its category's colour with its name and time. Drag across courts and times, pick a category, block. Tap a block to release it. Colours & categories (right of the legend) renames, recolours or adds a category of your own, saved for everyone.", "/backend#courts"],
       ["Attendance", "The lists by session and court. Posted lists are what the front desk and the families see.", "/backend#attendance"],
       ["Try-outs and Privates", "The same screens the coaches use; you see all of them.", "/portal#/tryouts"],
       ["What coaches do not see", "Messages, Courts, billing actions, anyone else's players, and this page's director steps. The system enforces it; the menu only reflects it.", "/portal"]]]
