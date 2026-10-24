@@ -1710,7 +1710,7 @@ const PW_CONFIG = {
     const snapErr = (e) => { if (e && (e.code === 'revoked' || e.code === 'not_granted')) { S.dbState = 'none'; paintLive(); } };
     const rows = (s) => s.docs.map((d) => Object.assign({ id: d.id }, d.data()));
     db.collection('groups').onSnapshot((s) => { S.groups = rows(s); S.loaded.groups = true; changed(); }, snapErr);
-    db.collection('players').onSnapshot((s) => { S.players = rows(s); S.loaded.players = true; changed(); }, snapErr);
+    db.collection('players').onSnapshot((s) => { S.players = rows(s).map((p) => (retired(p.coach) || retired(p.coach2) ? Object.assign({}, p, { coach: retired(p.coach) ? '' : p.coach, coach2: retired(p.coach2) ? '' : p.coach2 }) : p)); S.loaded.players = true; changed(); }, snapErr);
     db.collection('assessments').orderBy('updatedAt', 'desc').limit(1000).onSnapshot((s) => { S.assess = rows(s); S.loaded.assess = true; changed(); }, snapErr);
     db.collection('tryouts').onSnapshot((s) => { S.tryouts = rows(s); S.loaded.tryouts = true; changed(); }, snapErr);
   }
@@ -1928,7 +1928,7 @@ const PW_CONFIG = {
     WEB.stage = 'in'; S.db = webDb(WEB.fs); S.canWrite = true; S.dbState = 'live'; S.sample = webSample(); paintLive(); paintUser();
     WEB.core.push(S.db.collection('groups').onSnapshot((s) => { S.groups = rowsOf(s); S.loaded.groups = true; changed(); }, () => {}));
     if (!WEB.tryoutsOnly) {
-      WEB.core.push(S.db.collection('players').onSnapshot((s) => { S.players = rowsOf(s); S.loaded.players = true; changed(); }, () => {}));
+      WEB.core.push(S.db.collection('players').onSnapshot((s) => { S.players = rowsOf(s).map((p) => (retired(p.coach) || retired(p.coach2) ? Object.assign({}, p, { coach: retired(p.coach) ? '' : p.coach, coach2: retired(p.coach2) ? '' : p.coach2 }) : p)); S.loaded.players = true; changed(); }, () => {}));
       // the Monday sync: the Coach Board (one document), the latest change logs, changes still on their way to Monday, owner settings
       WEB.core.push(S.db.doc('board/current').onSnapshot((d) => { S.board = d.exists ? d.data() : null; S.loaded.board = true; changed(); }, () => { S.loaded.board = true; changed(); }));
       WEB.core.push(S.db.collection('syncLog').orderBy('at', 'desc').limit(10).onSnapshot((s) => { S.syncLogs = rowsOf(s).sort((a, b) => (b.at || 0) - (a.at || 0)); S.loaded.sync = true; changed(); }, () => { S.loaded.sync = true; }));
@@ -2007,8 +2007,11 @@ const PW_CONFIG = {
     const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : 'home';
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
-      : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }], ['followup', 'Follow-up', { view: 'followup' }]].concat(EDITION === 'web' && WEB.isOwner ? [['commit', 'Standard & commit', { view: 'commit' }]] : []).concat(EDITION === 'web' && WEB.isAdmin ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
-    el.innerHTML = items.map(([k, label, r]) => `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
+      : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }]]
+        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates']] : [])
+        .concat(EDITION === 'web' && WEB.isAdmin ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
+    // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
+    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
     if (window.PWDesign) {
       PWDesign.active(sec === 'tryouts' ? 'tryouts' : sec === 'board' ? 'coach-board' : 'coach-portal');
       const act = S.players.filter(active).length; const sig = [];
@@ -3524,8 +3527,10 @@ const PW_CONFIG = {
       ${other > 0 ? `<p class="hint" style="margin:-18px 0 30px">${other} active player${other === 1 ? ' is' : 's are'} in none of the three programs (9:00, other times or no schedule).</p>` : ''}
       ${t ? '' : `<p class="hint" style="margin:-18px 0 30px">${own ? 'No targets yet: set them with “Set targets”.' : 'No targets set yet.'}</p>`}`;
   }
+  const RETIRED = ['Paolo'];   // no longer with the academy (Antonio, Oct 23): their players show with no coach until Monday is fixed
+  const retired = (n) => { const x = String(n || '').trim().toLowerCase(); return !!x && RETIRED.some((r) => x === r.toLowerCase() || x.startsWith(r.toLowerCase() + ' ')); };
   function boardData() {
-    const B = S.board, items = (B && B.items) || [];
+    const B = S.board, items = ((B && B.items) || []).map((x) => (retired(x.lead) || retired(x.asst) ? Object.assign({}, x, { lead: retired(x.lead) ? '' : x.lead, asst: retired(x.asst) ? '' : x.asst }) : x));
     const act = items.filter((x) => x.g === 'active' && x.st === 'active');
     return { B, items, act };
   }
