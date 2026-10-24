@@ -496,6 +496,7 @@ function nextChargeText(price,from){const nr=nextRenewal(from);const y=nr.getFul
    This browser keeps only its own view, role, dates and filters. */
 const KEY='pw-backend-v3';
 const PREFS=['view','role','roleChosen','enroll','courtsDate','attDate','attSession','courtsMode','courtsFilter','member','summaryOpen','accountPid','playersFilter','playersQ'];
+const DEFAULT_TAGS=[{id:'academy',label:'Academy',color:'#A9F3F7'},{id:'tournament',label:'Tournament',color:'#E286E4'},{id:'private',label:'Private lesson',color:'#94FCB1'},{id:'rental',label:'Family rental',color:'#E2FE78'},{id:'outside',label:'Outside rental',color:'#111111'},{id:'maintenance',label:'Maintenance',color:'#D9D9D4'}];
 const SHARED=['blocks','exceptions','bookings','privates','charges','notifications','overrides','nextId','courtTags'];
 let state;
 function emptyEnroll(){return {program:null,level:null,plan:null,billing:null,option:null,days:[],player:{first:'',last:'',dob:'',parent:'',email:'',phone:''},agree:false,auth:false,done:null}}
@@ -597,7 +598,6 @@ function slotFree(courtId,dateStr,start,dur,ignorePast){for(let h=start;h<start+
 function runsFromSelection(sel){const byCourt={};[...sel].forEach(k=>{const [c,h]=k.split('|');(byCourt[c]=byCourt[c]||[]).push(Number(h))});const runs=[];for(const c in byCourt){const hs=byCourt[c].sort((a,b)=>a-b);let start=hs[0],prev=hs[0];for(let i=1;i<=hs.length;i++){if(i<hs.length&&hs[i]===prev+.5){prev=hs[i];continue}runs.push({court:c,start,dur:prev-start+.5});if(i<hs.length){start=hs[i];prev=hs[i]}}}return runs.sort((a,b)=>COURTS.findIndex(x=>x.id===a.court)-COURTS.findIndex(x=>x.id===b.court)||a.start-b.start)}
 /* ---- Court categories (Antonio, Oct 24): every block, lesson and rental has a category with a colour; staff add their own
    (a group, a camp, a club night) and change any colour from the Colours panel under the grid. Kept with the shared state. */
-const DEFAULT_TAGS=[{id:'academy',label:'Academy',color:'#A9F3F7'},{id:'tournament',label:'Tournament',color:'#E286E4'},{id:'private',label:'Private lesson',color:'#94FCB1'},{id:'rental',label:'Family rental',color:'#E2FE78'},{id:'outside',label:'Outside rental',color:'#111111'},{id:'maintenance',label:'Maintenance',color:'#D9D9D4'}];
 function tags(){if(!Array.isArray(state.courtTags)||!state.courtTags.length)state.courtTags=JSON.parse(JSON.stringify(DEFAULT_TAGS));return state.courtTags}
 function tagById(id){return tags().find(t=>t.id===id)||null}
 function tagOfBlock(b){if(b.tag&&tagById(b.tag))return tagById(b.tag);if(b.private)return tagById('private');if(b.event)return /mainten|clean|repair|water|roll/i.test(b.label||'')?tagById('maintenance'):tagById('tournament');return tagById('academy')||tags()[0]}
