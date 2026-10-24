@@ -88,9 +88,10 @@
       { name: "Attendance", href: "/backend#attendance" }, { name: "Players & billing", href: "/backend#players" }, { name: "Privates", href: "/backend#privates" },
       { name: "Books", href: "/backend#books" }, { name: "Messages", href: "/backend#messages" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" } ] },
     { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal", "tryouts"], items: [
-      { name: "Players & assessments", href: "/portal", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
+      { name: "Players Portal", href: "/portal", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
       { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
-      { name: "Messages", href: "/backend#messages", page: "backend" }, { name: "Courts", href: "/backend#courts", page: "backend" }, { name: "Privates", href: "/backend#privates", page: "backend" } ] },
+      { name: "Messages", href: "/backend#messages", page: "backend" }, { name: "Courts", href: "/backend#courts", page: "backend" }, { name: "Privates", href: "/backend#privates", page: "backend" },
+      { name: "Start here · the guide", href: "/start", page: "start" } ] },
     { id: "clients", name: "Clients", href: "/clients", page: ["backend"], items: [
       { name: "The client account", href: "/family" }, { name: "Enroll · public link", href: "/enroll" }, { name: "Courts", href: "/backend#courts" },
       { name: "Privates", href: "/backend#privates" }, { name: "Look up an account", href: "/backend#account" } ] },

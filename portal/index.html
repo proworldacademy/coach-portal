@@ -2007,10 +2007,10 @@ const PW_CONFIG = {
     const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : 'home';
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
-      : [['home', 'Players', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }]]
-        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['billing', 'Players & billing', '/backend#players']] : [])
-        .concat(EDITION === 'web' && WEB.isDirector ? [['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts']] : [])   // directors (Antonio, Oct 24)
-        .concat(EDITION === 'web' ? [['privates', 'Privates', '/backend#privates'], ['staff', 'Staff & access', { view: 'staff' }]] : []);
+      : [['home', 'Players Portal', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }]]
+        // the eight things a coach sees (Antonio, Oct 24): Players Portal · Try-outs · Coach Board · Attendance · Messages · Courts · Privates · Start here; Staff & access is directors only
+        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates'], ['start', 'Start here', '/start']] : [])
+        .concat(EDITION === 'web' && WEB.isDirector ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
     if (window.PWDesign) {
@@ -2032,7 +2032,8 @@ const PW_CONFIG = {
 
   /* ───────────── administrators: staff list, requests, import, backup ───────────── */
   function viewStaff() {
-    const manage = WEB.isDirector;   // everyone sees the team; directors manage it (Antonio, Oct 24)
+    if (!WEB.isDirector) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">Staff &amp; access is for the tennis directors and the owners.</div>`;
+    const manage = WEB.isDirector;   // directors only (Antonio, Oct 24)
     const ROLE_WORD = { admin: 'Administrator', director: 'Tennis director', desk: 'Front desk' };
     const reqs = WEB.requests.filter((r) => !WEB.staffList.some((s) => s.id === r.email && s.active === true)).sort((a, b) => (a.at || 0) - (b.at || 0));
     const reqRows = reqs.map((r) => `<div class="rowb srow"><div class="who"><span class="ava">${esc(initials(r.name || r.email))}</span><div style="min-width:0"><div class="nm">${esc(r.name || 'No name given')}</div><small>${esc(r.email)} · asked ${esc(fmtDate(r.at))}</small></div></div>

@@ -55,7 +55,7 @@
     const cs = coachSide();
     const director = !!(ctx.owner || ctx.admin || ctx.director || role === "director");
     const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
-    if (cs) return DOORS.filter((d) => d.id === "coaches").map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id || now === null, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(!director && directorOnly(it))).concat(ctx.has("start") ? [{ name: "Start here · the guide", href: "/start" }] : []) }));
+    if (cs) return DOORS.filter((d) => d.id === "coaches").map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id || now === null, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).concat(director ? [{ name: "Staff & access", href: "/portal#/staff" }] : []) }));
     return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))
       .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(d.id === "coaches" && !director && directorOnly(it))) }));
   }

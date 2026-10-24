@@ -32,7 +32,7 @@ async function requireStaff(req) {
   // money moves only for owners, administrators and people with the Billing page ticked on the Dashboard;
   // texts to families go out from the same people plus the front desk (role 'desk') — coaches only read the history of their groups
   const isDirector = isAdmin || role === 'director';   // a tennis director (Oct 24): Messages, Courts, coach assignments, who has access
-  return { uid: decoded.uid, email, name, firstName: String(name).split(' ')[0], role, owner: rec.owner === true, admin: isAdmin, director: isDirector, billing: isAdmin || pages.includes('billing'), texting: isDirector || role === 'desk' || pages.includes('billing') };
+  return { uid: decoded.uid, email, name, firstName: String(name).split(' ')[0], role, owner: rec.owner === true, admin: isAdmin, director: isDirector, billing: isAdmin || pages.includes('billing'), texting: isDirector || role === 'desk' || role === 'coach' || pages.includes('billing') };   // every coach holds Messages (Antonio, Oct 24); opt-in and the log still apply
 }
 function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
 

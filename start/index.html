@@ -212,7 +212,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
       ["Players", "Every player; open one to set coach, group, tier, and to read or start reports", "/portal"],
       ["Attendance", "The coaches' lists, by session and court", "/backend#attendance"],
       ["Messages", "A text to the families of a group, a coach or a day; Sent shows what went out", "/backend#messages"],
-      ["Staff & access", "Who is on the team, their role, approve a new coach", "/portal#/staff"]]],
+      ["Staff & access", "Directors only: who is on the team, their role, approve a new coach", "/portal#/staff"]]],
     marketing: ["Marketing", "the screens the marketing team opens most", [
       ["Home", "The status report; approve what is waiting", "/marketing#home"],
       ["2-Week Plan", "Every planned post, every coach once", "/marketing#fortnight"],
@@ -231,7 +231,9 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
       ["Attendance", "Admin → Attendance: pick the session, tap who is here, post the list. Posting is what the front desk and the families see.", "/backend#attendance"],
       ["Try-outs", "A family coming to try: the date, what we saw, the group offered. Add one when a parent calls you directly.", "/portal#/tryouts"],
       ["Privates", "Book a private at your tier rate: coach, player, day, time, court. It uses the family's lesson pack or their card on file and blocks the court.", "/backend#privates"],
-      ["Coach Board", "Who coaches whom, who has no coach yet, the try-outs coming. Read it; a director changes it.", "/portal#/board"]]],
+      ["Coach Board", "Who coaches whom, who has no coach yet, the try-outs coming. Read it; a director changes it.", "/portal#/board"],
+      ["Messages", "A text to the families of your group or your day: rain, a reminder, a change. Pick recipients, write or pick a template, preview, send. Only opted-in families are texted; Sent shows every text.", "/backend#messages"],
+      ["Courts", "The grid: every block in its category's colour with its name and time. Drag across courts and times, pick a category, block; tap a block to release it.", "/backend#courts"]]],
     director: ["How to: running the coaches' side", "tap a step to open that screen", "You open everything inside Coaches. Three jobs are yours alone: give every player a coach, keep the team list right, and speak to families through Messages.", [
       ["Coach Board first", "Who coaches whom and, below, every player with no coach yet by group. Nothing else works for a coach until their name is on their players.", "/portal#/board"],
       ["Give a player a coach", "Open the player, Edit: coach, second coach, group, tier, status. Save. The Coach Board and the coach's list follow the same second. Names on players are first names (Nico, Kam, Toño).", "/portal"],
@@ -241,7 +243,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
       ["Courts", "The grid: 18 courts and 2 fields by the half hour, every block in its category's colour with its name and time. Drag across courts and times, pick a category, block. Tap a block to release it. Colours & categories (right of the legend) renames, recolours or adds a category of your own, saved for everyone.", "/backend#courts"],
       ["Attendance", "The lists by session and court. Posted lists are what the front desk and the families see.", "/backend#attendance"],
       ["Try-outs and Privates", "The same screens the coaches use; you see all of them.", "/portal#/tryouts"],
-      ["What coaches do not see", "Messages, Courts, billing actions, anyone else's players, and this page's director steps. The system enforces it; the menu only reflects it.", "/portal"]]]
+      ["What coaches do not see", "Staff & access, billing actions, anyone else's players, and this page's director steps. The system enforces it; the menu only reflects it.", "/portal"]]]
   };
   const WALK = [
     ["Dashboard", "The greeting and the “Needs you” list, the ticker, the four doors, then straight to the bottom: People & access and What runs by itself. The point: this page decides who sees what, and most of the work runs on its own.", "3 min"],
@@ -261,7 +263,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
   function draw(ctx) {
     const has = (id) => !id || ctx.has(id);
     const isDirector = !!(ctx.owner || ctx.admin || ctx.director || String((ctx.rec && ctx.rec.role) || "").toLowerCase() === "director");
-    const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
+    const directorOnly = () => false;   // every coach holds Messages and Courts (Antonio, Oct 24)
     const coachOnly = !ctx.owner && !ctx.admin && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");   // coaches and tennis directors: the Coaches door is the whole site
     const doors = P.DOORS.filter((d) => d.id !== "library" && (d.page || []).some(has)).filter((d) => !coachOnly || d.id === "coaches").map((d) => (d.id === "coaches" && !isDirector ? Object.assign({}, d, { items: d.items.filter((it) => !directorOnly(it)) }) : d));
     // the hero card: the doors this person holds, with how many views each one opens
@@ -269,7 +271,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
     const AV = { admin: "Ad", coaches: "Co", clients: "Cl", marketing: "Mk" };
     const coachSide = !ctx.owner && !ctx.admin && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");
     document.body.classList.toggle("coach-side", coachSide);
-    if (coachSide) { $("#barDemo").innerHTML = '<span class="on">Coaches ▾</span><span class="sp"></span><kbd>⌘K</kbd><span>You · Sign out</span>'; const hb = $("#move .habits"); if (hb) hb.innerHTML = '<div class="card"><h3>One door</h3><p>Coaches is your whole site. Rest on it and its menu drops down: Players, Try-outs, Coach Board, Attendance, Privates' + (isDirector ? ", Messages, Courts" : "") + ', and this guide. Inside a page the tabs are the pills under the title.</p></div><div class="card"><h3>Jump anywhere</h3><p>Press <b>⌘K</b> (Ctrl+K on Windows) or click the search and type a player or a screen.</p></div><div class="card"><h3>Every screen has an address</h3><p>Paste a link in Slack and it opens exactly that screen. On a phone, add the site to your home screen and it opens like an app.</p></div>'; }
+    if (coachSide) { $("#barDemo").innerHTML = '<span class="on">Coaches ▾</span><span class="sp"></span><kbd>⌘K</kbd><span>You · Sign out</span>'; const hb = $("#move .habits"); if (hb) hb.innerHTML = '<div class="card"><h3>One door</h3><p>Coaches is your whole site. Rest on it and its menu drops down: Players Portal, Try-outs, Coach Board, Attendance, Messages, Courts, Privates and this guide' + (isDirector ? ", plus Staff & access" : "") + '. Inside a page the tabs are the pills under the title.</p></div><div class="card"><h3>Jump anywhere</h3><p>Press <b>⌘K</b> (Ctrl+K on Windows) or click the search and type a player or a screen.</p></div><div class="card"><h3>Every screen has an address</h3><p>Paste a link in Slack and it opens exactly that screen. On a phone, add the site to your home screen and it opens like an app.</p></div>'; }
     $("#doorN").textContent = String(coachSide ? 1 : doors.length + 2);
     $("#doorRows").innerHTML = (coachSide ? "" : '<a href="/"><span class="av">D</span><span><b>Dashboard</b><span class="d">what needs you today, the live numbers</span></span><em>→</em></a>') +
       doors.map((d) => { const n = d.items.filter((it) => has(it.page || null) && (it.page || (d.page || []).some(has))).length; return '<a href="' + esc(d.href) + '"><span class="av">' + esc(AV[d.id] || d.name[0]) + '</span><span><b>' + esc(d.name) + '</b><span class="d">' + n + " view" + (n === 1 ? "" : "s") + " in its menu</span></span><em>→</em></a>"; }).join("") +

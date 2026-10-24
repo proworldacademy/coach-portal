@@ -74,8 +74,8 @@ service cloud.firestore {
     // people only — never their own entry, never an owner, never makes anyone an owner — and hands out only pages they
     // hold themselves, so nobody but an owner can unlock Marketing, Finance or anything else they don't have.
     match /staff/{email} {
-      allow get: if onStaff() || (verified() && me() == email);   // everyone on the team sees who is on the team (Oct 24)
-      allow list: if onStaff();
+      allow get: if director() || (verified() && me() == email);   // Staff & access: directors and owners (Antonio, Oct 24)
+      allow list: if director();
       allow create, update: if owner() || (director()
         && email != me()
         && request.resource.data.get('owner', false) != true
@@ -199,8 +199,8 @@ service cloud.firestore {
     }
     // Messages (texts to families from the backend): the engine writes the batches and one line per recipient (admin SDK);
     // staff read them for the Sent history and a player's profile. Consent lives in players/<id>/private/sms, engine-written.
-    match /smsBatches/{id} { allow read: if director(); }   // Messages: directors (Antonio, Oct 24)
-    match /smsLog/{id}     { allow read: if director(); }
+    match /smsBatches/{id} { allow read: if backend() || portal(); }   // Messages: every coach holds it (Antonio, Oct 24)
+    match /smsLog/{id}     { allow read: if backend() || portal(); }
     match /smsWebhookLog/{id} { allow read: if backend(); }     // what JustCall's webhook sent and what the engine did with it (no bodies, no full numbers)
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }
