@@ -316,6 +316,7 @@ table.grid{table-layout:fixed;border-collapse:separate;border-spacing:0}
 table.grid thead th{min-width:0;width:auto}
 .cell.blk{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;height:42px;padding:0 8px;text-align:left;border-radius:8px;margin:2px;width:calc(100% - 4px);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .cell.blk b{font-size:11.5px;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cell.blk.done{opacity:.45}
 .cell.blk small{font-size:10px;font-weight:500;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 td.span{border-right:1px solid var(--line)}
 table.grid td.now{box-shadow:inset 2px 0 0 var(--ink)}
@@ -678,12 +679,12 @@ function renderCourts(app){
   // one block, one label: a run of half hours that belong to the same block, lesson or rental becomes one cell with its name and time
   courts.forEach((c,ci)=>{rows+=`<tr><th scope="row">${c.name}<small>${c.type==='clay'?'Har-Tru clay':c.type==='hard'?'Hard court':'Turf · full size'}</small></th>`;
     let si=0;while(si<SLOTS.length){const h=SLOTS[si];const past=isPast(dateStr,h);
-      if(past){rows+=`<td class="${h%1?'half':''}${isNow(h)?' now':''}"><button class="cell past" disabled data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}"></button></td>`;si++;continue}
       const b=blockAt(c.id,dateStr,h),bk=b?null:bookingAt(c.id,dateStr,h);
+      if(past&&!b&&!bk){rows+=`<td class="${h%1?'half':''}${isNow(h)?' now':''}"><button class="cell past" disabled data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}"></button></td>`;si++;continue}
       if(!b&&!bk){const sel=SEL.has(c.id+'|'+h);rows+=`<td class="${h%1?'half':''}${isNow(h)?' now':''}"><button class="cell open${staff?' staff':''}${sel?' sel':''}" data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}" title="${c.name} · ${fmtT(h)}"></button></td>`;si++;continue}
       // how far does this same block or booking run?
-      let n=1;while(si+n<SLOTS.length){const h2=SLOTS[si+n];if(isPast(dateStr,h2))break;const b2=blockAt(c.id,dateStr,h2),bk2=b2?null:bookingAt(c.id,dateStr,h2);if(b?(b2&&b2.id===b.id):(bk2&&bk2.id===bk.id))n++;else break}
-      const endH=SLOTS[si]+n/2;let t,title,sub='',cls='cell blk staff';
+      let n=1;while(si+n<SLOTS.length){const h2=SLOTS[si+n];const b2=blockAt(c.id,dateStr,h2),bk2=b2?null:bookingAt(c.id,dateStr,h2);if(b?(b2&&b2.id===b.id):(bk2&&bk2.id===bk.id))n++;else break}
+      const endH=SLOTS[si]+n/2;const over=isPast(dateStr,endH-.5);let t,title,sub='',cls='cell blk staff'+(over?' done':'');
       if(b){t=staff?tagOfBlock(b):null;title=b.label;if(b.private){const pv=state.privates.find(x=>x.blockId===b.id);const pl=pv?playerById(pv.pid):null;title=(pv?pv.coach.split(' ')[0]:'Private')+(pl?' · '+pl.name:'');sub=fmtRange(h,endH)+(pv?' · '+(pv.billed==='pack'?'pack':pv.billed==='card'?'paid':'to collect'):'')}else sub=fmtRange(h,endH);if(!staff){cls='cell blk taken';title='Unavailable';sub=''}}
       else{t=staff?tagOfBooking(bk):null;if(staff){title=bk.name;sub=fmtRange(h,endH)+' · '+(bk.paidOn?'paid':'to collect')}else{cls='cell blk '+(bk.mine?'mine':'taken');title=bk.mine?'Yours':'Booked';sub=bk.mine?fmtRange(h,endH):''}}
       const style=t?tagStyle(t):'';
