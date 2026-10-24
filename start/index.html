@@ -110,6 +110,12 @@
     <div class="tour jobs" id="jobRows"></div>
   </section>
 
+  <section class="sec walk hid" id="howto">
+    <div class="sec-h"><h2 id="howH">How to: your week in the portal</h2><small id="howS">tap a step to open that screen</small></div>
+    <p class="lead" id="howLead"></p>
+    <ol id="howList"></ol>
+  </section>
+
   <section class="sec" id="five">
     <div class="sec-h"><h2 id="fiveH">Your everyday five</h2><small id="fiveS">the screens you will use most</small></div>
     <div class="five" id="fiveCards"></div>
@@ -145,9 +151,9 @@
     "/backend#books": ["What QuickBooks receives: revenue by class, payments by day, fees, top renters", "Read; the reconciliation view"],
     "/backend#messages": ["Texts to families from the academy line (JustCall)", "Pick recipients by program, coach, day or court, write or pick a template, preview, send; Sent shows every text and its delivery; only opted-in families are texted"],
     "/backend#account": ["A family's account as the parent sees it: plan, balance, attendance, camps", "Look a family up when they call"],
-    "/portal": ["Every player with group, coach and status; a player's page holds the quarterly assessment, the reports, videos and the journal", "Search a player, fill in the part you coach, mark a report sent to the family"],
+    "/portal": ["The groups, each player with their coach and one status word; a player's page holds the quarterly assessment, the monthly report, videos and the journal", "Open your player, start the suggested report, fill in the part you coach, mark it sent to the family"],
     "/portal#/tryouts": ["Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered", "Add a try-out, record the result, convert it to an enrollment"],
-    "/portal#/board": ["Rosters by coach, players with no coach yet, the Proworld Standard, refreshed from Monday every morning with a change log", "Assign the players without a coach; see what changed overnight"],
+    "/portal#/board": ["Who coaches whom, the players with no coach yet, the try-outs coming; it reads the roster", "Directors: open a player with no coach and set the coach on their page; the board follows"],
     "/family": ["Where a parent signs in with the e-mail on file and sees their players, coach, schedule, attendance, reports, bills and card", "Copy the link for a family; the account matches by the parent's e-mail"],
     "/enroll": ["The public enrollment page: program, plan, days, parent, agreement, Stripe — no sign-in", "Copy the link, or prefill it from Admin → Enroll"],
     "/marketing#home": ["The status report: what went out against the plan week by week, the ad plan at a glance, whether the runs ran", "Read on Monday; approve what is waiting"],
@@ -159,7 +165,7 @@
   };
   const DOOR_LEAD = {
     admin: "Admin replaced Play by Point. Staff never type a card: the family enters it once on Stripe through the enrollment link, and every renewal, pack, private and drop-in after that charges the card on file. Bills go out on the 1st; the engine prorates mid-month starts and school breaks and runs the late policy on its own ($50 fee on the 6th, hold on the 10th, spot released on the 15th).",
-    coaches: "The Coach Portal is where a player is seen as a player: the roster by group and coach, the quarterly assessments, the reports that go home. Coaches live here; the front desk mostly comes in for try-outs.",
+    coaches: "The Coach Portal is where a player is seen as a player: the groups, each player with their coach, the quarterly assessments, the reports that go home. A coach opens their own players; a tennis director opens everyone, assigns coaches and holds Messages and Courts.",
     clients: "The family side seen from the inside: the links a family can use without any sign-in, who came in through them, what families asked for, and a client's account exactly as they see it. Replies and bookings happen in Admin; this is the map.",
     marketing: "Instagram and Meta ads, with the numbers refreshed every morning and two automatic runs doing the heavy lifting: Sunday builds the next two weeks, Monday judges the week."
   };
@@ -175,7 +181,7 @@
   ];
   const JOBS = [
     ["Billing engine", "5:05 AM, daily", "Files paid enrollments on the roster, applies the break-month credits before the 1st, runs the late policy, releases holds when paid, reconciles every plan with Stripe"],
-    ["Monday sync", "6:22 AM, daily", "Monday's roster changes into the Coach Portal, the portal's changes onto Monday, the Coach Board and its change log"],
+    ["Database backup", "4:40 AM, daily", "A full copy of the database into the backups bucket, kept 90 days"],
     ["Numbers", "6:54 AM, daily", "Instagram and Meta ads figures from Metricool onto the Marketing home and the Ads tab"],
     ["Concierge roster", "2:00 AM, daily", "The AI concierge refreshes who is enrolled from this site's roster feed and checks itself at 7 AM"],
     ["Monday review", "Mondays, 8:52 AM", "Judges the week against the plan, queues requests for Sunday, posts the weekly report under Marketing → Reports"],
@@ -198,14 +204,43 @@
       ["Players", "Your players, their assessments, the reports that go home", "/portal"],
       ["Attendance", "Tap who is here, post the list", "/backend#attendance"],
       ["Try-outs", "What we saw, the group offered", "/portal#/tryouts"],
-      ["Coach Board", "Your roster from Monday, players without a coach", "/portal#/board"],
+      ["Coach Board", "Who coaches whom; the players with no coach yet", "/portal#/board"],
       ["Privates", "Book a lesson at your tier rate", "/backend#privates"]]],
+    director: ["Tennis director", "the screens a director opens most", [
+      ["Coach Board", "Who coaches whom; give every player a coach", "/portal#/board"],
+      ["Players", "Every player; open one to set coach, group, tier, and to read or start reports", "/portal"],
+      ["Attendance", "The coaches' lists, by session and court", "/backend#attendance"],
+      ["Messages", "A text to the families of a group, a coach or a day; Sent shows what went out", "/backend#messages"],
+      ["Staff & access", "Who is on the team, their role, approve a new coach", "/portal#/staff"]]],
     marketing: ["Marketing", "the screens the marketing team opens most", [
       ["Home", "The status report; approve what is waiting", "/marketing#home"],
       ["2-Week Plan", "Every planned post, every coach once", "/marketing#fortnight"],
       ["Ads", "The ad plan, the season calendar, the competitors", "/marketing#ads"],
       ["Reports", "What the Sunday and Monday runs posted", "/marketing#reports"],
       ["Library", "The idea banks, the archive, the KPI history", "/marketing#database"]]]
+  };
+  /* The how-to, step by step: one for coaches, one for directors (Antonio, Oct 24). Each step opens the screen it talks about. */
+  const HOWTO = {
+    coach: ["How to: your week in the portal", "tap a step to open that screen", "Five screens, one sign-in. You see every player in your group; you open the ones with your name on them. A director sets who coaches whom.", [
+      ["Sign in", "Open the site and sign in with your Google account (the e-mail the academy gave you). The Coaches door is yours; the other doors stay closed.", "/portal"],
+      ["Players: find yours", "Players shows the groups. Open your group: your players are in black and open with a tap; the others are grey with the coach's name. The word on the right says where the player stands: Up to date, Working on it, Missing.", "/portal"],
+      ["Open a player", "The player's page shows the suggested report for now (the quarterly, or the monthly) on a pale lime card. Tap Start. Other reports sit folded under “Other reports”.", "/portal"],
+      ["Fill in your part", "Tennis, Fitness, Mental, Summary: each coach fills in their own part. Use the mic to dictate into any box; Ctrl + Enter moves on. It saves as you go; close it and come back any time.", "/portal"],
+      ["Mark it sent", "When the report is complete, mark it sent to the family. That turns the player's word to Up to date and the family sees it in their portal.", "/portal"],
+      ["Attendance", "Admin → Attendance: pick the session, tap who is here, post the list. Posting is what the front desk and the families see.", "/backend#attendance"],
+      ["Try-outs", "A family coming to try: the date, what we saw, the group offered. Add one when a parent calls you directly.", "/portal#/tryouts"],
+      ["Privates", "Book a private at your tier rate: coach, player, day, time, court. It uses the family's lesson pack or their card on file and blocks the court.", "/backend#privates"],
+      ["Coach Board", "Who coaches whom, who has no coach yet, the try-outs coming. Read it; a director changes it.", "/portal#/board"]]],
+    director: ["How to: running the coaches' side", "tap a step to open that screen", "You open everything inside Coaches. Three jobs are yours alone: give every player a coach, keep the team list right, and speak to families through Messages.", [
+      ["Coach Board first", "Who coaches whom and, below, every player with no coach yet by group. Nothing else works for a coach until their name is on their players.", "/portal#/board"],
+      ["Give a player a coach", "Open the player, Edit: coach, second coach, group, tier, status. Save. The Coach Board and the coach's list follow the same second. Names on players are first names (Nico, Kam, Toño).", "/portal"],
+      ["Staff & access", "Everyone on the team with their role. Approve a coach who signed in for the first time, pick Coach or Tennis director, turn access off for someone on leave. The “on players as…” box pins the name used on player records.", "/portal#/staff"],
+      ["Players and reports", "What a coach sees, for every player: the suggested report, the parts, the reports already sent. Open any player; start or read any report.", "/portal"],
+      ["Messages", "A text to the families of a program, a coach, a day or a court: rain, a reminder, a change. Pick the recipients, write or pick a template, preview, send. Only opted-in families are texted; Sent shows every text.", "/backend#messages"],
+      ["Courts", "The grid: 18 courts and 2 fields by the half hour. Block a run of courts for a clinic, release one, see the rentals.", "/backend#courts"],
+      ["Attendance", "The lists by session and court. Posted lists are what the front desk and the families see.", "/backend#attendance"],
+      ["Try-outs and Privates", "The same screens the coaches use; you see all of them.", "/portal#/tryouts"],
+      ["What coaches do not see", "Messages, Courts, billing actions, anyone else's players, and this page's director steps. The system enforces it; the menu only reflects it.", "/portal"]]]
   };
   const WALK = [
     ["Dashboard", "The greeting and the “Needs you” list, the ticker, the four doors, then straight to the bottom: People & access and What runs by itself. The point: this page decides who sees what, and most of the work runs on its own.", "3 min"],
@@ -224,7 +259,9 @@
 
   function draw(ctx) {
     const has = (id) => !id || ctx.has(id);
-    const doors = P.DOORS.filter((d) => d.id !== "library" && (d.page || []).some(has));
+    const isDirector = !!(ctx.owner || ctx.admin || ctx.director || String((ctx.rec && ctx.rec.role) || "").toLowerCase() === "director");
+    const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
+    const doors = P.DOORS.filter((d) => d.id !== "library" && (d.page || []).some(has)).map((d) => (d.id === "coaches" && !isDirector ? Object.assign({}, d, { items: d.items.filter((it) => !directorOnly(it)) }) : d));
     // the hero card: the doors this person holds, with how many views each one opens
     $("#doorN").textContent = String(doors.length + 2);                                   // the Dashboard, the doors held, the Library
     const AV = { admin: "Ad", coaches: "Co", clients: "Cl", marketing: "Mk" };
@@ -248,7 +285,12 @@
     $("#jobRows").innerHTML = '<div class="row h"><span>Job</span><span>When (ET)</span><span>What it does</span></div>' + JOBS.map((j) => '<div class="row"><div class="cell"><b>' + esc(j[0]) + '</b></div><div class="cell"><span class="d">' + esc(j[1]) + '</span></div><div class="cell"><span class="d">' + esc(j[2]) + '</span></div></div>').join("");
     // the everyday five, by who they are
     const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
-    const kind = ctx.owner || ctx.admin ? "owner" : ctx.has("backend") && (role === "desk" || ctx.has("billing")) ? "desk" : ctx.has("coach-portal") ? "coach" : ctx.has("mkt") ? "marketing" : ctx.has("backend") ? "desk" : "owner";
+    const kind = ctx.owner || ctx.admin ? "owner" : role === "director" && ctx.has("coach-portal") ? "director" : ctx.has("backend") && (role === "desk" || ctx.has("billing")) ? "desk" : ctx.has("coach-portal") ? "coach" : ctx.has("mkt") ? "marketing" : ctx.has("backend") ? "desk" : "owner";
+    // the how-to: coaches get the coach's week, directors (and owners) the director's
+    const hk = kind === "coach" ? "coach" : (kind === "director" || kind === "owner") && ctx.has("coach-portal") ? "director" : null;
+    $("#howto").classList.toggle("hid", !hk);
+    if (hk) { const h = HOWTO[hk]; $("#howH").textContent = h[0]; $("#howS").textContent = h[1]; $("#howLead").textContent = h[2];
+      $("#howList").innerHTML = h[3].map((w) => '<li><div><a href="' + esc(w[2]) + '" style="text-decoration:none;color:inherit"><b>' + esc(w[0]) + '</b><span>' + esc(w[1]) + '</span></a></div></li>').join(""); }
     const f = FIVE[kind];
     $("#fiveH").textContent = "Your everyday five"; $("#fiveS").textContent = f[1];
     $("#fiveCards").innerHTML = f[2].map((c, i) => '<a class="card" href="' + esc(c[2]) + '"><span class="k">' + (i + 1) + '</span><b>' + esc(c[0]) + '</b><p>' + esc(c[1]) + '</p><span class="where">' + esc(c[2].replace("/backend#", "Admin → ").replace("/portal#/", "Coaches → ").replace("/marketing#", "Marketing → ").replace(/^\/portal$/, "Coaches → Players").replace(/^\/clients$/, "Clients").replace(/^\/$/, "Dashboard")) + "</span></a>").join("");
