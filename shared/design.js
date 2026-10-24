@@ -44,8 +44,14 @@
   function doors() {
     if (!ctx) return [];
     const now = doorNow();
-    return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))
-      .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)) }));
+    // Coaches and tennis directors hold the backend page only for what the Coaches door links to (attendance, messages, courts,
+    // privates), so the Admin door itself stays closed to them; Messages and Courts inside Coaches are for directors (Antonio, Oct 24).
+    const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
+    const coachSide = !ctx.owner && !ctx.admin && (role === "coach" || role === "director" || role === "") && !ctx.has("billing");
+    const director = !!(ctx.owner || ctx.admin || ctx.director || role === "director");
+    const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
+    return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : d.id === "admin" && coachSide ? false : hasAny(d.page))
+      .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(d.id === "coaches" && !director && directorOnly(it))) }));
   }
   let ddEl = null, ddT = null;
   function ddHide() { if (ddEl) ddEl.classList.remove("on"); }
