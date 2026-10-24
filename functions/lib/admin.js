@@ -8,19 +8,19 @@ const CAT = require('./catalog');
 const S = require('./stripe');
 
 const OWNERS = ['PDKJkouns6g6zA1jrABJijEr3oq2', 'OLWbZu29WVUWUbN8W9HdPpOZgmj2'];   // the same owner ids as firestore.rules
-if (!require('firebase-admin/app').getApps().length) admin.initializeApp();
+if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app').initializeApp();
 
 async function requireStaff(req) {
   const h = String(req.headers.authorization || '');
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in to the backend first.');
   let decoded;
-  try { decoded = await admin.auth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
   if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use the backend.');
   if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, firstName: String(decoded.name || '').split(' ')[0], role: 'owner', owner: true, admin: true, billing: true, texting: true };
-  const doc = await admin.firestore().doc('staff/' + email).get();
+  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
   const active = !!(rec && rec.active === true);
   const pages = rec && Array.isArray(rec.pages) ? rec.pages : ['coach-portal', 'tryouts'];

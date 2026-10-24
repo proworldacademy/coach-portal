@@ -16,7 +16,7 @@ const NOTIFY = require('./notify');
 const ADMIN = require('./admin');
 const FEED = require('./feed');
 
-if (!require('firebase-admin/app').getApps().length) admin.initializeApp();
+if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app').initializeApp();
 
 const KEEP_REPORTS = 12;
 const REQUEST_KINDS = { court: 'Court reservation', private: 'Private lesson', change: 'Plan change', message: 'Message' };
@@ -28,7 +28,7 @@ async function requireFamily(req, opts) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in first.');
   let decoded;
-  try { decoded = opts.verify ? await opts.verify(token) : await admin.auth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — sign in again.'); }
+  try { decoded = opts.verify ? await opts.verify(token) : await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — sign in again.'); }
   const email = String(decoded.email || '').trim().toLowerCase();
   if (!email) throw S.err(403, 'email', 'This sign-in has no e-mail address on it.');
   if (decoded.email_verified !== true) throw S.err(403, 'verified', 'Please use Google or the e-mailed link to sign in, so we know the address is yours.');

@@ -24,7 +24,7 @@ function groupOf(programText) {
 function digits(s) { return String(s || '').replace(/\D/g, '').replace(/^1(\d{10})$/, '$1'); }
 function splitName(player) { const parts = String(player || '').trim().split(/\s+/); return { first: parts[0] || '', last: parts.length > 1 && parts[parts.length - 1].length > 1 ? parts.slice(1).join(' ') : '' }; }
 
-function db() { if (!require('firebase-admin/app').getApps().length) admin.initializeApp(); return admin.firestore(); }
+function db() { if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app').initializeApp(); return require('firebase-admin/firestore').getFirestore(); }
 
 /* Rows from the Motherboard (PLAYER, PROGRAM, PRIMARY COACH, PARENT / GUARDIAN, PHONE, EMAIL, PARENT 2 PHONE, MATCH NOTES). Re-importing
    refreshes the contact columns and never touches what the front desk set (plan, days, sent, skip). */
@@ -60,7 +60,7 @@ async function update(id, patch, who) {
   if (set.program !== undefined && set.program && !CAT.program(set.program)) throw S.err(400, 'program', 'Unknown program.');
   if (set.plan !== undefined && set.plan) { const prog = CAT.program(set.program !== undefined ? set.program : snap.data().program); if (!prog || !CAT.plan(prog.id, set.plan)) throw S.err(400, 'plan', 'Unknown plan for that program.'); }
   if (patch.sent === true) { set.sentAt = new Date().toISOString(); set.sentBy = who; set.sentVia = S.clean(patch.via, 20) || 'email'; }
-  if (patch.sent === false) { set.sentAt = admin.firestore.FieldValue.delete(); set.sentBy = admin.firestore.FieldValue.delete(); set.sentVia = admin.firestore.FieldValue.delete(); }
+  if (patch.sent === false) { set.sentAt = require('firebase-admin/firestore').FieldValue.delete(); set.sentBy = require('firebase-admin/firestore').FieldValue.delete(); set.sentVia = require('firebase-admin/firestore').FieldValue.delete(); }
   set.updatedAt = new Date().toISOString(); set.updatedBy = who;
   await ref.set(set, { merge: true });
   return (await ref.get()).data();
