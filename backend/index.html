@@ -1323,14 +1323,15 @@ function threadLines(t){const h=SMSH||{batches:[],logs:[],events:[]};const ids=n
     const c={sent:mine.filter(l=>l.status==='sent').length,failed:mine.filter(l=>l.status==='failed').length,skipped:mine.filter(l=>l.status==='skipped').length,queued:mine.filter(l=>l.status==='queued').length,delivered:mine.filter(l=>/deliver/i.test(l.delivery||'')).length};
     lines.push({dir:'out',at:b.at,body:(mine[0]&&mine[0].body)||b.text,by:b.byName||b.by,c,batch:b.id,label:b.threadLabel||''})}
   // replies: only from families on the roster, only in that family's thread and their groups' — never the whole JustCall inbox (Antonio, Oct 24)
-  if(t.kind!=='all'){const seenId=new Set();for(const e of (h.events||[])){if(!e.players||!e.players.some(id=>ids.has(id)))continue;const k=e.justcallId||(e.phone+'|'+e.body+'|'+Math.round((e.at||0)/60000));if(seenId.has(k))continue;seenId.add(k);const p=state.players.find(x=>(e.players||[]).includes(x.id));lines.push({dir:'in',at:e.at,body:e.body,kind:e.kind,who:p?((p.parent||'')+(p.parent?' · ':'')+p.name):phoneFmt(e.phone)})}}
+  const firstOut=lines.length?Math.min(...lines.map(l=>l.at||0)):Infinity;   // a blank slate: replies show only after the first text sent from here to this thread (Antonio, Oct 24)
+  if(t.kind!=='all'&&lines.length){const seenId=new Set();for(const e of (h.events||[])){if((e.at||0)<firstOut)continue;if(!e.players||!e.players.some(id=>ids.has(id)))continue;const k=e.justcallId||(e.phone+'|'+e.body+'|'+Math.round((e.at||0)/60000));if(seenId.has(k))continue;seenId.add(k);const p=state.players.find(x=>(e.players||[]).includes(x.id));lines.push({dir:'in',at:e.at,body:e.body,kind:e.kind,who:p?((p.parent||'')+(p.parent?' · ':'')+p.name):phoneFmt(e.phone)})}}
   lines.sort((a,b)=>(a.at||0)-(b.at||0));return lines}
 function drawThreads(app,body){
   const rows=smsRows();const all=threadList(rows);const can=smsCanSend();
   if(!SMSH){body.innerHTML='<p class="muted" style="margin-top:22px">Loading the conversations…</p>';liveApi('/api/admin/sms/history').then(h=>{SMSH=h;if(MSG.tab==='threads')drawThreads(app,body)}).catch(e=>{body.innerHTML=`<p class="note">${esc(e.message)}</p>`});return}
   const last={};for(const t of all){const ls=threadLines(t);t.n=ls.length;t.last=ls[ls.length-1]||null;t.unread=ls.some(l=>l.dir==='in'&&l.kind==='reply'&&(l.at||0)>(Number(localStorage.getItem('pw-msg-seen-'+t.key))||0))}
   const q=MSG.tq.trim().toLowerCase();
-  let list=all.filter(t=>t.kind!=='family'||t.n||q);if(q)list=list.filter(t=>t.label.toLowerCase().includes(q)||(t.sub||'').toLowerCase().includes(q));
+  let list=all.filter(t=>t.kind!=='family'?true:(t.n>0||q));if(q)list=list.filter(t=>t.label.toLowerCase().includes(q)||(t.sub||'').toLowerCase().includes(q));
   const order=t=>t.kind==='all'?3e15:(t.last?t.last.at:0)+(t.kind==='family'?0:1e12);list.sort((a,b)=>order(b)-order(a));
   if(!MSG.thread||!all.find(t=>t.key===MSG.thread))MSG.thread=(list[0]||all[0]).key;
   const cur=all.find(t=>t.key===MSG.thread);const lines=threadLines(cur);try{localStorage.setItem('pw-msg-seen-'+cur.key,String(Date.now()))}catch(e){}
@@ -1346,7 +1347,7 @@ function drawThreads(app,body){
   const text=MSG.ttext||'';const seg=smsSegments(text+(cfg.footer===false?'':'\n'+FOOTER_OF(cfg.senderName||'ProWorld Academy')));
   body.innerHTML=`<div class="threads"><div class="tlist card">
     <div class="tfind"><input id="t-q" placeholder="Search a family or a group" value="${esc(MSG.tq)}" autocomplete="off"></div>
-    <div class="trows">${list.map(t=>`<button class="trow${t.key===cur.key?' on':''}" data-t="${esc(t.key)}"><span class="tav" style="background:${t.color}">${esc(t.ini)}</span><span class="tmain"><b>${esc(t.label)}</b><small>${t.last?esc((t.last.dir==='out'?'You: ':'')+String(t.last.body||'').split('\n')[0]):esc(t.sub||'')}</small></span><span class="twhen">${t.last?esc(when(t.last.at)):''}${t.unread?'<i class="tdot"></i>':''}</span></button>`).join('')||'<p class="muted mini" style="padding:12px">No one matches.</p>'}</div></div>
+    <div class="trows">${list.map(t=>`<button class="trow${t.key===cur.key?' on':''}" data-t="${esc(t.key)}"><span class="tav" style="background:${t.color}">${esc(t.ini)}</span><span class="tmain"><b>${esc(t.label)}</b><small>${t.last?esc((t.last.dir==='out'?'You: ':'')+String(t.last.body||'').split('\n')[0]):esc(t.kind==='family'?(t.sub||''):(t.sub||'')+' · nothing sent yet')}</small></span><span class="twhen">${t.last?esc(when(t.last.at)):''}${t.unread?'<i class="tdot"></i>':''}</span></button>`).join('')||'<p class="muted mini" style="padding:12px">No one matches.</p>'}</div></div>
    <div class="tview card">
     <div class="thead"><span class="tav big" style="background:${cur.color}">${esc(cur.ini)}</span><div><b>${esc(cur.label)}</b><br><small>${cur.kind==='family'?esc(cur.sub||''):members.length+' player'+(members.length===1?'':'s')+' · '+willSend.length+' famil'+(willSend.length===1?'y':'ies')+' opted in'+(notIn.length?' · '+notIn.length+' skipped':'')}</small></div><div class="r">${willSend.length?`<span class="pill ok">${willSend.length} will get it</span>`:''}${notIn.length?`<span class="pill">${notIn.length} not opted in</span>`:''}${cur.kind!=='all'?`<button class="btn xs ghost" data-who="1">Who</button>`:''}</div></div>
     <div class="bubbles" id="t-bubbles">${bubbles}</div>
