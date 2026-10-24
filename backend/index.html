@@ -1082,9 +1082,14 @@ function renderPrivates(app){
     if(p.customer)return {k:'card',t:`${money(pr.total)} to the card on file${pr.n>1?' · '+money(pr.each)+' each × '+pr.n:''}`};
     return {k:'due',t:`${money(pr.total)} to collect at the front desk${pr.n>1?' · '+money(pr.each)+' each × '+pr.n:''}`}};
   const ini=n=>String(n||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+  const seeMoney=!!(window.PWCTX&&(window.PWCTX.owner||window.PWCTX.admin));   // prices are for the owners only (Antonio, Oct 24): coaches and directors just book
+  const payPlain=()=>{const p=playerById(PV.pid);if(!p)return {k:'',t:'Pick a player'};const pr=price();if(p.privPack>=pr.hours)return {k:'pack',t:'Lesson pack'};if(p.plan==='flex'&&p.packLeft>0)return {k:'pack',t:'Session pack'};if(p.customer)return {k:'card',t:'Card on file'};return {k:'due',t:'Front desk collects'}};
+  // the coach: a coach books for themselves; a director or owner picks from the list
+  const me=window.PWCTX||{};const myPro=PROS.find(c=>c.name.split(' ')[0].toLowerCase()===String((me.rec&&me.rec.coachAs)||(me.name||'').split(' ')[0]||'').toLowerCase());
+  const coachLocked=!!(myPro&&!(me.owner||me.admin||me.director));if(coachLocked)PV.coach=myPro.name;
   const upcoming=state.privates.filter(x=>x.date>=iso(TODAY)).sort((a,b)=>(a.date+String(a.start).padStart(4,'0')).localeCompare(b.date+String(b.start).padStart(4,'0')));
   const byDay={};upcoming.forEach(x=>{(byDay[x.date]=byDay[x.date]||[]).push(x)});
-  const agenda=Object.keys(byDay).sort().map(d=>`<div class="pv-day"><div class="pv-dayh">${esc(fmtDate(parse(d)))}${d===iso(TODAY)?' <span class="pv-today">Today</span>':''}</div>${byDay[d].map(x=>{const p=playerById(x.pid);const st=x.billed==='pack'?'<span class="pill ok">pack hour</span>':x.billed==='card'?'<span class="pill ok">charged '+money(x.amount)+'</span>':'<span class="pill warn">'+money(x.amount)+' to collect</span>';
+  const agenda=Object.keys(byDay).sort().map(d=>`<div class="pv-day"><div class="pv-dayh">${esc(fmtDate(parse(d)))}${d===iso(TODAY)?' <span class="pv-today">Today</span>':''}</div>${byDay[d].map(x=>{const p=playerById(x.pid);const st=x.billed==='pack'?'<span class="pill ok">pack hour</span>':x.billed==='card'?'<span class="pill ok">'+(seeMoney?'charged '+money(x.amount):'card on file')+'</span>':'<span class="pill warn">'+(seeMoney?money(x.amount)+' to collect':'front desk collects')+'</span>';
     return `<div class="pv-row"><div class="pv-when">${esc(fmtRange(x.start,x.start+x.dur))}</div><div class="pv-who"><span class="pv-ava">${esc(ini(p?p.name:'?'))}</span><div><b>${esc(p?p.name:'?')}</b><div class="m">with ${esc(x.coach)} · ${esc(courtById(x.court).name)}</div></div></div><div class="pv-st">${st}</div></div>`}).join('')}</div>`).join('');
   const draw=()=>{const {ns,ds}=fixChoices();const p=playerById(PV.pid);const pr=price();const pay=payLine();const free=freeCourts();if(PV.court&&!free.some(c=>c.id===PV.court))PV.court='';
     const times=[];for(let h=7;h<=20.5;h+=.5)times.push(h);
@@ -1096,10 +1101,10 @@ function renderPrivates(app){
     app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket on the right fills itself in, blocks the court and texts the family when you book.</p></section>
     <section class="section pv-wrap">
       <div class="pv-build">
-        <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-chips">${PROS.map(c=>`<button class="pv-chip${c.name===PV.coach?' on':''}" data-pv="coach" data-v="${esc(c.name)}"><span class="pv-ava sm">${esc(ini(c.name))}</span>${esc(c.name)}<small>${esc(c.tier)}</small></button>`).join('')}</div></div>
-        <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'}</small>`:'<small>The roster is loading…</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
+        <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-chips"><button class="pv-chip on" id="pv-coach" ${coachLocked?'disabled':''}><span class="pv-ava sm">${esc(ini(PV.coach))}</span>${esc(PV.coach)}${seeMoney?`<small>${esc(PRO(PV.coach).tier)}</small>`:''}${coachLocked?'':'<small>▾ change</small>'}</button></div></div>
+        <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${seeMoney?(p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'):''}</small>`:'<small>The roster is loading…</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
         <div class="pv-grid">
-          <div class="pv-step"><div class="pv-k">On court</div><div class="pv-chips">${['1','2','3','4'].map(n=>`<button class="pv-chip num${n===PV.n?' on':''}" data-pv="n" data-v="${n}" ${ns.includes(n)?'':'disabled'}>${n}</button>`).join('')}</div></div>
+          <div class="pv-step"><div class="pv-k">Players on court</div><div class="pv-chips">${['1','2','3','4'].map(n=>`<button class="pv-chip num${n===PV.n?' on':''}" data-pv="n" data-v="${n}" ${ns.includes(n)?'':'disabled'}>${n}</button>`).join('')}</div></div>
           <div class="pv-step"><div class="pv-k">Length</div><div class="pv-chips">${ds.map(m=>`<button class="pv-chip${m===Number(PV.dur)?' on':''}" data-pv="dur" data-v="${m}">${DUR[m]||m+' min'}</button>`).join('')}</div></div>
         </div>
         <div class="pv-step"><div class="pv-k">Day</div><div class="pv-chips dates">${Array.from({length:10},(_,i)=>addDays(TODAY,i)).map(x=>`<button class="pv-chip day${iso(x)===PV.date?' on':''}" data-pv="date" data-v="${iso(x)}"><b>${x.getDate()}</b><small>${DOW[x.getDay()].slice(0,3)}</small></button>`).join('')}</div></div>
@@ -1110,16 +1115,17 @@ function renderPrivates(app){
         <div class="pv-tk">Private lesson</div>
         <div class="pv-tbig">${esc(fmtRange(Number(PV.time),Number(PV.time)+PV.dur/60))}</div>
         <div class="pv-tdate">${esc(fmtDate(parse(PV.date)))}</div>
-        <div class="pv-tline"><span class="pv-ava">${esc(ini(PV.coach))}</span><div><small>Coach</small><b>${esc(PV.coach)}</b><span>${esc(PRO(PV.coach).tier)}</span></div></div>
+        <div class="pv-tline"><span class="pv-ava">${esc(ini(PV.coach))}</span><div><small>Coach</small><b>${esc(PV.coach)}</b><span>${seeMoney?esc(PRO(PV.coach).tier):'&nbsp;'}</span></div></div>
         <div class="pv-tline"><span class="pv-ava">${esc(ini(p?p.name:''))}</span><div><small>Player${pr.n>1?'s':''}</small><b>${p?esc(p.name):'—'}</b><span>${pr.n>1?pr.n+' on court':'1 on court'}</span></div></div>
         <div class="pv-tline"><span class="pv-ava">${PV.court?esc(courtById(PV.court).name.replace(/\D/g,'')||'C'):'·'}</span><div><small>Court</small><b>${PV.court?esc(courtById(PV.court).name):'First open court'}</b><span>${DUR[PV.dur]||PV.dur+' min'}</span></div></div>
-        <div class="pv-pay ${pay2.k}"><b>${money(pr.total)}</b>${esc(pay2.t)}</div>
+        ${seeMoney?`<div class="pv-pay ${pay2.k}"><b>${money(pr.total)}</b>${esc(pay2.t)}</div>`:`<div class="pv-pay ${payPlain().k}"><b>${esc(payPlain().t)}</b>${payPlain().k==='due'?'the family settles at the front desk':payPlain().k==='card'?'charged by the system':payPlain().k==='pack'?'taken from the pack':''}</div>`}
         <button class="btn pv-book" id="pv-book" ${p?'':'disabled'}>Book the private</button>
         <div class="pv-tfoot">Blocks the court · texts the family · lands on Books</div>
       </aside>
     </section>
     <section class="section"><h2>Upcoming</h2>${agenda||'<p class="muted">No privates booked yet.</p>'}</section>`;
     app.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{const k=b.dataset.pv,v=b.dataset.v;PV[k]=k==='time'?Number(v):k==='dur'?Number(v):v;if(k==='coach'||k==='n'||k==='dur'||k==='date')PV.court='';save();draw()});
+    const cb=$('#pv-coach');if(cb&&!coachLocked)cb.onclick=()=>{openModal(`<h3>Coach</h3><div class="pv-chips" style="margin-top:10px">${PROS.map(c=>`<button class="pv-chip${c.name===PV.coach?' on':''}" data-pick-coach="${esc(c.name)}"><span class="pv-ava sm">${esc(ini(c.name))}</span>${esc(c.name)}${seeMoney?`<small>${esc(c.tier)}</small>`:''}</button>`).join('')}</div><div class="actions"><button class="btn ghost sm" id="m-close">Back</button></div>`);$('#modal').querySelectorAll('[data-pick-coach]').forEach(b=>b.onclick=()=>{PV.coach=b.dataset.pickCoach;PV.court='';closeModal();save();draw()})};
     const q=$('#pv-q'),list=$('#pv-list');
     q.oninput=()=>{const t=q.value.trim().toLowerCase();if(!t){list.hidden=true;return}const hits=roster.filter(x=>x.name.toLowerCase().includes(t)).slice(0,8);list.innerHTML=hits.map(x=>`<button data-pid="${esc(x.id)}"><b>${esc(x.name)}</b><small>${x.program?esc(PROG(x.program).short):'no program'}</small></button>`).join('')||'<div class="m" style="padding:10px 12px">No one by that name</div>';list.hidden=false;
       list.querySelectorAll('[data-pid]').forEach(h=>h.onclick=()=>{PV.pid=h.dataset.pid;const pl=playerById(PV.pid);if(pl&&!pl.contactLoaded)loadContact(pl.id).then(draw);save();draw()})};
@@ -1129,7 +1135,7 @@ function renderPrivates(app){
       const bid='b'+uid();state.blocks.push({id:bid,label:'Private · '+coach.split(' ')[0],courts:[court],dows:[parse(date).getDay()],start,end:start+dur,from:date,until:date,private:true});
       state.privates.push({id:'PV-'+uid(),pid,coach,date,start,dur,court,billed,packType,amount,blockId:bid,cid});if(!p.contactLoaded)await loadContact(pid);
       notify('SMS',phoneFmt(p.phone)||'family',p.name.split(' ')[0]+': private with '+coach+' '+fmtDate(parse(date))+' '+fmtRange(start,start+dur)+' on '+courtById(court).name+'. '+(billed==='pack'?'Pack hour used.':billed==='card'?money(amount)+' charged to your card on file.':money(amount)+' is due at the front desk.'),{phone:p.phone});
-      rebuildPlayers();save();renderPrivates(app);toast('Booked '+courtById(court).name+' · '+(billed==='pack'?'pack hour used':billed==='card'?money(amount)+' charged':money(amount)+' to collect')+'.')};
+      rebuildPlayers();save();renderPrivates(app);toast('Booked '+courtById(court).name+(seeMoney?' · '+(billed==='pack'?'pack hour used':billed==='card'?money(amount)+' charged':money(amount)+' to collect'):'')+'.')};
   };
   draw();
 }
