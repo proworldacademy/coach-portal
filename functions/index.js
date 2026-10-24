@@ -11,6 +11,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const BACKUP = require('./lib/backup');
+const LESSONS = require('./lib/lessons');
 const CAL = require('./lib/calendar');
 const CAT = require('./lib/catalog');
 const S = require('./lib/stripe');
@@ -129,6 +130,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         try { await ctx.db.collection('smsLog').doc().set({ at: Date.now(), sentAt: ok ? Date.now() : null, by: who.email, byName: who.name || '', player: fam.id, playerName: fam.name || '', group: fam.group || '', coach: fam.coach || '', phone, body: S.clean(b.body, 600), status: ok ? 'sent' : 'failed', reason: ok ? '' : 'justcall', batch: 'direct' }); } catch (e) { /* the text went; the log line is best effort */ }
         return send(res, 200, { ok });
       }
+      if (route === 'POST /admin/lesson/booked') return send(res, 200, await LESSONS.booked(ctx.db, who, b));        // a private was booked: the coach hears it
+      if (route === 'POST /admin/lesson/cancelled') return send(res, 200, await LESSONS.cancelled(ctx.db, who, b));
       if (route === 'GET /admin/backup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BACKUP.status()); }                 // the nightly copies of the database
       if (route === 'POST /admin/backup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BACKUP.run(log)); }                  // one now
       if (route === 'GET /admin/catalog') return send(res, 200, Object.assign({ mode: mode(key) }, await SYNC.checkCatalog(stripe)));
@@ -267,4 +270,10 @@ exports.dailyBilling = onSchedule({ schedule: '5 5 * * *', timeZone: CAL.TZ, reg
 exports.nightlyBackup = onSchedule({ schedule: '40 4 * * *', timeZone: CAL.TZ, region: REGION, retryCount: 2, timeoutSeconds: 300, memory: '256MiB' }, async () => {
   try { const out = await BACKUP.run((l) => logger.info('backup: ' + l)); logger.info('nightlyBackup started', out); }
   catch (e) { logger.error('nightlyBackup failed', { message: e.message }); throw e; }
+});
+
+/* Private-lesson reminders: the evening before and one hour before, to the family (opted in) and the coach (lib/lessons.js). */
+exports.lessonReminders = onSchedule({ schedule: '*/15 * * * *', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 120, memory: '256MiB' }, async () => {
+  try { const out = await LESSONS.remind(DB.get(), Date.now(), (l) => logger.info('reminder: ' + l)); if (out.sent || out.errors.length) logger.info('lessonReminders', out); }
+  catch (e) { logger.error('lessonReminders failed', { message: e.message }); }
 });
