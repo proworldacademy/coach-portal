@@ -170,11 +170,13 @@ test('consent: staff toggles record who and when, the enrollment tick lands on t
 
 test('the JustCall webhook: only a signed request counts; STOP switches the family off, START back on, delivery updates land on the line', async () => {
   const db = fakeDb(Object.assign({}, ROSTER, SETTINGS)); wire();
-  const url = 'https://proworld-coach-portal.web.app/api/sms/webhook'; const ts = '2026-10-21 09:00:00';
+  const url = 'https://proworld-coach-portal.web.app/api/sms/webhook'; const ts = new Date().toISOString().slice(0, 19).replace('T', ' ');   // JustCall's format, fresh (a stale one is a replay)
   const sign = (type) => crypto.createHmac('sha256', 'secret-1').update(`secret-1|${encodeURIComponent(url)}|${type}|${ts}`).digest('hex');
   const headers = (type) => ({ 'x-justcall-signature': sign(type), 'x-justcall-signature-version': 'v1', 'x-justcall-request-timestamp': ts });
   const stop = { webhook_url: url, type: 'sms.received', data: { contact_number: '+15615550101', direction: 'Incoming', sms_info: { body: 'STOP' } } };
   await assert.rejects(SMS.webhook(db, { 'x-justcall-signature': 'bad', 'x-justcall-request-timestamp': ts }, stop), (e) => e.status === 401);
+  const old = '2026-10-21 09:00:00'; const oldSig = crypto.createHmac('sha256', 'secret-1').update(`secret-1|${encodeURIComponent(url)}|sms.received|${old}`).digest('hex');
+  await assert.rejects(SMS.webhook(db, { 'x-justcall-signature': oldSig, 'x-justcall-request-timestamp': old }, stop), (e) => e.status === 401);   // signed, but days old: a replay
   const out = await SMS.webhook(db, headers('sms.received'), stop);
   assert.deepEqual(out.players, ['as-ava-t']);
   assert.equal(db._docs.get('players/as-ava-t/private/sms').optIn, false); assert.equal(db._docs.get('players/as-ava-t/private/sms').source, 'stop');
@@ -193,7 +195,7 @@ test('the JustCall webhook: only a signed request counts; STOP switches the fami
   assert.equal(db._docs.get(line[0]).delivery, 'delivered');
   const h = await SMS.history(db, DESK, {}); assert.deepEqual(h.events.map((e) => e.kind).sort(), ['optin', 'optout']);
   const notes = [...db._docs.entries()].filter(([k]) => k.startsWith('smsWebhookLog/')).map(([, v]) => v);
-  assert.equal(notes.length, 5, 'every call is noted, the refused one too'); assert.equal(notes[0].ok, false); assert.equal(notes[0].error, 'signature'); assert.equal(notes[1].did, 'opted out 1 player(s)'); assert.equal(notes[1].phoneTail, '0101'); assert.ok(!JSON.stringify(notes).includes('STOP') && !JSON.stringify(notes).includes('+15615550101'), 'no body, no full number');
+  assert.equal(notes.length, 6, 'every call is noted, the refused ones too'); assert.equal(notes[0].ok, false); assert.equal(notes[0].error, 'signature'); assert.equal(notes[1].error, 'signature'); assert.equal(notes[2].did, 'opted out 1 player(s)'); assert.equal(notes[2].phoneTail, '0101'); assert.ok(!JSON.stringify(notes).includes('STOP') && !JSON.stringify(notes).includes('+15615550101'), 'no body, no full number');
   const alt = { webhook_url: url, type: 'sms.delivery_status_updated', data: { id: line[1].justcallId, delivery_status: 'failed' } };
   assert.match((await SMS.webhook(db, headers('sms.delivery_status_updated'), alt)).did, /failed on 1/);
 });

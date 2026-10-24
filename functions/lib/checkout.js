@@ -14,6 +14,7 @@ const S = require('./stripe');
 const ROSTER = require('./roster');
 const SMS = require('./sms');
 
+function sameSite(u) { try { const x = new URL(String(u || '')); return x.origin === new URL(SITE).origin ? x.href : ''; } catch (e) { return ''; } }   // a "Back" link only to our own site (Oct 24 audit)
 const SITE = 'https://proworld-coach-portal.web.app';
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MIN_CHARGE_LEAD = 49 * 3600;                   // closer than ~2 days to the 1st, the start month is on the house (no separate payment)
@@ -101,7 +102,7 @@ async function createMonthlySession(stripe, body) {
     billing_address_collection: 'auto',
     custom_text: { submit: { message: submit } },
     success_url: `${SITE}/enroll/done?s={CHECKOUT_SESSION_ID}`,
-    cancel_url: body.cancel_url && String(body.cancel_url).startsWith(SITE) ? body.cancel_url : `${SITE}/enroll?p=${prog.id}`
+    cancel_url: sameSite(body.cancel_url) || `${SITE}/enroll?p=${prog.id}`
   };
   let session;
   if (q.mode === 'charge') {
@@ -234,7 +235,7 @@ async function createOneTimeSession(stripe, body) {
     invoice_creation: { enabled: true, invoice_data: { description: description.slice(0, 1500), metadata: meta } },
     metadata: meta,
     success_url: `${SITE}/enroll/done?s={CHECKOUT_SESSION_ID}`,
-    cancel_url: body.cancel_url && String(body.cancel_url).startsWith(SITE) ? body.cancel_url : `${SITE}/enroll`
+    cancel_url: sameSite(body.cancel_url) || `${SITE}/enroll`
   }, { idempotencyKey: body.idempotency ? 'buy_' + S.clean(body.idempotency, 60) : undefined });
   return { url: session.url, id: session.id, quote: { lines: quoteLines, dueCents: total } };
 }
@@ -268,7 +269,9 @@ async function sessionStatus(stripe, id, log, ctx) {
     try { const rec = await ROSTER.record(ctx.db, stripe, s, sub, { log, mode: ctx.mode }); if (rec) out.roster = { player: rec.player || null, created: !!rec.created, tryout: rec.tryout || null }; await SMS.consentFromSession(ctx.db, s, rec); }
     catch (e) { out.rosterError = e.message; if (log) log('roster error ' + s.id + ': ' + e.message); }
   }
-  if (s.status === 'complete' && s.customer) { try { out.portalUrl = await S.portalUrl(stripe, S.customerId(s.customer), `${SITE}/enroll/done?s=${id}`); } catch (e) { out.portalUrl = null; } }
+  // Oct 24 audit: the thank-you page is reached with the session id in the address bar, so the answer carries no card-portal link and no e-mail;
+  // a signed-in family gets the portal link from /api/family/portal.
+  delete out.email;
   return out;
 }
 

@@ -120,7 +120,7 @@ test('monthly enrollment: the start month is a plain payment that saves the card
   assert.equal(st.enrollment.subscription, stripe._db.subscriptions[0].id);
   assert.deepEqual(st.enrollment.next, { date: '2026-11-01', cents: 74700 });
   assert.deepEqual(st.enrollment.days, ['Mon', 'Wed', 'Fri']);
-  assert.ok(st.portalUrl);
+  assert.equal(st.portalUrl, undefined); assert.equal(st.email, undefined);   // Oct 24 audit: nothing private on the thank-you answer
   // Opening the thank-you page again (or the sweep running later) never creates a second plan.
   await CHECKOUT.sessionStatus(stripe, session.id);
   const sweep = await JOBS.convertPaidEnrollments(stripe, '2026-10-14');
@@ -221,7 +221,9 @@ test('thank-you page status for a completed enrollment', async () => {
   assert.equal(st.paid, 62400);
   assert.deepEqual(st.enrollment.next, { date: '2026-11-01', cents: 74700 });
   assert.equal(st.enrollment.plan, '3 Days per week');
-  assert.match(st.portalUrl, /^https:\/\/billing\.stripe\.com\//);
+  assert.equal(st.portalUrl, undefined);
+  const portal = await S.portalUrl(stripe, 'cus_1', 'https://proworld-coach-portal.web.app/family');   // the signed-in family gets the card portal from /api/family/portal
+  assert.match(portal, /^https:\/\/billing\.stripe\.com\//);
   assert.equal(stripe._db.portalConfigs.length, 1);
   assert.equal(stripe._db.portalConfigs[0].features.subscription_cancel.mode, 'at_period_end');
 });

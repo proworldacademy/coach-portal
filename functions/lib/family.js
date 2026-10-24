@@ -16,7 +16,7 @@ const NOTIFY = require('./notify');
 const ADMIN = require('./admin');
 const FEED = require('./feed');
 
-if (!admin.apps.length) admin.initializeApp();
+if (!require('firebase-admin/app').getApps().length) admin.initializeApp();
 
 const KEEP_REPORTS = 12;
 const REQUEST_KINDS = { court: 'Court reservation', private: 'Private lesson', change: 'Plan change', message: 'Message' };

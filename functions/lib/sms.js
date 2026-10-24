@@ -342,6 +342,8 @@ function signatureOk(secret, headers, body) {
   const h = (k) => String(headers[k] || headers[k.toLowerCase()] || '');
   const given = h('x-justcall-signature'); const ts = h('x-justcall-request-timestamp');
   if (!given || !ts || !body || !body.webhook_url || !body.type) return false;
+  const when = /^\d{9,}$/.test(ts) ? Number(ts) * 1000 : Date.parse(ts.replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(ts) ? '' : 'Z'));   // JustCall sends "YYYY-MM-DD HH:MM:SS" (UTC)
+  if (Number.isFinite(when) && Math.abs(Date.now() - when) > 10 * 60 * 1000) return false;   // ten minutes: a captured STOP/START cannot be replayed later (Oct 24 audit)
   const payload = `${secret}|${encodeURIComponent(body.webhook_url)}|${body.type}|${ts}`;
   const want = crypto.createHmac('sha256', secret).update(payload).digest('hex');
   return given.length === want.length && crypto.timingSafeEqual(Buffer.from(given), Buffer.from(want));

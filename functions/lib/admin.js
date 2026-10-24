@@ -8,7 +8,7 @@ const CAT = require('./catalog');
 const S = require('./stripe');
 
 const OWNERS = ['PDKJkouns6g6zA1jrABJijEr3oq2', 'OLWbZu29WVUWUbN8W9HdPpOZgmj2'];   // the same owner ids as firestore.rules
-if (!admin.apps.length) admin.initializeApp();
+if (!require('firebase-admin/app').getApps().length) admin.initializeApp();
 
 async function requireStaff(req) {
   const h = String(req.headers.authorization || '');

@@ -24,7 +24,7 @@ function groupOf(programText) {
 function digits(s) { return String(s || '').replace(/\D/g, '').replace(/^1(\d{10})$/, '$1'); }
 function splitName(player) { const parts = String(player || '').trim().split(/\s+/); return { first: parts[0] || '', last: parts.length > 1 && parts[parts.length - 1].length > 1 ? parts.slice(1).join(' ') : '' }; }
 
-function db() { if (!admin.apps.length) admin.initializeApp(); return admin.firestore(); }
+function db() { if (!require('firebase-admin/app').getApps().length) admin.initializeApp(); return admin.firestore(); }
 
 /* Rows from the Motherboard (PLAYER, PROGRAM, PRIMARY COACH, PARENT / GUARDIAN, PHONE, EMAIL, PARENT 2 PHONE, MATCH NOTES). Re-importing
    refreshes the contact columns and never touches what the front desk set (plan, days, sent, skip). */

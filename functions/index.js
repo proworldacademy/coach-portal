@@ -117,8 +117,16 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInsta
         return send(res, 200, { ok: await NOTIFY.slack(ctx.db, which, S.clean(b.text, 600) + ' — ' + (who.name || who.email), lines) });
       }
       if (route === 'POST /admin/text') {
-        // a text to a family from the backend page (a private booked, a court reserved, a pack running low) — only when texts are switched on
-        return send(res, 200, { ok: await NOTIFY.text(ctx.db, S.clean(b.phone, 30), S.clean(b.body, 600)) });
+        // a text to a family from the backend page (a private booked, a court reserved, a pack running low) — only when texts are switched on.
+        // Oct 24 audit: needs the texting permission, the number must belong to a family that opted in, and every send is logged.
+        SMS.requireTexting(who);
+        const phone = SMS.e164(S.clean(b.phone, 30)); if (!phone) return send(res, 400, { error: 'phone', message: 'That is not a usable mobile number.' });
+        const fam = (await SMS.recipients(ctx.db)).find((r) => r.phone === phone);
+        if (!fam) return send(res, 403, { error: 'unknown', message: 'That number is not on a family record, so the engine will not text it.' });
+        if (!fam.optIn) return send(res, 403, { error: 'optin', message: `${fam.name || 'This family'} has not opted in to texts.` });
+        const ok = await NOTIFY.text(ctx.db, phone, S.clean(b.body, 600));
+        try { await ctx.db.collection('smsLog').doc().set({ at: Date.now(), sentAt: ok ? Date.now() : null, by: who.email, byName: who.name || '', player: fam.id, playerName: fam.name || '', group: fam.group || '', coach: fam.coach || '', phone, body: S.clean(b.body, 600), status: ok ? 'sent' : 'failed', reason: ok ? '' : 'justcall', batch: 'direct' }); } catch (e) { /* the text went; the log line is best effort */ }
+        return send(res, 200, { ok });
       }
       if (route === 'GET /admin/catalog') return send(res, 200, Object.assign({ mode: mode(key) }, await SYNC.checkCatalog(stripe)));
       if (route === 'POST /admin/catalog/sync') {
