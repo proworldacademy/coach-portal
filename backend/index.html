@@ -1067,12 +1067,13 @@ function renderPrivates(app){
      paid) and carries the Book button. Below, the upcoming lessons as a day-by-day agenda. Same booking logic as before:
      lesson pack hour → flex pack session → card on file → to collect at the front desk; blocks the court; texts the family. */
   const DUR={30:'30 min',45:'45 min',60:'1 hour',90:'1.5 hours',120:'2 hours'};
-  const PV=state.pv=state.pv||{coach:PROS[0].name,pid:'',n:'1',date:iso(TODAY),time:15,dur:60,court:''};
-  if(!PRO(PV.coach))PV.coach=PROS[0].name;
+  const PV=state.pv=state.pv||{coach:'',pid:'',n:'1',date:iso(TODAY),time:15,dur:60,court:''};
+  if(PV.coach&&!PRO(PV.coach))PV.coach='';
+  const PROX=n=>PRO(n)||PROS[0];   // the tier used for the chips before a coach is picked (prices are owners-only anyway)
   const roster=state.players.filter(p=>p.status!=='tryout').sort((a,b)=>a.name.localeCompare(b.name));
   if(!PV.pid||!playerById(PV.pid))PV.pid=roster[0]?roster[0].id:'';
-  const tier=()=>LESSON_TIERS[PRO(PV.coach).tier];
-  const kindOf=()=>PRO(PV.coach).tier==='SOCCER 120'?'soccer':'tennis';
+  const tier=()=>LESSON_TIERS[PROX(PV.coach).tier];
+  const kindOf=()=>PROX(PV.coach).tier==='SOCCER 120'?'soccer':'tennis';
   const fixChoices=()=>{const t=tier();const ns=Object.keys(t);if(!ns.includes(PV.n))PV.n=ns[0];const ds=Object.keys(t[PV.n]).map(Number).sort((a,b)=>a-b);if(!ds.includes(Number(PV.dur)))PV.dur=ds.includes(60)?60:ds[0];return {ns,ds}};
   const price=()=>{const t=tier();const each=t[PV.n][PV.dur];return {each,total:Math.round(each*Number(PV.n)*100)/100,hours:PV.dur/60,n:Number(PV.n),min:PV.dur}};
   const freeCourts=()=>COURTS.filter(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,Number(PV.time),PV.dur/60));
@@ -1101,7 +1102,7 @@ function renderPrivates(app){
     app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket on the right fills itself in, blocks the court and texts the family when you book.</p></section>
     <section class="section pv-wrap">
       <div class="pv-build">
-        <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-chips"><button class="pv-chip on" id="pv-coach" ${coachLocked?'disabled':''}><span class="pv-ava sm">${esc(ini(PV.coach))}</span>${esc(PV.coach)}${seeMoney?`<small>${esc(PRO(PV.coach).tier)}</small>`:''}${coachLocked?'':'<small>▾ change</small>'}</button></div></div>
+        <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-pick">${coachLocked?'':`<input id="pv-cq" class="pv-search" type="search" placeholder="Type a coach's name…" autocomplete="off" value="">`}<div class="pv-sel">${PV.coach?`<span class="pv-ava sm">${esc(ini(PV.coach))}</span><b>${esc(PV.coach)}</b>${seeMoney?`<small>${esc(PROX(PV.coach).tier)}</small>`:''}`:'<small>No coach picked yet</small>'}</div><div id="pv-clist" class="pv-list" hidden></div></div></div>
         <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${seeMoney?(p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'):''}</small>`:'<small>The roster is loading…</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
         <div class="pv-grid">
           <div class="pv-step"><div class="pv-k">Players on court</div><div class="pv-chips">${['1','2','3','4'].map(n=>`<button class="pv-chip num${n===PV.n?' on':''}" data-pv="n" data-v="${n}" ${ns.includes(n)?'':'disabled'}>${n}</button>`).join('')}</div></div>
@@ -1115,21 +1116,21 @@ function renderPrivates(app){
         <div class="pv-tk">Private lesson</div>
         <div class="pv-tbig">${esc(fmtRange(Number(PV.time),Number(PV.time)+PV.dur/60))}</div>
         <div class="pv-tdate">${esc(fmtDate(parse(PV.date)))}</div>
-        <div class="pv-tline"><span class="pv-ava">${esc(ini(PV.coach))}</span><div><small>Coach</small><b>${esc(PV.coach)}</b><span>${seeMoney?esc(PRO(PV.coach).tier):'&nbsp;'}</span></div></div>
+        <div class="pv-tline"><span class="pv-ava">${PV.coach?esc(ini(PV.coach)):'·'}</span><div><small>Coach</small><b>${PV.coach?esc(PV.coach):'—'}</b><span>${seeMoney&&PV.coach?esc(PROX(PV.coach).tier):'&nbsp;'}</span></div></div>
         <div class="pv-tline"><span class="pv-ava">${esc(ini(p?p.name:''))}</span><div><small>Player${pr.n>1?'s':''}</small><b>${p?esc(p.name):'—'}</b><span>${pr.n>1?pr.n+' on court':'1 on court'}</span></div></div>
         <div class="pv-tline"><span class="pv-ava">${PV.court?esc(courtById(PV.court).name.replace(/\D/g,'')||'C'):'·'}</span><div><small>Court</small><b>${PV.court?esc(courtById(PV.court).name):'First open court'}</b><span>${DUR[PV.dur]||PV.dur+' min'}</span></div></div>
-        ${seeMoney?`<div class="pv-pay ${pay2.k}"><b>${money(pr.total)}</b>${esc(pay2.t)}</div>`:`<div class="pv-pay ${payPlain().k}"><b>${esc(payPlain().t)}</b>${payPlain().k==='due'?'the family settles at the front desk':payPlain().k==='card'?'charged by the system':payPlain().k==='pack'?'taken from the pack':''}</div>`}
-        <button class="btn pv-book" id="pv-book" ${p?'':'disabled'}>Book the private</button>
+        ${seeMoney?`<div class="pv-pay ${pay2.k}"><b>${money(pr.total)}</b>${esc(pay2.t)}</div>`:''}
+        <button class="btn pv-book" id="pv-book" ${p&&PV.coach?'':'disabled'}>Book the private</button>
         <div class="pv-tfoot">Blocks the court · texts the family · lands on Books</div>
       </aside>
     </section>
     <section class="section"><h2>Upcoming</h2>${agenda||'<p class="muted">No privates booked yet.</p>'}</section>`;
     app.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{const k=b.dataset.pv,v=b.dataset.v;PV[k]=k==='time'?Number(v):k==='dur'?Number(v):v;if(k==='coach'||k==='n'||k==='dur'||k==='date')PV.court='';save();draw()});
-    const cb=$('#pv-coach');if(cb&&!coachLocked)cb.onclick=()=>{openModal(`<h3>Coach</h3><div class="pv-chips" style="margin-top:10px">${PROS.map(c=>`<button class="pv-chip${c.name===PV.coach?' on':''}" data-pick-coach="${esc(c.name)}"><span class="pv-ava sm">${esc(ini(c.name))}</span>${esc(c.name)}${seeMoney?`<small>${esc(c.tier)}</small>`:''}</button>`).join('')}</div><div class="actions"><button class="btn ghost sm" id="m-close">Back</button></div>`);$('#modal').querySelectorAll('[data-pick-coach]').forEach(b=>b.onclick=()=>{PV.coach=b.dataset.pickCoach;PV.court='';closeModal();save();draw()})};
+    const cq=$('#pv-cq'),clist=$('#pv-clist');if(cq){const showC=()=>{const t=cq.value.trim().toLowerCase();const hits=PROS.filter(c=>!t||c.name.toLowerCase().includes(t)).slice(0,10);clist.innerHTML=hits.map(c=>`<button data-coach="${esc(c.name)}"><b>${esc(c.name)}</b>${seeMoney?`<small>${esc(c.tier)}</small>`:''}</button>`).join('')||'<div class="m" style="padding:10px 12px">No coach by that name</div>';clist.hidden=false;clist.querySelectorAll('[data-coach]').forEach(h=>h.onclick=()=>{PV.coach=h.dataset.coach;PV.court='';save();draw()})};cq.oninput=showC;cq.onfocus=showC;cq.onblur=()=>setTimeout(()=>{clist.hidden=true},150)}
     const q=$('#pv-q'),list=$('#pv-list');
     q.oninput=()=>{const t=q.value.trim().toLowerCase();if(!t){list.hidden=true;return}const hits=roster.filter(x=>x.name.toLowerCase().includes(t)).slice(0,8);list.innerHTML=hits.map(x=>`<button data-pid="${esc(x.id)}"><b>${esc(x.name)}</b><small>${x.program?esc(PROG(x.program).short):'no program'}</small></button>`).join('')||'<div class="m" style="padding:10px 12px">No one by that name</div>';list.hidden=false;
       list.querySelectorAll('[data-pid]').forEach(h=>h.onclick=()=>{PV.pid=h.dataset.pid;const pl=playerById(PV.pid);if(pl&&!pl.contactLoaded)loadContact(pl.id).then(draw);save();draw()})};
-    $('#pv-book').onclick=async()=>{const coach=PV.coach,pid=PV.pid,date=PV.date,start=Number(PV.time),dur=PV.dur/60;let court=PV.court;const p=playerById(pid);if(!p){toast('Pick a player.');return}const kind=kindOf();if(!court){const c=COURTS.find(c=>c.kind===kind&&slotFree(c.id,date,start,dur));if(!c){toast('No open court at that time.');return}court=c.id}else if(!slotFree(court,date,start,dur)){toast(courtById(court).name+' isn\'t free then.');return}
+    $('#pv-book').onclick=async()=>{const coach=PV.coach,pid=PV.pid,date=PV.date,start=Number(PV.time),dur=PV.dur/60;let court=PV.court;const p=playerById(pid);if(!p){toast('Pick a player.');return}if(!coach){toast('Pick a coach.');return}const kind=kindOf();if(!court){const c=COURTS.find(c=>c.kind===kind&&slotFree(c.id,date,start,dur));if(!c){toast('No open court at that time.');return}court=c.id}else if(!slotFree(court,date,start,dur)){toast(courtById(court).name+' isn\'t free then.');return}
       const pr=price();const btn=$('#pv-book');btn.disabled=true;btn.textContent='Booking…';let billed='due',cid=null,amount=0,packType=null;
       if(p.privPack>=pr.hours){ov(pid).privUsed=Math.round(((ov(pid).privUsed||0)+pr.hours)*100)/100;billed='pack';packType='priv'}else if(p.plan==='flex'&&p.packLeft>0){ov(pid).packUsed=(ov(pid).packUsed||0)+1;billed='pack';packType='flex'}else{amount=pr.total;const c=addCharge(pid,'Private with '+coach+' · '+fmtDate(parse(date))+' · '+durText(dur)+(pr.n>1?' · '+pr.n+' players':''),amount,'due','private',PRO(coach).tier==='SOCCER 120'?'Soccer':PRO(coach).tier==='FITNESS 110'?'Fitness':'Private lessons',null,{lookup:lookupFor('lesson',PRO(coach).tier,{n:pr.n,min:pr.min}),qty:pr.n});cid=c.id;if(p.customer){const ok=await chargeCard(c);billed=ok?'card':'due'}}
       const bid='b'+uid();state.blocks.push({id:bid,label:'Private · '+coach.split(' ')[0],courts:[court],dows:[parse(date).getDay()],start,end:start+dur,from:date,until:date,private:true});
