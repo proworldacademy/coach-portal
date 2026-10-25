@@ -107,6 +107,7 @@ textarea:focus,input:focus{outline:none;border-color:var(--accent-ink)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:6px;border:1px solid var(--line2);background:var(--panel);padding:8px 12px;font-weight:600;font-size:12.5px;white-space:nowrap}
 .btn:hover{border-color:var(--text)}
 .btn.pri{background:var(--lime);border-color:var(--lime);color:#000}
+a.btn{text-decoration:none}
 .btn.ghost{background:none}
 
 /* talking points */
@@ -277,6 +278,7 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const finePointer = () => { try { return window.matchMedia('(pointer:fine)').matches; } catch (e) { return true; } };
   const UA = navigator.userAgent || '';
+  const IOS = /iPhone|iPad|iPod/.test(UA);
   const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|LinkedInApp|TikTok|Snapchat|Twitter|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA)) || navigator.standalone === true;
   const PHONE_TIP = 'Google couldn’t finish signing you in here. If this page is open inside another app (WhatsApp, Instagram…), open it in Safari or Chrome itself: the compass or “Open in browser” button, or copy the link.';
   const REDIRECT_SIGNIN = !finePointer() || navigator.standalone === true;   // phones: full-page hand-off to Google, no pop-up
@@ -296,6 +298,12 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
     if (G.stage === 'checking') return shell(`<div class="panel stack"><b>One moment…</b><p class="hint">Checking the staff list.</p></div>`);
     if (G.stage === 'unverified') return shell(`<div class="panel stack"><b>Google couldn’t confirm that email address for us.</b><p class="hint">Use a Gmail or Google Workspace account, and sign in to the Coach Portal first so an administrator can approve it.</p><div class="rowx"><button class="btn" data-g="signout">Use a different account</button></div></div>`);
     if (G.stage === 'pending') return shell(`<div class="panel stack"><b>You’re signed in, but not on the staff list yet.</b><p class="hint">This try-out uses the Coach Portal’s staff list. Open the portal, sign in there once, and an administrator will approve you; after that this page opens straight away.</p><div class="rowx"><a class="btn" href="./">Open the Coach Portal</a><button class="btn ghost" data-g="signout">Use a different account</button></div></div>`);
+    if (IN_APP && !G.forceHere && navigator.standalone !== true) return shell(`<div class="panel stack signin">${note}
+      <b>Open this page in ${IOS ? 'Safari or Chrome' : 'Chrome'} to sign in.</b>
+      <p class="hint">The link opened inside another app (WhatsApp, Instagram, Facebook…). Google does not allow sign-in from there, so the first try fails. In your real browser it works and you stay signed in.</p>
+      <a class="btn pri big" href="${IOS ? 'x-safari-' + esc(location.href) : 'intent://' + esc(location.host + location.pathname + location.search + location.hash) + '#Intent;scheme=https;package=com.android.chrome;end'}">Open in ${IOS ? 'Safari' : 'Chrome'}</a>
+      <div class="rowx"><button class="btn" data-g="copy-link">Copy the link</button><button class="btn ghost" data-g="force-here">Try here anyway</button></div>
+      <p class="hint">Or tap the menu (···) at the top of this screen and choose “Open in ${IOS ? 'Safari' : 'Chrome'}”.</p></div>`);
     return shell(`<div class="panel stack signin">${note}
       <button class="btn pri big" data-g="google" ${G.busy ? 'disabled' : ''}>Continue with Google</button>
       <p class="hint">For ProWorld coaching staff. Sign in with the same Google account you use for the Coach Portal. If you are already signed in to the portal on this device, this page opens by itself.</p>
@@ -330,6 +338,7 @@ tr.rec td{background:color-mix(in srgb,var(--lime) 9%,transparent)}
   });
   document.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-g]'); if (!b || b.disabled) return; const act = b.getAttribute('data-g');
+    if (act === 'force-here') { G.forceHere = true; renderGate(); return; }
     if (act === 'google') { G.note = ''; G.busy = true; renderGate(); try { if (REDIRECT_SIGNIN) { await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); return; } await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { G.note = authMsg(e); } G.busy = false; if (!auth.currentUser) renderGate(); }
     else if (act === 'signout') { b.disabled = true; try { await auth.signOut(); } catch (e) { /* noop */ } try { await fs.terminate(); await fs.clearPersistence(); } catch (e) { /* the portal may hold it open in another tab; fine */ } location.reload(); }
     else if (act === 'copy-link') { const url = location.href.split('#')[0]; let ok = false;

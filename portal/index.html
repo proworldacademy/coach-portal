@@ -1961,6 +1961,12 @@ const PW_CONFIG = {
     const link = EMAIL_LINK ? `<div class="or"><span>or</span></div>
       <form class="stack" data-wform="link"><div class="field"><label for="w_email">Your email address</label><input id="w_email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"></div>
         <button class="btn big" type="submit" ${WEB.busy === 'link' ? 'disabled' : ''}>Email me a sign-in link</button></form>` : '';
+    if (IN_APP && !WEB.forceHere && navigator.standalone !== true) return gateShell(`<div class="panel stack signin">${note}
+      <b>Open this page in ${IOS ? 'Safari or Chrome' : 'Chrome'} to sign in.</b>
+      <p class="hint">The link opened inside another app (WhatsApp, Instagram, Facebook…). Google does not allow sign-in from there, so the first try fails. In your real browser it works and you stay signed in.</p>
+      <a class="btn pri big" href="${IOS ? 'x-safari-' + esc(location.href) : 'intent://' + esc(location.host + location.pathname + location.search + location.hash) + '#Intent;scheme=https;package=com.android.chrome;end'}">Open in ${IOS ? 'Safari' : 'Chrome'}</a>
+      <div class="rowx"><button class="btn" data-wact="copy-link">Copy the link</button><button class="btn ghost" data-wact="force-here">Try here anyway</button></div>
+      <p class="hint">Or tap the menu (···) at the top of this screen and choose “Open in ${IOS ? 'Safari' : 'Chrome'}”.</p></div>`);
     return gateShell(`<div class="panel stack signin">${note}
       <button class="btn pri big" data-wact="google" ${WEB.busy === 'google' ? 'disabled' : ''}>Continue with Google</button>${link}
       <p class="hint">For ProWorld coaching staff. ${EMAIL_LINK ? '' : 'Sign in with your Google account (Gmail or Google Workspace). '}The first time you sign in, an administrator approves your email; after that you come straight in. No new password, and no other account needed.</p>
@@ -1973,6 +1979,7 @@ const PW_CONFIG = {
   const REDIRECT_SIGNIN = !finePointer() || navigator.standalone === true;
   const UA = navigator.userAgent || '';
   // named in-app browsers, Android web views, iPhone web views (they leave out the "Safari/" token), and iPhone home-screen mode
+  const IOS = /iPhone|iPad|iPod/.test(UA);
   const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|LinkedInApp|TikTok|Snapchat|Twitter|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA)) || navigator.standalone === true;
   function authMsg(e) {
     const c = e && e.code; if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return finePointer() ? '' : PHONE_TIP;
@@ -2105,6 +2112,7 @@ const PW_CONFIG = {
         toast(ok ? 'Link copied. Open Safari or Chrome and paste it there.' : 'Couldn’t copy. The address is ' + url); }
       else if (act === 'signout') { if (menu) menu.hidden = true; b.disabled = true; await signOutHere(); }
       else if (act === 'back-signin') { WEB.stage = 'out'; renderGate(); }
+      else if (act === 'force-here') { WEB.forceHere = true; renderGate(); }
       else if (act === 'staff') { if (menu) menu.hidden = true; go({ view: 'staff' }); }
       else if (act === 'approve') { const r = WEB.requests.find((x) => x.id === b.getAttribute('data-uid')); if (!r) return; b.disabled = true; await WEB.fs.doc('staff/' + r.email).set({ email: r.email, name: r.name || '', role: 'coach', active: true, addedBy: WEB.email, addedAt: Date.now() }); await WEB.fs.doc('requests/' + r.id).delete(); toast(`${r.name || r.email} can now use the portal.`); }
       else if (act === 'decline') twoStep(b, 'dr' + b.getAttribute('data-uid'), async () => { await WEB.fs.doc('requests/' + b.getAttribute('data-uid')).delete(); });

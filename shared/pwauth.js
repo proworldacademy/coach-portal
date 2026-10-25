@@ -44,6 +44,7 @@
     ".pwa .alt{display:inline-block;margin-top:14px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.14);color:#3b3d38;border-radius:999px;padding:9px 14px;font:700 12.5px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;text-decoration:none;transition:.2s}",
     ".pwa .alt:hover{border-color:#0A0A0A;color:#0A0A0A}",
     ".pwa .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}",
+    ".pwa .small{font-size:12.5px;color:#6b6e66;margin-top:12px}.pwa a.go{text-decoration:none;box-sizing:border-box;margin-bottom:10px}",
     ".pwa .err{color:#9a2f8f;font-size:12.5px;margin-top:12px;min-height:16px;line-height:1.45}",
     ".pwa .fine{color:#656860;font-size:11px;margin-top:18px;letter-spacing:.3px}",
     ".pwa a{color:#0A0A0A;text-decoration:underline;text-decoration-color:#E2FE78;text-decoration-thickness:2px;text-underline-offset:3px}",
@@ -66,6 +67,7 @@
     let inner = "";
     if (stage === "boot" || stage === "checking") inner = '<h1>One <em>moment</em></h1><p><span class="spin"></span>&nbsp; Checking your access…</p>';
     else if (stage === "nosdk") inner = '<h1>Can\'t <em>connect</em></h1><p>The sign-in service didn\'t load. Check the internet connection and reload the page.</p><button class="alt" data-a="reload">Reload</button>';
+    else if (stage === "out" && inApp() && !force) inner = '<h1>Open in your <em>browser</em></h1><p>This link opened inside ' + esc(inApp()) + '. Google does not allow sign-in from there, so the first try fails. Open the same page in ' + (ios ? "Safari or Chrome" : "Chrome") + ' and sign in there.</p>' + (ios ? '<a class="go" href="x-safari-' + esc(location.href) + '">Open in Safari</a>' : '<a class="go" href="intent://' + esc(location.host + location.pathname + location.search + location.hash) + '#Intent;scheme=https;package=com.android.chrome;end">Open in Chrome</a>') + '<div class="row"><button class="alt" data-a="copy">Copy the link</button><button class="alt" data-a="force">Try here anyway</button></div><p class="small">Or tap the menu (&middot;&middot;&middot;) at the top of this screen and choose &ldquo;Open in ' + (ios ? "Safari" : "Chrome") + '&rdquo;.</p><div class="err">' + esc(note) + "</div>";
     else if (stage === "out") inner = '<h1>Sign <em>in</em></h1><p>For the PROWORLD team. Sign in with your Google account — your ProWorld email, or the Google email you were added with. No new password.</p><button class="go" data-a="google"' + (busy ? " disabled" : "") + ">" + G + (busy ? " Opening Google…" : " Sign in with Google") + '</button><div class="err">' + esc(note) + "</div>";
     else if (stage === "pending") inner = '<h1>Almost <em>there</em></h1><p>You\'re signed in as <b>' + esc(who) + '</b>, but this email isn\'t on the PROWORLD team list yet. We\'ve let the administrators know — once you\'re added, this page opens by itself.</p><div class="row"><button class="alt" data-a="out">Use another account</button></div>';
     else if (stage === "noaccess") inner = '<h1>Not <em>yours</em> yet</h1><p>You\'re signed in as <b>' + esc(who) + '</b>. Your access doesn\'t include <b>' + esc(pageName(need)) + '</b>. An administrator can tick it for you on the Dashboard.</p><div class="row"><a class="alt" href="/">Go to the Dashboard</a><button class="alt" data-a="out">Use another account</button></div>';
@@ -73,10 +75,28 @@
     el.innerHTML = '<div class="pwa"><div class="brand">PROWORLD</div>' + inner + '<div class="fine">Individually built. Fully connected.</div></div>';
     el.querySelectorAll("[data-a]").forEach((b) => b.addEventListener("click", () => act(b.getAttribute("data-a"))));
   }
+  // links opened from WhatsApp, Instagram, Facebook, Messenger, LinkedIn or TikTok land in that app's own browser; Google refuses
+  // sign-in there (and the redirect ticket is lost when iOS hands Google to Chrome), so we send the person to the real browser first
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  let force = false;
+  function inApp() {
+    const ua = navigator.userAgent || "";
+    if (/WhatsApp/i.test(ua)) return "WhatsApp";
+    if (/Instagram/i.test(ua)) return "Instagram";
+    if (/FBAN|FBAV|FB_IAB|Messenger/i.test(ua)) return "Facebook";
+    if (/LinkedInApp/i.test(ua)) return "LinkedIn";
+    if (/musical_ly|TikTok|BytedanceWebview/i.test(ua)) return "TikTok";
+    if (/Snapchat/i.test(ua)) return "Snapchat";
+    if (/; wv\)/.test(ua) && /Android/i.test(ua)) return "another app";
+    if (ios && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua) && /AppleWebKit/.test(ua)) return "another app";
+    return "";
+  }
   const touch = () => (window.matchMedia && matchMedia("(pointer:coarse)").matches) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   async function act(a) {
     if (a === "reload") { location.reload(); return; }
     if (a === "out") { await signOut(); return; }
+    if (a === "force") { force = true; paint(); return; }
+    if (a === "copy") { try { await navigator.clipboard.writeText(location.href); note = "Link copied. Paste it in Safari or Chrome."; } catch (e) { note = location.href; } paint(); return; }
     if (a === "google") {
       if (!init()) return; note = ""; busy = true; paint();
       const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({ prompt: "select_account" });

@@ -24,6 +24,7 @@ body.skin-coach .head .sub b{background:none;padding:0}
 
 /* ── bubbles: tabs, filters, buttons ── */
 body.skin-coach .tab,body.skin-coach .fchip,body.skin-coach .btn{background:#fff;border-color:transparent;color:var(--ink)}
+body.skin-coach .btn.pri,body.skin-coach a.btn.pri{background:var(--ink);color:var(--lime);text-decoration:none}
 body.skin-coach .tab:hover,body.skin-coach .fchip:hover,body.skin-coach .btn:hover{border-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 body.skin-coach .tab[aria-selected="true"],body.skin-coach .fchip[aria-pressed="true"]{background:var(--ink);color:var(--lime)}
 body.skin-coach .search input{background-color:#fff;border-color:transparent}
