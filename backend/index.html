@@ -221,7 +221,7 @@ table.grid td.half{border-right:1px dashed var(--line)}
 /* ---------- attendance board ---------- */
 .board{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 22px 18px;backdrop-filter:blur(12px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28)}
 .board + .board{margin-top:18px}
-@media (max-width:560px){.board{padding:16px 12px}}
+@media (max-width:560px){.board{padding:16px 12px}.court{grid-template-columns:56px minmax(0,1fr) 34px;gap:6px 8px}.court .players{grid-column:1/-1;gap:5px}.court .cn{grid-row:1;grid-column:1/3;font-size:26px;padding-top:0}.court .cn small{display:inline;margin-left:6px}.court .more{grid-row:1;grid-column:3}.pc{font-size:13px;padding:6px 10px 6px 8px}.hero p{font-size:14px}}
 .board .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
 .board .head h2{font-size:clamp(34px,5.5vw,56px)}
 .board .head .prog{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(22px,3.6vw,30px);color:var(--muted)}
@@ -321,6 +321,8 @@ table.grid thead th{min-width:0;width:auto}
 td.span{border-right:1px solid var(--line)}
 table.grid td.now{box-shadow:inset 2px 0 0 var(--ink)}
 table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
+/* phones: the grid keeps real half-hour columns and scrolls sideways; the court column stays pinned and shrinks */
+@media(max-width:560px){table.grid col.c0{width:92px!important}table.grid tbody th{min-width:0;padding:0 8px;font-size:12px}table.grid tbody th small{font-size:10px}table.grid thead th:first-child{padding-left:8px}.gridwrap{max-height:none;margin:0 -4px}}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 .tagpick{display:flex;flex-wrap:wrap;gap:6px}
 .tagchip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
@@ -375,7 +377,13 @@ table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
 .composer textarea:focus{outline:2px solid var(--ink)}
 .composer .send{width:46px;height:46px;border-radius:50%;border:0;background:var(--ink);color:var(--lime);font-size:20px;font-weight:700;cursor:pointer;flex:none}
 .composer .send:disabled{opacity:.35;cursor:default}
-@media(max-width:900px){.threads{grid-template-columns:1fr;height:auto}.tlist{max-height:40vh}.tview{min-height:60vh}}
+/* phones: the list is one screen, the conversation the next (‹ back), like a messaging app */
+.tback{display:none}
+@media(max-width:900px){.threads{grid-template-columns:1fr;height:auto}.tlist{max-height:none;min-height:50vh}.tview{min-height:70vh}
+  .threads:not(.tv-open) .tview{display:none}.threads.tv-open .tlist{display:none}
+  .tback{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:22px;line-height:1;cursor:pointer;flex:none;padding:0 0 3px}
+  .thead{flex-wrap:wrap;gap:10px 12px;padding:12px 14px}.thead>div{flex:1 1 0;min-width:0}.thead b{font-size:15px}.thead .r{flex:1 1 100%;margin-left:0;flex-wrap:wrap}
+  .composer .to{flex-wrap:wrap}.composer .cnt{flex:1 1 100%}}
 </style>
 <link rel="stylesheet" href="/backend/calm.css"><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, soft status tints; the Privates ticket -->
 </head>
@@ -387,7 +395,7 @@ table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
     <label class="who"><span>View as</span><select id="role"></select></label>
   </div>
   <main id="app"></main>
-  <p class="foot-note">ProWorld backend · for the team. Payments run through Stripe (the billing engine); the roster is the one the Coach Portal and Monday share. Prices and packages are the official ones (the same lines as Play by Point, Oct 2026).</p>
+  <p class="foot-note">ProWorld backend · for the team. Payments run through Stripe (the billing engine); the roster is the one the Coach Portal and Play by Point share. Prices and packages are the official ones (the same lines as Play by Point, Oct 2026).</p>
   <footer class="pwd-foot"><b>PROWORLD</b><span>Individually built. Fully connected.</span><span>651 Egret Cir, Delray Beach, FL 33444 · proworldacademy.com</span></footer>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -744,7 +752,7 @@ function renderCourts(app){
   app.innerHTML=`<section class="hero"><h1>${staff?'Court control.':'Book a court.'}</h1><p>${staff?'Drag across the grid to block a run of courts and times in one go — courts 7 to 12, 7:00 to 10:00, done. Tap a block, lesson or rental to release, cancel or refund. Renters only see what is left open.':'18 courts in half-hour slots. Tap a slot or drag across several courts and times, then reserve. Confirmed by email and text.'}</p></section>
   <div class="toolbar">${dateStrip(dateStr,0,9)}<div class="seg" role="group" aria-label="Filter"><button data-filter="all" aria-pressed="${state.courtsFilter==='all'}">All</button><button data-filter="tennis" aria-pressed="${state.courtsFilter==='tennis'}">Tennis</button>${staff?`<button data-filter="soccer" aria-pressed="${state.courtsFilter==='soccer'}">Fields</button>`:''}</div>${state.role!=='parent'?`<div class="seg" role="group" aria-label="Mode"><button data-mode="public" aria-pressed="${!staff}">Public</button><button data-mode="staff" aria-pressed="${staff}">Academy staff</button></div>`:''}${!staff?`<label class="check" style="font-size:13.5px"><input type="checkbox" id="member" ${state.member?'checked':''}><span>Enrolled family (no charge)</span></label>`:''}</div>
   <div class="legend">${legend}</div>
-  <div class="gridwrap" id="gridwrap"><table class="grid"><colgroup><col style="width:140px">${SLOTS.map(()=>'<col style="width:46px">').join('')}</colgroup><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+  <div class="gridwrap" id="gridwrap"><table class="grid" style="width:${140+46*SLOTS.length}px"><colgroup><col class="c0" style="width:140px">${SLOTS.map(()=>'<col style="width:46px">').join('')}</colgroup><thead>${head}</thead><tbody>${rows}</tbody></table></div>
   <div id="selbar"></div>
   ${staff?renderStaffPanel():`<p class="note">Court reservations are ${money(RATES.hard)} per hour on hard and clay courts (half-hour bookings are half price); enrolled families reserve at no charge — the same reservation pricing as today. The soccer fields are not rented to the public. Free cancellation up to 24 hours before. Rained out? You get a credit automatically.</p>`}`;
   app.querySelectorAll('.date').forEach(b=>b.onclick=()=>{state.courtsDate=b.dataset.date;SEL.clear();save();renderCourts(app)});
@@ -807,7 +815,7 @@ function renderAttendance(app){
   const dateStr=state.attDate;const d=parse(dateStr);const dow=d.getDay();const todays=SESSIONS.filter(s=>s.dows.includes(dow));
   if(state.attSession!=='all'&&!todays.some(s=>s.id===state.attSession)&&todays.length)state.attSession=todays[0].id;
   const show=state.attSession==='all'?todays:todays.filter(s=>s.id===state.attSession);
-  let html=`<section class="hero"><h1>Attendance.</h1><p>The list the coaches used to write in Notes and screenshot to Slack — now tap-to-mark, and the same list for everyone. Everyone expected is already on a court: the roster from Monday, plus every family that enrolled online, minus anyone on hold. Drag players between courts, strike who didn't show, add who did, post. Billing takes it from there.</p></section>
+  let html=`<section class="hero"><h1>Attendance.</h1><p>The list the coaches used to write in Notes and screenshot to Slack — now tap-to-mark, and the same list for everyone. Everyone expected is already on a court: the Play by Point roster, plus every family that enrolled online, minus anyone on hold. Drag players between courts, strike who didn't show, add who did, post. Billing takes it from there.</p></section>
   <div class="toolbar">${dateStrip(dateStr,-3,6)}</div>
   <div class="seg" style="margin-top:12px" role="group" aria-label="Session">${todays.map(s=>`<button data-sess="${s.id}" aria-pressed="${s.id===state.attSession}">${s.time} · ${s.label}</button>`).join('')}${todays.length?`<button data-sess="all" aria-pressed="${state.attSession==='all'}">Whole day</button>`:'<button disabled>No sessions — weekend</button>'}</div>`;
   show.forEach(sess=>{html+=renderBoard(sess,getSheet(dateStr,sess.id))});
@@ -1099,7 +1107,7 @@ function renderPrivates(app){
     for(let tries=0;tries<10&&!times.some(h=>okAt(PV.date,h));tries++)PV.date=iso(addDays(parse(PV.date),1));
     if(!okAt(PV.date,Number(PV.time))){const first=times.find(h=>okAt(PV.date,h));if(first!==undefined)PV.time=first}
     const pay2=payLine();const free2=freeCourts();if(PV.court&&!free2.some(c=>c.id===PV.court))PV.court='';
-    app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket on the right fills itself in, blocks the court and texts the family when you book.</p></section>
+    app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket fills itself in, blocks the court and texts the family when you book.</p></section>
     <section class="section pv-wrap">
       <div class="pv-build">
         <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-pick">${coachLocked?'':`<input id="pv-cq" class="pv-search" type="search" placeholder="Type a coach's name…" autocomplete="off" value="">`}<div class="pv-sel">${PV.coach?`<span class="pv-ava sm">${esc(ini(PV.coach))}</span><b>${esc(PV.coach)}</b>${seeMoney?`<small>${esc(PROX(PV.coach).tier)}</small>`:''}`:'<small>No coach picked yet</small>'}</div><div id="pv-clist" class="pv-list" hidden></div></div></div>
@@ -1356,18 +1364,19 @@ function drawThreads(app,body){
     else bubbles+=`<div class="bub in"><span class="txt">${esc(l.body)}</span><span class="meta">${esc(l.who||'')} · ${esc(when(l.at))}</span></div>`}
   if(!lines.length)bubbles=`<div class="tday">Nothing yet</div><div class="bub sys"><span class="txt">${cur.kind==='family'?'No text to this family yet.':'No text to this group yet. The first one starts the thread.'}</span></div>`;
   const text=MSG.ttext||'';const seg=smsSegments(text+(cfg.footer===false?'':'\n'+FOOTER_OF(cfg.senderName||'ProWorld Academy')));
-  body.innerHTML=`<div class="threads"><div class="tlist card">
+  body.innerHTML=`<div class="threads${MSG.tOpen?' tv-open':''}"><div class="tlist card">
     <div class="tfind"><input id="t-q" placeholder="Search a family or a group" value="${esc(MSG.tq)}" autocomplete="off"></div>
     <div class="trows">${list.map(t=>`<button class="trow${t.key===cur.key?' on':''}" data-t="${esc(t.key)}"><span class="tav" style="background:${t.color}">${esc(t.ini)}</span><span class="tmain"><b>${esc(t.label)}</b><small>${t.last?esc((t.last.dir==='out'?'You: ':'')+String(t.last.body||'').split('\n')[0]):esc(t.kind==='family'?(t.sub||''):(t.sub||'')+' · nothing sent yet')}</small></span><span class="twhen">${t.last?esc(when(t.last.at)):''}${t.unread?'<i class="tdot"></i>':''}</span></button>`).join('')||'<p class="muted mini" style="padding:12px">No one matches.</p>'}${nArch?`<button class="btn xs ghost" data-arch="1" style="margin:8px auto 2px">${MSG.showArchived?'Hide archived':nArch+' archived'}</button>`:''}</div></div>
    <div class="tview card">
-    <div class="thead"><span class="tav big" style="background:${cur.color}">${esc(cur.ini)}</span><div><b>${esc(cur.label)}</b><br><small>${cur.kind==='family'?esc(cur.sub||''):members.length+' player'+(members.length===1?'':'s')+' · '+willSend.length+' famil'+(willSend.length===1?'y':'ies')+' opted in'+(notIn.length?' · '+notIn.length+' skipped':'')}</small></div><div class="r">${willSend.length?`<span class="pill ok">${willSend.length} will get it</span>`:''}${notIn.length?`<span class="pill">${notIn.length} not opted in</span>`:''}${cur.kind!=='all'?`<button class="btn xs ghost" data-who="1">Who</button>`:''}${can&&cur.kind!=='all'?`<button class="btn xs ghost" data-tmenu="1" title="Clear or archive this thread">⋯</button>`:''}</div></div>
+    <div class="thead"><button class="tback" data-tback aria-label="Back to the threads">‹</button><span class="tav big" style="background:${cur.color}">${esc(cur.ini)}</span><div><b>${esc(cur.label)}</b><br><small>${cur.kind==='family'?esc(cur.sub||''):members.length+' player'+(members.length===1?'':'s')+' · '+willSend.length+' famil'+(willSend.length===1?'y':'ies')+' opted in'+(notIn.length?' · '+notIn.length+' skipped':'')}</small></div><div class="r">${willSend.length?`<span class="pill ok">${willSend.length} will get it</span>`:''}${notIn.length?`<span class="pill">${notIn.length} not opted in</span>`:''}${cur.kind!=='all'?`<button class="btn xs ghost" data-who="1">Who</button>`:''}${can&&cur.kind!=='all'?`<button class="btn xs ghost" data-tmenu="1" title="Clear or archive this thread">⋯</button>`:''}</div></div>
     <div class="bubbles" id="t-bubbles">${bubbles}</div>
     ${can&&cur.kind!=='all'?`<div class="composer"><div class="to">To: <span class="chip sm on">${esc(cur.label)}</span>${cur.kind!=='family'?`<button class="chip sm" data-custom="1">+ add a coach, a day, a court or a family</button>`:''}<span class="cnt">${willSend.length} famil${willSend.length===1?'y':'ies'} · opted in only · ${seg.segs} segment${seg.segs===1?'':'s'}</span></div>
       <div class="tpl">${tpl.map(t=>`<button class="tchip" data-tpl="${esc(t.id)}">${esc(t.name)}</button>`).join('')}<button class="tchip" data-tpl="" title="Templates">+ template</button></div>
       <div class="box"><textarea id="t-text" rows="1" maxlength="1200" placeholder="Write to ${esc(cur.label)}…">${esc(text)}</textarea><button class="send" id="t-send" ${willSend.length&&text.trim()?'':'disabled'} title="Send">↑</button></div>
       <div class="hint" style="margin:4px 2px 0">Placeholders work: {first_name} {program} {time} {court}. The footer and STOP handling are added by the system.</div></div>`:can?`<div class="composer"><div class="hint">Pick a group or a family on the left to write to it, or use Custom audience for a one-off mix.</div></div>`:''}
    </div></div>`;
-  body.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{MSG.thread=b.dataset.t;MSG.ttext='';drawThreads(app,body)});
+  body.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{MSG.thread=b.dataset.t;MSG.ttext='';MSG.tOpen=true;drawThreads(app,body);const tv=body.querySelector('.tview');if(tv&&matchMedia('(max-width:900px)').matches)tv.scrollIntoView({block:'start'})});
+  const tb=body.querySelector('[data-tback]');if(tb)tb.onclick=()=>{MSG.tOpen=false;drawThreads(app,body)};
   const qi=$('#t-q');qi.oninput=()=>{MSG.tq=qi.value;drawThreads(app,body);const i=$('#t-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)};
   const bb=$('#t-bubbles');if(bb)bb.scrollTop=bb.scrollHeight;
   const who=body.querySelector('[data-who]');if(who)who.onclick=()=>openModal(`<h3>${esc(cur.label)}</h3><p class="sub">${members.length} player${members.length===1?'':'s'}</p><table class="tablelist"><thead><tr><th>Player</th><th>Parent</th><th>Texts</th></tr></thead><tbody>${members.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.parent||'')}<div class="m">${p.phone?esc(phoneFmt(p.phone)):'no number'}</div></td><td>${p.optIn&&p.valid?'<span class="pill ok">opted in</span>':p.optOut?'<span class="pill warn">opted out</span>':!p.phone||!p.valid?'<span class="pill warn">no valid number</span>':'<span class="pill">not opted in</span>'}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="btn ghost sm" id="m-close">Back</button></div>`);

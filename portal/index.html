@@ -47,6 +47,8 @@ b,strong{font-weight:700}
 .fupill b{background:var(--ink);color:var(--lime);border-radius:999px;min-width:22px;padding:2px 7px;text-align:center;font-size:11px}
 .userbox{display:none}
 .vtabs{margin:14px 0 0}
+/* phones: the Coaches row is one line that scrolls sideways, the page you are on kept in view (same as the Admin page) */
+@media(max-width:560px){.vtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:12px -16px 0;padding:2px 16px 8px;mask:linear-gradient(90deg,#000 92%,transparent);-webkit-mask:linear-gradient(90deg,#000 92%,transparent)}.vtabs::-webkit-scrollbar{display:none}.vtabs a,.vtabs button{flex:none}}
 .vtabs button small{font-weight:700;opacity:1;background:var(--lime);color:var(--ink);border-radius:999px;padding:1px 7px;margin-left:8px;font-size:11px}
 .vtabs button.on small{background:var(--lime);color:var(--ink)}
 @media(max-width:560px){.tools{margin-top:0}.search{flex-basis:100%;max-width:none}.live{margin-left:0}}
@@ -2020,6 +2022,7 @@ const PW_CONFIG = {
         .concat(EDITION === 'web' && WEB.isDirector ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
+    { const on = el.querySelector('.on'); if (on && el.scrollWidth > el.clientWidth + 2) { const x = on.offsetLeft - 16; if (x > 0) el.scrollLeft = x; } }
     if (window.PWDesign) {
       PWDesign.active(sec === 'tryouts' ? 'tryouts' : sec === 'board' ? 'coach-board' : 'coach-portal');
       const act = S.players.filter(active).length; const sig = [];
@@ -3582,7 +3585,7 @@ const PW_CONFIG = {
     const today = todayISO();
     const newOnes = act.filter((p) => p.pbpNote && /^Added/.test(p.pbpNote));
     const awayNow = S.players.filter((p) => p.status === 'away' && p.pbpNote && /^Not in/.test(p.pbpNote));
-    const syncLine = `<p class="hint due-line"><b>The list:</b> Play by Point, checked Oct 23 · ${un.length ? `<span class="chip st-missing">${un.length} with no coach</span>` : '<span class="chip st-done">everyone has a coach</span>'}${newOnes.length ? ` · <span class="chip st-working">${newOnes.length} new, no coach yet</span>` : ''}${awayNow.length ? ` · ${awayNow.length} set to Away for the coaches to decide` : ''}</p>`;
+    const syncLine = `<p class="hint due-line"><b>The list:</b> the Fall 2026 coach list (Play by Point current players, Oct 24) · ${un.length ? `<span class="chip st-missing">${un.length} with no coach</span>` : '<span class="chip st-done">everyone has a coach</span>'}${newOnes.length ? ` · <span class="chip st-working">${newOnes.length} new, no coach yet</span>` : ''}${awayNow.length ? ` · ${awayNow.length} set to Away for the coaches to decide` : ''}</p>`;
     return `${top}${syncLine}
       <div class="stats"><div class="stat lead"><div class="lbl">Active players</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs coming</div><b>${tries.length}</b></div></div>
