@@ -50,7 +50,8 @@ function allowOrigin(req, res) {
 const subIdOf = (b) => { const id = S.clean(b.subscription, 60); if (!/^sub_/.test(id)) throw S.err(400, 'subscription', 'subscription id required'); return id; };
 async function familyOfSub(stripe, sub) { try { const c = await stripe.customers.retrieve(S.customerId(sub.customer)); return { phone: c.phone || '', name: c.name || '' }; } catch (e) { return { phone: '', name: '' }; } }
 
-exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], maxInstances: 10, timeoutSeconds: 60, memory: '256MiB' }, async (req, res) => {
+// minInstances 1: one engine stays warm, so the first tap on Messages / Courts / Privates after a quiet spell answers in ~100 ms instead of a 3–6 s cold start (Antonio, Oct 25)
+exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInstances: 1, maxInstances: 10, timeoutSeconds: 60, memory: '256MiB' }, async (req, res) => {
   allowOrigin(req, res);
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
   const path = req.path.replace(/\/+$/, '') || '/';

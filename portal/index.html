@@ -49,9 +49,11 @@ b,strong{font-weight:700}
 .vtabs{margin:14px 0 0}
 /* phones: the Coaches row is one line that scrolls sideways, the page you are on kept in view (same as the Admin page) */
 /* phones (Antonio, Oct 25): the row under the bar goes — the ☰ menu has the same eight; lists instead of bubbles wherever a bubble only costs space */
-@media(max-width:560px){.vtabs{display:none!important}
-  .bps{display:flex;flex-direction:column;gap:0}.bps .bp{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;border:0;border-top:1px solid var(--line);border-radius:0;padding:9px 2px;background:transparent}.bps .bp:first-child{border-top:0}.bps .bp small{text-align:right;white-space:nowrap;flex:none}.bps .bp .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bucket .bps,.bps.flat{gap:0}}
+@media(max-width:560px){.vtabs{display:none!important}}
+/* Coach Board as lines, on every screen (Antonio, Oct 25): one player per line, like the group lists */
+.bps{display:flex;flex-direction:column;gap:0}.bps .bp{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;border:0;border-top:1px solid var(--line);border-radius:0;padding:9px 4px;background:transparent}.bps .bp:first-child{border-top:0}.bps .bp small{text-align:right;white-space:nowrap;flex:none}.bps .bp .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bps .bp:hover{background:#F6F6F2;border-color:var(--line)}
+.bps.flat{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:0 24px}.bps.flat .bp:first-child{border-top:1px solid var(--line)}
 .vtabs button small{font-weight:700;opacity:1;background:var(--lime);color:var(--ink);border-radius:999px;padding:1px 7px;margin-left:8px;font-size:11px}
 .vtabs button.on small{background:var(--lime);color:var(--ink)}
 @media(max-width:560px){.tools{margin-top:0}.search{flex-basis:100%;max-width:none}.live{margin-left:0}}

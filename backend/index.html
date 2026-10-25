@@ -688,7 +688,8 @@ function postSheet(sheet,sess){
 /* ====================== SHELL ====================== */
 function setRole(r){if(!ROLES[r])return;state.role=r;state.roleChosen=true;location.hash=r;if(window.PWCTX)pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0];save();render()}   // never above what the staff record allows
 function setView(v){if(window.PWCTX){pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(v))return}state.view=v;if(v==='enroll'&&state.enroll.done)state.enroll=emptyEnroll();if(parse(state.courtsDate)<TODAY)state.courtsDate=iso(TODAY);closeModal();save();render();window.scrollTo({top:0,behavior:'auto'})}
-window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ROLES[h]&&h!==state.role)setRole(h)});
+// the menu links are /backend#courts, #messages, #privates…: a hash change on this page switches the view (Antonio, Oct 25: 'Courts does not even click' on the phone)
+window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ROLES[h]&&h!==state.role)setRole(h);else if(TABS[h]&&h!==state.view)setView(h)});
 function render(){const sel=$('#role');sel.innerHTML=Object.keys(ROLES).map(k=>`<option value="${k}" ${k===state.role?'selected':''}>${ROLES[k].label}</option>`).join('');sel.onchange=()=>setRole(sel.value);const nav=$('#modes');const coachSide=state.role==='coach'||state.role==='director';
   // coaches and directors see one row, the same as the Coach Portal's (Antonio, Oct 24): the portal views are links, the backend views are tabs
   const portalRow=coachSide?[['/portal','Players'],['/portal#/tryouts','Try-outs'],['/portal#/board','Coach Board']]:[];const tailRow=coachSide?[['/start','Start here']].concat(window.PWCTX&&(window.PWCTX.director||window.PWCTX.admin||window.PWCTX.owner)?[['/portal#/staff','Staff & access']]:[]):[];
