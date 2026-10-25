@@ -53,6 +53,9 @@ b,strong{font-weight:700}
 /* Coach Board as lines, on every screen (Antonio, Oct 25): one player per line, like the group lists */
 .bps{display:flex;flex-direction:column;gap:0}.bps .bp{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;border:0;border-top:1px solid var(--line);border-radius:0;padding:9px 4px;background:transparent}.bps .bp:first-child{border-top:0}.bps .bp small{text-align:right;white-space:nowrap;flex:none}.bps .bp .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bps .bp:hover{background:#F6F6F2;border-color:var(--line)}
+.bp[draggable]{cursor:grab;-webkit-user-drag:element}.bp.dragging{opacity:.4}
+.dz.over{outline:2px dashed var(--ink);outline-offset:4px;border-radius:10px;background:#F6FFD6}
+.ccard .bps.dz,.bucket .bps.dz{min-height:28px}
 .bps.flat{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:0 24px}.bps.flat .bp:first-child{border-top:1px solid var(--line)}
 .vtabs button small{font-weight:700;opacity:1;background:var(--lime);color:var(--ink);border-radius:999px;padding:1px 7px;margin-left:8px;font-size:11px}
 .vtabs button.on small{background:var(--lime);color:var(--ink)}
@@ -2148,6 +2151,31 @@ const PW_CONFIG = {
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
     m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
+    if (r.view === 'board') bindBoardDrag(m);
+  }
+  // Coach Board: hold a player, drop them on a coach (Antonio, Oct 25) — the same drag as Attendance; directors only
+  function bindBoardDrag(m) {
+    if (!(EDITION === 'web' && WEB.isDirector)) return;
+    let dragging = null;
+    m.querySelectorAll('.bp[draggable]').forEach((b) => {
+      b.addEventListener('dragstart', (ev) => { dragging = b.dataset.pid; b.classList.add('dragging'); try { ev.dataTransfer.setData('text/plain', b.dataset.pid); ev.dataTransfer.effectAllowed = 'move'; } catch (e) { /* older browsers */ } });
+      b.addEventListener('dragend', () => { dragging = null; b.classList.remove('dragging'); m.querySelectorAll('.dz.over').forEach((z) => z.classList.remove('over')); });
+    });
+    m.querySelectorAll('.dz').forEach((z) => {
+      z.addEventListener('dragover', (ev) => { ev.preventDefault(); z.classList.add('over'); });
+      z.addEventListener('dragleave', (ev) => { if (!z.contains(ev.relatedTarget)) z.classList.remove('over'); });
+      z.addEventListener('drop', async (ev) => {
+        ev.preventDefault(); z.classList.remove('over');
+        let pid = dragging; try { pid = ev.dataTransfer.getData('text/plain') || pid; } catch (e) { /* keep */ }
+        const p = pid && player(pid); if (!p) return;
+        const to = z.dataset.coach || ''; const from = p.coach || '';
+        if (to === from) return;
+        const patch = { coach: to, updatedAt: Date.now(), updatedBy: WEB.email };
+        if (to && p.coach2 === to) patch.coach2 = '';
+        try { await WEB.fs.doc('players/' + pid).set(plain(patch), { merge: true }); toast(to ? `${p.name} → Coach ${to}.` : `${p.name}: no coach.`); }
+        catch (e) { toast('Could not move ' + p.name + ': ' + (e && e.message ? e.message : e)); }
+      });
+    });
   }
   const notice = () => S.dbState === 'none' && EDITION !== 'web' ? `<div class="notice">This view can’t reach the shared database, so nothing is loaded and nothing will save. Open the portal from your Claude artifacts while signed in to work with live data.</div>` : '';
   const goAttr = (r) => `data-go='${esc(JSON.stringify(r))}'`;
@@ -3575,7 +3603,7 @@ const PW_CONFIG = {
     const own = EDITION === 'web' && WEB.isOwner;
     const top = `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Coach Board' }])}
       <div class="head"><div><div class="lbl">From the roster · Play by Point is the list</div><h1 class="title">Coach <em>Board.</em></h1>
-        <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. Set a player’s coach on their page; this board follows.</div></div></div>`;
+        <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. ${EDITION === 'web' && WEB.isDirector ? 'Hold a player and drop them on a coach to move them (or on No coach to clear it); their page updates with it.' : 'Set a player’s coach on their page; this board follows.'}</div></div></div>`;
     if (!S.loaded.players) return `${top}<div class="empty" style="margin-bottom:30px">Loading…</div>`;
     const { act } = boardData();
     const sortP = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
@@ -3584,7 +3612,8 @@ const PW_CONFIG = {
     const un = act.filter((p) => !p.coach);
     const gl = (gid) => { const g = groups().find((x) => x.id === gid); return g ? g.label : (gid || 'No group'); };
     const GIDS = groups().map((g) => g.id).concat(['']);
-    const bp = (p, extra) => `<button class="bp" ${goAttr({ view: 'player', pid: p.id })}><span class="pn">${esc(p.name)}</span>${[gl(p.group)].concat(extra || []).filter(Boolean).length ? `<small>${esc([gl(p.group)].concat(extra || []).filter(Boolean).join(' · '))}</small>` : ''}</button>`;
+    const canDrag = EDITION === 'web' && WEB.isDirector;
+    const bp = (p, extra) => `<button class="bp" data-pid="${esc(p.id)}"${canDrag ? ' draggable="true"' : ''} ${goAttr({ view: 'player', pid: p.id })}><span class="pn">${esc(p.name)}</span>${[gl(p.group)].concat(extra || []).filter(Boolean).length ? `<small>${esc([gl(p.group)].concat(extra || []).filter(Boolean).join(' · '))}</small>` : ''}</button>`;
     const T = tryouts(); const tries = T.today.concat(T.week, T.later);
     const today = todayISO();
     const newOnes = act.filter((p) => p.pbpNote && /^Added/.test(p.pbpNote));
@@ -3594,9 +3623,9 @@ const PW_CONFIG = {
       <div class="stats"><div class="stat lead"><div class="lbl">Active players</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs coming</div><b>${tries.length}</b></div></div>
       <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">primary coach · players with their group</span></div>
-      ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps">${list.slice().sort(sortP).map((p) => bp(p, p.coach2 && p.coach2 !== p.coach ? ['with ' + p.coach2] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No primary coaches set yet.</div>'}
+      ${coaches.length ? `<div class="ccards">${coaches.map(([c, list]) => `<div class="ccard"><div class="top"><div class="cname">${esc(c)}</div><div class="count">${list.length}</div></div><div class="bps dz" data-coach="${esc(c)}">${list.slice().sort(sortP).map((p) => bp(p, p.coach2 && p.coach2 !== p.coach ? ['with ' + p.coach2] : [])).join('')}</div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No primary coaches set yet.</div>'}
       <div class="sect"><h2>No coach yet</h2><span class="muted" style="font-size:12px">${un.length} active with no primary coach · by group</span></div>
-      ${un.length ? `<div class="buckets">${GIDS.map((gid) => { const l = un.filter((p) => (p.group || '') === gid).sort(sortP); return l.length ? `<div class="bucket"><div class="bh"><b>${esc(gl(gid))}</b><span>${l.length}</span></div><div class="bps">${l.map((p) => bp(p, p.pbpNote && /^Added/.test(p.pbpNote) ? ['new from Play by Point'] : [])).join('')}</div></div>` : ''; }).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">Every active player has a primary coach.</div>'}
+      ${un.length ? `<div class="buckets">${GIDS.map((gid) => { const l = un.filter((p) => (p.group || '') === gid).sort(sortP); return l.length ? `<div class="bucket"><div class="bh"><b>${esc(gl(gid))}</b><span>${l.length}</span></div><div class="bps dz" data-coach="">${l.map((p) => bp(p, p.pbpNote && /^Added/.test(p.pbpNote) ? ['new from Play by Point'] : [])).join('')}</div></div>` : ''; }).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">Every active player has a primary coach.</div>'}
       <div class="sect"><h2>Try-outs coming</h2><span class="muted" style="font-size:12px">${tries.length}</span></div>
       ${tries.length ? `<div class="list" style="margin-bottom:30px">${tries.map((t) => `<div class="rowb"><div class="who"><span class="ava when">${esc(t.date ? (t.date === today ? 'Today' : dayLabel(t.date)) : 'No date')}${t.time ? `<small>${esc(timeLabel(t.time))}</small>` : ''}</span><div style="min-width:0"><div class="nm">${esc(t.name || 'Unnamed')}</div><small>${esc([tryGroupLabel(t), t.coach ? 'Coach ' + t.coach : ''].filter(Boolean).join(' · ') || 'Details on the try-out')}</small></div></div><div class="mid"></div><div class="chips"><button class="btn sm ghost" ${goAttr({ view: 'tryout', id: t.id })}>Open</button></div></div>`).join('')}</div>` : '<div class="empty" style="margin-bottom:30px">No try-outs booked.</div>'}
       ${awayNow.length ? `<div class="sect"><h2>Set to Away · coaches decide</h2><span class="muted" style="font-size:12px">not on the Fall 2026 coach list (Play by Point current players, Oct 24) · tap a name to bring them back</span></div><div class="bps flat" style="margin-bottom:30px">${awayNow.sort(sortP).map((p) => bp(p, [/duplicate of (.+)$/.test(p.pbpNote) ? 'looks like a duplicate' : /Fall 2026/.test(p.pbpNote) ? 'not on the Fall 2026 list' : 'not in Play by Point'])).join('')}</div>` : ''}
