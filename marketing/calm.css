@@ -1,0 +1,60 @@
+/* Marketing Command Center · "In between" (Antonio, Oct 25, 2026: "the same style and look and feel as the coaches one").
+   The same layer as portal/calm.css, scoped to the studio skin: a flat warm grey page and white cards (no sky, no drifting
+   lights, no live blur); bubbles black with lime for whatever is selected; status as short soft bubbles — grey = to do,
+   pale lime = started, lime = done, amber = needs a person, soft orchid = missing; mint · cyan · orchid only as pale tints.
+   One title weight, no outlined word. Loaded last, so everything here wins. CSS only: nothing in the page changes. */
+
+/* ── the page ── */
+html,body.skin-studio{background:#F1F1ED!important}
+body.skin-studio .pwd-sky,body.skin-studio .pwd-lights{display:none!important}
+body.skin-studio{--card:#fff;--card-2:#fff;--line:#E7E7E2;--line-2:#DADAD4;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.05)}
+body.skin-studio .card,body.skin-studio .stat,body.skin-studio .tab-btn,body.skin-studio .lib-btn,body.skin-studio .lib-row,body.skin-studio .btn,
+body.skin-studio input,body.skin-studio select,body.skin-studio textarea{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.skin-studio .card{background:#fff;border-color:transparent;box-shadow:var(--shadow)}
+body.skin-studio .stat{background:#fff;border-color:transparent;box-shadow:var(--shadow)}
+body.skin-studio .lib-row{background:#fff;border-color:transparent;box-shadow:var(--shadow)}
+
+/* ── the title: one weight, no outlined word ── */
+body.skin-studio .hero h1 em,body.skin-studio .title em,body.skin-studio .page-title em,body.skin-studio .h-display em{color:var(--ink);-webkit-text-stroke:0;paint-order:normal;font-style:italic}
+body.skin-studio .hero h1{font-size:clamp(40px,5.2vw,64px)}
+body.skin-studio .hero .eyebrow i{background:var(--ink)}
+body.skin-studio .live{background:#DDFDE7;color:#0E3B22;border-color:transparent}
+
+/* ── bubbles: tabs, buttons ── */
+body.skin-studio .tab-btn,body.skin-studio .lib-btn{background:#fff;border-color:transparent;color:var(--ink);box-shadow:none}
+body.skin-studio .tab-btn:hover,body.skin-studio .lib-btn:hover{transform:none;border-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+body.skin-studio .tab-btn.active,body.skin-studio .lib-btn.on,body.skin-studio .lib-btn[aria-expanded="true"]{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+body.skin-studio .lib-row .tab-btn{background:transparent}
+body.skin-studio .lib-row .tab-btn.active{background:var(--ink)}
+body.skin-studio .btn.ghost,body.skin-studio .btn.ghost.orchid,body.skin-studio .btn.ghost.cyan,body.skin-studio .btn.ghost.muted{background:#fff;border-color:transparent;color:var(--ink);box-shadow:var(--shadow)}
+body.skin-studio .btn.ghost:hover{border-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+body.skin-studio .btn.ghost.muted{color:var(--muted)}
+body.skin-studio .btn.mint,body.skin-studio .btn.orchid{background:var(--ink);border-color:var(--ink);color:var(--lime)}
+body.skin-studio input,body.skin-studio select,body.skin-studio textarea{background:#fff;border-color:var(--line-2)}
+body.skin-studio input:focus,body.skin-studio select:focus,body.skin-studio textarea:focus{box-shadow:0 0 0 2px var(--ink) inset;outline:none}
+
+/* ── the card labels and the numbers: one dot colour, white tiles ── */
+body.skin-studio .card-label::before,body.skin-studio .stat-label::before{background:var(--ink);box-shadow:none}
+body.skin-studio .card-label.orchid::before,body.skin-studio .card-label.mint::before,body.skin-studio .card-label.cyan::before{background:var(--ink)}
+body.skin-studio .card-label.muted::before{background:rgba(0,0,0,.18)}
+body.skin-studio .stat-delta{background:#DDFDE7;color:#0E3B22}
+body.skin-studio .stat-delta.down{background:#F9E2F8;color:#5B1A5C}
+
+/* ── status: short soft bubbles, one language ── */
+body.skin-studio .st{background:#EFEFEA;color:#6B6B68;letter-spacing:.2px;text-transform:none;font-size:11.5px;padding:4px 10px}
+body.skin-studio .st.ok,body.skin-studio .st.on{background:#DDFDE7;color:#0E3B22}
+body.skin-studio .st.done,body.skin-studio .st.today{background:var(--lime);color:var(--ink)}
+body.skin-studio .st.wait{background:#FFF1D6;color:#7A5200}
+body.skin-studio .st.miss{background:#F9E2F8;color:#5B1A5C}
+body.skin-studio .st.plan{background:#DFF7F9;color:#0B3F44}
+body.skin-studio .attn b{letter-spacing:.2px;text-transform:none;font-size:11.5px;padding:4px 10px;background:#EFEFEA;color:#6B6B68}
+body.skin-studio .attn b.bad{background:#F9E2F8;color:#5B1A5C}
+body.skin-studio .attn b.ok{background:#DDFDE7;color:#0E3B22}
+body.skin-studio .attn b.info{background:#DFF7F9;color:#0B3F44}
+body.skin-studio .attn b.lime{background:var(--lime);color:var(--ink)}
+body.skin-studio .tag,body.skin-studio .item-meta{letter-spacing:.2px;text-transform:none;font-size:11px;background:#EFEFEA;color:var(--ink)}
+body.skin-studio .tag.mint{background:#DDFDE7}body.skin-studio .tag.cyan{background:#DFF7F9}body.skin-studio .tag.orchid{background:#F9E2F8}body.skin-studio .tag.dim{background:#F6F6F2;color:var(--muted)}
+body.skin-studio .wk.today{background:#F6FFD6}
+body.skin-studio .item-hook{border-left-color:var(--lime)}
+body.skin-studio .tbl th{color:var(--muted)}
+body.skin-studio .tbl tr.now td,body.skin-studio .tbl tr.today td{background:#F6FFD6}
