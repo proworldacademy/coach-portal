@@ -55,6 +55,9 @@ b,strong{font-weight:700}
 .bps .bp:hover{background:#F6F6F2;border-color:var(--line)}
 .bp[draggable]{cursor:grab;-webkit-user-drag:element}.bp.dragging{opacity:.4}
 .dz.over{outline:2px dashed var(--ink);outline-offset:4px;border-radius:10px;background:#F6FFD6}
+.undo-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:#fff;border-radius:14px;padding:10px 14px;margin:-4px 0 18px;font-size:13px;box-shadow:var(--shadow)}
+.undo-bar b{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+.undo-bar .mv{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}.undo-bar .lnk{font-weight:700}
 .ccard .bps.dz,.bucket .bps.dz{min-height:28px}
 .bps.flat{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:0 24px}.bps.flat .bp:first-child{border-top:1px solid var(--line)}
 .vtabs button small{font-weight:700;opacity:1;background:var(--lime);color:var(--ink);border-radius:999px;padding:1px 7px;margin-left:8px;font-size:11px}
@@ -2154,8 +2157,24 @@ const PW_CONFIG = {
     if (r.view === 'board') bindBoardDrag(m);
   }
   // Coach Board: hold a player, drop them on a coach (Antonio, Oct 25) — the same drag as Attendance; directors only
+  const BOARD_MOVES = [];   // this session's moves, newest first, each undoable (Antonio, Oct 25)
+  async function boardMove(p, to, isUndo) {
+    const patch = { coach: to, updatedAt: Date.now(), updatedBy: WEB.email };
+    const before = { coach: p.coach || '', coach2: p.coach2 || '' };
+    if (to && p.coach2 === to) patch.coach2 = '';
+    if (isUndo) patch.coach2 = isUndo.coach2;
+    await WEB.fs.doc('players/' + p.id).set(plain(patch), { merge: true });
+    if (!isUndo) BOARD_MOVES.unshift({ pid: p.id, name: p.name, from: before.coach, coach2: before.coach2, to, at: Date.now() });
+    if (BOARD_MOVES.length > 8) BOARD_MOVES.length = 8;
+  }
   function bindBoardDrag(m) {
     if (!(EDITION === 'web' && WEB.isDirector)) return;
+    m.querySelectorAll('[data-undo]').forEach((b) => b.addEventListener('click', async () => {
+      const i = Number(b.dataset.undo); const mv = BOARD_MOVES[i]; const p = mv && player(mv.pid); if (!p) return;
+      b.disabled = true;
+      try { await boardMove(p, mv.from, { coach2: mv.coach2 }); BOARD_MOVES.splice(i, 1); toast(`${p.name} back ${mv.from ? 'with Coach ' + mv.from : 'to no coach'}.`); }
+      catch (e) { b.disabled = false; toast('Could not undo: ' + (e && e.message ? e.message : e)); }
+    }));
     let dragging = null;
     m.querySelectorAll('.bp[draggable]').forEach((b) => {
       b.addEventListener('dragstart', (ev) => { dragging = b.dataset.pid; b.classList.add('dragging'); try { ev.dataTransfer.setData('text/plain', b.dataset.pid); ev.dataTransfer.effectAllowed = 'move'; } catch (e) { /* older browsers */ } });
@@ -2170,9 +2189,7 @@ const PW_CONFIG = {
         const p = pid && player(pid); if (!p) return;
         const to = z.dataset.coach || ''; const from = p.coach || '';
         if (to === from) return;
-        const patch = { coach: to, updatedAt: Date.now(), updatedBy: WEB.email };
-        if (to && p.coach2 === to) patch.coach2 = '';
-        try { await WEB.fs.doc('players/' + pid).set(plain(patch), { merge: true }); toast(to ? `${p.name} → Coach ${to}.` : `${p.name}: no coach.`); }
+        try { await boardMove(p, to); toast(to ? `${p.name} → Coach ${to}. Undo is under the title.` : `${p.name}: no coach. Undo is under the title.`); }
         catch (e) { toast('Could not move ' + p.name + ': ' + (e && e.message ? e.message : e)); }
       });
     });
@@ -3619,7 +3636,8 @@ const PW_CONFIG = {
     const newOnes = act.filter((p) => p.pbpNote && /^Added/.test(p.pbpNote));
     const awayNow = S.players.filter((p) => p.status === 'away' && p.pbpNote && /^Not in/.test(p.pbpNote));
     const syncLine = `<p class="hint due-line"><b>The list:</b> the Fall 2026 coach list (Play by Point current players, Oct 24) · ${un.length ? `<span class="chip st-missing">${un.length} with no coach</span>` : '<span class="chip st-done">everyone has a coach</span>'}${newOnes.length ? ` · <span class="chip st-working">${newOnes.length} new, no coach yet</span>` : ''}${awayNow.length ? ` · ${awayNow.length} set to Away for the coaches to decide` : ''}</p>`;
-    return `${top}${syncLine}
+    const undoBar = EDITION === 'web' && WEB.isDirector && BOARD_MOVES.length ? `<div class="undo-bar"><b>Moved just now</b>${BOARD_MOVES.map((mv, i) => `<span class="mv">${esc(mv.name)} <span class="muted">${esc(mv.from || 'no coach')} → ${esc(mv.to || 'no coach')}</span><button type="button" class="lnk" data-undo="${i}">Undo</button></span>`).join('')}</div>` : '';
+    return `${top}${syncLine}${undoBar}
       <div class="stats"><div class="stat lead"><div class="lbl">Active players</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs coming</div><b>${tries.length}</b></div></div>
       <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">primary coach · players with their group</span></div>
