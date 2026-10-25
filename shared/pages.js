@@ -96,8 +96,9 @@
       { name: "The client account", href: "/family" }, { name: "Enroll · public link", href: "/enroll" }, { name: "Courts", href: "/backend#courts" },
       { name: "Privates", href: "/backend#privates" }, { name: "Look up an account", href: "/backend#account" } ] },
     { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [
-      { name: "Home · the status report", href: "/marketing#home" }, { name: "Coach assignments", href: "/marketing#assignments" }, { name: "Plan", href: "/marketing#fortnight" },
-      { name: "Workflow", href: "/marketing#workflow" }, { name: "Ads", href: "/marketing#ads" }, { name: "Reports", href: "/marketing#reports" } ] },
+      // same names and order as the page's own tab row (Antonio, Oct 24: the menus match the pages)
+      { name: "Home · the status report", href: "/marketing#home" }, { name: "2-Week Plan", href: "/marketing#fortnight" }, { name: "Coach assignments", href: "/marketing#assignments" },
+      { name: "Workflow", href: "/marketing#workflow" }, { name: "Ads", href: "/marketing#ads" }, { name: "Reports", href: "/marketing#reports" }, { name: "More · banks, archive, KPI", href: "/marketing#database" } ] },
     { id: "library", name: "Library", href: "/#library", page: null, items: [] }
   ];
   const SECTIONS = [
