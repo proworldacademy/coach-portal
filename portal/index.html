@@ -48,7 +48,10 @@ b,strong{font-weight:700}
 .userbox{display:none}
 .vtabs{margin:14px 0 0}
 /* phones: the Coaches row is one line that scrolls sideways, the page you are on kept in view (same as the Admin page) */
-@media(max-width:560px){.vtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:12px -16px 0;padding:2px 16px 8px;mask:linear-gradient(90deg,#000 92%,transparent);-webkit-mask:linear-gradient(90deg,#000 92%,transparent)}.vtabs::-webkit-scrollbar{display:none}.vtabs a,.vtabs button{flex:none}}
+/* phones (Antonio, Oct 25): the row under the bar goes — the ☰ menu has the same eight; lists instead of bubbles wherever a bubble only costs space */
+@media(max-width:560px){.vtabs{display:none!important}
+  .bps{display:flex;flex-direction:column;gap:0}.bps .bp{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;border:0;border-top:1px solid var(--line);border-radius:0;padding:9px 2px;background:transparent}.bps .bp:first-child{border-top:0}.bps .bp small{text-align:right;white-space:nowrap;flex:none}.bps .bp .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bucket .bps,.bps.flat{gap:0}}
 .vtabs button small{font-weight:700;opacity:1;background:var(--lime);color:var(--ink);border-radius:999px;padding:1px 7px;margin-left:8px;font-size:11px}
 .vtabs button.on small{background:var(--lime);color:var(--ink)}
 @media(max-width:560px){.tools{margin-top:0}.search{flex-basis:100%;max-width:none}.live{margin-left:0}}
@@ -112,8 +115,7 @@ button.rowb:hover{background:rgba(0,0,0,.045)}
 .chip.tier{border-color:var(--line-2);color:var(--ink)}
 .chip.go{background:var(--ink);border-color:var(--ink);color:var(--lime)}
 .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.15) inset}
-@media(max-width:700px){.rowb{grid-template-columns:minmax(0,1fr);gap:8px}.rowb .mid{display:none}.rowb .chips{justify-content:flex-start;padding-left:48px}}
-@media(max-width:700px){.rowb .who:has(.dot)+.mid+.chips{padding-left:21px}}
+@media(max-width:700px){.rowb{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 8px}.rowb .mid{display:none}.rowb .chips{justify-content:flex-end;padding-left:0;flex-wrap:nowrap}.rowb .chips .chip{white-space:nowrap}}
 .empty{padding:30px 20px;font-size:13.5px}
 
 /* ── buttons ── */

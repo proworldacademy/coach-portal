@@ -221,7 +221,12 @@ table.grid td.half{border-right:1px dashed var(--line)}
 /* ---------- attendance board ---------- */
 .board{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 22px 18px;backdrop-filter:blur(12px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28)}
 .board + .board{margin-top:18px}
-@media (max-width:560px){.board{padding:16px 12px}.court{grid-template-columns:56px minmax(0,1fr) 34px;gap:6px 8px}.court .players{grid-column:1/-1;gap:5px}.court .cn{grid-row:1;grid-column:1/3;font-size:26px;padding-top:0}.court .cn small{display:inline;margin-left:6px}.court .more{grid-row:1;grid-column:3}.pc{font-size:13px;padding:6px 10px 6px 8px}.hero p{font-size:14px}}
+/* phones (Antonio, Oct 25): the Admin/Coaches row under the bar goes (the ☰ menu has it); the session picker is one button that opens a list; lists, not bubbles */
+.sesspick{display:none}
+@media (max-width:560px){.tools .modes{display:none!important}
+  .sesspick{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;text-align:left;color:var(--ink)}.sesspick span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:700}.sesspick b{flex:1;font-size:14px}.sesspick i{font-style:normal;color:var(--muted)}.sesspick[aria-expanded="true"] i{transform:rotate(180deg)}
+  .seg.sess{display:none;flex-direction:column;gap:0;border-radius:14px;padding:4px 0;margin-top:6px!important;background:#fff}.seg.sess.open{display:flex}.seg.sess button{text-align:left;border-radius:0;padding:12px 14px;border-top:1px solid var(--line);color:var(--ink)}.seg.sess button:first-child{border-top:0}.seg.sess button[aria-pressed="true"]{background:var(--ink);color:var(--lime)}
+  .board{padding:16px 12px}.court{grid-template-columns:56px minmax(0,1fr) 34px;gap:6px 8px}.court .players{grid-column:1/-1;gap:5px}.court .cn{grid-row:1;grid-column:1/3;font-size:26px;padding-top:0}.court .cn small{display:inline;margin-left:6px}.court .more{grid-row:1;grid-column:3}.pc{font-size:13px;padding:6px 10px 6px 8px}.hero p{font-size:14px}}
 .board .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
 .board .head h2{font-size:clamp(34px,5.5vw,56px)}
 .board .head .prog{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(22px,3.6vw,30px);color:var(--muted)}
@@ -817,12 +822,14 @@ function renderAttendance(app){
   const show=state.attSession==='all'?todays:todays.filter(s=>s.id===state.attSession);
   let html=`<section class="hero"><h1>Attendance.</h1><p>The list the coaches used to write in Notes and screenshot to Slack — now tap-to-mark, and the same list for everyone. Everyone expected is already on a court: the Play by Point roster, plus every family that enrolled online, minus anyone on hold. Drag players between courts, strike who didn't show, add who did, post. Billing takes it from there.</p></section>
   <div class="toolbar">${dateStrip(dateStr,-3,6)}</div>
-  <div class="seg" style="margin-top:12px" role="group" aria-label="Session">${todays.map(s=>`<button data-sess="${s.id}" aria-pressed="${s.id===state.attSession}">${s.time} · ${s.label}</button>`).join('')}${todays.length?`<button data-sess="all" aria-pressed="${state.attSession==='all'}">Whole day</button>`:'<button disabled>No sessions — weekend</button>'}</div>`;
+  <button class="sesspick" data-sesspick aria-expanded="${state.sessOpen?'true':'false'}"><span>Session</span><b>${(()=>{const cur=todays.find(s=>s.id===state.attSession);return cur?cur.time+' · '+cur.label:state.attSession==='all'?'Whole day':'pick one'})()}</b><i>▾</i></button>
+  <div class="seg sess${state.sessOpen?' open':''}" style="margin-top:12px" role="group" aria-label="Session">${todays.map(s=>`<button data-sess="${s.id}" aria-pressed="${s.id===state.attSession}">${s.time} · ${s.label}</button>`).join('')}${todays.length?`<button data-sess="all" aria-pressed="${state.attSession==='all'}">Whole day</button>`:'<button disabled>No sessions — weekend</button>'}</div>`;
   show.forEach(sess=>{html+=renderBoard(sess,getSheet(dateStr,sess.id))});
   html+=`<p class="note">Tags come from the player record, not the coach's memory: <b>F</b> = on a session pack (one session is used when marked present), <b>TO</b> = tryout, <b>G</b> = guest with no record (pink). A lime chip is an enrolled player here on a day they're not scheduled — posting bills the drop-in unless the front desk approves it as a swap. Courts on a list are the courts blocked for that session on the grid; add or remove one here and the grid updates.</p>`;
   app.innerHTML=html;
   app.querySelectorAll('.date').forEach(b=>b.onclick=()=>{state.attDate=b.dataset.date;save();renderAttendance(app)});
-  app.querySelectorAll('[data-sess]').forEach(b=>b.onclick=()=>{state.attSession=b.dataset.sess;save();renderAttendance(app)});
+  app.querySelectorAll('[data-sess]').forEach(b=>b.onclick=()=>{state.attSession=b.dataset.sess;state.sessOpen=false;save();renderAttendance(app)});
+  const sp=app.querySelector('[data-sesspick]');if(sp)sp.onclick=()=>{state.sessOpen=!state.sessOpen;renderAttendance(app)};
   show.forEach(sess=>bindBoard(app,sess,getSheet(dateStr,sess.id)));
 }
 function renderBoard(sess,sheet){
