@@ -82,6 +82,8 @@
     cadence: {},
     usedIdeas: [],
     usedProd: [],
+    // ideas that really went out (from the ledger and the archive), kept forever so a generator can never offer them again (Antonio, Oct 26: Tara's pre-match snacks came back)
+    postedIdeas: [],
     ideaBank: IDEA_BANK_SEED,
     prodBank: PRODUCTION_BANK_SEED,
     kpi: [],
@@ -463,8 +465,25 @@
   function recomputeUsed() { const ui = new Set(), up = new Set(); weekList().forEach((w) => { if (!w.locked) return; const ids = weekIds(w); ids.ideas.forEach((x) => ui.add(x)); ids.prod.forEach((x) => up.add(x)); }); S.usedIdeas = Array.from(ui); S.usedProd = Array.from(up); }
   // reserved = already posted + sitting in any saved week (draft or locked), except the week given
   function reserved(exceptWS) { const ri = new Set(ALREADY_POSTED_IDS), rp = new Set(); Object.keys(S.weeks || {}).forEach((k) => { if (k === exceptWS) return; const ids = weekIds(S.weeks[k]); ids.ideas.forEach((x) => ri.add(x)); ids.prod.forEach((x) => rp.add(x)); }); return { ideas: ri, prod: rp }; }
-  function availableIdeas(coach, exceptWS) { const r = reserved(exceptWS || null).ideas; return (S.ideaBank[coach] || []).filter((i) => !r.has(i.id)); }
-  function postedCount(coach) { return (S.ideaBank[coach] || []).filter((i) => ALREADY_POSTED_IDS.includes(i.id)).length; }
+  // ── never again: an idea is off the table when its id was posted (postedIdeas, the ledger) OR when a post in the archive already covers the same ground ──
+  const STOP = new Set("the a an and or of to in on for with your you our we is are what how why when before after between from this that it its at by do does not just more than into one two three every day week match tennis player players coach coaches proworld academy here heres what's whats actually works work".split(" "));
+  const words = (t) => new Set(String(t || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.replace(/(ies|es|s)$/, "")));
+  function looksPosted(idea, coach) {
+    const iw = words((idea.title || idea.t || "") + " " + (idea.desc || idea.hook || ""));
+    if (iw.size < 2) return false;
+    const since = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
+    for (const p of S.archive || []) {
+      if (String(p.date || "") < since) continue;
+      const pw = words((p.title || "") + " " + (p.desc || ""));
+      let shared = 0; iw.forEach((w) => { if (pw.has(w)) shared++; });
+      const same = coach && p.coach && String(p.coach).toLowerCase().split(/\s+/).pop() === String(coach).toLowerCase().split(/\s+/).pop();
+      const need = same ? 3 : 5;
+      if (shared >= need && shared / Math.min(iw.size, pw.size || 1) >= (same ? 0.3 : 0.4)) return p;
+    }
+    return false;
+  }
+  function availableIdeas(coach, exceptWS) { const r = reserved(exceptWS || null).ideas; const posted = new Set(S.postedIdeas || []); return (S.ideaBank[coach] || []).filter((i) => !r.has(i.id) && !posted.has(i.id) && !looksPosted(i, coach)); }
+  function postedCount(coach) { const posted = new Set((S.postedIdeas || []).concat(ALREADY_POSTED_IDS)); return (S.ideaBank[coach] || []).filter((i) => posted.has(i.id) || looksPosted(i, coach)).length; }
   function availableProd(exceptWS) { const r = reserved(exceptWS || null).prod; return S.prodBank.filter((i) => !r.has(i.id)); }
   const pick = (p, extra) => Object.assign({ id: p.id, title: p.title, format: p.format, day: p.day, desc: p.desc, hook: p.hook || "", delivered: false, approved: false, custom: false }, extra || {});
   function runHooks() { (window.PW && window.PW.hooks || []).forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
@@ -986,7 +1005,7 @@
   function renderAll() { renderOverview(); renderAssignments(); renderProduction(); renderWeeks(); renderBankStatus(); renderCadence(); renderCal(); renderArchive(); renderKpiHistory(); renderAds(); renderFortnight(); (window.PW.hooks || []).forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
   window.renderAll = renderAll;
   // Bridge for the engine modules (content database, cadence ramp, workflow briefs)
-  window.PW = { S, save, askForm, askConfirm, openModal, closeModal, esc, $, toast, sundayOf, SM, MONTHS, COACHES, PILLARS, ALREADY_POSTED_IDS, COACH_WEEKLY_COUNT, availableIdeas, availableProd, detectWeekTheme, stripForPDF, deliverFile, cur, thisWeek, curWS: () => curWS, weekList, weekLabel, wsOf, reserved, showWeek, hooks: [], isLive: () => !!db && !readOnly, loadedAt: () => loadedAt, recipe, weekCoaches, buildWeek, itemState, isDone, stateChip, weekTally, dayDate, dkey, POST_DAYS, fmtDay, wsDate, shiftWS, FN_ANCHOR, fnStartOf, fnOf, fnPair, fnLabel, fortnightCoaches, buildFortnight, curFN: () => curFN };
+  window.PW = { S, save, looksPosted, askForm, askConfirm, openModal, closeModal, esc, $, toast, sundayOf, SM, MONTHS, COACHES, PILLARS, ALREADY_POSTED_IDS, COACH_WEEKLY_COUNT, availableIdeas, availableProd, detectWeekTheme, stripForPDF, deliverFile, cur, thisWeek, curWS: () => curWS, weekList, weekLabel, wsOf, reserved, showWeek, hooks: [], isLive: () => !!db && !readOnly, loadedAt: () => loadedAt, recipe, weekCoaches, buildWeek, itemState, isDone, stateChip, weekTally, dayDate, dkey, POST_DAYS, fmtDay, wsDate, shiftWS, FN_ANCHOR, fnStartOf, fnOf, fnPair, fnLabel, fortnightCoaches, buildFortnight, curFN: () => curFN };
   initLocal();
   showWeek(curWS);
   renderAll();
