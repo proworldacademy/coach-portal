@@ -105,7 +105,7 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
 .steps .step.more small{display:none}
 @media(max-width:700px){.steps{grid-template-columns:1fr 1fr}.steps .step.more{grid-column:span 2;justify-content:center}.steps .step b{font-size:17px}}
 #exec-table td.c,#exec-table th.c{text-align:center}
-#exec-table .wk{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:18px;padding-top:8px}
+#exec-table .xwk{display:flex;align-items:center;gap:10px;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:18px;padding-top:8px}
 #exec-table tr.is-miss td{background:#FDF3FC}
 #exec-table .miss{color:#5B1A5C;font-weight:700}
 #tab-smore .lib-row{margin-top:0}

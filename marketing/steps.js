@@ -104,7 +104,7 @@
     let created = 0, posted = 0, missing = 0, first = 0; const rows = [];
     pair.forEach((ws, wi) => {
       const w = S.weeks && S.weeks[ws]; if (!w) { rows.push('<tr><td colspan="7" class="muted">Week ' + (wi + 1) + " · " + esc(PW.weekLabel ? PW.weekLabel(ws) : ws) + ' · not built yet. Press "Build the 2 weeks" on Create.</td></tr>'); return; }
-      rows.push('<tr><td colspan="7"><div class="wk">Week ' + (wi + 1) + " · " + esc(w.weekDates || ws) + (w.locked ? "" : ' <span class="st">draft</span>') + "</div></td></tr>");
+      rows.push('<tr><td colspan="7"><div class="xwk">Week ' + (wi + 1) + " · " + esc(w.weekDates || ws) + (w.locked ? "" : ' <span class="st">draft</span>') + "</div></td></tr>");
       items(w).sort((a, b) => DAYS.indexOf(a.it.day || "Spare") - DAYS.indexOf(b.it.day || "Spare")).forEach(({ who, it }) => {
         const r = PW.itemState(ws, it), st = r.st, e = r.e || {};
         if (st !== "spare") created++;
