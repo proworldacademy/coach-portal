@@ -61,3 +61,29 @@ body.skin-studio .tbl tr.now td,body.skin-studio .tbl tr.today td{background:#F6
 body.skin-studio .chg{background:#DDFDE7;color:#0E3B22;letter-spacing:.2px;text-transform:none;font-size:11.5px}
 body.skin-studio .chg.down{background:#F9E2F8;color:#5B1A5C}
 body.skin-studio .chg.flat{background:#EFEFEA;color:#6B6B68}
+
+/* ── one more sweep (Antonio, Oct 25 night): fewer highlighters and stripes, quieter buttons, titles that fit ── */
+body.skin-studio .hl,body.skin-studio .hl.mint,body.skin-studio .hl.cyan,body.skin-studio .hl.orchid{background:none;padding:0}
+body.skin-studio .coach{box-shadow:var(--shadow);border-color:transparent;background:#fff}
+body.skin-studio .recur{border-color:var(--line)}
+body.skin-studio .page-title{font-size:clamp(34px,4.6vw,56px)}
+body.skin-studio .page-title em{color:var(--ink);-webkit-text-stroke:0}
+body.skin-studio .page-sub{max-width:62ch}
+body.skin-studio #reports-list .card-label{font-size:18px;line-height:1.05}
+body.skin-studio .btn{font-size:14px;padding:9px 15px}
+body.skin-studio .btn.sm{font-size:12.5px}
+
+body.skin-studio .fhead{color:var(--ink-2)}
+body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-radius:14px}
+/* phones: one column everywhere, compact buttons, shorter intro, report titles that fit */
+@media(max-width:640px){
+  body.skin-studio .hero .sum{font-size:14.5px;line-height:1.45}
+  body.skin-studio .page-sub{font-size:13px}
+  body.skin-studio .grid-4{grid-template-columns:1fr}
+  body.skin-studio #home-ig.grid-4{grid-template-columns:repeat(2,1fr)}
+  body.skin-studio .btn-row{gap:6px}body.skin-studio .btn-row .btn{flex:1 1 calc(50% - 6px);justify-content:center;font-size:12.5px;padding:9px 10px;white-space:normal;line-height:1.1}
+  body.skin-studio .week-bar input{min-width:0;flex:1 1 45%}
+  body.skin-studio #reports-list .card-label{font-size:16px}
+  body.skin-studio .card-label{font-size:19px}
+  body.skin-studio .camp{padding:12px}
+  body.skin-studio .coach-name{font-size:20px}}
