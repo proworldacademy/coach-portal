@@ -87,3 +87,25 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
   body.skin-studio .card-label{font-size:19px}
   body.skin-studio .camp{padding:12px}
   body.skin-studio .coach-name{font-size:20px}}
+
+/* ── Marketing in three steps (Oct 26, 2026): the stepper, the view switch, the Execute table ── */
+.view-switch{display:flex;align-items:center;gap:6px;margin:14px 0 0}
+.view-switch .vs{font:700 12px var(--body);border:0;background:transparent;color:var(--muted);padding:5px 10px;border-radius:999px;cursor:pointer}
+.view-switch .vs.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:8px;margin:10px 0 0}
+.steps .step{display:flex;align-items:center;gap:12px;background:#fff;border:0;border-radius:16px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);box-shadow:var(--shadow);min-width:0}
+.steps .step:focus-visible{outline:2px solid var(--ink)}
+.steps .step b{display:block;font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:20px;line-height:1}
+.steps .step small{display:block;color:var(--muted);font-size:11.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.steps .step i{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:700;background:#F1F1ED;font-size:13px}
+.steps .step.on{background:var(--ink);color:var(--lime)}
+.steps .step.on small{color:var(--lime);opacity:.75}
+.steps .step.on i{background:var(--lime);color:#0A0A0A}
+.steps .step.more{border-radius:999px;padding:12px 18px}
+.steps .step.more small{display:none}
+@media(max-width:700px){.steps{grid-template-columns:1fr 1fr}.steps .step.more{grid-column:span 2;justify-content:center}.steps .step b{font-size:17px}}
+#exec-table td.c,#exec-table th.c{text-align:center}
+#exec-table .wk{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:18px;padding-top:8px}
+#exec-table tr.is-miss td{background:#FDF3FC}
+#exec-table .miss{color:#5B1A5C;font-weight:700}
+#tab-smore .lib-row{margin-top:0}
