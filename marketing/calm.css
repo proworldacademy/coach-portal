@@ -64,7 +64,7 @@ body.skin-studio .chg.flat{background:#EFEFEA;color:#6B6B68}
 
 /* ── one more sweep (Antonio, Oct 25 night): fewer highlighters and stripes, quieter buttons, titles that fit ── */
 body.skin-studio .hl,body.skin-studio .hl.mint,body.skin-studio .hl.cyan,body.skin-studio .hl.orchid{background:none;padding:0}
-body.skin-studio .coach{box-shadow:var(--shadow);border-color:transparent;background:#fff}
+body.skin-studio .coach{box-shadow:var(--shadow);border:0!important;background:#fff}
 body.skin-studio .recur{border-color:var(--line)}
 body.skin-studio .page-title{font-size:clamp(34px,4.6vw,56px)}
 body.skin-studio .page-title em{color:var(--ink);-webkit-text-stroke:0}
