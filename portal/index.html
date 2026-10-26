@@ -2020,8 +2020,8 @@ const PW_CONFIG = {
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
       : [['home', 'Players Portal', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }]]
-        // the eight things a coach sees (Antonio, Oct 24): Players Portal · Try-outs · Coach Board · Attendance · Messages · Courts · Privates · Start here; Staff & access is directors only
-        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates'], ['start', 'Start here', '/start']] : [])
+        // the eight things a coach sees (Antonio, Oct 24): Players Portal · Try-outs · Coach Board · Attendance · Messages · Courts · Privates (Start here dropped Oct 26: a PDF guide instead); Staff & access is directors only
+        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates']] : [])
         .concat(EDITION === 'web' && WEB.isDirector ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}</button>`).join('');
