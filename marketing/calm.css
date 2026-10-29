@@ -109,3 +109,14 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
 #exec-table tr.is-miss td{background:#FDF3FC}
 #exec-table .miss{color:#5B1A5C;font-weight:700}
 #tab-smore .lib-row{margin-top:0}
+
+/* ── the idea engine, live (Oct 28): the direction box and its answers ── */
+#ask-engine .eng-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+#ask-engine textarea{flex:1 1 100%;min-height:52px;border:1px solid var(--line-2);border-radius:14px;padding:10px 14px;font:inherit;font-size:14px;resize:vertical;background:#fff}
+#ask-engine select{border:1px solid var(--line-2);border-radius:999px;padding:8px 12px;font:inherit;font-size:13px;background:#fff}
+#ask-engine .btn{background:var(--ink);color:var(--lime);font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:15px}
+.eng-idea{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid var(--line);align-items:flex-start}
+.eng-idea:first-child{border-top:0}
+.eng-idea>div:first-child{min-width:0;flex:1}
+.eng-use{display:flex;flex-direction:column;gap:6px;flex:none}
+@media(max-width:640px){.eng-idea{flex-direction:column}.eng-use{flex-direction:row}}

@@ -91,4 +91,23 @@ async function chargeOnFile(stripe, body, who) {
   return { invoice: fin.id, paid, error, url: fin.hosted_invoice_url, amount: fin.amount_due, label: line.label, kind: line.kind, lookup: line.lookup, qty, sessions: (line.sessions || 0) * qty, hours: (line.hours || 0) * qty };
 }
 
-module.exports = { requireStaff, requireBilling, overview, chargeOnFile, planOf };
+/* The marketing side (Oct 28): owners, administrators and anyone whose access holds the Marketing page — the idea engine is theirs. */
+async function requireMarketing(req) {
+  const h = String(req.headers.authorization || '');
+  const token = h.startsWith('Bearer ') ? h.slice(7) : '';
+  if (!token) throw S.err(401, 'signin', 'Sign in first.');
+  let decoded;
+  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  const email = String(decoded.email || '').toLowerCase();
+  const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
+  if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use this.');
+  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, owner: true, admin: true, marketing: true };
+  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
+  const rec = doc.exists ? doc.data() : null;
+  const pages = rec && Array.isArray(rec.pages) ? rec.pages : [];
+  const ok = !!(rec && rec.active === true && (rec.owner === true || rec.role === 'admin' || pages.includes('mkt')));
+  if (!ok) throw S.err(403, 'access', 'Your access does not include Marketing.');
+  return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: rec.owner === true || rec.role === 'admin', marketing: true };
+}
+
+module.exports = { requireStaff, requireMarketing, requireBilling, overview, chargeOnFile, planOf };

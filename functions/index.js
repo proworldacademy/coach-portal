@@ -12,6 +12,7 @@ const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const BACKUP = require('./lib/backup');
 const LESSONS = require('./lib/lessons');
+const IDEAS = require('./lib/ideas');
 const CAL = require('./lib/calendar');
 const CAT = require('./lib/catalog');
 const S = require('./lib/stripe');
@@ -103,6 +104,15 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       throw S.err(404, 'route', 'No such family route.');
     }
 
+    if (path.startsWith('/api/marketing/')) {
+      // the idea engine, live (Oct 28): owners, administrators and the Marketing people
+      const who = await ADMIN.requireMarketing(req);
+      const b = req.body || {};
+      if (route === 'POST /marketing/ideas') { const out = await IDEAS.ideas(ctx.db, who, b); logger.info('ideas', { by: who.email, coach: b.coach || '', n: out.ideas.length, took: out.took }); return send(res, 200, out); }
+      if (route === 'GET /marketing/ideas/status') { const st = await IDEAS.settings(ctx.db, true); return send(res, 200, { ready: /^sk-ant-/.test(String(st.anthropicKey || '')), by: st.by || '', at: st.at || 0 }); }
+      throw S.err(404, 'route', 'No such marketing route.');
+    }
+
     if (path.startsWith('/api/admin/')) {
       const who = await ADMIN.requireStaff(req);
       const stripe = S.stripeFor(key); const b = req.body || {};
@@ -133,6 +143,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       }
       if (route === 'GET /admin/coachalerts') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const st = await NOTIFY.settings(ctx.db, true); const staff = (await ctx.db.collection('staff').where('active', '==', true).get()).docs.map((d) => ({ email: d.id, name: d.data().name || d.id, slack: d.data().slackName || '', linked: !!d.data().slackId, phone: !!d.data().phone })); return send(res, 200, { hasToken: !!st.slackBotToken, staff }); }
       if (route === 'POST /admin/coachalerts') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const tok = S.clean(b.slackBotToken, 200); if (!/^xox[bp]-[A-Za-z0-9-]{20,}$/.test(tok)) throw S.err(400, 'token', 'That does not look like a Slack bot token (it starts with xoxb-).'); await ctx.db.doc('settings/notify').set({ slackBotToken: tok, slackBotBy: who.email, slackBotAt: Date.now() }, { merge: true }); NOTIFY.forget(); return send(res, 200, await LESSONS.linkSlack(ctx.db)); }
+      if (route === 'GET /admin/ai') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const st = await IDEAS.settings(ctx.db, true); return send(res, 200, { ready: /^sk-ant-/.test(String(st.anthropicKey || '')), by: st.by || '', at: st.at || 0 }); }
+      if (route === 'POST /admin/ai') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const k = S.clean(b.anthropicKey, 250); if (!/^sk-ant-[A-Za-z0-9_-]{30,}$/.test(k)) throw S.err(400, 'key', 'That does not look like an Anthropic API key (it starts with sk-ant-).'); await ctx.db.doc('settings/ai').set({ anthropicKey: k, by: who.email, at: Date.now() }, { merge: true }); IDEAS.forget(); return send(res, 200, { ready: true }); }
       if (route === 'POST /admin/coachalerts/link') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await LESSONS.linkSlack(ctx.db)); }
       if (route === 'POST /admin/lesson/booked') return send(res, 200, await LESSONS.booked(ctx.db, who, b));        // a private was booked: the coach hears it
       if (route === 'POST /admin/lesson/cancelled') return send(res, 200, await LESSONS.cancelled(ctx.db, who, b));
