@@ -48,9 +48,17 @@
     const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
     return (role === "coach" || role === "director" || role === "") && !ctx.has("billing") && !ctx.has("mkt") && ctx.has("coach-portal");
   }
+  // Marketing-only people (Manu, Oct 28) live in the Marketing door the same way: no Dashboard, the logo goes to /marketing.
+  function mktSide() {
+    if (!ctx || ctx.owner || ctx.admin) return false;
+    return ctx.has("mkt") && !ctx.has("coach-portal") && !ctx.has("backend") && !ctx.has("billing") && !ctx.has("tryouts");
+  }
+  // one-door people: the only door they hold is their whole site
+  const oneDoor = () => coachSide() ? "/portal" : mktSide() ? "/marketing" : "";
   function doors() {
     if (!ctx) return [];
     const now = doorNow();
+    if (mktSide()) return DOORS.filter((d) => d.id === "marketing").map((d) => ({ id: d.id, name: d.name, href: d.href, on: true, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)) }));
     const role = String((ctx.rec && ctx.rec.role) || "").toLowerCase();
     const cs = coachSide();
     const director = !!(ctx.owner || ctx.admin || ctx.director || role === "director");
@@ -83,18 +91,18 @@
     const home = opts.active ? opts.active === "/" : here === "/";
     const ds = doors();
     const door = (d) => '<span class="door' + (d.on ? " on" : "") + '" data-door="' + esc(d.id) + '"><a class="' + (d.on ? "on" : "") + '" href="' + esc(d.href) + '"' + (d.on ? ' aria-current="page"' : "") + (d.items.length ? ' aria-haspopup="menu"' : "") + ">" + esc(d.name) + "</a></span>";
-    const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? (coachSide() ? "" : '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>') + ds.map(door).join("") : "") + "</nav>";
+    const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? (oneDoor() ? "" : '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>') + ds.map(door).join("") : "") + "</nav>";
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
     const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
     const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
     // on a phone the strip is hidden; a menu button opens the same doors and their views as a sheet (Lorenzo, Oct 24)
     const burger = ctx && opts.strip !== false ? '<button class="pwd-burger" type="button" data-burger aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>' : "";
-    top.innerHTML = '<a class="pwd-mark" href="' + (coachSide() ? "/portal" : "/") + '" aria-label="PROWORLD"></a>' + strip + jump + burger + who;
+    top.innerHTML = '<a class="pwd-mark" href="' + (oneDoor() || "/") + '" aria-label="PROWORLD"></a>' + strip + jump + burger + who;
     const bb = top.querySelector("[data-burger]");
     if (bb) {
       let sheet = $("#pwd-menu");
       if (!sheet) { sheet = document.createElement("div"); sheet.className = "pwd-menu"; sheet.id = "pwd-menu"; sheet.setAttribute("role", "menu"); document.body.appendChild(sheet); }
-      sheet.innerHTML = (coachSide() ? "" : '<a class="d' + (home ? " on" : "") + '" href="/">Dashboard</a>') + ds.map((d) => '<a class="d' + (d.on ? " on" : "") + '" href="' + esc(d.href) + '">' + esc(d.name) + "</a>" + (d.items.length ? '<div class="sub">' + d.items.map((it) => '<a href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("") + "</div>" : "")).join("");
+      sheet.innerHTML = (oneDoor() ? "" : '<a class="d' + (home ? " on" : "") + '" href="/">Dashboard</a>') + ds.map((d) => '<a class="d' + (d.on ? " on" : "") + '" href="' + esc(d.href) + '">' + esc(d.name) + "</a>" + (d.items.length ? '<div class="sub">' + d.items.map((it) => '<a href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("") + "</div>" : "")).join("");
       const setOpen = (on) => { sheet.classList.toggle("on", on); bb.classList.toggle("on", on); bb.setAttribute("aria-expanded", on ? "true" : "false"); document.documentElement.classList.toggle("pwd-menu-open", on); };
       bb.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!sheet.classList.contains("on")); });
       sheet.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
@@ -152,7 +160,7 @@
     const kind = (p) => (p.section === "tools" ? "tool" : ({ plan: "plan", report: "report", page: "page", archive: "archive", proto: "prototype" }[p.status] || p.section || ""));
     const base = mine().map((p) => ({ name: p.name, kind: kind(p), href: pageHref(p), ext: external(p) }));
     const views = []; doors().forEach((d) => d.items.forEach((it) => views.push({ name: d.name + " › " + it.name, kind: "view", href: it.href })));
-    const all = (coachSide() ? [] : [{ name: "Dashboard", kind: "home", href: "/" }]).concat(extra, coachSide() ? [] : base, views);
+    const all = (oneDoor() ? [] : [{ name: "Dashboard", kind: "home", href: "/" }]).concat(extra, oneDoor() ? [] : base, views);
     const seen = new Set(); return all.filter((x) => x.href && !seen.has(x.href) && seen.add(x.href));
   }
   const hl = (name, q) => { const i = name.toLowerCase().indexOf(q); return i < 0 ? esc(name) : esc(name.slice(0, i)) + "<mark>" + esc(name.slice(i, i + q.length)) + "</mark>" + esc(name.slice(i + q.length)); };
@@ -239,7 +247,7 @@
     if (document.body) run(); else document.addEventListener("DOMContentLoaded", run, { once: true });
   }
   // a coach or director who lands on the Dashboard goes to the Coaches door: that is their whole site
-  function landing() { if (coachSide() && (here === "/" || here === "") && !location.hash) location.replace("/portal"); }
+  function landing() { const d = oneDoor(); if (d && (here === "/" || here === "") && !location.hash) location.replace(d); }
   window.addEventListener("pw:auth", (e) => { ctx = e.detail; landing(); if (mounted) drawTop(); });
   window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; if (mounted) drawTop(); });
   // a page with several views (the Coach Portal's assessments / try-outs / board) re-marks the strip as the view changes
