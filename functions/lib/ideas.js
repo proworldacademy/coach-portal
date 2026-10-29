@@ -74,12 +74,17 @@ async function ideas(db, who, b) {
   ].filter(Boolean).join('\n');
 
   const t0 = Date.now();
-  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 2500, temperature: 1, system: sys, messages: [{ role: 'user', content: user }] }) });
+  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 6000, temperature: 1, system: sys, messages: [{ role: 'user', content: user }] }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw S.err(502, 'claude', 'The idea engine could not answer (' + (j && j.error && j.error.message ? clip(j.error.message, 160) : r.status) + ').');
   const text = (j.content || []).map((c) => c.text || '').join('');
   let list = [];
-  try { const m = text.match(/\[[\s\S]*\]/); list = JSON.parse(m ? m[0] : text); } catch (e) { throw S.err(502, 'parse', 'The idea engine answered in a shape the page cannot read. Try again.'); }
+  try { const m = text.match(/\[[\s\S]*\]/); list = JSON.parse(m ? m[0] : text); }
+  catch (e) {   // cut off mid-list: keep every complete object
+    const objs = text.match(/\{[^{}]*\}/g) || [];
+    objs.forEach((o) => { try { list.push(JSON.parse(o)); } catch (e2) { /* skip */ } });
+    if (!list.length) throw S.err(502, 'parse', 'The idea engine answered in a shape the page cannot read. Try again.');
+  }
   if (!Array.isArray(list)) list = [];
   const FORMATS = ['Talking Head', 'Reel', 'Carousel', 'Static Post', 'Ad Video', 'Story'];
   const seen = archive.map((p) => (p.title || '') + ' ' + (p.desc || '')).concat(bankTitles, prodTitles);
