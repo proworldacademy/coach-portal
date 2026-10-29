@@ -101,7 +101,12 @@
     try { const d = localStorage.getItem("eng-dir"); if (d) $("eng-dir").value = d; } catch (e) { /* noop */ }
     $("eng-dir").addEventListener("input", () => { try { localStorage.setItem("eng-dir", $("eng-dir").value); } catch (e) { /* noop */ } });
     $("eng-go").addEventListener("click", run);
-    api("/marketing/ideas/status").then((s) => { if (!s.ready) $("eng-status").innerHTML = '· <b style="color:#5B1A5C">no key yet</b> — an owner pastes the Anthropic API key on the backend (Messages → Settings → Idea engine)'; }).catch(() => {});
+    status();
+  }
+  function status() {   // the sign-in may land after the page draws, so check again when it does
+    const show = () => api("/marketing/ideas/status").then((s) => { const el = $("eng-status"); if (!el) return; el.innerHTML = s.ready ? "· new ideas on the spot, in the coach's voice, never a repeat" : '· <b style="color:#5B1A5C">no key yet</b> — an owner pastes the Anthropic API key on the backend (Messages → Settings → Idea engine)'; }).catch(() => {});
+    if (window.firebase && firebase.auth && firebase.auth().currentUser) show();
+    else if (window.firebase && firebase.auth) { const off = firebase.auth().onAuthStateChanged((u) => { if (u) { show(); off(); } }); }
   }
   async function run() {
     const btn = $("eng-go"), out = $("eng-out"), coach = $("eng-coach").value, n = Number($("eng-n").value) || 5;
