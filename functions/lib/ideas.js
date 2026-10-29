@@ -30,8 +30,10 @@ async function shards(db, col) {
 }
 
 const clip = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
-const words = (t) => new Set(String(t || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 4).map((w) => w.replace(/(ies|es|s)$/, '')));
-function overlaps(a, b, need) { const A = words(a), B = words(b); let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return n >= need && n / Math.min(A.size || 1, B.size || 1) >= 0.4; }
+// words every PROWORLD post shares do not make two ideas the same idea
+const STOP = new Set(['proworld', 'academy', 'campus', 'court', 'courts', 'player', 'players', 'tennis', 'coach', 'coaches', 'training', 'train', 'session', 'delray', 'beach', 'reel', 'carousel', 'video', 'story', 'post', 'parent', 'parents', 'kids', 'athlete', 'athletes', 'every', 'with', 'from', 'that', 'this', 'what', 'your', 'their', 'here', 'show', 'shot', 'text', 'overlay', 'finish', 'close', 'slow', 'talking', 'head', 'line', 'first', 'then', 'into', 'over', 'about', 'when', 'they', 'them', 'make', 'made', 'more', 'than', 'just', 'like', 'real', 'high', 'performance']);
+const words = (t) => new Set(String(t || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 4).map((w) => w.replace(/(ies|es|s)$/, '')).filter((w) => !STOP.has(w) && !STOP.has(w + 's')));
+function overlaps(a, b, need) { const A = words(a), B = words(b); let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return n >= need && n / Math.min(A.size || 1, B.size || 1) >= 0.5; }
 
 /* ideas(db, who, {coach, direction, n, format}) → { ideas: [{id, title, format, day, pillar, desc, hook, coach}], model, took } */
 async function ideas(db, who, b) {
@@ -68,7 +70,7 @@ async function ideas(db, who, b) {
     coach ? 'Coach: ' + coach + '. Write every idea in this coach\'s own voice and area (' + (coach === 'Tara' ? 'fitness and nutrition' : coach === 'Tonio' ? 'mental performance' : coach === 'Kam' || coach === 'Kamryn' ? '10 & Under' : coach === 'Flo' || coach === 'Florian' ? 'tour team and tournaments' : 'tennis coaching') + ').' : 'No specific coach: production pieces (carousels, statics, reels shot by the photographer).',
     format ? 'Format: ' + format + ' only.' : '',
     direction ? 'DIRECTION FROM THE TEAM (follow it first): ' + direction : 'Direction: whatever this coach has not covered yet, varied across the pillars.',
-    'N = ' + n + '.'
+    'N = ' + (n + 2) + '.'
   ].filter(Boolean).join('\n');
 
   const t0 = Date.now();
@@ -85,7 +87,7 @@ async function ideas(db, who, b) {
   for (const i of list) {
     if (!i || !i.title) continue;
     const title = clip(i.title, 90), desc = clip(i.desc, 600), hook = clip(i.hook, 200);
-    if (seen.some((s) => overlaps(title + ' ' + desc, s, 4))) continue;   // the model slipped: same ground as something we have
+    if (seen.some((s) => overlaps(title + ' ' + hook, s, 3))) continue;   // the model slipped: same ground as something we have
     out.push({ id: 'ai_' + Date.now().toString(36) + '_' + out.length, title, format: FORMATS.includes(i.format) ? i.format : (coach ? 'Talking Head' : 'Carousel'), pillar: clip(i.pillar, 40), desc, hook, coach: coach || 'Production', by: 'engine-live', askedBy: who.email, direction, at: new Date().toISOString() });
     if (out.length >= n) break;
   }
