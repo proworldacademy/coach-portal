@@ -45,7 +45,7 @@ async function ideas(db, who, b) {
   const n = Math.max(1, Math.min(8, Number(b.n) || 5));
   const format = clip(b.format, 30);
 
-  const [strategy, priorities, pillars, recipe, team, market, adWatch, calendar, adPlan, delivery] = await Promise.all([stateDoc(db, 'strategy'), stateDoc(db, 'priorities'), stateDoc(db, 'pillars'), stateDoc(db, 'recipe'), stateDoc(db, 'team'), stateDoc(db, 'market'), stateDoc(db, 'adWatch'), stateDoc(db, 'calendar'), stateDoc(db, 'adPlan'), stateDoc(db, 'delivery')]);
+  const [strategy, priorities, pillars, recipe, team, market, adWatch, calendar, adPlan, delivery, compPosts] = await Promise.all([stateDoc(db, 'strategy'), stateDoc(db, 'priorities'), stateDoc(db, 'pillars'), stateDoc(db, 'recipe'), stateDoc(db, 'team'), stateDoc(db, 'market'), stateDoc(db, 'adWatch'), stateDoc(db, 'calendar'), stateDoc(db, 'adPlan'), stateDoc(db, 'delivery'), stateDoc(db, 'competitorPosts')]);
   // the season: what is coming in the next ten weeks and which promo windows are open today (the calendar the Sunday run keeps)
   const today = new Date().toISOString().slice(0, 10);
   const plus = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
@@ -57,6 +57,8 @@ async function ideas(db, who, b) {
   const marketRead = mk ? [mk.date + ': ' + clip(mk.headline, 300)].concat((mk.findings || []).slice(0, 8).map((f) => '· ' + clip(f, 320))) : [];
   const aw = Array.isArray(adWatch) && adWatch[0] ? adWatch[0] : null;
   const compAds = aw ? (aw.rows || []).filter((r) => r && r.active).map((r) => '· ' + r.brand + ': ' + r.active + ' ads, ' + (r.type || '') + (r.program ? ', ' + clip(r.program, 60) : '') + (r.format ? ', ' + r.format : '') + (r.note ? ' — ' + clip(r.note, 120) : '')) : [];
+  const cp = Array.isArray(compPosts) && compPosts[0] ? compPosts[0] : null;
+  const compSeen = cp ? (cp.rows || []).filter((r) => r && Array.isArray(r.posts) && r.posts.length).map((r) => '· ' + r.brand + ': ' + r.posts.slice(0, 4).map((x) => clip(x.gist, 70)).join('; ') + (r.promoStarted ? ' (camp promo since ' + r.promoStarted + ')' : '')) : [];
   const ledger = delivery && delivery.posts ? Object.values(delivery.posts).filter((x) => x && x.status !== 'missing' && (x.views || x.saves)) : [];
   const best = ledger.sort((a, c) => ((c.views || 0) + 40 * (c.saves || 0)) - ((a.views || 0) + 40 * (a.saves || 0))).slice(0, 6).map((x) => '· ' + clip(x.title, 80) + ' — ' + (x.views || 0) + ' views, ' + (x.saves || 0) + ' saves, ' + (x.shares || 0) + ' shares');
   const archive = (await shards(db, 'archive')).filter((p) => p && p.date).sort((a, c) => String(c.date).localeCompare(String(a.date))).slice(0, 60);
@@ -78,6 +80,7 @@ async function ideas(db, who, b) {
     camps.length ? 'OUR AD CAMPAIGNS (an "Ad Video" idea should serve one of these):\n' + camps.join('\n') : '',
     marketRead.length ? 'THE LAST MARKET READ (the Monday review of our numbers, the competitors and the niche):\n' + marketRead.join('\n') : '',
     compAds.length ? 'COMPETITOR ADS RUNNING NOW (do what they are not; never name them in a post):\n' + compAds.join('\n') : '',
+    compSeen.length ? 'WHAT THE COMPETITORS POSTED LATELY (as far as search sees; ground we leave to them unless we do it better from the campus):\n' + compSeen.join('\n') : '',
     best.length ? 'OUR BEST RECENT POSTS BY VIEWS AND SAVES (the formats and angles to double down on, with new topics):\n' + best.join('\n') : '',
     'WHAT WORKS NOW: parent-facing carousels that answer one honest question ("Red, Orange or Green ball? Here is the honest difference") get 5–10x the views and most of the saves; coach talking-head reels sit at 1–1.6K views and work best when the coach tells one concrete thing from the court. The campus is our biggest difference: show it.',
     'ALREADY DONE OR ALREADY IN THE BANK — never repeat these topics, angles or hooks, not even reworded:',
