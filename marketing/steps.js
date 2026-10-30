@@ -86,7 +86,7 @@
   // the library buttons keep working; they mark More
   if (lib) lib.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => { steps.querySelectorAll(".step").forEach((x) => x.classList.toggle("on", x.dataset.step === "smore")); }));
   // old links keep landing in the right step
-  const MAP = { home: "sreport", reports: "sreport", fortnight: "screate", assignments: "screate", workflow: "screate", ads: "screate", report: "sreport", create: "screate", execute: "sexecute", more: "smore" };
+  const MAP = { home: "sreport", reports: "sreport", aireplies: "sreport", fortnight: "screate", assignments: "screate", workflow: "screate", ads: "screate", report: "sreport", create: "screate", execute: "sexecute", more: "smore" };
   const fromHash = () => { const h = String(location.hash || "").replace(/^#/, ""); if (!h) return openTab("sreport"); if (MAP[h]) return openTab(MAP[h]); if ($("tab-" + h)) return openTab(h); openTab("sreport"); };
   window.addEventListener("hashchange", fromHash);
   // app.js's own hash handler may have opened a classic tab already; ours runs last

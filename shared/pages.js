@@ -97,7 +97,7 @@
     { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [
       // same names and order as the page's own tab row (Antonio, Oct 24: the menus match the pages)
       { name: "Home · the status report", href: "/marketing#home" }, { name: "2-Week Plan", href: "/marketing#fortnight" }, { name: "Coach assignments", href: "/marketing#assignments" },
-      { name: "Workflow", href: "/marketing#workflow" }, { name: "Ads", href: "/marketing#ads" }, { name: "Reports", href: "/marketing#reports" }, { name: "More · banks, archive, KPI", href: "/marketing#database" } ] },
+      { name: "Workflow", href: "/marketing#workflow" }, { name: "Ads", href: "/marketing#ads" }, { name: "Reports", href: "/marketing#reports" }, { name: "AI replies", href: "/marketing#aireplies" }, { name: "More · banks, archive, KPI", href: "/marketing#database" } ] },
     { id: "library", name: "Library", href: "/#library", page: null, items: [] }
   ];
   const SECTIONS = [

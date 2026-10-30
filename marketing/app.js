@@ -84,6 +84,8 @@
     usedProd: [],
     // ideas that really went out (from the ledger and the archive), kept forever so a generator can never offer them again (Antonio, Oct 26: Tara's pre-match snacks came back)
     postedIdeas: [],
+    // AI replies (Oct 30): how the concierge answered families each week — written by the Monday AI replies run, newest first
+    aiReplies: [],
     ideaBank: IDEA_BANK_SEED,
     prodBank: PRODUCTION_BANK_SEED,
     kpi: [],
