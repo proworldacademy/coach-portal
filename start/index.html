@@ -152,7 +152,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
     "/backend#books": ["What QuickBooks receives: revenue by class, payments by day, fees, top renters", "Read; the reconciliation view"],
     "/backend#messages": ["Texts to families from the academy line, as conversations: one thread per group and per family, your texts and their replies", "Pick a thread, tap a template or write, send; the bubble shows sent, delivered, failed; Custom audience for a one-off mix; only opted-in families are texted"],
     "/backend#account": ["A family's account as the parent sees it: plan, balance, attendance, camps", "Look a family up when they call"],
-    "/portal": ["The groups, each player with their coach and one status word; a player's page holds the quarterly assessment, the monthly report, videos and the journal", "Open your player, start the suggested report, fill in the part you coach, mark it sent to the family"],
+    "/portal": ["The groups, each player with their coach, one status word and the weekly contact mark; a player's page holds the 3-month report, the weekly contact, videos and the journal", "Open your player, tick the weekly contact, write the 3-month report, mark it sent to the family"],
     "/portal#/tryouts": ["Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered", "Add a try-out, record the result, convert it to an enrollment"],
     "/portal#/board": ["Who coaches whom, the players with no coach yet, the try-outs coming; it reads the roster", "Directors: open a player with no coach and set the coach on their page; the board follows"],
     "/family": ["Where a parent signs in with the e-mail on file and sees their players, coach, schedule, attendance, reports, bills and card", "Copy the link for a family; the account matches by the parent's e-mail"],
@@ -166,7 +166,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
   };
   const DOOR_LEAD = {
     admin: "Admin replaced Play by Point. Staff never type a card: the family enters it once on Stripe through the enrollment link, and every renewal, pack, private and drop-in after that charges the card on file. Bills go out on the 1st; the engine prorates mid-month starts and school breaks and runs the late policy on its own ($50 fee on the 6th, hold on the 10th, spot released on the 15th).",
-    coaches: "The Coach Portal is where a player is seen as a player: the groups, each player with their coach, the quarterly assessments, the reports that go home. A coach opens their own players; a tennis director opens everyone, assigns coaches and holds Messages and Courts.",
+    coaches: "The Coach Portal is where a player is seen as a player: the groups, each player with their coach, the 3-month report that goes home, the weekly contact with every family. A coach opens their own players; a tennis director opens everyone, assigns coaches and holds Messages and Courts.",
     clients: "The family side seen from the inside: the links a family can use without any sign-in, who came in through them, what families asked for, and a client's account exactly as they see it. Replies and bookings happen in Admin; this is the map.",
     marketing: "Instagram and Meta ads, with the numbers refreshed every morning and two automatic runs doing the heavy lifting: Sunday builds the next two weeks, Monday judges the week."
   };
@@ -225,8 +225,9 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
     coach: ["How to: your week in the portal", "tap a step to open that screen", "Five screens, one sign-in. You see every player in your group; you open the ones with your name on them. A director sets who coaches whom.", [
       ["Sign in", "Open the site and sign in with your Google account (the e-mail the academy gave you). The Coaches door is yours; the other doors stay closed.", "/portal"],
       ["Players: find yours", "Players shows the groups. Open your group: your players are in black and open with a tap; the others are grey with the coach's name. The word on the right says where the player stands: Up to date, Working on it, Missing.", "/portal"],
-      ["Open a player", "The player's page shows the suggested report for now (the quarterly, or the monthly) on a pale lime card. Tap Start. Other reports sit folded under “Other reports”.", "/portal"],
-      ["Fill in your part", "Tennis, Fitness, Mental, Summary: each coach fills in their own part. Use the mic to dictate into any box; Ctrl + Enter moves on. It saves as you go; close it and come back any time.", "/portal"],
+      ["Weekly contact", "Every family hears from you every week: one text or one call through JustCall, with the parents or with the player. Tick it off on the player's page or on the Weekly contact list — red means nobody has been in touch yet this week.", "/portal#/contact"],
+      ["Open a player", "The player's page shows the 3-month report on a pale lime card: the goals for the next three months first, then tennis, fitness, mental, competition and a personal note. Tap Start. One report, every three months.", "/portal"],
+      ["Write it to the player", "Use the mic to dictate into any box; Ctrl + Enter moves on. Spelling and grammar are tidied up by themselves, and a note that would land as negative gets a red flag — reword it, or press Reword it for me. It saves as you go.", "/portal"],
       ["Mark it sent", "When the report is complete, mark it sent to the family. That turns the player's word to Up to date and the family sees it in their portal.", "/portal"],
       ["Attendance", "Admin → Attendance: pick the session, tap who is here, post the list. Posting is what the front desk and the families see.", "/backend#attendance"],
       ["Try-outs", "A family coming to try: the date, what we saw, the group offered. Add one when a parent calls you directly.", "/portal#/tryouts"],
