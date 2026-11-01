@@ -7,6 +7,7 @@ const CAL = require('../lib/calendar');
 const CAT = require('../lib/catalog');
 const S = require('../lib/stripe');
 const CHECKOUT = require('../lib/checkout');
+CHECKOUT._setClock(() => Date.UTC(2026, 9, 13, 14, 0, 0));   // the fixtures live on Oct 13, 2026 — the tests must not age with the real calendar
 const JOBS = require('../lib/jobs');
 const { fakeStripe } = require('./fake-stripe');
 

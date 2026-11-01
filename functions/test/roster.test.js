@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const CAL = require('../lib/calendar');
 const CAT = require('../lib/catalog');
 const CHECKOUT = require('../lib/checkout');
+CHECKOUT._setClock(() => Date.UTC(2026, 9, 13, 14, 0, 0));   // the fixtures live on Oct 13, 2026 — the tests must not age with the real calendar
 const JOBS = require('../lib/jobs');
 const ROSTER = require('../lib/roster');
 const NOTIFY = require('../lib/notify');

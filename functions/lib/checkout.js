@@ -39,7 +39,7 @@ function monthlyQuote(programId, planId, start, today, now) {
   const prog = CAT.program(programId), plan = CAT.plan(programId, planId);
   if (!prog || !plan) throw S.err(400, 'unknown_plan', 'Unknown program or plan.');
   today = today || CAL.todayET();                                                   // a start date is never earlier than today: nobody is billed for days already gone
-  now = now || Math.floor(Date.now() / 1000);
+  now = now || Math.floor(CLOCK() / 1000);
   if (plan.every) return cycleQuote(prog, plan, today);
   const startDate = /^\d{4}-\d{2}-\d{2}$/.test(start || '') && start >= today ? start : today;
   const q = CAL.firstMonthQuote(plan.monthly * 100, startDate);
@@ -163,13 +163,13 @@ async function ensureEnrollment(stripe, session, log) {
   const pm = paymentMethodOf(full);
   if (!pm) throw S.err(409, 'no_card', 'The payment is in, but Stripe has not reported the saved card yet.');
   const { prog, plan, price } = await S.monthlyPlanPrice(stripe, m.program, m.plan);
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(CLOCK() / 1000);
   let anchor = parseInt(m.anchor, 10) || 0;
   const meta = Object.assign({}, m, { session: session.id });
   delete meta.price; delete meta.description;
   if (anchor <= now + 60) {
     // The 1st already passed before the plan was created (the page was never opened and the sweep ran late): start on the next 1st and flag it.
-    anchor = CAL.unixET(CAL.nextFirst(CAL.todayET()), 6, 0);
+    anchor = CAL.unixET(CAL.nextFirst(CAL.todayET(new Date(CLOCK()))), 6, 0);
     meta.needs_review = 'plan created after its first 1st — check the missed month';
     log(`enrollment ${session.id}: anchor passed, moved to ${CAL.dateOfUnixET(anchor)} (flagged)`);
   }
@@ -275,4 +275,7 @@ async function sessionStatus(stripe, id, log, ctx) {
   return out;
 }
 
-module.exports = { monthlyQuote, createMonthlySession, createOneTimeSession, sessionStatus, ensureEnrollment, ensureCardOnFile, findEnrollment, isProgramPayment, enrollmentOf, SITE, money };
+// the clock, replaceable by the tests (their fixtures live in October 2026 and must not age)
+let CLOCK = () => Date.now();
+function _setClock(f) { CLOCK = f || (() => Date.now()); }
+module.exports = { _setClock, monthlyQuote, createMonthlySession, createOneTimeSession, sessionStatus, ensureEnrollment, ensureCardOnFile, findEnrollment, isProgramPayment, enrollmentOf, SITE, money };
