@@ -9,6 +9,7 @@ const ROSTER = require('../lib/roster');
 const NOTIFY = require('../lib/notify');
 const { fakeStripe } = require('./fake-stripe');
 const { fakeDb } = require('./fake-db');
+const { frozen } = require('./frozen');
 
 const PRICES = [];
 for (const p of CAT.PROGRAMS) for (const pl of p.plans) { const c = CAT.cycleOf(pl); PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: c.interval, interval_count: c.count }, unit_amount: pl.monthly * 100, product: p.product }); }
@@ -40,7 +41,7 @@ test('a paid enrollment creates the player, the parent details, the note for Mon
   const db = fakeDb(SETTINGS);
   const sent = wire();
   const session = await paidProgramSession(stripe);
-  const st = await CHECKOUT.sessionStatus(stripe, session.id, null, { db, mode: 'test' });
+  const st = await frozen(Date.UTC(2026, 9, 13, 14, 0, 0), () => CHECKOUT.sessionStatus(stripe, session.id, null, { db, mode: 'test' }));   // filed "today" = Oct 13 in this story
   assert.equal(st.roster.player, 'as-ava-t'); assert.equal(st.roster.created, true);
   const p = db._docs.get('players/as-ava-t');
   assert.equal(p.name, 'Ava Torres'); assert.equal(p.shortName, 'Ava T.'); assert.equal(p.group, 'as'); assert.equal(p.status, 'active'); assert.equal(p.source, 'enroll'); assert.equal(p.coach, '');
