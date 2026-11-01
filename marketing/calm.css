@@ -120,3 +120,4 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
 .eng-idea>div:first-child{min-width:0;flex:1}
 .eng-use{display:flex;flex-direction:column;gap:6px;flex:none}
 @media(max-width:640px){.eng-idea{flex-direction:column}.eng-use{flex-direction:row}}
+#exec-table td.xact{text-align:right;white-space:nowrap}

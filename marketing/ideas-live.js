@@ -97,7 +97,7 @@
       '<div class="eng-row"><textarea id="eng-dir" rows="2" placeholder="What are you looking for? e.g. more about the campus · tournament season · lighter on assessments · three carousels for Winter Camp parents"></textarea></div>' +
       '<div class="eng-row"><select id="eng-coach"><option value="Production">Production (carousels, statics, ads)</option>' + coaches.map((c) => '<option value="' + esc(c) + '">' + esc(c) + "</option>").join("") + '</select><select id="eng-n"><option value="5">5 ideas</option><option value="3">3</option><option value="8">8</option></select><button class="btn" id="eng-go">⚡ Ask the engine</button><span class="small muted">Swap also uses this box: when a bank runs thin it thinks of five more in the direction you typed.</span></div>' +
       '<div id="eng-out"></div>';
-    host.parentNode.insertBefore(box, host);
+    host.parentNode.insertBefore(box, host.nextSibling);
     try { const d = localStorage.getItem("eng-dir"); if (d) $("eng-dir").value = d; } catch (e) { /* noop */ }
     $("eng-dir").addEventListener("input", () => { try { localStorage.setItem("eng-dir", $("eng-dir").value); } catch (e) { /* noop */ } });
     $("eng-go").addEventListener("click", run);

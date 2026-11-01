@@ -52,10 +52,10 @@
 
   // ② Create
   move(sCreate, $("fortnight"));
-  const asg = $("tab-assignments"); if (asg) Array.from(asg.querySelectorAll(":scope > .card, :scope > .grid-2, :scope > div")).forEach((el) => move(sCreate, el));
   move(sCreate, cardOf("brief-buttons"));
   move(sCreate, labelled("The ads in these weeks <span class=\"small muted\">· the ad plan</span>", $("ad-plan")));
-  move(sCreate, labelled("The season <span class=\"small muted\">· posts from · ads from</span>", $("ad-cal")));
+  // the week-by-week assignments (a second view of the same two weeks), the banks and the season: in More (Antonio, Nov 1: "too many windows")
+  const asg = $("tab-assignments"); const asgCards = asg ? Array.from(asg.querySelectorAll(":scope > .card, :scope > .grid-2, :scope > div")) : [];
 
   // ③ Execute
   const execCard = document.createElement("div"); execCard.className = "card"; execCard.id = "exec-card"; execCard.innerHTML = '<div class="card-label">What went out <span class="small muted" id="exec-when"></span></div><div id="exec-tiles" class="grid-4" style="margin-bottom:14px"></div><div class="tbl-wrap"><table class="tbl" id="exec-table"></table></div>';
@@ -70,6 +70,8 @@
   const moreRow = document.createElement("div"); moreRow.className = "nav"; moreRow.style.marginTop = "8px";
   ["assignments:Coach assignments (classic)", "workflow:Workflow", "ads:Ads (classic)", "reports:Reports (classic)", "home:Home (classic)"].forEach((s) => { const [id, name] = s.split(":"); const b = document.createElement("button"); b.className = "tab-btn"; b.dataset.tab = id; b.textContent = name; b.addEventListener("click", () => openTab(id)); moreRow.appendChild(b); });
   sMore.appendChild(moreRow);
+  asgCards.forEach((el) => move(sMore, el));
+  move(sMore, labelled("The season <span class=\"small muted\">· posts from · ads from</span>", $("ad-cal")));
   move(sMore, labelled("How the engine runs", $("pipeline")));
 
   // ── switching ──
@@ -94,7 +96,7 @@
   window.openWeek = function (ws) { openTab("screate"); if (window.PW && PW.showWeek) PW.showWeek(ws); };
 
   // ── ③ the table: every item of the current fortnight, with the run's tick ──
-  function items(w) { const out = []; (w.coaches || []).forEach((c) => (c.ideas || []).forEach((i) => out.push({ who: c.name, it: i }))); (w.production || []).forEach((p) => out.push({ who: "Production", it: p })); return out; }
+  function items(w) { const out = []; (w.coaches || []).forEach((c, ci) => (c.ideas || []).forEach((i, ii) => out.push({ who: c.name, it: i, ref: "'" + w.weekStart + "','idea'," + ci + "," + ii }))); (w.production || []).forEach((p, pi) => out.push({ who: "Production", it: p, ref: "'" + w.weekStart + "','prod'," + pi })); return out; }
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Spare"];
   function renderExec() {
     const PW = window.PW; if (!PW || !PW.S || !$("exec-table")) return;
@@ -103,20 +105,20 @@
     $("exec-when").textContent = "· " + PW.fnLabel(fn) + (when ? " · checked against Instagram " + when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + " " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : " · not checked yet");
     let created = 0, posted = 0, missing = 0, first = 0; const rows = [];
     pair.forEach((ws, wi) => {
-      const w = S.weeks && S.weeks[ws]; if (!w) { rows.push('<tr><td colspan="7" class="muted">Week ' + (wi + 1) + " · " + esc(PW.weekLabel ? PW.weekLabel(ws) : ws) + ' · not built yet. Press "Build the 2 weeks" on Create.</td></tr>'); return; }
-      rows.push('<tr><td colspan="7"><div class="xwk">Week ' + (wi + 1) + " · " + esc(w.weekDates || ws) + (w.locked ? "" : ' <span class="st">draft</span>') + "</div></td></tr>");
-      items(w).sort((a, b) => DAYS.indexOf(a.it.day || "Spare") - DAYS.indexOf(b.it.day || "Spare")).forEach(({ who, it }) => {
+      const w = S.weeks && S.weeks[ws]; if (!w) { rows.push('<tr><td colspan="8" class="muted">Week ' + (wi + 1) + " · " + esc(PW.weekLabel ? PW.weekLabel(ws) : ws) + ' · not built yet. Press "Build the 2 weeks" on Create.</td></tr>'); return; }
+      rows.push('<tr><td colspan="8"><div class="xwk">Week ' + (wi + 1) + " · " + esc(w.weekDates || ws) + (w.locked ? "" : ' <span class="st">draft</span>') + "</div></td></tr>");
+      items(w).sort((a, b) => DAYS.indexOf(a.it.day || "Spare") - DAYS.indexOf(b.it.day || "Spare")).forEach(({ who, it, ref }) => {
         const r = PW.itemState(ws, it), st = r.st, e = r.e || {};
         if (st !== "spare") created++;
         if (st === "posted" || st === "late") posted++; else if (st === "missing") missing++;
         if (it.carried) first++;
         const d = PW.dayDate(ws, it.day); const dl = d ? d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : (it.day || "Spare");
-        const ig = st === "posted" || st === "late" ? esc((e.postedAt ? String(e.postedAt).slice(0, 10) + " · " : "") + (e.views ? e.views.toLocaleString() + " views" : "") + (e.matchedBy && e.matchedBy !== "title" ? " · matched by " + e.matchedBy : "") + (st === "late" ? " · late" : "")) : st === "missing" ? '<span class="miss">not on Instagram</span>' : st === "today" ? "today" : it.carried ? '<span class="st wait">carried · post first</span>' : "";
-        rows.push("<tr" + (st === "missing" ? ' class="is-miss"' : "") + "><td>" + esc(dl) + "</td><td><b>" + esc(it.title || "") + "</b><div class=\"small muted\">" + esc([it.format, it.pillar].filter(Boolean).join(" · ")) + "</div></td><td>" + esc(who) + '</td><td class="c">' + (st === "spare" ? "" : "✓") + '</td><td class="c">' + (st === "posted" || st === "late" ? "✓" : '<span class="muted">·</span>') + '</td><td class="c">' + (st === "missing" ? "✕" : '<span class="muted">·</span>') + "</td><td>" + ig + "</td></tr>");
+        const ig = st === "posted" || st === "late" ? esc((e.postedAt ? String(e.postedAt).slice(0, 10) + " · " : "") + (e.views ? e.views.toLocaleString() + " views" : "") + (e.matchedBy === "improvised" ? " · improvised" : e.matchedBy && e.matchedBy !== "title" ? " · matched by " + e.matchedBy : "") + (st === "late" ? " · late" : "")) : st === "missing" ? '<span class="miss">not on Instagram</span>' : st === "today" ? "today" : it.carried ? '<span class="st wait">carried · post first</span>' : "";
+        rows.push("<tr" + (st === "missing" ? ' class="is-miss"' : "") + "><td>" + esc(dl) + "</td><td><b>" + esc(it.title || "") + "</b><div class=\"small muted\">" + esc([it.format, it.pillar].filter(Boolean).join(" · ")) + "</div></td><td>" + esc(who) + '</td><td class="c">' + (st === "spare" ? "" : "✓") + '</td><td class="c">' + (st === "posted" || st === "late" ? "✓" : '<span class="muted">·</span>') + '</td><td class="c">' + (st === "missing" ? "✕" : '<span class="muted">·</span>') + "</td><td>" + ig + '</td><td class="xact"><button class="btn ghost xs" title="Edit · mark posted · remove" onclick="fnEdit(' + ref + ')">✎</button></td></tr>');
       });
     });
     $("exec-tiles").innerHTML = [["Created", created], ["Posted", posted], ["Missing", missing], ["Post first", first]].map(([l, n]) => '<div class="stat"><div class="stat-label">' + l + '</div><div class="stat-num">' + n + "</div></div>").join("");
-    $("exec-table").innerHTML = '<thead><tr><th>Day</th><th>Item</th><th>Who</th><th class="c">Created</th><th class="c">Posted</th><th class="c">Missing</th><th>On Instagram</th></tr></thead><tbody>' + rows.join("") + "</tbody>";
+    $("exec-table").innerHTML = '<thead><tr><th>Day</th><th>Item</th><th>Who</th><th class="c">Created</th><th class="c">Posted</th><th class="c">Missing</th><th>On Instagram</th><th></th></tr></thead><tbody>' + rows.join("") + "</tbody>";
   }
   if (window.PW && PW.hooks) PW.hooks.push(renderExec);
   renderExec();

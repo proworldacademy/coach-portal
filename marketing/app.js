@@ -39,7 +39,7 @@
       root.querySelector(".modal-bg").addEventListener("click", (e) => { if (e.target.classList.contains("modal-bg")) { closeModal(); resolve(false); } });
     });
   }
-  function askForm(title, fields, okLabel, intro) {
+  function askForm(title, fields, okLabel, intro, actions) {
     return new Promise((resolve) => {
       let html = "<h3>" + esc(title) + "</h3>" + (intro ? "<p>" + esc(intro) + "</p>" : "");
       fields.forEach((f) => {
@@ -49,9 +49,10 @@
         else html += '<input type="text" id="' + id + '" value="' + esc(f.value || "") + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "") + ">";
         html += "</div>";
       });
-      html += '<div class="btn-row"><button class="btn ghost muted" id="m-cancel">Cancel</button><button class="btn" id="m-ok">' + esc(okLabel || "Save") + "</button></div>";
+      html += '<div class="btn-row">' + (actions || []).map((a) => '<button class="btn ' + (a.cls || "ghost") + '" data-act="' + esc(a.id) + '">' + esc(a.label) + "</button>").join("") + '<button class="btn ghost muted" id="m-cancel">Cancel</button><button class="btn" id="m-ok">' + esc(okLabel || "Save") + "</button></div>";
       const root = openModal(html);
       const done = (ok) => { if (!ok) { closeModal(); resolve(null); return; } const out = {}; fields.forEach((f) => (out[f.key] = root.querySelector("#m-f-" + f.key).value.trim())); closeModal(); resolve(out); };
+      root.querySelectorAll("[data-act]").forEach((b) => (b.onclick = () => { closeModal(); resolve({ action: b.dataset.act }); }));
       root.querySelector("#m-cancel").onclick = () => done(false);
       root.querySelector("#m-ok").onclick = () => done(true);
       root.querySelector(".modal-bg").addEventListener("click", (e) => { if (e.target.classList.contains("modal-bg")) done(false); });
@@ -545,8 +546,29 @@
     const named = (c) => [c.program, c.name].some((n) => n && t.indexOf(String(n).toLowerCase()) >= 0);
     return P.find((c) => (c.creatives || []).some((x) => x.from === it.id)) || (t ? P.find(named) : null) || null;
   }
+  // Improvised posts (Antonio, Nov 1): when the morning run finds a post that matches no plan item it lands in delivery.extras with the
+  // coach's name (or "—" for a carousel/static). The coach still filmed that week, so their planned slot counts as posted — "improvised".
+  // Extras of a coach cover that coach's items in order; production extras cover production items of the same family in order.
+  function improvisedFor(ws, it) {
+    const w = S.weeks[ws], ex = S.delivery && Array.isArray(S.delivery.extras) ? S.delivery.extras : []; if (!w || !ex.length) return null;
+    const end = shiftWS(ws, 1);
+    const inWeek = ex.filter((x) => x && x.date && x.date >= ws && x.date < end);
+    if (!inWeek.length) return null;
+    let mine = [], pool = [];
+    const coach = (w.coaches || []).find((c) => (c.ideas || []).includes(it));
+    if (coach) { mine = coach.ideas.filter((i) => !i.delivered && !deliveryOf(ws, i)); pool = inWeek.filter((x) => x.coach && x.coach !== "—" && String(x.coach).toLowerCase() === String(coach.name).toLowerCase()); }
+    else if ((w.production || []).includes(it)) {
+      const fam = (f) => /carousel/i.test(f || "") ? "carousel" : /reel|video|talking/i.test(f || "") ? "reel" : "post";
+      mine = w.production.filter((i) => !i.delivered && !deliveryOf(ws, i) && fam(i.format) === fam(it.format));
+      pool = inWeek.filter((x) => (!x.coach || x.coach === "—") && fam(x.format) === fam(it.format));
+    }
+    const idx = mine.indexOf(it); if (idx < 0 || idx >= pool.length) return null;
+    const x = pool[idx];
+    return { status: "posted", postedAt: x.date, title: x.title, matchedBy: "improvised", note: "improvised — " + (coach ? coach.name : "production") + " posted something else that week: " + (x.title || "") };
+  }
   function itemState(ws, it) {
-    const e = deliveryOf(ws, it), auto = !!(e && (e.status === "posted" || e.status === "late"));
+    let e = deliveryOf(ws, it), auto = !!(e && (e.status === "posted" || e.status === "late"));
+    if (!auto && !it.delivered) { const imp = improvisedFor(ws, it); if (imp) { e = imp; auto = true; } }
     if (it.delivered || auto) return { st: auto && e.status === "late" ? "late" : "posted", e, hand: !auto };
     if (!e) { const c = adCampaignOf(it), a = c && S.delivery && S.delivery.ads && S.delivery.ads[c.id]; if (a && a.status === "live") return { st: "posted", e: { status: "posted", postedAt: a.firstSeen, title: c.name, matchedBy: "campaign", note: "the campaign is live in the ad account" } }; }
     const d = dayDate(ws, it.day);
@@ -571,7 +593,7 @@
     const nums = e && e.views != null && e.views !== "" ? " · " + Number(e.views).toLocaleString("en-US") + " views" : "";
     const when = e && e.postedAt ? " " + fmtDay(e.postedAt) : "";
     const tip = e ? esc((e.title || "") + (e.note ? " — " + e.note : "")) : "";
-    if (r.st === "posted") return '<span class="st done" title="' + (r.hand ? "Ticked by hand" : tip) + '">✓ Posted' + (r.hand ? " · by hand" : when) + nums + "</span>";
+    if (r.st === "posted") return '<span class="st done" title="' + (r.hand ? "Ticked by hand" : tip) + '">✓ Posted' + (r.hand ? " · by hand" : e && e.matchedBy === "improvised" ? " · improvised" + when : when) + nums + "</span>";
     if (r.st === "late") return '<span class="st done" title="' + tip + '">✓ Posted late' + when + nums + "</span>";
     if (r.st === "missing") return '<span class="st miss" title="' + (e && e.note ? esc(e.note) : "The day passed and no post matched this") + '">✕ Missing</span>';
     if (r.st === "today") return '<span class="st today">Today</span>';
@@ -987,7 +1009,18 @@
     else { const avail = availableProd(ws).filter((x) => x.id !== it.id && !w.production.some((p) => p.id === x.id) && (/^ad/i.test(it.format || "") ? /^ad/i.test(x.format || "") : isPostItem(x))); if (!avail.length) { toast("Nothing else of that kind in the production bank", true); return; } const np = pick(avail[0], { pillar: avail[0].pillar }); np.day = it.day; w.production[a] = np; }
     fnSync(ws); toast("Swapped — approve it when it's right");
   };
-  window.fnEdit = async function (ws, kind, a, b) { const it = fnGet(ws, kind, a, b); if (!it) return; const r = await askForm("Edit", ideaFields(it), "Save changes"); if (!r || !r.title) return; Object.assign(it, { title: r.title, desc: r.desc, day: r.day, format: r.format, hook: r.hook, custom: true }); fnSync(ws); };
+  window.fnEdit = async function (ws, kind, a, b) {
+    const w = S.weeks[ws], it = fnGet(ws, kind, a, b); if (!w || !it) return;
+    const done = isDone(ws, it);
+    const r = await askForm("Edit this post", ideaFields(it), "Save changes", null, [
+      { id: "posted", label: it.delivered ? "Unmark posted" : done ? "✓ Posted (by the run)" : "✓ Mark posted", cls: "ghost mint" },
+      { id: "remove", label: "✕ Remove from the plan", cls: "ghost muted" }
+    ]);
+    if (!r) return;
+    if (r.action === "posted") { if (it.delivered) { it.delivered = false; toast("Unmarked"); } else if (!done) { it.delivered = true; it.approved = true; toast("Marked posted by hand"); } fnSync(ws); return; }
+    if (r.action === "remove") { if (!(await askConfirm("Remove this post", "Take it out of the plan? It goes back in the bank for a future week (unless it was posted).", "Remove", true))) return; if (kind === "idea") w.coaches[a].ideas.splice(b, 1); else w.production.splice(a, 1); fnSync(ws); toast("Removed"); return; }
+    if (!r.title) return; Object.assign(it, { title: r.title, desc: r.desc, day: r.day, format: r.format, hook: r.hook, custom: true }); fnSync(ws);
+  };
   window.fnSkip = async function (ws, kind, a, b) { const w = S.weeks[ws]; const it = fnGet(ws, kind, a, b); if (!w || !it) return; if (!(await askConfirm("Drop this post", "Take it out of the plan? It goes back in the bank for a future week.", "Drop", true))) return; if (kind === "idea") w.coaches[a].ideas.splice(b, 1); else w.production.splice(a, 1); fnSync(ws); };
   window.useExtra = function (ws, kind, a, b) {
     const ex = fnGet(ws, kind, a, b); if (!ex) return;
