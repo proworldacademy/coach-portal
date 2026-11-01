@@ -555,11 +555,12 @@
     const inWeek = ex.filter((x) => x && x.date && x.date >= ws && x.date < end);
     if (!inWeek.length) return null;
     let mine = [], pool = [];
+    const open = (i) => { const d = deliveryOf(ws, i); return !i.delivered && !(d && (d.status === "posted" || d.status === "late")); };   // a "missing" entry is still open
     const coach = (w.coaches || []).find((c) => (c.ideas || []).includes(it));
-    if (coach) { mine = coach.ideas.filter((i) => !i.delivered && !deliveryOf(ws, i)); pool = inWeek.filter((x) => x.coach && x.coach !== "—" && String(x.coach).toLowerCase() === String(coach.name).toLowerCase()); }
+    if (coach) { mine = coach.ideas.filter(open); pool = inWeek.filter((x) => x.coach && x.coach !== "—" && String(x.coach).toLowerCase() === String(coach.name).toLowerCase()); }
     else if ((w.production || []).includes(it)) {
       const fam = (f) => /carousel/i.test(f || "") ? "carousel" : /reel|video|talking/i.test(f || "") ? "reel" : "post";
-      mine = w.production.filter((i) => !i.delivered && !deliveryOf(ws, i) && fam(i.format) === fam(it.format));
+      mine = w.production.filter((i) => open(i) && fam(i.format) === fam(it.format));
       pool = inWeek.filter((x) => (!x.coach || x.coach === "—") && fam(x.format) === fam(it.format));
     }
     const idx = mine.indexOf(it); if (idx < 0 || idx >= pool.length) return null;
