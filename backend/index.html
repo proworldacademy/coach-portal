@@ -221,7 +221,12 @@ table.grid td.half{border-right:1px dashed var(--line)}
 /* ---------- attendance board ---------- */
 .board{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 22px 18px;backdrop-filter:blur(12px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28)}
 .board + .board{margin-top:18px}
-@media (max-width:560px){.board{padding:16px 12px}}
+/* phones (Antonio, Oct 25): the Admin/Coaches row under the bar goes (the ☰ menu has it); the session picker is one button that opens a list; lists, not bubbles */
+.sesspick{display:none}
+@media (max-width:560px){.tools .modes{display:none!important}
+  .sesspick{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;text-align:left;color:var(--ink)}.sesspick span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:700}.sesspick b{flex:1;font-size:14px}.sesspick i{font-style:normal;color:var(--muted)}.sesspick[aria-expanded="true"] i{transform:rotate(180deg)}
+  .seg.sess{display:none;flex-direction:column;gap:0;border-radius:14px;padding:4px 0;margin-top:6px!important;background:#fff}.seg.sess.open{display:flex}.seg.sess button{text-align:left;border-radius:0;padding:12px 14px;border-top:1px solid var(--line);color:var(--ink)}.seg.sess button:first-child{border-top:0}.seg.sess button[aria-pressed="true"]{background:var(--ink);color:var(--lime)}
+  .board{padding:16px 12px}.court{grid-template-columns:56px minmax(0,1fr) 34px;gap:6px 8px}.court .players{grid-column:1/-1;gap:5px}.court .cn{grid-row:1;grid-column:1/3;font-size:26px;padding-top:0}.court .cn small{display:inline;margin-left:6px}.court .more{grid-row:1;grid-column:3}.pc{font-size:13px;padding:6px 10px 6px 8px}.hero p{font-size:14px}}
 .board .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
 .board .head h2{font-size:clamp(34px,5.5vw,56px)}
 .board .head .prog{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(22px,3.6vw,30px);color:var(--muted)}
@@ -310,7 +315,82 @@ table.grid td.half{border-right:1px dashed var(--line)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (max-width:920px){#toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 70px)}}
 .foot-note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:48px;max-width:70ch}
+
+/* ── Court control, Oct 24: equal half-hour columns, one cell per block with its name and time, categories with their own colours, the now line ── */
+table.grid{table-layout:fixed;border-collapse:separate;border-spacing:0}
+table.grid thead th{min-width:0;width:auto}
+.cell.blk{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;height:42px;padding:0 8px;text-align:left;border-radius:8px;margin:2px;width:calc(100% - 4px);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.cell.blk b{font-size:11.5px;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cell.blk.done{opacity:.45}
+.cell.blk small{font-size:10px;font-weight:500;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+td.span{border-right:1px solid var(--line)}
+table.grid td.now{box-shadow:inset 2px 0 0 var(--ink)}
+table.grid thead th.nowh{box-shadow:inset 0 -3px 0 var(--ink)}
+/* phones: the grid keeps real half-hour columns and scrolls sideways; the court column stays pinned and shrinks */
+@media(max-width:560px){table.grid col.c0{width:92px!important}table.grid tbody th{min-width:0;padding:0 8px;font-size:12px}table.grid tbody th small{font-size:10px}table.grid thead th:first-child{padding-left:8px}.gridwrap{max-height:none;margin:0 -4px}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.tagpick{display:flex;flex-wrap:wrap;gap:6px}
+.tagchip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.tagchip i{width:12px;height:12px;border-radius:50%;background:var(--tc);display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.tagchip.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+.selbar #sel-label{min-width:160px}
+.taglist{display:grid;gap:8px}
+.tagrow{display:grid;grid-template-columns:44px minmax(0,260px) auto auto;gap:10px;align-items:center}
+.tagrow input[type=color],#tag-new-color{width:44px;height:36px;padding:2px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+.tagrow input[type=text]{height:36px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:13.5px;background:#fff}
+.tagrow input[readonly]{color:var(--muted);background:var(--surface)}
+.tagpanel .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#tag-new-label{height:36px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:13.5px;background:#fff}
+
+/* ── Messages as threads (Option A, Oct 24) ── */
+.threads{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;margin-top:22px;height:min(720px,78vh)}
+.tlist{display:flex;flex-direction:column;overflow:hidden;padding:10px}
+.tfind input{width:100%;height:40px;border-radius:12px;border:0;background:#f4f4f0;padding:0 14px;font:inherit;font-size:14px;margin-bottom:8px}
+.trows{overflow:auto;display:flex;flex-direction:column;gap:2px}
+.trow{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 10px;border-radius:14px;border:0;background:transparent;text-align:left;font:inherit;cursor:pointer;color:var(--ink)}
+.trow:hover{background:#f7f7f3}.trow.on{background:#f1f1ec}
+.tav{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--ink);flex:none}
+.tav.big{width:36px;height:36px}
+.tmain b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tmain small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.twhen{font-size:11.5px;color:var(--muted);align-self:start;margin-top:2px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tdot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 2px var(--ink);display:inline-block}
+.tview{display:flex;flex-direction:column;overflow:hidden}
+.thead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.thead b{font-size:16px}.thead small{color:var(--muted);font-size:13px}
+.thead .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.bubbles{flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(#fff,#fafaf8)}
+.tday{align-self:center;font-size:11.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin:6px 0}
+.bub{max-width:66%;padding:11px 15px;border-radius:18px;font-size:14.5px;line-height:1.4;display:flex;flex-direction:column;gap:5px;flex:none}
+.tday{flex:none}
+.bub .txt{white-space:pre-wrap;word-break:break-word}
+.bub.out{position:relative}.bub .bx{position:absolute;left:-30px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:0;background:#efefea;color:var(--muted);font-size:14px;line-height:1;cursor:pointer;opacity:0;transition:.15s}.bub.out:hover .bx{opacity:1}.bub .bx:hover{background:var(--ink);color:#fff}
+.bub.out{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:6px}
+.bub.in{align-self:flex-start;background:#efefea;color:var(--ink);border-bottom-left-radius:6px}
+.bub .meta{font-size:11px;opacity:.7}.bub.out .meta{color:var(--lime);opacity:1}.bub .meta b{color:#ffb4b4}
+.bub.sys{align-self:center;background:transparent;color:var(--muted);font-size:12.5px;max-width:80%;text-align:center}
+.bub.ev{align-self:center;background:transparent!important;border:0!important;box-shadow:none!important;padding:0 6px;max-width:90%;text-align:center;color:var(--muted);font-size:12px}
+.composer{padding:12px 18px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;background:#fff}
+.composer .to{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.composer .to .chip.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+.composer .cnt{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.composer .tpl{display:flex;gap:6px;flex-wrap:wrap}
+.tchip{height:30px;padding:0 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.tchip:hover{border-color:var(--ink)}
+.composer .box{display:flex;align-items:flex-end;gap:10px}
+.composer textarea{flex:1;min-height:46px;max-height:160px;border-radius:16px;border:0;background:#f4f4f0;padding:12px 16px;font:inherit;font-size:14.5px;resize:none;line-height:1.4}
+.composer textarea:focus{outline:2px solid var(--ink)}
+.composer .send{width:46px;height:46px;border-radius:50%;border:0;background:var(--ink);color:var(--lime);font-size:20px;font-weight:700;cursor:pointer;flex:none}
+.composer .send:disabled{opacity:.35;cursor:default}
+/* phones: the list is one screen, the conversation the next (‹ back), like a messaging app */
+.tback{display:none}
+@media(max-width:900px){.threads{grid-template-columns:1fr;height:auto}.tlist{max-height:none;min-height:50vh}.tview{min-height:70vh}
+  .threads:not(.tv-open) .tview{display:none}.threads.tv-open .tlist{display:none}
+  .tback{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:22px;line-height:1;cursor:pointer;flex:none;padding:0 0 3px}
+  .thead{flex-wrap:wrap;gap:10px 12px;padding:12px 14px}.thead>div{flex:1 1 0;min-width:0}.thead b{font-size:15px}.thead .r{flex:1 1 100%;margin-left:0;flex-wrap:wrap}
+  .composer .to{flex-wrap:wrap}.composer .cnt{flex:1 1 100%}}
 </style>
+<link rel="stylesheet" href="/backend/calm.css"><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, soft status tints; the Privates ticket -->
 </head>
 <body class="skin-desk">
 <div class="wrap">
@@ -320,7 +400,7 @@ table.grid td.half{border-right:1px dashed var(--line)}
     <label class="who"><span>View as</span><select id="role"></select></label>
   </div>
   <main id="app"></main>
-  <p class="foot-note">ProWorld backend · for the team. Payments run through Stripe (the billing engine); the roster is the one the Coach Portal and Monday share. Prices and packages are the official ones (the same lines as Play by Point, Oct 2026).</p>
+  <p class="foot-note">ProWorld backend · for the team. Payments run through Stripe (the billing engine); the roster is the one the Coach Portal and Play by Point share. Prices and packages are the official ones (the same lines as Play by Point, Oct 2026).</p>
   <footer class="pwd-foot"><b>PROWORLD</b><span>Individually built. Fully connected.</span><span>651 Egret Cir, Delray Beach, FL 33444 · proworldacademy.com</span></footer>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -472,10 +552,11 @@ function nextChargeText(price,from){const nr=nextRenewal(from);const y=nr.getFul
    This browser keeps only its own view, role, dates and filters. */
 const KEY='pw-backend-v3';
 const PREFS=['view','role','roleChosen','enroll','courtsDate','attDate','attSession','courtsMode','courtsFilter','member','summaryOpen','accountPid','playersFilter','playersQ'];
-const SHARED=['blocks','exceptions','bookings','privates','charges','notifications','overrides','nextId'];
+const DEFAULT_TAGS=[{id:'academy',label:'Academy',color:'#A9F3F7'},{id:'tournament',label:'Tournament',color:'#E286E4'},{id:'private',label:'Private lesson',color:'#94FCB1'},{id:'rental',label:'Family rental',color:'#E2FE78'},{id:'outside',label:'Outside rental',color:'#111111'},{id:'maintenance',label:'Maintenance',color:'#D9D9D4'}];
+const SHARED=['blocks','exceptions','bookings','privates','charges','notifications','overrides','nextId','courtTags'];
 let state;
 function emptyEnroll(){return {program:null,level:null,plan:null,billing:null,option:null,days:[],player:{first:'',last:'',dob:'',parent:'',email:'',phone:''},agree:false,auth:false,done:null}}
-function freshState(){return {view:'desk',role:'owner',nextId:1,players:[],bookings:[],blocks:JSON.parse(JSON.stringify(SEED_BLOCKS)),exceptions:[],notifications:[],charges:[],privates:[],overrides:{},attendance:{},
+function freshState(){return {view:'desk',role:'owner',nextId:1,players:[],bookings:[],blocks:JSON.parse(JSON.stringify(SEED_BLOCKS)),courtTags:JSON.parse(JSON.stringify(DEFAULT_TAGS)),exceptions:[],notifications:[],charges:[],privates:[],overrides:{},attendance:{},
   enroll:emptyEnroll(),courtsDate:iso(TODAY),attDate:iso(TODAY),attSession:'as',courtsMode:'staff',courtsFilter:'all',member:false,summaryOpen:false,accountPid:null,playersFilter:'all',playersQ:''}}
 function load(){const s=freshState();try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(o&&typeof o==='object')for(const k of PREFS)if(o[k]!==undefined)s[k]=o[k]}catch(e){}if(!s.enroll||!s.enroll.player)s.enroll=emptyEnroll();return s}
 state=load();
@@ -532,7 +613,7 @@ function notify(channel,to,subject,opts){state.notifications.unshift({channel,to
   if(channel==='Slack')liveApi('/api/admin/announce',{which:/coach/.test(to)?'coaches':'desk',text:subject,lines:opts&&opts.lines||null}).catch(()=>{});
   if(channel==='SMS'&&opts&&opts.phone)liveApi('/api/admin/text',{phone:opts.phone,body:subject}).catch(()=>{})}
 
-const ROLES={owner:{label:'Owner (everything)',tabs:['desk','enroll','courts','attendance','players','messages','privates','books','account']},desk:{label:'Front desk',tabs:['desk','players','messages','attendance','courts','enroll','books']},coach:{label:'Coach',tabs:['attendance','privates','courts','messages']},parent:{label:'Parent',tabs:['account','enroll','courts']}};
+const ROLES={owner:{label:'Owner (everything)',tabs:['desk','enroll','courts','attendance','players','messages','privates','books','account']},director:{label:'Tennis director',tabs:['attendance','messages','courts','privates']},desk:{label:'Front desk',tabs:['desk','players','attendance','courts','enroll','books']},coach:{label:'Coach',tabs:['attendance','messages','courts','privates']},parent:{label:'Parent',tabs:['account','enroll','courts']}};   // Antonio, Oct 24: Messages and Courts for directors; coaches see attendance, players & billing, privates
 const TABS={desk:'Front desk',enroll:'Enroll',courts:'Courts',attendance:'Attendance',players:'Players & billing',messages:'Messages',privates:'Privates',books:'Books',account:'My account'};
 (function initRole(){const h=location.hash.replace('#','');if(ROLES[h])state.role=h;if(!ROLES[state.role])state.role='owner';if(TABS[h]){if(!ROLES[state.role].tabs.includes(h))state.role='owner';state.view=h}if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0]})();
 
@@ -572,6 +653,14 @@ function slotRate(court,date,h){let r=RATES[court.type]/2;const bits=[];if(isPea
 function priceRun(court,dateStr,start,dur,member){const d=parse(dateStr);let total=0;const bits=new Set();for(let h=start;h<start+dur;h+=.5){const s=slotRate(court,d,h);total+=s.r;s.bits.forEach(b=>bits.add(b))}let disc=0;if(member){disc=Math.round(total*RATES.memberOff);total-=disc}return {total:Math.round(total),disc,bits:[...bits]}}
 function slotFree(courtId,dateStr,start,dur,ignorePast){for(let h=start;h<start+dur;h+=.5){if(h>=END||(!ignorePast&&isPast(dateStr,h))||blockAt(courtId,dateStr,h)||bookingAt(courtId,dateStr,h))return false}return true}
 function runsFromSelection(sel){const byCourt={};[...sel].forEach(k=>{const [c,h]=k.split('|');(byCourt[c]=byCourt[c]||[]).push(Number(h))});const runs=[];for(const c in byCourt){const hs=byCourt[c].sort((a,b)=>a-b);let start=hs[0],prev=hs[0];for(let i=1;i<=hs.length;i++){if(i<hs.length&&hs[i]===prev+.5){prev=hs[i];continue}runs.push({court:c,start,dur:prev-start+.5});if(i<hs.length){start=hs[i];prev=hs[i]}}}return runs.sort((a,b)=>COURTS.findIndex(x=>x.id===a.court)-COURTS.findIndex(x=>x.id===b.court)||a.start-b.start)}
+/* ---- Court categories (Antonio, Oct 24): every block, lesson and rental has a category with a colour; staff add their own
+   (a group, a camp, a club night) and change any colour from the Colours panel under the grid. Kept with the shared state. */
+function tags(){if(!Array.isArray(state.courtTags)||!state.courtTags.length)state.courtTags=JSON.parse(JSON.stringify(DEFAULT_TAGS));return state.courtTags}
+function tagById(id){return tags().find(t=>t.id===id)||null}
+function tagOfBlock(b){if(b.tag&&tagById(b.tag))return tagById(b.tag);if(b.private)return tagById('private');if(b.event)return /mainten|clean|repair|water|roll/i.test(b.label||'')?tagById('maintenance'):tagById('tournament');return tagById('academy')||tags()[0]}
+function tagOfBooking(bk){return tagById(bk.kind==='family'?'rental':'outside')||tags()[0]}
+function inkOn(hex){const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex||''));if(!m)return '#000';const [r,g,b]=[1,2,3].map(i=>parseInt(m[i],16)/255);const L=.2126*r+.7152*g+.0722*b;return L>.6?'#000':'#fff'}
+function tagStyle(t){return `background:${t.color};color:${inkOn(t.color)}`}
 function cellKind(courtId,dateStr,h,staff){const b=blockAt(courtId,dateStr,h);if(b)return b.private?{k:'private',label:b.label}:b.event?{k:'event',label:b.label}:{k:'academy',label:b.label};const bk=bookingAt(courtId,dateStr,h);if(bk)return staff?{k:bk.kind==='family'?'family':'outside',label:bk.name}:{k:bk.mine?'mine':'taken',label:bk.mine?'Yours':'Booked'};return null}
 
 /* ====================== ATTENDANCE MODEL ====================== */
@@ -598,10 +687,16 @@ function postSheet(sheet,sess){
 }
 
 /* ====================== SHELL ====================== */
-function setRole(r){state.role=r;state.roleChosen=true;location.hash=r;if(!ROLES[r].tabs.includes(state.view))state.view=ROLES[r].tabs[0];save();render()}
-function setView(v){state.view=v;if(v==='enroll'&&state.enroll.done)state.enroll=emptyEnroll();if(parse(state.courtsDate)<TODAY)state.courtsDate=iso(TODAY);closeModal();save();render();window.scrollTo({top:0,behavior:'auto'})}
-window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ROLES[h]&&h!==state.role)setRole(h)});
-function render(){const sel=$('#role');sel.innerHTML=Object.keys(ROLES).map(k=>`<option value="${k}" ${k===state.role?'selected':''}>${ROLES[k].label}</option>`).join('');sel.onchange=()=>setRole(sel.value);const nav=$('#modes');nav.innerHTML=ROLES[state.role].tabs.map(t=>`<button data-view="${t}" aria-current="${t===state.view?'page':'false'}">${TABS[t]}</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.view));({desk:renderDesk,enroll:renderEnroll,courts:renderCourts,attendance:renderAttendance,players:renderPlayers,messages:renderMessages,privates:renderPrivates,books:renderBooks,account:renderAccount})[state.view]($('#app'))}
+function setRole(r){if(!ROLES[r])return;state.role=r;state.roleChosen=true;location.hash=r;if(window.PWCTX)pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0];save();render()}   // never above what the staff record allows
+function setView(v){if(window.PWCTX){pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(v))return}state.view=v;if(v==='enroll'&&state.enroll.done)state.enroll=emptyEnroll();if(parse(state.courtsDate)<TODAY)state.courtsDate=iso(TODAY);closeModal();save();render();window.scrollTo({top:0,behavior:'auto'})}
+// the menu links are /backend#courts, #messages, #privates…: a hash change on this page switches the view (Antonio, Oct 25: 'Courts does not even click' on the phone)
+window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ROLES[h]&&h!==state.role)setRole(h);else if(TABS[h]&&h!==state.view)setView(h)});
+function render(){const sel=$('#role');sel.innerHTML=Object.keys(ROLES).map(k=>`<option value="${k}" ${k===state.role?'selected':''}>${ROLES[k].label}</option>`).join('');sel.onchange=()=>setRole(sel.value);const nav=$('#modes');const coachSide=state.role==='coach'||state.role==='director';
+  // coaches and directors see one row, the same as the Coach Portal's (Antonio, Oct 24): the portal views are links, the backend views are tabs
+  const portalRow=coachSide?[['/portal','Players'],['/portal#/tryouts','Try-outs'],['/portal#/board','Coach Board'],['/portal#/contact','Weekly contact']]:[];const tailRow=coachSide?[].concat(window.PWCTX&&(window.PWCTX.director||window.PWCTX.admin||window.PWCTX.owner)?[['/portal#/staff','Staff & access']]:[]):[];
+  const order=coachSide?['attendance','messages','courts','privates']:ROLES[state.role].tabs;
+  const ra=$('#role');if(ra&&ra.parentElement)ra.parentElement.style.display=coachSide?'none':'';   // the View as selector is the owners' preview tool
+  nav.innerHTML=portalRow.map(([h,l])=>`<a href="${h}">${l}</a>`).join('')+order.filter(t=>ROLES[state.role].tabs.includes(t)).map(t=>`<button data-view="${t}" aria-current="${t===state.view?'page':'false'}">${TABS[t]}</button>`).join('')+tailRow.map(([h,l])=>`<a href="${h}">${l}</a>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.view));({desk:renderDesk,enroll:renderEnroll,courts:renderCourts,attendance:renderAttendance,players:renderPlayers,messages:renderMessages,privates:renderPrivates,books:renderBooks,account:renderAccount})[state.view]($('#app'))}
 function openModal(inner){$('#modal').innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${inner}</div></div>`;$('#scrim').onclick=ev=>{if(ev.target.id==='scrim')closeModal()};const c=$('#m-close');if(c)c.onclick=closeModal}
 function closeModal(){$('#modal').innerHTML=''}
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeModal()});
@@ -642,14 +737,29 @@ let SEL=new Set(),drag=null;
 function renderCourts(app){
   const dateStr=state.courtsDate;const d=parse(dateStr);const staff=state.courtsMode==='staff'&&state.role!=='parent';
   const courts=COURTS.filter(c=>(staff||c.kind==='tennis')&&(state.courtsFilter==='all'||c.kind===state.courtsFilter));let rows='';
-  courts.forEach((c,ci)=>{rows+=`<tr><th scope="row">${c.name}<small>${c.type==='clay'?'Har-Tru clay':c.type==='hard'?'Hard court':'Turf · full size'}</small></th>`;SLOTS.forEach((h,si)=>{const past=isPast(dateStr,h);const k=past?null:cellKind(c.id,dateStr,h,staff);let cls='cell',label='';if(past)cls+=' past';else if(k){cls+=' '+k.k;label=k.label}else cls+=' open';if(staff&&!past)cls+=' staff';if(SEL.has(c.id+'|'+h))cls+=' sel';rows+=`<td class="${h%1?'half':''}"><button class="${cls}" data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}" ${past?'disabled':''} title="${c.name} · ${fmtT(h)}">${esc(label)}</button></td>`});rows+='</tr>'});
-  let head='<tr><th>'+fmtDate(d)+'</th>';for(let h=7;h<END;h++)head+=`<th colspan="2">${fmtT(h)}</th>`;head+='</tr>';
+  const today=iso(d)===iso(TODAY),nowH=nowSlot();const isNow=(h)=>today&&h===nowH;
+  // one block, one label: a run of half hours that belong to the same block, lesson or rental becomes one cell with its name and time
+  courts.forEach((c,ci)=>{rows+=`<tr><th scope="row">${c.name}<small>${c.type==='clay'?'Har-Tru clay':c.type==='hard'?'Hard court':'Turf · full size'}</small></th>`;
+    let si=0;while(si<SLOTS.length){const h=SLOTS[si];const past=isPast(dateStr,h);
+      const b=blockAt(c.id,dateStr,h),bk=b?null:bookingAt(c.id,dateStr,h);
+      if(past&&!b&&!bk){rows+=`<td class="${h%1?'half':''}${isNow(h)?' now':''}"><button class="cell past" disabled data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}"></button></td>`;si++;continue}
+      if(!b&&!bk){const sel=SEL.has(c.id+'|'+h);rows+=`<td class="${h%1?'half':''}${isNow(h)?' now':''}"><button class="cell open${staff?' staff':''}${sel?' sel':''}" data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}" title="${c.name} · ${fmtT(h)}"></button></td>`;si++;continue}
+      // how far does this same block or booking run?
+      let n=1;while(si+n<SLOTS.length){const h2=SLOTS[si+n];const b2=blockAt(c.id,dateStr,h2),bk2=b2?null:bookingAt(c.id,dateStr,h2);if(b?(b2&&b2.id===b.id):(bk2&&bk2.id===bk.id))n++;else break}
+      const endH=SLOTS[si]+n/2;const over=isPast(dateStr,endH-.5);let t,title,sub='',cls='cell blk staff'+(over?' done':'');
+      if(b){t=staff?tagOfBlock(b):null;title=b.label;if(b.private){const pv=state.privates.find(x=>x.blockId===b.id);const pl=pv?playerById(pv.pid):null;title=(pv?pv.coach.split(' ')[0]:'Private')+(pl?' · '+pl.name:'');sub=fmtRange(h,endH)+(pv?' · '+(pv.billed==='pack'?'pack':pv.billed==='card'?'paid':'to collect'):'')}else sub=fmtRange(h,endH);if(!staff){cls='cell blk taken';title='Unavailable';sub=''}}
+      else{t=staff?tagOfBooking(bk):null;if(staff){title=bk.name;sub=fmtRange(h,endH)+' · '+(bk.paidOn?'paid':'to collect')}else{cls='cell blk '+(bk.mine?'mine':'taken');title=bk.mine?'Yours':'Booked';sub=bk.mine?fmtRange(h,endH):''}}
+      const style=t?tagStyle(t):'';
+      rows+=`<td colspan="${n}" class="span${isNow(h)?' now':''}"><button class="${cls}" style="${style}" data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}" title="${esc(title)}${sub?' · '+esc(sub):''}"><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</button></td>`;si+=n}
+    rows+='</tr>'});
+  let head='<tr><th>'+fmtDate(d)+'</th>';for(let h=7;h<END;h++)head+=`<th colspan="2" class="${today&&(nowH===h||nowH===h+.5)?'nowh':''}">${fmtT(h)}</th>`;head+='</tr>';
   const blockedHrs=courts.reduce((n,c)=>n+SLOTS.filter(h=>blockAt(c.id,dateStr,h)).length,0)/2;const openHrs=courts.reduce((n,c)=>n+SLOTS.filter(h=>!isPast(dateStr,h)&&!blockAt(c.id,dateStr,h)&&!bookingAt(c.id,dateStr,h)).length,0)/2;
-  const legend=staff?`<span><i style="background:var(--surface);outline:1px solid var(--line)"></i>Open · ${openHrs} court-hours</span><span><i style="background:var(--cyan)"></i>Academy · ${blockedHrs} court-hours</span><span><i style="background:var(--cyan);background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.12) 0 3px,transparent 3px 6px)"></i>Tournament / maintenance</span><span><i style="background:var(--mint)"></i>Private lesson</span><span><i style="background:var(--orchid)"></i>Family rental</span><span><i style="background:#000"></i>Outside rental</span><span><i style="background:var(--lime);outline:1px solid #000"></i>Selected</span>`:`<span><i style="background:var(--surface);outline:1px solid var(--line)"></i>Open · ${openHrs} court-hours</span><span><i style="background:var(--surface-2)"></i>Unavailable</span><span><i style="background:var(--orchid)"></i>Yours</span><span><i style="background:var(--lime);outline:1px solid #000"></i>Selected</span>`;
+  const hrsByTag={};if(staff)courts.forEach(c=>SLOTS.forEach(h=>{if(isPast(dateStr,h))return;const b=blockAt(c.id,dateStr,h);const t=b?tagOfBlock(b):(bookingAt(c.id,dateStr,h)?tagOfBooking(bookingAt(c.id,dateStr,h)):null);if(t)hrsByTag[t.id]=(hrsByTag[t.id]||0)+.5}));
+  const legend=staff?`<span><i style="background:var(--surface);outline:1px solid var(--line)"></i>Open · ${openHrs} court-hours</span>`+tags().map(t=>`<span><i style="background:${t.color}"></i>${esc(t.label)}${hrsByTag[t.id]?' · '+hrsByTag[t.id]+' h':''}</span>`).join('')+`<span><i style="background:var(--lime);outline:1px solid #000"></i>Selected</span><button class="btn ghost sm" id="tag-edit" style="margin-left:auto">Colours &amp; categories</button>`:`<span><i style="background:var(--surface);outline:1px solid var(--line)"></i>Open · ${openHrs} court-hours</span><span><i style="background:var(--surface-2)"></i>Unavailable</span><span><i style="background:var(--orchid)"></i>Yours</span><span><i style="background:var(--lime);outline:1px solid #000"></i>Selected</span>`;
   app.innerHTML=`<section class="hero"><h1>${staff?'Court control.':'Book a court.'}</h1><p>${staff?'Drag across the grid to block a run of courts and times in one go — courts 7 to 12, 7:00 to 10:00, done. Tap a block, lesson or rental to release, cancel or refund. Renters only see what is left open.':'18 courts in half-hour slots. Tap a slot or drag across several courts and times, then reserve. Confirmed by email and text.'}</p></section>
   <div class="toolbar">${dateStrip(dateStr,0,9)}<div class="seg" role="group" aria-label="Filter"><button data-filter="all" aria-pressed="${state.courtsFilter==='all'}">All</button><button data-filter="tennis" aria-pressed="${state.courtsFilter==='tennis'}">Tennis</button>${staff?`<button data-filter="soccer" aria-pressed="${state.courtsFilter==='soccer'}">Fields</button>`:''}</div>${state.role!=='parent'?`<div class="seg" role="group" aria-label="Mode"><button data-mode="public" aria-pressed="${!staff}">Public</button><button data-mode="staff" aria-pressed="${staff}">Academy staff</button></div>`:''}${!staff?`<label class="check" style="font-size:13.5px"><input type="checkbox" id="member" ${state.member?'checked':''}><span>Enrolled family (no charge)</span></label>`:''}</div>
   <div class="legend">${legend}</div>
-  <div class="gridwrap" id="gridwrap"><table class="grid"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+  <div class="gridwrap" id="gridwrap"><table class="grid" style="width:${140+46*SLOTS.length}px"><colgroup><col class="c0" style="width:140px">${SLOTS.map(()=>'<col style="width:46px">').join('')}</colgroup><thead>${head}</thead><tbody>${rows}</tbody></table></div>
   <div id="selbar"></div>
   ${staff?renderStaffPanel():`<p class="note">Court reservations are ${money(RATES.hard)} per hour on hard and clay courts (half-hour bookings are half price); enrolled families reserve at no charge — the same reservation pricing as today. The soccer fields are not rented to the public. Free cancellation up to 24 hours before. Rained out? You get a credit automatically.</p>`}`;
   app.querySelectorAll('.date').forEach(b=>b.onclick=()=>{state.courtsDate=b.dataset.date;SEL.clear();save();renderCourts(app)});
@@ -660,7 +770,7 @@ function renderCourts(app){
 }
 function bindGrid(app,courts,staff){
   const cells=[...app.querySelectorAll('.cell')];const byPos={};cells.forEach(c=>byPos[c.dataset.ci+','+c.dataset.si]=c);
-  const applyRect=(a,b)=>{const c0=Math.min(a.ci,b.ci),c1=Math.max(a.ci,b.ci),s0=Math.min(a.si,b.si),s1=Math.max(a.si,b.si);SEL=new Set(drag.base);for(let ci=c0;ci<=c1;ci++)for(let si=s0;si<=s1;si++){const el=byPos[ci+','+si];if(el&&el.classList.contains('open'))SEL.add(el.dataset.court+'|'+el.dataset.h)}cells.forEach(el=>el.classList.toggle('sel',SEL.has(el.dataset.court+'|'+el.dataset.h)));drawSelbar(app)};
+  const applyRect=(a,b)=>{const c0=Math.min(a.ci,b.ci),c1=Math.max(a.ci,b.ci),s0=Math.min(a.si,b.si),s1=Math.max(a.si,b.si);const pt=SEL.tag,pl=SEL.label;SEL=new Set(drag.base);SEL.tag=pt;SEL.label=pl;for(let ci=c0;ci<=c1;ci++)for(let si=s0;si<=s1;si++){const el=byPos[ci+','+si];if(el&&el.classList.contains('open'))SEL.add(el.dataset.court+'|'+el.dataset.h)}cells.forEach(el=>el.classList.toggle('sel',SEL.has(el.dataset.court+'|'+el.dataset.h)));drawSelbar(app)};
   cells.forEach(el=>{
     el.addEventListener('pointerdown',ev=>{if(ev.pointerType!=='mouse'||!el.classList.contains('open'))return;ev.preventDefault();drag={a:{ci:+el.dataset.ci,si:+el.dataset.si},base:new Set(ev.shiftKey||ev.metaKey||ev.ctrlKey?SEL:[]),moved:false}});
     el.addEventListener('pointerenter',()=>{if(!drag)return;const b={ci:+el.dataset.ci,si:+el.dataset.si};if(b.ci!==drag.a.ci||b.si!==drag.a.si)drag.moved=true;applyRect(drag.a,b)});
@@ -671,15 +781,17 @@ function bindGrid(app,courts,staff){
 function drawSelbar(app){
   const bar=$('#selbar');if(!bar)return;const staff=state.courtsMode==='staff'&&state.role!=='parent';const dateStr=state.courtsDate;
   if(!SEL.size){bar.innerHTML='';return}const runs=runsFromSelection(SEL);const courtsN=new Set(runs.map(r=>r.court)).size;const hours=[...SEL].length/2;const lo=Math.min(...runs.map(r=>r.start)),hi=Math.max(...runs.map(r=>r.start+r.dur));
-  if(staff){bar.innerHTML=`<div class="selbar"><b>${courtsN} court${courtsN>1?'s':''} × ${hours} hr</b><span class="sub">${runs.length===courtsN?fmtRange(lo,hi):runs.length+' separate runs'} · ${fmtDate(parse(dateStr))}</span><input id="sel-label" placeholder="Label (Academy, Private…)" value="Academy"><div class="right"><button class="btn lime" id="sel-block">Block selected</button><button class="btn ghost" id="sel-clear">Clear</button></div></div>`;
-    $('#sel-block').onclick=()=>{const label=$('#sel-label').value||'Academy';const dow=parse(dateStr).getDay();runs.forEach(r=>state.blocks.push({id:'b'+uid(),label,courts:[r.court],dows:[dow],start:r.start,end:r.start+r.dur,from:dateStr,until:dateStr}));notify('Slack','#coaches',label+' blocked: '+courtsN+' court'+(courtsN>1?'s':'')+' · '+fmtRange(lo,hi)+' · '+fmtDate(parse(dateStr)));SEL.clear();save();renderCourts(app);toast('Blocked '+courtsN+' court'+(courtsN>1?'s':'')+' · '+hours+' court-hours.')}}
+  if(staff){const cur=SEL.tag||'academy';bar.innerHTML=`<div class="selbar"><b>${courtsN} court${courtsN>1?'s':''} × ${hours} hr</b><span class="sub">${runs.length===courtsN?fmtRange(lo,hi):runs.length+' separate runs'} · ${fmtDate(parse(dateStr))}</span><div class="tagpick" role="group" aria-label="Category">${tags().filter(t=>!['private','rental','outside'].includes(t.id)).map(t=>`<button class="tagchip${t.id===cur?' on':''}" data-tag="${esc(t.id)}" style="--tc:${t.color}"><i></i>${esc(t.label)}</button>`).join('')}</div><input id="sel-label" placeholder="Label" value="${esc(SEL.label||(tagById(cur)||{}).label||'Academy')}"><div class="right"><button class="btn lime" id="sel-block">Block selected</button><button class="btn ghost" id="sel-clear">Clear</button></div></div>`;
+    bar.querySelectorAll('[data-tag]').forEach(c=>c.onclick=()=>{const was=(tagById(SEL.tag||'academy')||{}).label;SEL.tag=c.dataset.tag;const l=$('#sel-label');if(l&&(!l.value||l.value===was))l.value=(tagById(SEL.tag)||{}).label||'';SEL.label=l?l.value:'';drawSelbar(app)});
+    $('#sel-label').oninput=()=>{SEL.label=$('#sel-label').value};
+    $('#sel-block').onclick=()=>{const tag=SEL.tag||'academy';const label=$('#sel-label').value||(tagById(tag)||{}).label||'Academy';const dow=parse(dateStr).getDay();runs.forEach(r=>state.blocks.push({id:'b'+uid(),label,tag,courts:[r.court],dows:[dow],start:r.start,end:r.start+r.dur,from:dateStr,until:dateStr}));notify('Slack','#coaches',label+' blocked: '+courtsN+' court'+(courtsN>1?'s':'')+' · '+fmtRange(lo,hi)+' · '+fmtDate(parse(dateStr)));SEL.clear();save();renderCourts(app);toast('Blocked '+courtsN+' court'+(courtsN>1?'s':'')+' · '+hours+' court-hours.')}}
   else{let total=0;runs.forEach(r=>{total+=priceRun(courtById(r.court),dateStr,r.start,r.dur,state.member).total});bar.innerHTML=`<div class="selbar"><b>${money(total)}</b><span class="sub">${courtsN} court${courtsN>1?'s':''} · ${hours} hr · ${runs.length===courtsN?fmtRange(lo,hi):runs.length+' time slots'} · ${fmtDate(parse(dateStr))}</span><div class="right"><button class="btn lime" id="sel-reserve">Reserve selected</button><button class="btn ghost" id="sel-clear">Clear</button></div></div>`;$('#sel-reserve').onclick=()=>openBookingSheet(app,runs)}
-  $('#sel-clear').onclick=()=>{SEL.clear();renderCourts(app)};
+  $('#sel-clear').onclick=()=>{SEL.clear();SEL.tag=null;SEL.label='';renderCourts(app)};
 }
 function onCell(app,courtId,h){
   const dateStr=state.courtsDate;const court=courtById(courtId);const b=blockAt(courtId,dateStr,h),bk=bookingAt(courtId,dateStr,h);const staff=state.courtsMode==='staff'&&state.role!=='parent';if(!staff)return;
   if(b){openModal(`<h3>${esc(b.label)}</h3><p class="sub">${court.name} · ${fmtDate(parse(dateStr))} · ${fmtRange(b.start,b.end)} · ${b.private?'private lesson':b.event?'event':'academy block'}</p><p style="font-size:14px">${b.private?'Cancelling frees the court. The session goes back on the pack or the charge is voided.':'Release this one half-hour to public rental, or the whole block for today. The weekly rule stays in place on other days.'}</p><div class="actions">${b.private?`<button class="btn" id="m-release">Cancel this private</button>`:`<button class="btn" id="m-release">Release ${fmtT(h)} slot</button><button class="btn ghost" id="m-release-all">Release ${fmtRange(b.start,b.end)} today</button>`}<button class="btn ghost" id="m-close">Keep it</button></div>`);
-    const rel=(all)=>{if(b.private){state.blocks=state.blocks.filter(x=>x.id!==b.id);const pv=state.privates.find(x=>x.blockId===b.id);if(pv){const p=playerById(pv.pid);if(pv.billed==='pack'&&p){if(pv.packType==='flex')p.packLeft++;else p.privPack++}if(pv.cid){const c=state.charges.find(x=>x.id===pv.cid);if(c)c.status='void'}state.privates=state.privates.filter(x=>x!==pv);notify('SMS',p?phoneFmt(p.phone):'—','Private with '+pv.coach+' on '+fmtDate(parse(dateStr))+' cancelled.'+(pv.billed==='pack'?' Session returned to your pack.':' No charge.'))}}else if(b.from===dateStr&&b.until===dateStr&&(all||b.end-b.start===.5)){state.blocks=state.blocks.filter(x=>x.id!==b.id)}else{const hs=all?SLOTS.filter(x=>x>=b.start&&x<b.end):[h];hs.forEach(x=>state.exceptions.push({court:courtId,date:dateStr,h:x}));notify('Slack','#front-desk',court.name+' '+(all?fmtRange(b.start,b.end):fmtT(h))+' on '+fmtDate(parse(dateStr))+' released from '+b.label)}closeModal();save();renderCourts(app);toast(b.private?'Private cancelled.':court.name+' released.')};
+    const rel=(all)=>{if(b.private){state.blocks=state.blocks.filter(x=>x.id!==b.id);const pv=state.privates.find(x=>x.blockId===b.id);if(pv){const p=playerById(pv.pid);if(pv.billed==='pack'&&p){if(pv.packType==='flex')p.packLeft++;else p.privPack++}if(pv.cid){const c=state.charges.find(x=>x.id===pv.cid);if(c)c.status='void'}state.privates=state.privates.filter(x=>x!==pv);notify('SMS',p?phoneFmt(p.phone):'—','Private with '+pv.coach+' on '+fmtDate(parse(dateStr))+' cancelled.'+(pv.billed==='pack'?' Session returned to your pack.':' No charge.'),{phone:p?p.phone:''});liveApi('/api/admin/lesson/cancelled',{coach:pv.coach,player:p?p.name:'',date:pv.date,start:pv.start,dur:pv.dur}).catch(()=>{})}}else if(b.from===dateStr&&b.until===dateStr&&(all||b.end-b.start===.5)){state.blocks=state.blocks.filter(x=>x.id!==b.id)}else{const hs=all?SLOTS.filter(x=>x>=b.start&&x<b.end):[h];hs.forEach(x=>state.exceptions.push({court:courtId,date:dateStr,h:x}));notify('Slack','#front-desk',court.name+' '+(all?fmtRange(b.start,b.end):fmtT(h))+' on '+fmtDate(parse(dateStr))+' released from '+b.label)}closeModal();save();renderCourts(app);toast(b.private?'Private cancelled.':court.name+' released.')};
     $('#m-release').onclick=()=>rel(false);const ra=$('#m-release-all');if(ra)ra.onclick=()=>rel(true);return}
   if(bk){openModal(`<h3>${esc(bk.name)}</h3><p class="sub">${court.name} · ${fmtDate(parse(dateStr))} · ${fmtRange(bk.start,bk.start+bk.dur)} · ${bk.kind==='family'?'enrolled family':'outside rental'} · paid ${money(bk.price)}</p><p style="font-size:14px">Cancelling refunds the card on file and texts the renter.</p><div class="actions"><button class="btn" id="m-cancel">Cancel and refund ${money(bk.price)}</button><button class="btn ghost" id="m-close">Back</button></div>`);$('#m-cancel').onclick=()=>{state.bookings=state.bookings.filter(x=>x.id!==bk.id);notify('SMS',bk.phone?phoneFmt(bk.phone):'renter',court.name+' on '+fmtDate(parse(dateStr))+' cancelled by the academy. '+money(bk.price)+' refunded to your card.');closeModal();save();renderCourts(app);toast('Cancelled and refunded '+money(bk.price)+'.')};return}
 }
@@ -694,22 +806,32 @@ function openBookingSheet(app,runs){
     runs.forEach(r=>{const court=courtById(r.court);const q=priceRun(court,dateStr,r.start,r.dur,state.member);state.bookings.push({id:'R-'+uid(),date:dateStr,court:r.court,start:r.start,dur:r.dur,name,phone,email,pid,price:q.total,mine:true,kind:state.member||p?'family':'outside',paidOn:paid==='due'?null:iso(TODAY),paidHow:paid,cid:charge?charge.id:null})});
     const first=runs[0];notify('SMS',phoneFmt(phone)||'renter','ProWorld: '+(runs.length>1?runs.length+' courts are yours':courtById(first.court).name+' is yours')+' '+fmtDate(parse(dateStr))+' '+fmtRange(first.start,first.start+first.dur)+'.'+(paid==='card'?' '+money(total)+' charged to your card on file.':paid==='due'?' '+money(total)+' is due at the front desk.':''),{phone});SEL.clear();closeModal();save();renderCourts(app);toast(paid==='card'?'Reserved and charged '+money(total)+'.':paid==='due'?'Reserved — '+money(total)+' to collect at the front desk.':'Reserved at no charge.')};
 }
-function renderStaffPanel(){const cOpts=COURTS.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');return `<section class="staffpanel"><h3>Recurring blocks</h3><p class="muted mini" style="margin:-6px 0 12px">For the weekly schedule. For a one-off run of courts, just drag across the grid above.</p><div class="form"><div class="field"><label for="bk-label">Label</label><input id="bk-label" value="Academy"></div><div class="field"><label for="bk-from">From court</label><select id="bk-from">${cOpts}</select></div><div class="field"><label for="bk-to">To court</label><select id="bk-to">${cOpts.replace('value="8"','value="8" selected')}</select></div><div class="field"><label for="bk-start">Start</label><select id="bk-start">${timeOptions(16,7,20.5)}</select></div><div class="field"><label for="bk-end">End</label><select id="bk-end">${timeOptions(19,7.5,21)}</select></div><div class="field"><label for="bk-repeat">Repeat</label><select id="bk-repeat"><option value="week">This week only</option><option value="semester" selected>Every week through ${SEMESTER.end}</option></select></div></div><div class="chips" id="bk-days" style="margin-top:14px">${DOW.map((d,i)=>`<button class="chip" data-dow="${i}" aria-pressed="${i>=1&&i<=5}">${d}</button>`).join('')}</div><div class="row"><button class="btn" id="bk-go">Block courts</button><span class="muted mini" id="bk-preview"></span></div></section>`}
-function bindStaffPanel(app){const days=()=>[...app.querySelectorAll('#bk-days .chip')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>Number(c.dataset.dow));const preview=()=>{const a=COURTS.findIndex(c=>c.id===$('#bk-from').value),b=COURTS.findIndex(c=>c.id===$('#bk-to').value);const n=Math.abs(b-a)+1;const hrs=Number($('#bk-end').value)-Number($('#bk-start').value);$('#bk-preview').textContent=hrs>0?`${n} court${n>1?'s':''} × ${hrs} hr × ${days().length} day${days().length!==1?'s':''} a week`:'End must be after start.'};app.querySelectorAll('#bk-days .chip').forEach(c=>c.onclick=()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')!=='true');preview()});['bk-from','bk-to','bk-start','bk-end'].forEach(id=>$('#'+id).onchange=preview);preview();$('#bk-go').onclick=()=>{const a=COURTS.findIndex(c=>c.id===$('#bk-from').value),b=COURTS.findIndex(c=>c.id===$('#bk-to').value);const lo=Math.min(a,b),hi=Math.max(a,b);const courts=COURTS.slice(lo,hi+1).map(c=>c.id);const start=Number($('#bk-start').value),end=Number($('#bk-end').value);const dows=days();if(end<=start||!dows.length){toast('Pick an end after the start and at least one day.');return}const rep=$('#bk-repeat').value;const cur=parse(state.courtsDate);const wkStart=addDays(cur,-cur.getDay()),wkEnd=addDays(wkStart,6);state.blocks.push({id:'b'+uid(),label:$('#bk-label').value||'Academy',courts,dows,start,end,from:iso(rep==='week'?wkStart:TODAY),until:rep==='week'?iso(wkEnd):SEMESTER.endIso});notify('Slack','#coaches',($('#bk-label').value||'Academy')+' block set: '+courts.length+' courts, '+fmtRange(start,end)+', '+dows.map(i=>DOW[i]).join('/')+(rep==='week'?' this week':' through '+SEMESTER.end));save();renderCourts(app);toast('Blocked '+courts.length+' courts × '+(end-start)+' hr × '+dows.length+' days.')}}
+function renderTagPanel(){return `<section class="staffpanel tagpanel" id="tagpanel" hidden><h3>Colours &amp; categories</h3><p class="muted mini" style="margin:-6px 0 12px">Every block on the grid wears its category's colour. Rename one, pick another colour, or add your own (a group, a camp, a club night). Private lessons, family rentals and outside rentals are set by the system; you can still recolour them.</p><div class="taglist">${tags().map(t=>`<div class="tagrow" data-tid="${esc(t.id)}"><input type="color" value="${esc(t.color)}" aria-label="Colour for ${esc(t.label)}" data-tcolor="${esc(t.id)}"><input type="text" value="${esc(t.label)}" aria-label="Name" data-tlabel="${esc(t.id)}" ${['private','rental','outside'].includes(t.id)?'readonly':''}><span class="muted mini">${state.blocks.filter(b=>tagOfBlock(b).id===t.id).length} block${state.blocks.filter(b=>tagOfBlock(b).id===t.id).length===1?'':'s'}</span>${['academy','tournament','private','rental','outside','maintenance'].includes(t.id)?'':`<button class="btn ghost sm" data-tdel="${esc(t.id)}" ${state.blocks.some(b=>b.tag===t.id)?'disabled title="In use on the grid"':''}>Remove</button>`}</div>`).join('')}</div><div class="row" style="margin-top:12px"><input type="color" id="tag-new-color" value="#E2FE78" aria-label="New category colour"><input type="text" id="tag-new-label" placeholder="New category (Full Time, 10 & Under, Club night…)" style="max-width:320px"><button class="btn" id="tag-add">Add</button><span class="muted mini">Saved for everyone the moment you change it.</span></div></section>`}
+function renderStaffPanel(){const cOpts=COURTS.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');return renderTagPanel()+`<section class="staffpanel"><h3>Recurring blocks</h3><p class="muted mini" style="margin:-6px 0 12px">For the weekly schedule. For a one-off run of courts, just drag across the grid above.</p><div class="form"><div class="field"><label for="bk-tag">Category</label><select id="bk-tag">${tags().filter(t=>!['private','rental','outside'].includes(t.id)).map(t=>`<option value="${esc(t.id)}">${esc(t.label)}</option>`).join('')}</select></div><div class="field"><label for="bk-label">Label</label><input id="bk-label" value="Academy"></div><div class="field"><label for="bk-from">From court</label><select id="bk-from">${cOpts}</select></div><div class="field"><label for="bk-to">To court</label><select id="bk-to">${cOpts.replace('value="8"','value="8" selected')}</select></div><div class="field"><label for="bk-start">Start</label><select id="bk-start">${timeOptions(16,7,20.5)}</select></div><div class="field"><label for="bk-end">End</label><select id="bk-end">${timeOptions(19,7.5,21)}</select></div><div class="field"><label for="bk-repeat">Repeat</label><select id="bk-repeat"><option value="week">This week only</option><option value="semester" selected>Every week through ${SEMESTER.end}</option></select></div></div><div class="chips" id="bk-days" style="margin-top:14px">${DOW.map((d,i)=>`<button class="chip" data-dow="${i}" aria-pressed="${i>=1&&i<=5}">${d}</button>`).join('')}</div><div class="row"><button class="btn" id="bk-go">Block courts</button><span class="muted mini" id="bk-preview"></span></div></section>`}
+function bindTagPanel(app){const panel=$('#tagpanel');if(!panel)return;const open=$('#tag-edit');if(open)open.onclick=()=>{panel.hidden=!panel.hidden;if(!panel.hidden)panel.scrollIntoView({behavior:'smooth',block:'start'})};
+  const bkt=$('#bk-tag'),bkl=$('#bk-label');if(bkt&&bkl)bkt.onchange=()=>{const t=tagById(bkt.value);if(t&&(!bkl.value||tags().some(x=>x.label===bkl.value)))bkl.value=t.label};
+  const commit=(msg)=>{save();renderCourts(app);const p=$('#tagpanel');if(p)p.hidden=false;if(msg)toast(msg)};
+  panel.querySelectorAll('[data-tcolor]').forEach(i=>i.onchange=()=>{const t=tagById(i.dataset.tcolor);if(t){t.color=i.value;commit(t.label+' recoloured.')}});
+  panel.querySelectorAll('[data-tlabel]').forEach(i=>i.onchange=()=>{const t=tagById(i.dataset.tlabel);const v=i.value.trim().slice(0,40);if(t&&v){t.label=v;commit('Renamed.')}});
+  panel.querySelectorAll('[data-tdel]').forEach(b=>b.onclick=()=>{state.courtTags=tags().filter(t=>t.id!==b.dataset.tdel);commit('Category removed.')});
+  $('#tag-add').onclick=()=>{const label=$('#tag-new-label').value.trim().slice(0,40);if(!label){toast('Give the category a name.');return}const id='t'+uid();tags().push({id,label,color:$('#tag-new-color').value});SEL.tag=id;commit(label+' added.')}}
+function bindStaffPanel(app){bindTagPanel(app);const days=()=>[...app.querySelectorAll('#bk-days .chip')].filter(c=>c.getAttribute('aria-pressed')==='true').map(c=>Number(c.dataset.dow));const preview=()=>{const a=COURTS.findIndex(c=>c.id===$('#bk-from').value),b=COURTS.findIndex(c=>c.id===$('#bk-to').value);const n=Math.abs(b-a)+1;const hrs=Number($('#bk-end').value)-Number($('#bk-start').value);$('#bk-preview').textContent=hrs>0?`${n} court${n>1?'s':''} × ${hrs} hr × ${days().length} day${days().length!==1?'s':''} a week`:'End must be after start.'};app.querySelectorAll('#bk-days .chip').forEach(c=>c.onclick=()=>{c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')!=='true');preview()});['bk-from','bk-to','bk-start','bk-end'].forEach(id=>$('#'+id).onchange=preview);preview();$('#bk-go').onclick=()=>{const a=COURTS.findIndex(c=>c.id===$('#bk-from').value),b=COURTS.findIndex(c=>c.id===$('#bk-to').value);const lo=Math.min(a,b),hi=Math.max(a,b);const courts=COURTS.slice(lo,hi+1).map(c=>c.id);const start=Number($('#bk-start').value),end=Number($('#bk-end').value);const dows=days();if(end<=start||!dows.length){toast('Pick an end after the start and at least one day.');return}const rep=$('#bk-repeat').value;const cur=parse(state.courtsDate);const wkStart=addDays(cur,-cur.getDay()),wkEnd=addDays(wkStart,6);state.blocks.push({id:'b'+uid(),label:$('#bk-label').value||'Academy',tag:$('#bk-tag')?$('#bk-tag').value:'academy',courts,dows,start,end,from:iso(rep==='week'?wkStart:TODAY),until:rep==='week'?iso(wkEnd):SEMESTER.endIso});notify('Slack','#coaches',($('#bk-label').value||'Academy')+' block set: '+courts.length+' courts, '+fmtRange(start,end)+', '+dows.map(i=>DOW[i]).join('/')+(rep==='week'?' this week':' through '+SEMESTER.end));save();renderCourts(app);toast('Blocked '+courts.length+' courts × '+(end-start)+' hr × '+dows.length+' days.')}}
 
 /* ====================== ATTENDANCE ====================== */
 function renderAttendance(app){
   const dateStr=state.attDate;const d=parse(dateStr);const dow=d.getDay();const todays=SESSIONS.filter(s=>s.dows.includes(dow));
   if(state.attSession!=='all'&&!todays.some(s=>s.id===state.attSession)&&todays.length)state.attSession=todays[0].id;
   const show=state.attSession==='all'?todays:todays.filter(s=>s.id===state.attSession);
-  let html=`<section class="hero"><h1>Attendance.</h1><p>The list the coaches used to write in Notes and screenshot to Slack — now tap-to-mark, and the same list for everyone. Everyone expected is already on a court: the roster from Monday, plus every family that enrolled online, minus anyone on hold. Drag players between courts, strike who didn't show, add who did, post. Billing takes it from there.</p></section>
+  let html=`<section class="hero"><h1>Attendance.</h1><p>The list the coaches used to write in Notes and screenshot to Slack — now tap-to-mark, and the same list for everyone. Everyone expected is already on a court: the Play by Point roster, plus every family that enrolled online, minus anyone on hold. Drag players between courts, strike who didn't show, add who did, post. Billing takes it from there.</p></section>
   <div class="toolbar">${dateStrip(dateStr,-3,6)}</div>
-  <div class="seg" style="margin-top:12px" role="group" aria-label="Session">${todays.map(s=>`<button data-sess="${s.id}" aria-pressed="${s.id===state.attSession}">${s.time} · ${s.label}</button>`).join('')}${todays.length?`<button data-sess="all" aria-pressed="${state.attSession==='all'}">Whole day</button>`:'<button disabled>No sessions — weekend</button>'}</div>`;
+  <button class="sesspick" data-sesspick aria-expanded="${state.sessOpen?'true':'false'}"><span>Session</span><b>${(()=>{const cur=todays.find(s=>s.id===state.attSession);return cur?cur.time+' · '+cur.label:state.attSession==='all'?'Whole day':'pick one'})()}</b><i>▾</i></button>
+  <div class="seg sess${state.sessOpen?' open':''}" style="margin-top:12px" role="group" aria-label="Session">${todays.map(s=>`<button data-sess="${s.id}" aria-pressed="${s.id===state.attSession}">${s.time} · ${s.label}</button>`).join('')}${todays.length?`<button data-sess="all" aria-pressed="${state.attSession==='all'}">Whole day</button>`:'<button disabled>No sessions — weekend</button>'}</div>`;
   show.forEach(sess=>{html+=renderBoard(sess,getSheet(dateStr,sess.id))});
   html+=`<p class="note">Tags come from the player record, not the coach's memory: <b>F</b> = on a session pack (one session is used when marked present), <b>TO</b> = tryout, <b>G</b> = guest with no record (pink). A lime chip is an enrolled player here on a day they're not scheduled — posting bills the drop-in unless the front desk approves it as a swap. Courts on a list are the courts blocked for that session on the grid; add or remove one here and the grid updates.</p>`;
   app.innerHTML=html;
   app.querySelectorAll('.date').forEach(b=>b.onclick=()=>{state.attDate=b.dataset.date;save();renderAttendance(app)});
-  app.querySelectorAll('[data-sess]').forEach(b=>b.onclick=()=>{state.attSession=b.dataset.sess;save();renderAttendance(app)});
+  app.querySelectorAll('[data-sess]').forEach(b=>b.onclick=()=>{state.attSession=b.dataset.sess;state.sessOpen=false;save();renderAttendance(app)});
+  const sp=app.querySelector('[data-sesspick]');if(sp)sp.onclick=()=>{state.sessOpen=!state.sessOpen;renderAttendance(app)};
   show.forEach(sess=>bindBoard(app,sess,getSheet(dateStr,sess.id)));
 }
 function renderBoard(sess,sheet){
@@ -957,26 +1079,84 @@ function addPlayerSheet(app){openModal(`<h3>Add player</h3><p class="sub">From a
 
 /* ====================== PRIVATES ====================== */
 function renderPrivates(app){
-  const upcoming=state.privates.filter(x=>x.date>=iso(TODAY)).sort((a,b)=>(a.date+String(a.start).padStart(4,'0')).localeCompare(b.date+String(b.start).padStart(4,'0')));
-  const pOpts=state.players.filter(p=>p.status!=='tryout').sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${esc(p.id)}">${esc(p.name)} — ${p.program?PROG(p.program).short:'no program'}${p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':''}</option>`).join('');
-  let dOpts='';for(let i=0;i<10;i++){const x=addDays(TODAY,i);dOpts+=`<option value="${iso(x)}">${fmtDate(x)}</option>`}
+  /* Privates, the "ticket" version (Antonio, Oct 23): pick the coach, the player, how many on court, the day, the start and the
+     length as bubbles; a black ticket on the right builds itself as you pick (who · when · where · what it costs and how it is
+     paid) and carries the Book button. Below, the upcoming lessons as a day-by-day agenda. Same booking logic as before:
+     lesson pack hour → flex pack session → card on file → to collect at the front desk; blocks the court; texts the family. */
   const DUR={30:'30 min',45:'45 min',60:'1 hour',90:'1.5 hours',120:'2 hours'};
-  app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Coaches book their own lessons here at their tier rate. The system already knows if the player has a lesson pack — it uses an hour, or charges the card on file (for families enrolled online), or leaves it for the front desk to collect. It blocks the court and texts the parent. Nothing to reconcile.</p></section>
-  <section class="section"><div class="form"><div class="field"><label for="pv-coach">Pro <span class="muted" id="pv-tier"></span></label><select id="pv-coach">${PROS.map(c=>`<option value="${esc(c.name)}">${esc(c.name)} · ${esc(c.tier)}</option>`).join('')}</select></div><div class="field"><label for="pv-player">Player</label><select id="pv-player">${pOpts||'<option value="">— the roster is loading —</option>'}</select></div><div class="field"><label for="pv-n">Players on court</label><select id="pv-n"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div><div class="field"><label for="pv-date">Date</label><select id="pv-date">${dOpts}</select></div><div class="field"><label for="pv-time">Start</label><select id="pv-time">${timeOptions(15,7,20.5)}</select></div><div class="field"><label for="pv-dur">Length</label><select id="pv-dur"></select></div><div class="field"><label for="pv-court">Court <span class="muted" id="pv-free"></span></label><select id="pv-court"><option value="">First open court</option></select></div><div class="field wide"><label>How it's paid</label><div id="pv-how" class="paybox"></div></div></div><div class="actions"><button class="btn lime" id="pv-book">Book the private</button></div></section>
-  <section class="section"><h2>Upcoming</h2>${upcoming.length?`<table class="tablelist"><tbody>${upcoming.map(x=>{const p=playerById(x.pid);return `<tr><td><b>${esc(p?p.name:'?')}</b><div class="m">with ${esc(x.coach)} · ${courtById(x.court).name}</div></td><td>${fmtDate(parse(x.date))}<div class="m">${fmtRange(x.start,x.start+x.dur)}</div></td><td>${x.billed==='pack'?'<span class="pill info">pack hour</span>':x.billed==='card'?'<span class="pill lime">charged '+money(x.amount)+'</span>':'<span class="pill warn">'+money(x.amount)+' to collect</span>'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">No privates booked yet.</p>'}</section>`;
-  const tier=()=>LESSON_TIERS[PRO($('#pv-coach').value).tier];
-  const durs=()=>{const t=tier();const nsel=$('#pv-n');const avail=Object.keys(t);[...nsel.options].forEach(o=>o.disabled=!avail.includes(o.value));if(!avail.includes(nsel.value))nsel.value=avail[0];const d=$('#pv-dur');const prev=d.value;const ds=Object.keys(t[nsel.value]).map(Number).sort((a,b)=>a-b);d.innerHTML=ds.map(m=>`<option value="${m}">${DUR[m]||m+' min'}</option>`).join('');d.value=ds.includes(Number(prev))?prev:(ds.includes(60)?'60':String(ds[0]));$('#pv-tier').textContent='· '+PRO($('#pv-coach').value).tier};
-  const price=()=>{const t=tier();const n=$('#pv-n').value,m=Number($('#pv-dur').value);const each=t[n][m];return {each,total:Math.round(each*Number(n)*100)/100,hours:m/60,n:Number(n),min:m}};
-  const how=()=>{const p=playerById($('#pv-player').value);if(!p)return;const pr=price();const box=$('#pv-how');const n=Number($('#pv-n').value);if(p.privPack>=pr.hours){box.className='paybox pack';box.innerHTML=`<b>Uses ${pr.hours} hour${pr.hours===1?'':'s'} from the lesson pack</b> — ${Math.round((p.privPack-pr.hours)*100)/100} left after, no charge.`}else if(p.plan==='flex'&&p.packLeft>0){box.className='paybox pack';box.innerHTML=`<b>Uses 1 session from the ${p.packTotal}-session pack</b> — ${p.packLeft-1} left after, no charge.`}else if(p.customer){box.className='paybox card';box.innerHTML=`<b>${money(pr.total)}</b> to the card on file${n>1?' — '+money(pr.each)+' each × '+n:''}.`}else{box.className='paybox';box.innerHTML=`<b>${money(pr.total)}</b> to collect at the front desk — no card on file${n>1?' — '+money(pr.each)+' each × '+n:''}.`}};
-  const courts=()=>{const date=$('#pv-date').value,start=Number($('#pv-time').value),dur=Number($('#pv-dur').value)/60;const sel=$('#pv-court');const prev=sel.value;const kind=PRO($('#pv-coach').value).tier==='SOCCER 120'?'soccer':'tennis';const free=COURTS.filter(c=>c.kind===kind&&slotFree(c.id,date,start,dur));sel.innerHTML='<option value="">First open court</option>'+free.map(c=>`<option value="${c.id}">${c.name} · ${c.type==='clay'?'clay':c.type==='hard'?'hard':'field'}</option>`).join('');if(free.some(c=>c.id===prev))sel.value=prev;$('#pv-free').textContent='· '+free.length+' free at that time'};
-  $('#pv-coach').onchange=()=>{durs();how();courts()};$('#pv-n').onchange=()=>{durs();how();courts()};$('#pv-player').onchange=()=>{const p=playerById($('#pv-player').value);if(p&&!p.contactLoaded)loadContact(p.id);how()};$('#pv-dur').onchange=()=>{how();courts()};$('#pv-date').onchange=courts;$('#pv-time').onchange=courts;durs();how();courts();
-  $('#pv-book').onclick=async()=>{const coach=$('#pv-coach').value,pid=$('#pv-player').value,date=$('#pv-date').value,start=Number($('#pv-time').value),dur=Number($('#pv-dur').value)/60;let court=$('#pv-court').value;const p=playerById(pid);if(!p){toast('Pick a player.');return}const kind=PRO(coach).tier==='SOCCER 120'?'soccer':'tennis';if(!court){const c=COURTS.find(c=>c.kind===kind&&slotFree(c.id,date,start,dur));if(!c){toast('No open court at that time.');return}court=c.id}else if(!slotFree(court,date,start,dur)){toast(courtById(court).name+' isn\'t free then.');return}
-    const pr=price();const btn=$('#pv-book');btn.disabled=true;let billed='due',cid=null,amount=0,packType=null;
-    if(p.privPack>=pr.hours){ov(pid).privUsed=Math.round(((ov(pid).privUsed||0)+pr.hours)*100)/100;billed='pack';packType='priv'}else if(p.plan==='flex'&&p.packLeft>0){ov(pid).packUsed=(ov(pid).packUsed||0)+1;billed='pack';packType='flex'}else{amount=pr.total;const c=addCharge(pid,'Private with '+coach+' · '+fmtDate(parse(date))+' · '+durText(dur)+(pr.n>1?' · '+pr.n+' players':''),amount,'due','private',PRO(coach).tier==='SOCCER 120'?'Soccer':PRO(coach).tier==='FITNESS 110'?'Fitness':'Private lessons',null,{lookup:lookupFor('lesson',PRO(coach).tier,{n:pr.n,min:pr.min}),qty:pr.n});cid=c.id;if(p.customer){const ok=await chargeCard(c);billed=ok?'card':'due'}}
-    const bid='b'+uid();state.blocks.push({id:bid,label:'Private · '+coach.split(' ')[0],courts:[court],dows:[parse(date).getDay()],start,end:start+dur,from:date,until:date,private:true});
-    state.privates.push({id:'PV-'+uid(),pid,coach,date,start,dur,court,billed,packType,amount,blockId:bid,cid});if(!p.contactLoaded)await loadContact(pid);
-    notify('SMS',phoneFmt(p.phone)||'family',p.name.split(' ')[0]+': private with '+coach+' '+fmtDate(parse(date))+' '+fmtRange(start,start+dur)+' on '+courtById(court).name+'. '+(billed==='pack'?'Pack hour used.':billed==='card'?money(amount)+' charged to your card on file.':money(amount)+' is due at the front desk.'),{phone:p.phone});
-    rebuildPlayers();save();renderPrivates(app);toast('Booked '+courtById(court).name+' · '+(billed==='pack'?'pack hour used':billed==='card'?money(amount)+' charged':money(amount)+' to collect')+'.')};
+  const PV=state.pv=state.pv||{coach:'',pid:'',n:'1',date:iso(TODAY),time:15,dur:60,court:''};
+  if(PV.coach&&!PRO(PV.coach))PV.coach='';
+  const PROX=n=>PRO(n)||PROS[0];   // the tier used for the chips before a coach is picked (prices are owners-only anyway)
+  const roster=state.players.filter(p=>p.status!=='tryout').sort((a,b)=>a.name.localeCompare(b.name));
+  if(PV.pid&&!playerById(PV.pid))PV.pid='';   // no default player either: type the name
+  const tier=()=>LESSON_TIERS[PROX(PV.coach).tier];
+  const kindOf=()=>PROX(PV.coach).tier==='SOCCER 120'?'soccer':'tennis';
+  const fixChoices=()=>{const t=tier();const ns=Object.keys(t);if(!ns.includes(PV.n))PV.n=ns[0];const ds=Object.keys(t[PV.n]).map(Number).sort((a,b)=>a-b);if(!ds.includes(Number(PV.dur)))PV.dur=ds.includes(60)?60:ds[0];return {ns,ds}};
+  const price=()=>{const t=tier();const each=t[PV.n][PV.dur];return {each,total:Math.round(each*Number(PV.n)*100)/100,hours:PV.dur/60,n:Number(PV.n),min:PV.dur}};
+  const freeCourts=()=>COURTS.filter(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,Number(PV.time),PV.dur/60));
+  const payLine=()=>{const p=playerById(PV.pid);if(!p)return {k:'',t:'Pick a player'};const pr=price();
+    if(p.privPack>=pr.hours)return {k:'pack',t:`Uses ${pr.hours} hour${pr.hours===1?'':'s'} of the lesson pack · ${Math.round((p.privPack-pr.hours)*100)/100} left after`};
+    if(p.plan==='flex'&&p.packLeft>0)return {k:'pack',t:`Uses 1 session of the ${p.packTotal}-session pack · ${p.packLeft-1} left after`};
+    if(p.customer)return {k:'card',t:`${money(pr.total)} to the card on file${pr.n>1?' · '+money(pr.each)+' each × '+pr.n:''}`};
+    return {k:'due',t:`${money(pr.total)} to collect at the front desk${pr.n>1?' · '+money(pr.each)+' each × '+pr.n:''}`}};
+  const ini=n=>String(n||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+  const seeMoney=!!(window.PWCTX&&(window.PWCTX.owner||window.PWCTX.admin));   // prices are for the owners only (Antonio, Oct 24): coaches and directors just book
+  const payPlain=()=>{const p=playerById(PV.pid);if(!p)return {k:'',t:'Pick a player'};const pr=price();if(p.privPack>=pr.hours)return {k:'pack',t:'Lesson pack'};if(p.plan==='flex'&&p.packLeft>0)return {k:'pack',t:'Session pack'};if(p.customer)return {k:'card',t:'Card on file'};return {k:'due',t:'Front desk collects'}};
+  // the coach: a coach books for themselves; a director or owner picks from the list
+  const me=window.PWCTX||{};const myPro=PROS.find(c=>c.name.split(' ')[0].toLowerCase()===String((me.rec&&me.rec.coachAs)||(me.name||'').split(' ')[0]||'').toLowerCase());
+  const coachLocked=!!(myPro&&!(me.owner||me.admin||me.director));if(coachLocked)PV.coach=myPro.name;
+  const upcoming=state.privates.filter(x=>x.date>=iso(TODAY)).sort((a,b)=>(a.date+String(a.start).padStart(4,'0')).localeCompare(b.date+String(b.start).padStart(4,'0')));
+  const byDay={};upcoming.forEach(x=>{(byDay[x.date]=byDay[x.date]||[]).push(x)});
+  const agenda=Object.keys(byDay).sort().map(d=>`<div class="pv-day"><div class="pv-dayh">${esc(fmtDate(parse(d)))}${d===iso(TODAY)?' <span class="pv-today">Today</span>':''}</div>${byDay[d].map(x=>{const p=playerById(x.pid);const st=x.billed==='pack'?'<span class="pill ok">pack hour</span>':x.billed==='card'?'<span class="pill ok">'+(seeMoney?'charged '+money(x.amount):'card on file')+'</span>':'<span class="pill warn">'+(seeMoney?money(x.amount)+' to collect':'front desk collects')+'</span>';
+    return `<div class="pv-row"><div class="pv-when">${esc(fmtRange(x.start,x.start+x.dur))}</div><div class="pv-who"><span class="pv-ava">${esc(ini(p?p.name:'?'))}</span><div><b>${esc(p?p.name:'?')}</b><div class="m">with ${esc(x.coach)} · ${esc(courtById(x.court).name)}</div></div></div><div class="pv-st">${st}</div></div>`}).join('')}</div>`).join('');
+  const draw=()=>{const {ns,ds}=fixChoices();const p=playerById(PV.pid);const pr=price();const pay=payLine();const free=freeCourts();if(PV.court&&!free.some(c=>c.id===PV.court))PV.court='';
+    const times=[];for(let h=7;h<=20.5;h+=.5)times.push(h);
+    // the start follows what is still bookable: a past or taken time slides to the next free one, a day with nothing left slides to the next day
+    const okAt=(d,h)=>COURTS.some(c=>c.kind===kindOf()&&slotFree(c.id,d,h,PV.dur/60));
+    for(let tries=0;tries<10&&!times.some(h=>okAt(PV.date,h));tries++)PV.date=iso(addDays(parse(PV.date),1));
+    if(!okAt(PV.date,Number(PV.time))){const first=times.find(h=>okAt(PV.date,h));if(first!==undefined)PV.time=first}
+    const pay2=payLine();const free2=freeCourts();if(PV.court&&!free2.some(c=>c.id===PV.court))PV.court='';
+    app.innerHTML=`<section class="hero"><h1>Privates.</h1><p>Pick the coach, the player and the time. The ticket fills itself in, blocks the court and texts the family when you book.</p></section>
+    <section class="section pv-wrap">
+      <div class="pv-build">
+        <div class="pv-step"><div class="pv-k">Coach</div><div class="pv-pick">${coachLocked?'':`<input id="pv-cq" class="pv-search" type="search" placeholder="Type a coach's name…" autocomplete="off" value="">`}<div class="pv-sel">${PV.coach?`<span class="pv-ava sm">${esc(ini(PV.coach))}</span><b>${esc(PV.coach)}</b>${seeMoney?`<small>${esc(PROX(PV.coach).tier)}</small>`:''}`:'<small>No coach picked yet</small>'}</div><div id="pv-clist" class="pv-list" hidden></div></div></div>
+        <div class="pv-step"><div class="pv-k">Player</div><div class="pv-pick"><input id="pv-q" class="pv-search" type="search" placeholder="Type a name…" autocomplete="off" value=""><div class="pv-sel">${p?`<span class="pv-ava sm">${esc(ini(p.name))}</span><b>${esc(p.name)}</b><small>${p.program?esc(PROG(p.program).short):'no program'}${seeMoney?(p.privPack?' · lesson pack '+p.privPack+' h left':p.plan==='flex'?' · pack '+p.packLeft+' left':p.customer?' · card on file':' · no card on file'):''}</small>`:'<small>No player picked yet</small>'}</div><div id="pv-list" class="pv-list" hidden></div></div></div>
+        <div class="pv-grid">
+          <div class="pv-step"><div class="pv-k">Players on court</div><div class="pv-chips">${['1','2','3','4'].map(n=>`<button class="pv-chip num${n===PV.n?' on':''}" data-pv="n" data-v="${n}" ${ns.includes(n)?'':'disabled'}>${n}</button>`).join('')}</div></div>
+          <div class="pv-step"><div class="pv-k">Length</div><div class="pv-chips">${ds.map(m=>`<button class="pv-chip${m===Number(PV.dur)?' on':''}" data-pv="dur" data-v="${m}">${DUR[m]||m+' min'}</button>`).join('')}</div></div>
+        </div>
+        <div class="pv-step"><div class="pv-k">Day</div><div class="pv-chips dates">${Array.from({length:10},(_,i)=>addDays(TODAY,i)).map(x=>`<button class="pv-chip day${iso(x)===PV.date?' on':''}" data-pv="date" data-v="${iso(x)}"><b>${x.getDate()}</b><small>${DOW[x.getDay()].slice(0,3)}</small></button>`).join('')}</div></div>
+        <div class="pv-step"><div class="pv-k">Start</div><div class="pv-chips times">${times.map(h=>{const ok=COURTS.some(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,h,PV.dur/60));return `<button class="pv-chip t${h===Number(PV.time)?' on':''}${ok?'':' off'}" data-pv="time" data-v="${h}" ${ok?'':'disabled'}>${esc(fmtT(h))}</button>`}).join('')}</div></div>
+        <div class="pv-step"><div class="pv-k">Court <span class="muted">· ${free2.length} free then</span></div><div class="pv-chips">${`<button class="pv-chip${PV.court?'':' on'}" data-pv="court" data-v="">First open court</button>`+free2.map(c=>`<button class="pv-chip${c.id===PV.court?' on':''}" data-pv="court" data-v="${esc(c.id)}">${esc(c.name)}<small>${c.type==='clay'?'clay':c.type==='hard'?'hard':'field'}</small></button>`).join('')}</div></div>
+      </div>
+      <aside class="pv-ticket">
+        <div class="pv-tk">Private lesson</div>
+        <div class="pv-tbig">${esc(fmtRange(Number(PV.time),Number(PV.time)+PV.dur/60))}</div>
+        <div class="pv-tdate">${esc(fmtDate(parse(PV.date)))}</div>
+        <div class="pv-tline"><span class="pv-ava">${PV.coach?esc(ini(PV.coach)):'·'}</span><div><small>Coach</small><b>${PV.coach?esc(PV.coach):'—'}</b><span>${seeMoney&&PV.coach?esc(PROX(PV.coach).tier):'&nbsp;'}</span></div></div>
+        <div class="pv-tline"><span class="pv-ava">${esc(ini(p?p.name:''))}</span><div><small>Player${pr.n>1?'s':''}</small><b>${p?esc(p.name):'—'}</b><span>${pr.n>1?pr.n+' on court':'1 on court'}</span></div></div>
+        <div class="pv-tline"><span class="pv-ava">${PV.court?esc(courtById(PV.court).name.replace(/\D/g,'')||'C'):'·'}</span><div><small>Court</small><b>${PV.court?esc(courtById(PV.court).name):'First open court'}</b><span>${DUR[PV.dur]||PV.dur+' min'}</span></div></div>
+        ${seeMoney?`<div class="pv-pay ${pay2.k}"><b>${money(pr.total)}</b>${esc(pay2.t)}</div>`:''}
+        <button class="btn pv-book" id="pv-book" ${p&&PV.coach?'':'disabled'}>Book the private</button>
+        <div class="pv-tfoot">Blocks the court · texts the family · lands on Books</div>
+      </aside>
+    </section>
+    <section class="section"><h2>Upcoming</h2>${agenda||'<p class="muted">No privates booked yet.</p>'}</section>`;
+    app.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{const k=b.dataset.pv,v=b.dataset.v;PV[k]=k==='time'?Number(v):k==='dur'?Number(v):v;if(k==='coach'||k==='n'||k==='dur'||k==='date')PV.court='';save();draw()});
+    const cq=$('#pv-cq'),clist=$('#pv-clist');if(cq){const showC=()=>{const t=cq.value.trim().toLowerCase();const hits=PROS.filter(c=>!t||c.name.toLowerCase().includes(t)).slice(0,10);clist.innerHTML=hits.map(c=>`<button data-coach="${esc(c.name)}"><b>${esc(c.name)}</b>${seeMoney?`<small>${esc(c.tier)}</small>`:''}</button>`).join('')||'<div class="m" style="padding:10px 12px">No coach by that name</div>';clist.hidden=false;clist.querySelectorAll('[data-coach]').forEach(h=>h.onclick=()=>{PV.coach=h.dataset.coach;PV.court='';save();draw()})};cq.oninput=showC;cq.onfocus=showC;cq.onblur=()=>setTimeout(()=>{clist.hidden=true},150)}
+    const q=$('#pv-q'),list=$('#pv-list');
+    q.oninput=()=>{const t=q.value.trim().toLowerCase();if(!t){list.hidden=true;return}const hits=roster.filter(x=>x.name.toLowerCase().includes(t)).slice(0,8);list.innerHTML=hits.map(x=>`<button data-pid="${esc(x.id)}"><b>${esc(x.name)}</b><small>${x.program?esc(PROG(x.program).short):'no program'}</small></button>`).join('')||'<div class="m" style="padding:10px 12px">No one by that name</div>';list.hidden=false;
+      list.querySelectorAll('[data-pid]').forEach(h=>h.onclick=()=>{PV.pid=h.dataset.pid;const pl=playerById(PV.pid);if(pl&&!pl.contactLoaded)loadContact(pl.id).then(draw);save();draw()})};
+    $('#pv-book').onclick=async()=>{const coach=PV.coach,pid=PV.pid,date=PV.date,start=Number(PV.time),dur=PV.dur/60;let court=PV.court;const p=playerById(pid);if(!p){toast('Pick a player.');return}if(!coach){toast('Pick a coach.');return}const kind=kindOf();if(!court){const c=COURTS.find(c=>c.kind===kind&&slotFree(c.id,date,start,dur));if(!c){toast('No open court at that time.');return}court=c.id}else if(!slotFree(court,date,start,dur)){toast(courtById(court).name+' isn\'t free then.');return}
+      const pr=price();const btn=$('#pv-book');btn.disabled=true;btn.textContent='Booking…';let billed='due',cid=null,amount=0,packType=null;
+      if(p.privPack>=pr.hours){ov(pid).privUsed=Math.round(((ov(pid).privUsed||0)+pr.hours)*100)/100;billed='pack';packType='priv'}else if(p.plan==='flex'&&p.packLeft>0){ov(pid).packUsed=(ov(pid).packUsed||0)+1;billed='pack';packType='flex'}else{amount=pr.total;const c=addCharge(pid,'Private with '+coach+' · '+fmtDate(parse(date))+' · '+durText(dur)+(pr.n>1?' · '+pr.n+' players':''),amount,'due','private',PRO(coach).tier==='SOCCER 120'?'Soccer':PRO(coach).tier==='FITNESS 110'?'Fitness':'Private lessons',null,{lookup:lookupFor('lesson',PRO(coach).tier,{n:pr.n,min:pr.min}),qty:pr.n});cid=c.id;if(p.customer){const ok=await chargeCard(c);billed=ok?'card':'due'}}
+      const bid='b'+uid();state.blocks.push({id:bid,label:'Private · '+coach.split(' ')[0],courts:[court],dows:[parse(date).getDay()],start,end:start+dur,from:date,until:date,private:true});
+      state.privates.push({id:'PV-'+uid(),pid,coach,date,start,dur,court,billed,packType,amount,blockId:bid,cid});if(!p.contactLoaded)await loadContact(pid);
+      notify('SMS',phoneFmt(p.phone)||'family',p.name.split(' ')[0]+': private with '+coach+' '+fmtDate(parse(date))+' '+fmtRange(start,start+dur)+' on '+courtById(court).name+'. '+(billed==='pack'?'Pack hour used.':billed==='card'?money(amount)+' charged to your card on file.':money(amount)+' is due at the front desk.'),{phone:p.phone});
+      liveApi('/api/admin/lesson/booked',{coach,player:p.name,date,start,dur,court}).catch(()=>{});   // the coach's text and the coaches' Slack line; reminders follow by themselves
+      rebuildPlayers();save();renderPrivates(app);toast('Booked '+courtById(court).name+(seeMoney?' · '+(billed==='pack'?'pack hour used':billed==='card'?money(amount)+' charged':money(amount)+' to collect'):'')+'.')};
+  };
+  draw();
 }
 
 /* ====================== MY ACCOUNT (parent) ====================== */
@@ -1053,7 +1233,7 @@ function renderDesk(app){
    also does the sending — the JustCall keys never reach this page. Nobody is texted without opt-in: those rows are counted
    and skipped, never sent. The draft and the selection live in this browser only. */
 const MSG_KEY='pw-backend-msg';
-const MSG={tab:'compose',sel:[],text:'',template:'',date:iso(TODAY),fills:{time:'',court:''},via:{},preview:'',q:'',open:{}};
+const MSG={tab:'threads',sel:[],text:'',template:'',date:iso(TODAY),fills:{time:'',court:''},via:{},preview:'',q:'',open:{},thread:'',tq:'',ttext:''};
 try{const j=JSON.parse(localStorage.getItem(MSG_KEY)||'{}');for(const k of ['sel','text','template','fills'])if(j[k]!==undefined)MSG[k]=j[k]}catch(e){}
 function msgSave(){try{localStorage.setItem(MSG_KEY,JSON.stringify({sel:MSG.sel,text:MSG.text,template:MSG.template,fills:MSG.fills}))}catch(e){}}
 let SMSD=null,SMSD_AT=0,SMSH=null,SMS_LOADING=false;
@@ -1086,15 +1266,15 @@ function smsFinal(p){const cfg=SMSD&&SMSD.settings||{};const t=smsRender(MSG.tex
 
 async function renderMessages(app){
   if(!SMSD){app.innerHTML=`<section class="hero"><h1>Messages.</h1><p>Loading the families on file…</p></section>`;await smsLoad();if(!SMSD||state.view!=='messages')return}
-  const can=smsCanSend();if(!can&&MSG.tab!=='sent')MSG.tab='sent';
-  const tabs=can?[['compose','Compose'],['sent','Sent'],['templates','Templates'],['settings','Settings']]:[['sent','Sent']];
-  app.innerHTML=`<section class="hero"><h1>Messages.</h1><p>${can?'Texts to families from the academy\'s line — a rain update, a court change, a reminder. Pick who, write or pick the message, send. Only families who opted in are texted; replies stay in the JustCall inbox.':'What the front desk has texted the families of your players. Replies stay in the JustCall inbox.'}</p></section>
+  const can=smsCanSend();if(!can&&!['threads','sent'].includes(MSG.tab))MSG.tab='threads';
+  const tabs=can?[['threads','Threads'],['compose','Custom audience'],['templates','Templates'],['settings','Settings']]:[['threads','Threads']];
+  app.innerHTML=`<section class="hero"><h1>Messages.</h1><p>${can?'One thread per group and per family. Pick a thread, write at the bottom, send: the academy\'s number does the sending, only families who opted in are texted, and their replies come back into the thread.':'What went out to the families of your players, and what they answered.'}</p></section>
   <div class="search" style="margin-top:22px"><div class="seg">${tabs.map(([k,l])=>`<button data-mtab="${k}" aria-pressed="${MSG.tab===k}">${l}</button>`).join('')}</div>${SMSD.line&&SMSD.line.connected?`<span class="pill ok">JustCall connected${SMSD.line.from?' · '+esc(phoneFmt(SMSD.line.from)):''}</span>`:can?'<span class="pill warn">JustCall not connected</span>':''}<a class="btn xs ghost" style="margin-left:auto" href="${esc(SMSD.settings&&SMSD.settings.inboxUrl||'https://app.justcall.io')}" target="_blank" rel="noopener">Open JustCall inbox</a><button class="btn xs ghost" id="msg-refresh">Refresh</button></div>
   ${SMSD.error?`<p class="note">${esc(SMSD.error)}</p>`:''}
   <div id="msg-body"></div>`;
   app.querySelectorAll('[data-mtab]').forEach(b=>b.onclick=()=>{MSG.tab=b.dataset.mtab;renderMessages(app)});
   $('#msg-refresh').onclick=async()=>{SMSH=null;await smsLoad(true);renderMessages(app)};
-  ({compose:drawCompose,sent:drawSent,templates:drawTemplates,settings:drawSmsSettings})[MSG.tab](app,$('#msg-body'));
+  ({threads:drawThreads,compose:drawCompose,sent:drawSent,templates:drawTemplates,settings:drawSmsSettings})[MSG.tab](app,$('#msg-body'));
 }
 
 /* ---- Compose ---- */
@@ -1147,12 +1327,76 @@ function smsConfirm(app,body,willSend,notIn,noNum,previewFor){
   openModal(`<h3>Send to ${willSend.length} player${willSend.length===1?'':'s'}?</h3><p class="sub">${notIn.length?notIn.length+' not opted in and ':''}${noNum.length?noNum.length+' without a valid number ':''}${notIn.length||noNum.length?'are skipped. ':''}Each family gets its own text from ${esc(SMSD.line&&SMSD.line.from?phoneFmt(SMSD.line.from):'the academy line')}.</p>
   <div class="note" style="white-space:pre-wrap;font-size:14px">${esc(final)}</div><p class="policy">Sent one by one, a few at a time; failures are retried three times and listed under Sent.</p>
   <div class="actions"><button class="btn lime" id="m-go">Send now</button><button class="btn ghost" id="m-close">Back</button></div>`);
-  $('#m-go').onclick=async()=>{closeModal();const recipients=willSend.map(p=>({player:p.id,vars:smsVars(p)}));const prog=$('#msg-progress');prog.innerHTML='<p class="note">Sending…</p>';$('#msg-send').disabled=true;
-    try{let out=await liveApi('/api/admin/sms/send',{body:MSG.text,template:MSG.template,recipients});let guard=0;
+  $('#m-go').onclick=async()=>{closeModal();const recipients=willSend.map(p=>({player:p.id,vars:smsVars(p)}));const prog=$('#msg-progress');prog.innerHTML='<p class="note">Sending…</p>';const sendBtn=$('#msg-send')||$('#t-send');if(sendBtn)sendBtn.disabled=true;
+    try{let out=await liveApi('/api/admin/sms/send',{body:MSG.text,template:MSG.template,recipients,thread:MSG.sendThread||'',threadLabel:MSG.sendThreadLabel||''});let guard=0;
       while(out.state!=='done'&&guard<60){prog.innerHTML=`<p class="note">Sending… ${out.sent+out.failed} of ${out.total-out.skipped}</p>`;out=await liveApi('/api/admin/sms/continue',{batch:out.batch});guard++}
       prog.innerHTML=`<p class="note"><b>Sent ${out.sent}${out.skipped?', skipped '+out.skipped+' (not opted in or no valid number)':''}${out.failed?', <span style="color:var(--orchid)">failed '+out.failed+'</span> — see Sent to retry':''}.</b></p>`;
-      SMSH=null;toast('Sent to '+out.sent+' famil'+(out.sent===1?'y':'ies')+'.');MSG.sel=[];MSG.via={};msgSave();setTimeout(()=>{MSG.tab='sent';renderMessages(app)},1500)}
-    catch(e){prog.innerHTML=`<p class="note" style="color:var(--orchid)">${esc(e.message)}</p>`;$('#msg-send').disabled=false}};
+      SMSH=null;toast('Sent to '+out.sent+' famil'+(out.sent===1?'y':'ies')+'.');MSG.sel=[];MSG.via={};if(MSG.sendThread){MSG.text='';MSG.ttext='';MSG.thread=MSG.sendThread}msgSave();setTimeout(()=>{MSG.tab='threads';renderMessages(app)},900)}
+    catch(e){prog.innerHTML=`<p class="note" style="color:var(--orchid)">${esc(e.message)}</p>`;if(sendBtn)sendBtn.disabled=false}};
+}
+
+/* ---- Threads (Option A, Antonio Oct 24): one conversation per group and per family ---- */
+function threadList(rows){const {groups,day}=smsGroups(rows);const fam=rows.filter(p=>p.status==='active'||p.status==='away');
+  const th=[];th.push({key:'all',label:'Everything sent',sub:'every text, every group',ids:fam.map(p=>p.id),kind:'all',color:'#efefea',ini:'All'});
+  for(const g of groups)th.push({key:g.key,label:g.label,sub:g.n+' player'+(g.n===1?'':'s'),ids:g.ids,kind:g.kind,color:g.kind==='coach'?'var(--mints)':'var(--cyans)',ini:g.label.replace(/^Coach /,'').split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase()});
+  for(const d of day)th.push({key:d.key,label:d.label,sub:d.n+' today',ids:d.ids,kind:d.kind,color:'var(--orchids)',ini:d.kind==='court'?'C'+(d.court||''):'Day',time:d.time||'',court:d.court||''});
+  for(const p of fam)th.push({key:'f:'+p.id,label:p.parent||p.name,sub:p.parent?p.name:(p.programLabel||''),ids:[p.id],kind:'family',color:'#efefea',ini:(p.parent||p.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase(),pid:p.id});
+  return th}
+function threadLines(t){const h=SMSH||{batches:[],logs:[],events:[]};const ids=new Set(t.ids);const lines=[];
+  const byBatch={};for(const l of h.logs)(byBatch[l.batch]=byBatch[l.batch]||[]).push(l);
+  const hk=(SMSD&&SMSD.settings&&SMSD.settings.threads)||{};const cleared=(hk[t.key]&&hk[t.key].clearedAt)||0;
+  for(const b of h.batches){if(b.hidden||(b.at||0)<cleared)continue;const ls=byBatch[b.id]||[];const mine=t.kind==='all'?ls:ls.filter(l=>ids.has(l.player));if(!mine.length)continue;
+    const match=t.kind==='all'||t.kind==='family'||(b.thread&&b.thread===t.key)||(!b.thread&&mine.length>=Math.max(1,Math.floor(ls.length*.8)));if(!match)continue;
+    const c={sent:mine.filter(l=>l.status==='sent').length,failed:mine.filter(l=>l.status==='failed').length,skipped:mine.filter(l=>l.status==='skipped').length,queued:mine.filter(l=>l.status==='queued').length,delivered:mine.filter(l=>/deliver/i.test(l.delivery||'')).length};
+    lines.push({dir:'out',at:b.at,body:(mine[0]&&mine[0].body)||b.text,by:b.byName||b.by,c,batch:b.id,label:b.threadLabel||''})}
+  // replies: only from families on the roster, only in that family's thread and their groups' — never the whole JustCall inbox (Antonio, Oct 24)
+  const firstOut=lines.length?Math.min(...lines.map(l=>l.at||0)):Infinity;   // a blank slate: replies show only after the first text sent from here to this thread (Antonio, Oct 24)
+  if(t.kind!=='all'&&lines.length){const seenId=new Set();for(const e of (h.events||[])){if((e.at||0)<firstOut||(e.at||0)<cleared)continue;if(!e.players||!e.players.some(id=>ids.has(id)))continue;const k=e.justcallId||(e.phone+'|'+e.body+'|'+Math.round((e.at||0)/60000));if(seenId.has(k))continue;seenId.add(k);const p=state.players.find(x=>(e.players||[]).includes(x.id));lines.push({dir:'in',at:e.at,body:e.body,kind:e.kind,who:p?((p.parent||'')+(p.parent?' · ':'')+p.name):phoneFmt(e.phone)})}}
+  lines.sort((a,b)=>(a.at||0)-(b.at||0));return lines}
+function drawThreads(app,body){
+  const rows=smsRows();const all=threadList(rows);const can=smsCanSend();
+  if(!SMSH){body.innerHTML='<p class="muted" style="margin-top:22px">Loading the conversations…</p>';liveApi('/api/admin/sms/history').then(h=>{SMSH=h;if(MSG.tab==='threads')drawThreads(app,body)}).catch(e=>{body.innerHTML=`<p class="note">${esc(e.message)}</p>`});return}
+  const last={};for(const t of all){const ls=threadLines(t);t.n=ls.length;t.last=ls[ls.length-1]||null;t.unread=ls.some(l=>l.dir==='in'&&l.kind==='reply'&&(l.at||0)>(Number(localStorage.getItem('pw-msg-seen-'+t.key))||0))}
+  const q=MSG.tq.trim().toLowerCase();
+  const hk=(SMSD.settings&&SMSD.settings.threads)||{};const archived=t=>{const a=hk[t.key]&&hk[t.key].archivedAt;return a&&(!t.last||(t.last.at||0)<a)};
+  let list=all.filter(t=>t.kind!=='family'?true:(t.n>0||q)).filter(t=>MSG.showArchived||!archived(t));const nArch=all.filter(t=>t.kind==='family'&&t.n>0&&archived(t)).length;if(q)list=list.filter(t=>t.label.toLowerCase().includes(q)||(t.sub||'').toLowerCase().includes(q));
+  const order=t=>t.kind==='all'?3e15:(t.last?t.last.at:0)+(t.kind==='family'?0:1e12);list.sort((a,b)=>order(b)-order(a));
+  if(!MSG.thread||!all.find(t=>t.key===MSG.thread))MSG.thread=(list[0]||all[0]).key;
+  const cur=all.find(t=>t.key===MSG.thread);const lines=threadLines(cur);try{localStorage.setItem('pw-msg-seen-'+cur.key,String(Date.now()))}catch(e){}
+  const members=rows.filter(p=>cur.ids.includes(p.id));const willSend=members.filter(p=>p.phone&&p.valid&&p.optIn),notIn=members.filter(p=>!(p.phone&&p.valid&&p.optIn));
+  const when=t=>{if(!t)return '';const d=new Date(t);const today=iso(d)===iso(TODAY);return today?d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):fmtDate(d)};
+  const dayOf=t=>{const d=new Date(t);return iso(d)===iso(TODAY)?'Today':iso(d)===iso(addDays(TODAY,-1))?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})};
+  const cfg=SMSD.settings||{};const tpl=cfg.templates||[];
+  let bubbles='',lastDay='',lastEv='';for(const l of lines){const dy=dayOf(l.at);if(dy!==lastDay){bubbles+=`<div class="tday">${esc(dy)}</div>`;lastDay=dy}
+    if(l.dir==='out')bubbles+=`<div class="bub out" data-batch="${esc(l.batch)}">${can?`<button class="bx" data-hide="${esc(l.batch)}" title="Remove this message from the thread">×</button>`:''}<span class="txt">${esc(String(l.body||'').split('\n')[0])}</span><span class="meta">${l.label&&cur.kind==='all'?esc(l.label)+' · ':''}sent ${l.c.sent}${l.c.delivered?' · '+l.c.delivered+' delivered':''}${l.c.failed?' · <b>'+l.c.failed+' failed</b>':''}${l.c.skipped?' · '+l.c.skipped+' skipped':''}${l.c.queued?' · '+l.c.queued+' sending':''} · ${esc(l.by||'')} · ${esc(when(l.at))}</span></div>`;
+    else if(l.kind!=='reply'){const key=l.kind+'|'+(l.who||'')+'|'+dy;if(key===lastEv)continue;lastEv=key;bubbles+=`<div class="bub ev"><span class="txt">${esc(l.who||'')} ${l.kind==='optout'?'replied STOP · opted out, not texted again':'replied START · opted back in'} · ${esc(when(l.at))}</span></div>`}
+    else bubbles+=`<div class="bub in"><span class="txt">${esc(l.body)}</span><span class="meta">${esc(l.who||'')} · ${esc(when(l.at))}</span></div>`}
+  if(!lines.length)bubbles=`<div class="tday">Nothing yet</div><div class="bub sys"><span class="txt">${cur.kind==='family'?'No text to this family yet.':'No text to this group yet. The first one starts the thread.'}</span></div>`;
+  const text=MSG.ttext||'';const seg=smsSegments(text+(cfg.footer===false?'':'\n'+FOOTER_OF(cfg.senderName||'ProWorld Academy')));
+  body.innerHTML=`<div class="threads${MSG.tOpen?' tv-open':''}"><div class="tlist card">
+    <div class="tfind"><input id="t-q" placeholder="Search a family or a group" value="${esc(MSG.tq)}" autocomplete="off"></div>
+    <div class="trows">${list.map(t=>`<button class="trow${t.key===cur.key?' on':''}" data-t="${esc(t.key)}"><span class="tav" style="background:${t.color}">${esc(t.ini)}</span><span class="tmain"><b>${esc(t.label)}</b><small>${t.last?esc((t.last.dir==='out'?'You: ':'')+String(t.last.body||'').split('\n')[0]):esc(t.kind==='family'?(t.sub||''):(t.sub||'')+' · nothing sent yet')}</small></span><span class="twhen">${t.last?esc(when(t.last.at)):''}${t.unread?'<i class="tdot"></i>':''}</span></button>`).join('')||'<p class="muted mini" style="padding:12px">No one matches.</p>'}${nArch?`<button class="btn xs ghost" data-arch="1" style="margin:8px auto 2px">${MSG.showArchived?'Hide archived':nArch+' archived'}</button>`:''}</div></div>
+   <div class="tview card">
+    <div class="thead"><button class="tback" data-tback aria-label="Back to the threads">‹</button><span class="tav big" style="background:${cur.color}">${esc(cur.ini)}</span><div><b>${esc(cur.label)}</b><br><small>${cur.kind==='family'?esc(cur.sub||''):members.length+' player'+(members.length===1?'':'s')+' · '+willSend.length+' famil'+(willSend.length===1?'y':'ies')+' opted in'+(notIn.length?' · '+notIn.length+' skipped':'')}</small></div><div class="r">${willSend.length?`<span class="pill ok">${willSend.length} will get it</span>`:''}${notIn.length?`<span class="pill">${notIn.length} not opted in</span>`:''}${cur.kind!=='all'?`<button class="btn xs ghost" data-who="1">Who</button>`:''}${can&&cur.kind!=='all'?`<button class="btn xs ghost" data-tmenu="1" title="Clear or archive this thread">⋯</button>`:''}</div></div>
+    <div class="bubbles" id="t-bubbles">${bubbles}</div>
+    ${can&&cur.kind!=='all'?`<div class="composer"><div class="to">To: <span class="chip sm on">${esc(cur.label)}</span>${cur.kind!=='family'?`<button class="chip sm" data-custom="1">+ add a coach, a day, a court or a family</button>`:''}<span class="cnt">${willSend.length} famil${willSend.length===1?'y':'ies'} · opted in only · ${seg.segs} segment${seg.segs===1?'':'s'}</span></div>
+      <div class="tpl">${tpl.map(t=>`<button class="tchip" data-tpl="${esc(t.id)}">${esc(t.name)}</button>`).join('')}<button class="tchip" data-tpl="" title="Templates">+ template</button></div>
+      <div class="box"><textarea id="t-text" rows="1" maxlength="1200" placeholder="Write to ${esc(cur.label)}…">${esc(text)}</textarea><button class="send" id="t-send" ${willSend.length&&text.trim()?'':'disabled'} title="Send">↑</button></div>
+      <div class="hint" style="margin:4px 2px 0">Placeholders work: {first_name} {program} {time} {court}. The footer and STOP handling are added by the system.</div></div>`:can?`<div class="composer"><div class="hint">Pick a group or a family on the left to write to it, or use Custom audience for a one-off mix.</div></div>`:''}
+   </div></div>`;
+  body.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{MSG.thread=b.dataset.t;MSG.ttext='';MSG.tOpen=true;drawThreads(app,body);const tv=body.querySelector('.tview');if(tv&&matchMedia('(max-width:900px)').matches)tv.scrollIntoView({block:'start'})});
+  const tb=body.querySelector('[data-tback]');if(tb)tb.onclick=()=>{MSG.tOpen=false;drawThreads(app,body)};
+  const qi=$('#t-q');qi.oninput=()=>{MSG.tq=qi.value;drawThreads(app,body);const i=$('#t-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)};
+  const bb=$('#t-bubbles');if(bb)bb.scrollTop=bb.scrollHeight;
+  const who=body.querySelector('[data-who]');if(who)who.onclick=()=>openModal(`<h3>${esc(cur.label)}</h3><p class="sub">${members.length} player${members.length===1?'':'s'}</p><table class="tablelist"><thead><tr><th>Player</th><th>Parent</th><th>Texts</th></tr></thead><tbody>${members.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.parent||'')}<div class="m">${p.phone?esc(phoneFmt(p.phone)):'no number'}</div></td><td>${p.optIn&&p.valid?'<span class="pill ok">opted in</span>':p.optOut?'<span class="pill warn">opted out</span>':!p.phone||!p.valid?'<span class="pill warn">no valid number</span>':'<span class="pill">not opted in</span>'}</td></tr>`).join('')}</tbody></table><div class="actions"><button class="btn ghost sm" id="m-close">Back</button></div>`);
+  const tact=async(path,payload,msg)=>{try{await liveApi(path,payload);SMSH=null;SMSD_AT=0;await smsLoad(true);toast(msg);drawThreads(app,body)}catch(e){toast(e.message)}};
+  body.querySelectorAll('[data-hide]').forEach(b=>b.onclick=()=>{openModal(`<h3>Remove this message?</h3><p class="sub">It leaves the thread for everyone. The record of who was texted stays in the log.</p><div class="actions"><button class="btn" id="m-hide">Remove</button><button class="btn ghost" id="m-close">Keep</button></div>`);$('#m-hide').onclick=()=>{closeModal();tact('/api/admin/sms/hide',{batch:b.dataset.hide},'Removed from the thread.')}});
+  const tm=body.querySelector('[data-tmenu]');if(tm)tm.onclick=()=>{const dir=window.PWCTX&&(window.PWCTX.director||window.PWCTX.admin||window.PWCTX.owner);openModal(`<h3>${esc(cur.label)}</h3><p class="sub">Housekeeping for this thread. Nothing is deleted from the log.</p><div class="actions" style="flex-wrap:wrap"><button class="btn" id="m-archive">Archive</button>${dir?`<button class="btn ghost" id="m-clear">Clear the thread</button>`:''}<button class="btn ghost" id="m-close">Back</button></div><p class="hint" style="margin-top:10px">Archive hides the thread from the list until something new is sent or received. Clear empties what is shown in it (directors).</p>`);$('#m-archive').onclick=()=>{closeModal();tact('/api/admin/sms/thread',{thread:cur.key,action:'archive'},'Archived.')};const c=$('#m-clear');if(c)c.onclick=()=>{closeModal();tact('/api/admin/sms/thread',{thread:cur.key,action:'clear'},'Thread cleared.')}};
+  const ar=body.querySelector('[data-arch]');if(ar)ar.onclick=()=>{MSG.showArchived=!MSG.showArchived;drawThreads(app,body)};
+  const custom=body.querySelector('[data-custom]');if(custom)custom.onclick=()=>{MSG.sel=members.map(p=>p.id);MSG.via={};msgSave();MSG.tab='compose';renderMessages(app)};
+  body.querySelectorAll('[data-tpl]').forEach(b=>b.onclick=()=>{if(!b.dataset.tpl){MSG.tab='templates';renderMessages(app);return}const t=tpl.find(x=>x.id===b.dataset.tpl);if(t){MSG.ttext=t.text;MSG.template=t.id;drawThreads(app,body);const ta=$('#t-text');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}}});
+  const ta=$('#t-text');if(ta){const grow=()=>{ta.style.height='auto';ta.style.height=Math.min(160,ta.scrollHeight)+'px'};grow();ta.oninput=()=>{MSG.ttext=ta.value;grow();const sb=$('#t-send');if(sb)sb.disabled=!(willSend.length&&ta.value.trim())};ta.onkeydown=ev=>{if((ev.metaKey||ev.ctrlKey)&&ev.key==='Enter'){ev.preventDefault();const sb=$('#t-send');if(sb&&!sb.disabled)sb.click()}}}
+  const sb=$('#t-send');if(sb)sb.onclick=()=>{MSG.text=MSG.ttext;MSG.sendThread=cur.key;MSG.sendThreadLabel=cur.label;MSG.via={};for(const p of willSend)if(cur.time||cur.court)MSG.via[p.id]={time:cur.time||'',court:cur.court||''};const preview=willSend[0]||null;const holder=document.createElement('div');holder.id='msg-progress';body.appendChild(holder);const fake={disabled:false};smsConfirm(app,body,willSend,notIn.filter(p=>p.phone&&p.valid),notIn.filter(p=>!p.phone||!p.valid),preview)};
 }
 
 /* ---- Sent ---- */
@@ -1198,6 +1442,21 @@ function drawSmsSettings(app,body){
   const oir=$('#sms-optin-roster');if(oir)oir.onclick=async()=>{if(oir.dataset.armed!=='1'){oir.dataset.armed='1';oir.textContent='Record consent for all of them, in your name?';oir.classList.add('lime');setTimeout(()=>{if(oir.isConnected&&oir.dataset.armed==='1'){oir.dataset.armed='';oir.classList.remove('lime');drawSmsSettings(app,body)}},8000);return}oir.disabled=true;const out=$('#sms-optin-out');out.textContent='Recording…';try{const r=await liveApi('/api/admin/sms/optin-roster',{});toast(r.optedIn+' families opted in.');await smsLoad(true);drawSmsSettings(app,body)}catch(e){out.textContent=e.message;oir.disabled=false}};
   $('#sms-test').onclick=async()=>{const out=$('#sms-test-out');const ph=$('#sms-test-phone').value.trim();if(!ph){out.textContent='Type your mobile first.';return}out.textContent='Sending…';$('#sms-test').disabled=true;try{const r=await liveApi('/api/admin/sms/test',{phone:ph});out.textContent='Sent — JustCall id '+(r.id||'(none)')+'. Check your phone.';SMSH=null}catch(e){out.textContent=e.message}finally{$('#sms-test').disabled=false}};
   $('#sms-save').onclick=async()=>{const out=$('#sms-out');out.textContent='Saving…';try{SMSD.settings=await liveApi('/api/admin/sms/settings',{senderName:$('#sms-sender').value,footer:$('#sms-footer').checked,inboxUrl:$('#sms-inbox').value.trim()});out.textContent='Saved.';drawSmsSettings(app,body)}catch(e){out.textContent=e.message}};
+  if(DB.ctx&&DB.ctx.owner){const sec=document.createElement('section');sec.className='section';sec.id='coach-alerts';sec.innerHTML='<h2>Coach alerts</h2><p class="muted mini">Loading…</p>';body.appendChild(sec);
+    const drawCA=(d)=>{sec.innerHTML=`<h2>Coach alerts</h2><p class="muted mini" style="margin:-6px 0 12px">A private booked or cancelled, and the hour-before reminder, reach the coach on their <b>personal Slack</b>. One Slack bot token links everyone by their sign-in e-mail. ${d.hasToken?'<span class="pill ok">Slack linked</span>':'<span class="pill warn">No Slack bot token yet</span>'}</p>
+      <div class="actions"><input id="ca-token" type="password" placeholder="${d.hasToken?'Paste a new bot token to replace it':'Paste the Slack bot token (xoxb-…)'}" style="border:1.5px solid var(--line);border-radius:4px;padding:8px 10px;min-width:320px"><button class="btn sm" id="ca-save">${d.hasToken?'Replace and relink':'Save and link the coaches'}</button>${d.hasToken?'<button class="btn sm ghost" id="ca-link">Relink by e-mail</button>':''}<span class="muted mini" id="ca-out"></span></div>
+      <p class="hint">Slack → api.slack.com/apps → the ProWorld app → OAuth & Permissions: bot scopes <b>chat:write</b>, <b>im:write</b>, <b>users:read</b>, <b>users:read.email</b> → Install to workspace → copy the Bot User OAuth Token. The token never leaves the engine.</p>
+      <table class="tablelist" style="margin-top:10px"><thead><tr><th>Person</th><th>Slack</th><th>Mobile</th></tr></thead><tbody>${(d.staff||[]).map(x=>`<tr><td><b>${esc(x.name)}</b><div class="m">${esc(x.email)}</div></td><td>${x.linked?'<span class="pill ok">'+esc(x.slack||'linked')+'</span>':'<span class="pill warn">not linked</span>'}</td><td>${x.phone?'<span class="pill">on file</span>':'<span class="m">—</span>'}</td></tr>`).join('')}</tbody></table>`;
+      const out=$('#ca-out');$('#ca-save').onclick=async()=>{const t=$('#ca-token').value.trim();if(!t){out.textContent='Paste the token first.';return}out.textContent='Linking…';try{const r=await liveApi('/api/admin/coachalerts',{slackBotToken:t});out.textContent=`Linked ${r.linked.length}, not found on Slack: ${r.missing.length}.`;drawCA(await liveApi('/api/admin/coachalerts'))}catch(e){out.textContent=e.message}};
+      const lk=$('#ca-link');if(lk)lk.onclick=async()=>{out.textContent='Linking…';try{const r=await liveApi('/api/admin/coachalerts/link',{});out.textContent=`Linked ${r.linked.length}, not found on Slack: ${r.missing.length}${r.missing.length?' ('+r.missing.map(m=>m.name).join(', ')+')':''}.`;drawCA(await liveApi('/api/admin/coachalerts'))}catch(e){out.textContent=e.message}}};
+    liveApi('/api/admin/coachalerts').then(drawCA).catch(e=>{sec.innerHTML='<h2>Coach alerts</h2><p class="note">'+esc(e.message)+'</p>'});
+    // the idea engine (Oct 28): the Marketing page asks Claude for new ideas on the spot; the key lives with the engine
+    const ai=document.createElement('section');ai.className='section';ai.id='idea-engine';ai.innerHTML='<h2>Idea engine</h2><p class="muted mini">Loading…</p>';body.appendChild(ai);
+    const drawAI=(d)=>{ai.innerHTML=`<h2>Idea engine</h2><p class="muted mini" style="margin:-6px 0 12px">The Marketing page's Swap and "Ask the engine" write new ideas with Claude. ${d.ready?'<span class="pill ok">key on file</span>':'<span class="pill warn">no key yet</span>'}</p>
+      <div class="actions"><input id="ai-key" type="password" placeholder="${d.ready?'Paste a new key to replace it':'Paste the Anthropic API key (sk-ant-…)'}" style="border:1.5px solid var(--line);border-radius:4px;padding:8px 10px;min-width:320px"><button class="btn sm" id="ai-save">${d.ready?'Replace the key':'Save the key'}</button><span class="muted mini" id="ai-out"></span></div>
+      <p class="hint">console.anthropic.com → API keys → Create key. It never leaves the engine; the page only ever sees the ideas. Each ask costs a few cents.</p>`;
+      $('#ai-save').onclick=async()=>{const out=$('#ai-out');const k=$('#ai-key').value.trim();if(!k){out.textContent='Paste the key first.';return}out.textContent='Saving…';try{await liveApi('/api/admin/ai',{anthropicKey:k});out.textContent='Saved. The Marketing page can ask now.';drawAI({ready:true})}catch(e){out.textContent=e.message}}};
+    liveApi('/api/admin/ai').then(drawAI).catch(e=>{ai.innerHTML='<h2>Idea engine</h2><p class="note">'+esc(e.message)+'</p>'})}
 }
 /* the player's sheet: consent and the last texts */
 async function smsPlayerBlock(pid){const el=$('#ps-sms');if(!el)return;try{const r=await liveApi('/api/admin/sms/player?id='+encodeURIComponent(pid));const rc=r.recipient;const el2=$('#ps-sms');if(!el2)return;
@@ -1207,15 +1466,19 @@ async function smsPlayerBlock(pid){const el=$('#ps-sms');if(!el)return;try{const
 
 /* ====================== SIGN-IN + THE DATABASE (the site's one PROWORLD sign-in) ====================== */
 function pickRole(ctx){
-  if(ROLES[location.hash.replace('#','')]||TABS[location.hash.replace('#','')]||state.roleChosen)return;
+  // the most this person may see, from their staff record (the database rules decide what they can read; this decides the tabs)
   const r=String(ctx&&ctx.rec&&ctx.rec.role||'').toLowerCase();
-  state.role=(ctx&&(ctx.owner||ctx.admin))?'owner':r==='coach'?'coach':r==='desk'?'desk':'owner';
+  const max=(ctx&&(ctx.owner||ctx.admin))?'owner':(ctx&&ctx.director)||r==='director'?'director':r==='desk'?'desk':'coach';
+  const rank={coach:1,parent:1,desk:2,director:3,owner:4};
+  const asked=ROLES[location.hash.replace('#','')]||TABS[location.hash.replace('#','')]||state.roleChosen;
+  if(!asked||!ROLES[state.role]||rank[state.role]>rank[max])state.role=max;
+  if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0];
 }
 function monthStart(){return iso(new Date(TODAY.getFullYear(),TODAY.getMonth(),1))}
 async function connect(ctx){
   DB.ctx=ctx;DB.fs=PWAuth.fs();if(!DB.fs){render();return}
-  fetch('/api/catalog',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{CATL=c}).catch(()=>{});
   liveApi('/api/admin/overview').then(r=>{if(!LIVE)LIVE=r}).catch(()=>{});   // so a private booked before the Players tab was ever opened still charges the card on file
+  fetch('/api/catalog',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{CATL=c;if(c&&Array.isArray(c.camps)&&c.camps.length){CAMPS.splice(0,CAMPS.length,...c.camps.map(x=>({id:x.id,name:x.name,dates:x.dates,ages:x.ages,d:x.blurb,options:x.options.map(o=>({id:o.id,l:o.label,p:o.price}))})));if(state.view==='account')render()}}).catch(()=>{});   // the camps on sale come from the engine's catalog (winter, spring, summer land here on their own)
   const fs=DB.fs;let lastRoster=-1;
   const rerender=(why)=>{if(!DB.ready)return;if(state.view==='privates'||state.view==='enroll'||state.view==='messages'){if(why!=='players'||state.players.length===lastRoster)return}if(why==='players')lastRoster=state.players.length;render()};
   try{const d=await fs.doc('backend/state').get();if(d.exists)applyShared(d.data())}catch(e){console.error('backend/state',e)}
