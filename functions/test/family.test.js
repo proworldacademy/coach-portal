@@ -116,6 +116,9 @@ test('attendance comes from the posted lists only; reports only when final and m
   seed['assessments/a1/body/values'] = { v: { sc_tennis: 7, sc_fitness: 6, sc_overall: 7, p_strengths: 'Great footwork.', tk_f1: 'Serve toss', tk_f2: 'Backhand depth', s_parents: 'Proud of Liam this quarter.', ft_10m: '1.9' } };
   seed['assessments/a2'] = { playerId: 'ft-liam-r', type: 'monthly', status: 'final', sentToParents: false, period: 'Oct 2026', evalDate: '2026-10-12' };
   seed['assessments/a3'] = { playerId: 'ft-liam-r', type: 'monthly', status: 'draft', sentToParents: true, period: 'Nov 2026', evalDate: '2026-11-01' };
+  // the 3-month report (Nov 2026): the goals lead, then how to get there per pillar, then the coach's note
+  seed['assessments/a4'] = { playerId: 'ft-liam-r', type: 'report3m', status: 'final', sentToParents: true, period: 'Q4 2026', evalDate: '2026-10-12', coach: 'Eric Samuelsson' };
+  seed['assessments/a4/body/values'] = { v: { r_goals: 'Serve a full game without a double fault.', r_tennis: 'Toss higher, same rhythm every time.', r_fitness: 'Two mobility sessions a week.', r_mental: 'Reset between points.', r_comp: 'Two L5 tournaments before Christmas.', s_parents: 'A great start to the quarter.' } };
   const db = fakeDb(seed);
   const maria = await FAMILY.me(db, fakeStripe({ prices: PRICES }), { email: 'maria.rivera@example.com', name: 'Maria' }, { today: '2026-10-13' });
   const liam = maria.players.find((p) => p.name === 'Liam Rivera'); const mia = maria.players.find((p) => p.name === 'Mia Rivera');
@@ -123,8 +126,12 @@ test('attendance comes from the posted lists only; reports only when final and m
   assert.equal(liam.attendance.present, 1);
   assert.equal(liam.attendance.missed, 0);
   assert.equal(mia.attendance.missed, 1);
-  assert.equal(liam.reports.length, 1);
-  const r = liam.reports[0];
+  assert.equal(liam.reports.length, 2);
+  const r3 = liam.reports.find((x) => x.type === 'report3m');
+  assert.equal(r3.title, '3-Month Report');
+  assert.deepEqual(r3.notes.map((n) => n.id), ['goals', 'tennis', 'fitness', 'mental', 'competition', 'parents']);
+  assert.equal(r3.notes[0].label, 'The goals for the next 3 months'); assert.equal(r3.notes[0].text, 'Serve a full game without a double fault.');
+  const r = liam.reports.find((x) => x.type === 'quarterly_hp');
   assert.equal(r.title, 'Quarterly Player Assessment');
   assert.equal(r.coach, 'Eric');
   assert.deepEqual(r.scores, { tennis: 7, fitness: 6, overall: 7 });

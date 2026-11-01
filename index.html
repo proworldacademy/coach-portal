@@ -168,7 +168,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   const plural = (n, one, many) => n === 1 ? one : many;
   let ctx = null, fs = null, staff = [], requests = [];
   // what the database says, piece by piece; each tile repaints as its piece arrives
-  const S = { players: null, board: null, sync: null, tryouts: null, checks: null, numbers: null, weeks: null, enroll: null, family: null, links: {} };
+  const S = { players: null, board: null, sync: null, tryouts: null, checks: null, numbers: null, weeks: null, enroll: null, family: null, contact: null, links: {} };
 
   D.mount({ skin: "home", active: "/", strip: true });
   $("date").textContent = D.greet().date + " · Delray Beach";
@@ -193,6 +193,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (has("ai-check") && S.checks && (S.checks.due + S.checks.bad) > 0) out.push({ id: "checks", n: S.checks.due + S.checks.bad, what: S.checks.bad ? plural(S.checks.due + S.checks.bad, "AI check due", "AI checks due") + " · " + S.checks.bad + " with a problem" : plural(S.checks.due, "AI check due today", "AI checks due today"), where: "AI check", href: "/checks" });
     if (ctx && ctx.admin && requests.length) { const n = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length; if (n) out.push({ id: "requests", n, what: plural(n, "person asked to get in", "people asked to get in"), where: "Access", href: "#people-sec" }); }
     if (has("coach-portal") && S.players && S.players.toAssign > 0) out.push({ id: "assign", n: S.players.toAssign, what: plural(S.players.toAssign, "new player needs a coach", "new players need a coach"), where: "Coaches", href: "/portal" });
+    if (has("coach-portal") && S.contact && S.contact.left > 0) out.push({ id: "contact", n: S.contact.left, what: plural(S.contact.left, "family nobody has been in touch with this week", "families nobody has been in touch with this week"), where: "Weekly contact", href: "/portal#/contact" });
     if (has("backend") && S.family && S.family.open > 0) out.push({ id: "family", n: S.family.open, what: plural(S.family.open, "family request waiting for the front desk", "family requests waiting for the front desk"), where: "Admin", href: "/backend#desk" });
     if ((has("tryouts") || has("coach-portal")) && S.tryouts && S.tryouts.waiting > 0) out.push({ id: "tryouts", n: S.tryouts.waiting, what: plural(S.tryouts.waiting, "try-out waiting for a result or a decision", "try-outs waiting for a result or a decision"), where: "Try-outs", href: "/portal#/tryouts" });
     return out;
@@ -224,6 +225,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (has("coach-portal") && S.sync && S.sync.toCheck) out.push({ cls: "due", html: "<b>" + S.sync.toCheck + "</b> to check on the board", href: "/portal#/board" });
     if (S.players) out.push({ cls: "ok", html: "<b>" + fmt(S.players.active) + "</b> active players", href: has("coach-portal") ? "/portal" : "/backend" });
     if (has("coach-portal") && S.players && S.players.toAssign) out.push({ cls: "new", html: "<b>" + S.players.toAssign + "</b> new " + plural(S.players.toAssign, "player needs", "players need") + " a coach", href: "/portal" });
+    if (has("coach-portal") && S.contact) out.push({ cls: S.contact.left ? "bad" : "ok", html: S.contact.left ? "<b>" + S.contact.left + "</b> " + plural(S.contact.left, "family", "families") + " still to reach this week" : "every family heard from their coach this week", href: "/portal#/contact" });
     if (has("mkt") && S.weeks && S.weeks.missing) out.push({ cls: "bad", html: "<b>" + S.weeks.missing + " " + plural(S.weeks.missing, "post", "posts") + "</b> missing from the plan", href: "/marketing" });
     if (has("mkt") && S.weeks && S.weeks.waiting) out.push({ cls: "due", html: "<b>" + S.weeks.waiting + " " + plural(S.weeks.waiting, "post", "posts") + "</b> waiting for approval", href: "/marketing" });
     if (has("mkt") && S.numbers && S.numbers.change != null) out.push({ cls: "ok", html: "Instagram <b>" + (S.numbers.change >= 0 ? "+" : "") + fmt(S.numbers.change) + "</b> this week", href: "/marketing" });
@@ -343,14 +345,14 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   // ── everything else: one list with a filter ──
   const dateOf = (s) => { const m = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)[a-z]*\.? (\d{1,2}), (20\d\d)/.exec(String(s || "")); return m ? m[1].slice(0, 3) + " " + m[2] : ""; };
-  const kindOf = (p) => ({ plan: "plan", proto: "prototype", report: "report", page: "page", archive: "archive" }[p.status] || p.section);
+  const kindOf = (p) => ({ plan: "plan", proto: "prototype", report: "report", page: "page", archive: "archive", parked: "parked" }[p.status] || p.section);
   let libF = "";
   function library() {
-    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id));
+    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id) && (!p.owners || ctx.owner));   // owners: true = the owners' shelf (the parked reports)
     $("lib-sec").hidden = !mine.length; if (!mine.length) return;
     $("lib-small").textContent = mine.length + " pages";
     const groups = [["", "All · " + mine.length], ["plan", "Plans"], ["report", "Reports"], ["page", "Pages"]];
-    const match = (p, f) => !f || (f === "plan" ? /plan|prototype/.test(kindOf(p)) : f === "page" ? /page|archive/.test(kindOf(p)) : kindOf(p) === f);
+    const match = (p, f) => !f || (f === "plan" ? /plan|prototype/.test(kindOf(p)) : f === "page" ? /page|archive|parked/.test(kindOf(p)) : kindOf(p) === f);
     $("libh").innerHTML = groups.filter((g) => !g[0] || mine.some((p) => match(p, g[0]))).map((g) => '<button type="button" class="' + (g[0] === libF ? "on" : "") + '" data-f="' + g[0] + '">' + esc(g[1]) + "</button>").join("");
     const rows = mine.filter((p) => match(p, libF));
     $("lib").innerHTML = rows.map((p, i) => '<a class="lr" href="' + esc(p.url) + '" style="animation-delay:' + i * 25 + 'ms" title="' + esc(p.desc) + '"><b>' + esc(p.name) + '</b><span class="t">' + esc(kindOf(p)) + '</span><span class="d">' + esc(dateOf(p.desc)) + "</span><em>→</em></a>").join("");
@@ -448,6 +450,9 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       const r = { active: 0, groups: {}, noGroup: 0, toAssign: 0 }; const now = Date.now();
       s.forEach((d) => { const p = d.data() || {}; if (!p.name) return; r.active++; if (p.group) r.groups[p.group] = (r.groups[p.group] || 0) + 1; else r.noGroup++; const en = p.enroll; if (en && en.at && now - en.at < 14 * DAY && !p.coach) r.toAssign++; });
       S.players = r; repaint();
+      // the weekly contact tracker: who has not heard from their coach yet this week (Monday to Sunday, keyed by the Monday)
+      const wk = (() => { const x = new Date(); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return iso(x); })();
+      quiet(fs.collection("contacts").where("week", "==", wk).get().then((c) => { const done = new Set(); c.forEach((d) => { const x = d.data() || {}; if (x.done === true && x.playerId) done.add(x.playerId); }); const act = []; s.forEach((d) => { const p = d.data() || {}; if (p.name) act.push(d.id); }); const n = act.filter((id) => done.has(id)).length; S.contact = { week: wk, done: n, total: act.length, left: act.length - n }; repaint(); }));
     }));
     if (wants("board")) {
       quiet(fs.doc("board/current").get().then((d) => {

@@ -91,12 +91,15 @@ async function attendance(db, players, today) {
 }
 
 /* ── the reports the coaches sent: final, marked "sent to parents" ── */
-const TITLES = { quarterly_hp: 'Quarterly Player Assessment', quarterly: 'Quarterly Player Assessment', quarterly_u: 'Under 12 Player Assessment', monthly: 'Monthly Player Report', camp_snapshot: 'Camp Week Snapshot', camp_performance: 'Camp Performance Report', u10: 'Under 10 Player Progress Update' };
+const TITLES = { report3m: '3-Month Report', quarterly_hp: 'Quarterly Player Assessment', quarterly: 'Quarterly Player Assessment', quarterly_u: 'Under 12 Player Assessment', quarterly_u12: 'Under 12 Player Assessment', progress_u10: 'Under 10 Player Progress Update', monthly: 'Monthly Player Report', camp_snapshot: 'Camp Week Snapshot', camp_performance: 'Camp Performance Report', u10: 'Under 10 Player Progress Update' };
+// the 3-month report (Nov 2026) leads with the goals, then how to get there per pillar; the older forms keep their own fields
 const NOTE_FIELDS = [
+  ['goals', 'The goals for the next 3 months', ['r_goals']],
   ['strengths', 'Key strengths', ['p_strengths', 'ob_strengths']],
-  ['tennis', 'Tennis', ['tennis_overall']],
-  ['fitness', 'Fitness', ['fitness_overall']],
-  ['mental', 'Mental performance', ['mental_overall']],
+  ['tennis', 'Tennis', ['r_tennis', 'tennis_overall', 'mo_tennis']],
+  ['fitness', 'Fitness', ['r_fitness', 'fitness_overall', 'mo_fitness']],
+  ['mental', 'Mental performance', ['r_mental', 'mental_overall', 'mo_mental']],
+  ['competition', 'Competition', ['r_comp', 'mo_comp']],
   ['next', 'What comes next', ['next_focus', 'wk_next', 'cp_next']],
   ['parents', 'A note from your coach', ['s_parents']]
 ];

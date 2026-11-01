@@ -10,6 +10,7 @@ const CHECKOUT = require('../lib/checkout');
 CHECKOUT._setClock(() => Date.UTC(2026, 9, 13, 14, 0, 0));   // the fixtures live on Oct 13, 2026 — the tests must not age with the real calendar
 const JOBS = require('../lib/jobs');
 const { fakeStripe } = require('./fake-stripe');
+const { frozen } = require('./frozen');
 
 /* The published examples in backend/BILLING-RULES.md (Afterschool · 3 days · $980) */
 test('training-day calendar matches the published 2026–27 table', () => {
@@ -105,7 +106,7 @@ test('monthly enrollment: the start month is a plain payment that saves the card
   // Stripe confirms the payment (the family lands on the thank-you page): the plan is created on the saved card.
   const session = stripe._db.sessions[0];
   Object.assign(session, { status: 'complete', payment_status: 'paid', customer: stripe._db.customers[0], payment_intent: { id: 'pi_1', payment_method: 'pm_card_1' }, line_items: { data: [{ description: 'Afterschool | Fall 2026 — start month (prorated by training days)', amount_total: 62400 }] }, customer_details: { email: 'jane.torres@example.com' } });
-  const st = await CHECKOUT.sessionStatus(stripe, session.id);
+  const st = await frozen(NOW_OCT13 * 1000, () => CHECKOUT.sessionStatus(stripe, session.id));   // the plan is created "today" (Oct 13 in this story): the anchor stays Nov 1
   assert.equal(st.status, 'complete'); assert.equal(st.paid, 62400);
   const created = stripe._calls.filter((c) => c.name === 'subscriptions.create');
   assert.equal(created.length, 1);

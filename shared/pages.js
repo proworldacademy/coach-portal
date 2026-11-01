@@ -21,7 +21,7 @@
     { id: "mkt", section: "tools", door: "marketing", name: "Marketing Command Center", short: "Marketing", color: "", status: "here", opens: "site", menu: true, url: "/marketing", owner: "Marketing",
       desc: "Home with this week's numbers and posts, the two-week plan to approve, Meta ads, and the reports the Sunday and Monday runs post. The idea banks, archive and brief live in its Library." },
     { id: "coach-portal", section: "tools", door: "coaches", name: "Coach Portal · Player Assessments", short: "Coaches", color: "mint", status: "here", opens: "site", menu: true, url: "/portal", owner: "Coaches · Directors",
-      desc: "Every player's quarterly assessment (tennis, fitness, mental, summary), monthly and camp reports, videos, the journal and the follow-up checklist, with the branded PDF for parents." },
+      desc: "Every player with their coach, the 3-month report (the goals for the next three months, then tennis, fitness, mental, competition and a note from the coach), the weekly contact tracker, videos, the journal and the follow-up checklist, with the branded PDF for parents. The quarterly assessment and the camp reports are parked (Nov 1, 2026)." },
     { id: "tryouts", section: "tools", door: "coaches", name: "Try-outs", short: "Try-outs", color: "mint", status: "here", opens: "site", menu: false, url: "/portal#/tryouts", owner: "Front desk · Coaches",
       desc: "Every try-out from the first call to the decision: date and time, the parent, what we saw, the group offered." },
     { id: "coach-board", section: "tools", door: "coaches", name: "Coach Board", short: "Coach Board", color: "cyan", status: "here", opens: "site", menu: false, url: "/portal#/board", with: "coach-portal", owner: "Directors · Coaches",
@@ -77,6 +77,8 @@
       desc: "Aug 28, 2026 — community and social strategy 2026 → 2028: serialized academy content and the rooms the algorithm can't touch." },
     { id: "launch", section: "library", name: "The Proworld Launch File", color: "gray", status: "report", opens: "site", url: "/p?id=launch", file: "launch", owner: "Leadership",
       desc: "Aug 27, 2026 — five exercises: the investor autopsy, the existing customer, a $0 launch sequence, the competitive blind-spot map and the path to first revenue." },
+    { id: "parked-reports", section: "library", door: "coaches", name: "Parked reports · the quarterly assessment, the monthly report, the camp reports", short: "Parked", color: "gray", status: "parked", opens: "site", url: "/portal#/parked", with: "coach-portal", owners: true, owner: "Owners",
+      desc: "Parked Nov 1, 2026: the full quarterly assessment (HP, Under 12, Under 10 progress), the monthly report and the two camp reports. Coaches write the 3-month report instead; everything on file still opens, and an owner can still start a parked one from a player's page." },
     { id: "tennis-tryout", section: "library", name: "Tennis Section Try-Out", color: "gray", status: "archive", opens: "site", url: "/p?id=tennis-tryout", file: "tennis-tryout", owner: "Leadership",
       desc: "The five ways a coach could fill the Tennis part of the quarterly (A–E). Decided Oct 8, 2026: option C is live in the Coach Portal." }
   ];
@@ -89,7 +91,7 @@
       { name: "Books", href: "/backend#books" }, { name: "Messages", href: "/backend#messages" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" } ] },
     { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal", "tryouts"], items: [
       { name: "Players Portal", href: "/portal", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
-      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
+      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Weekly contact", href: "/portal#/contact", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
       { name: "Messages", href: "/backend#messages", page: "backend" }, { name: "Courts", href: "/backend#courts", page: "backend" }, { name: "Privates", href: "/backend#privates", page: "backend" } ] },
     { id: "clients", name: "Clients", href: "/clients", page: ["backend"], items: [
       { name: "The client account", href: "/family" }, { name: "Enroll · public link", href: "/enroll" }, { name: "Courts", href: "/backend#courts" },
@@ -136,7 +138,7 @@
   const LEGACY = ["coach-portal", "tryouts"];
   // Pages that used to exist under another id: whoever had the old one has the new one.
   const ALIAS = { "be-owner": "backend", "be-desk": "backend", "be-coach": "backend", "be-parent": "backend" };
-  const STATUS_LABEL = { here: "Live", live: "Live", proto: "Prototype", plan: "Plan", page: "Page", report: "Report", archive: "Archive" };
+  const STATUS_LABEL = { here: "Live", live: "Live", proto: "Prototype", plan: "Plan", page: "Page", report: "Report", archive: "Archive", parked: "Parked" };
   const OPENS_LABEL = { site: "", claude: "Opens in Claude", link: "Its own page" };
   window.PW_PAGES = { PAGES, DOORS, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL };
 })();
