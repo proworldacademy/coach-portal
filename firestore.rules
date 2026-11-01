@@ -205,6 +205,17 @@ service cloud.firestore {
     match /videos/{id}  { allow read, write: if portal(); }
     match /journal/{id} { allow read, write: if portal(); }
     match /goals/{id}   { allow read, write: if portal(); }
+    // The weekly contact tracker (Nov 1, 2026): one record per player per week ({playerId}_{Monday}), ticked by the coach on
+    // the portal; the engine (runs) may read it for the weekly reminders and write a JustCall-sourced tick later.
+    match /contacts/{id} {
+      allow read: if runs() || portal() || backend();
+      allow create, update: if (runs() || portal())
+        && id.matches('[A-Za-z0-9_-]+_[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && request.resource.data.keys().hasOnly(['playerId', 'playerName', 'group', 'coach', 'week', 'done', 'by', 'byEmail', 'at', 'how', 'who', 'source', 'note'])
+        && request.resource.data.playerId is string && request.resource.data.week is string && request.resource.data.done is bool
+        && id == request.resource.data.playerId + '_' + request.resource.data.week;
+      allow delete: if !runs() && portal() && director();
+    }
 
     // ── Pages copied onto this site (/p?id=<page>): the reports, plans and prototypes that used to open on claude.ai ──
     // Each is a locked file on the public site; its key is here and opens only for someone who holds that page.
