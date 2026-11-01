@@ -24,7 +24,11 @@
     return '<div class="card"><div class="card-label">' + label + (sub ? ' <span class="small muted">· ' + sub + "</span>" : "") + "</div>" + (body || '<div class="empty">' + empty + "</div>") + "</div>";
   };
 
+  const stash = document.createElement("div"); stash.hidden = true; document.body.appendChild(stash);
+  const bcard = () => { const b = $("brief-buttons"); return b ? (b.closest(".card") || b) : null; };
+  const acard = () => { const a = $("ad-plan"); return a ? a.closest(".card") : null; };
   function render() {
+    [bcard(), acard()].forEach((el) => { if (el) stash.appendChild(el); });   // the two cards survive the redraw
     const fn = PW.curFN(), pair = PW.fnPair(fn), c = PW.fnCounts();
     const allLocked = pair.every((ws) => S.weeks[ws] && S.weeks[ws].locked);
     const built = pair.filter((ws) => S.weeks[ws]).length;
@@ -45,9 +49,9 @@
       section("Carousels &amp; posts", "designed by the editor", postRows, "No carousels or posts yet.") +
       section("Ads", "the ad videos these weeks · the campaigns they serve below", adRows, "No ad video yet.") + '<div id="create-adplan"></div>' +
       section("In hand", "spares, stories, anything else · use one instead of a weak post", handRows, "Nothing in hand.");
-    const bb = $("brief-buttons"); const bc = bb && (bb.closest(".card") || bb); const slot = $("create-briefs");
+    const bc = bcard(); const slot = $("create-briefs");
     if (bc && slot) { slot.appendChild(bc); const lab = bc.querySelector(".card-label"); if (lab) lab.innerHTML = 'Send it <span class="small muted">· coach brief · photographer shot list · editor · posting plan</span>'; }
-    const ap = $("ad-plan"); const apc = ap && ap.closest(".card"); const aslot = $("create-adplan"); if (apc && aslot) aslot.appendChild(apc);
+    const apc = acard(); const aslot = $("create-adplan"); if (apc && aslot) aslot.appendChild(apc);
     host.querySelectorAll(".chk").forEach((k) => k.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); k.click(); } }));
   }
   render();
