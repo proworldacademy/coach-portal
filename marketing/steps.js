@@ -34,7 +34,7 @@
   const host = $("tab-home").parentNode;
   const mk = (id, title, sub) => { const s = document.createElement("section"); s.className = "tab"; s.id = "tab-" + id; s.innerHTML = '<h1 class="h-display page-title">' + title + '</h1><p class="page-sub">' + sub + "</p>"; host.insertBefore(s, $("tab-home")); return s; };
   const sReport = mk("sreport", "The <em>report</em>", "Read, nothing to click. Every morning the brain reads our Instagram and the ad account, every Monday the competitors, every Sunday it writes what worked.");
-  const sCreate = mk("screate", "<em>Create</em> the two weeks", "One button builds the two weeks from the banks the brain keeps refilling. Every coach once, the campus three times. Tick, swap, approve, send the briefs from here.");
+  const sCreate = mk("screate", "<em>Create</em> the next two weeks", "One button. The brain builds the two weeks from everything it has learned: the banks, the pillars, what worked, the season, the competitors. Then, by category: the coach videos, the carousels and posts, the ads, what is in hand. Approve, swap, send.");
   const sExec = mk("sexecute", "<em>Execute</em>", "One table: created · posted · missing, ticked by the morning run from Instagram. Missing goes first into the next two weeks.");
   const sMore = mk("smore", "<em>More</em>", "The reference screens: the banks, the archive, the history, the season, the runs. Same as before, one door.");
   const move = (sec, el) => { if (el && el.parentNode !== sec) sec.appendChild(el); };
