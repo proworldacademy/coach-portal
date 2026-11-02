@@ -29,6 +29,7 @@ const FEED = require('./lib/feed');
 const FAMILY = require('./lib/family');
 const SMS = require('./lib/sms');
 const MONDAY = require('./lib/mondayimport');
+const CONTACTS = require('./lib/contacts');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -146,6 +147,10 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'GET /admin/ai') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const st = await IDEAS.settings(ctx.db, true); return send(res, 200, { ready: /^sk-ant-/.test(String(st.anthropicKey || '')), by: st.by || '', at: st.at || 0 }); }
       if (route === 'POST /admin/ai') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const k = S.clean(b.anthropicKey, 250); if (!/^sk-ant-[A-Za-z0-9_-]{30,}$/.test(k)) throw S.err(400, 'key', 'That does not look like an Anthropic API key (it starts with sk-ant-).'); await ctx.db.doc('settings/ai').set({ anthropicKey: k, by: who.email, at: Date.now() }, { merge: true }); IDEAS.forget(); return send(res, 200, { ready: true }); }
       if (route === 'POST /admin/coachalerts/link') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await LESSONS.linkSlack(ctx.db)); }
+      // the weekly contact tracker (Nov 2): JustCall → ticks, the Friday reminder, who has a JustCall seat — directors and owners
+      if (route === 'POST /admin/contacts/sync') { if (!who.director) throw S.err(403, 'director', 'Directors and owners only.'); const out = await CONTACTS.sync(ctx.db, { log }); logger.info('contacts sync', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
+      if (route === 'POST /admin/contacts/nudge') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await CONTACTS.nudge(ctx.db, { dry: b.dry === true })); }
+      if (route === 'GET /admin/contacts/justcall') { if (!who.director) throw S.err(403, 'director', 'Directors and owners only.'); return send(res, 200, await CONTACTS.justcallUsers(ctx.db)); }
       if (route === 'POST /admin/lesson/booked') return send(res, 200, await LESSONS.booked(ctx.db, who, b));        // a private was booked: the coach hears it
       if (route === 'POST /admin/lesson/cancelled') return send(res, 200, await LESSONS.cancelled(ctx.db, who, b));
       if (route === 'GET /admin/backup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BACKUP.status()); }                 // the nightly copies of the database
@@ -289,6 +294,16 @@ exports.nightlyBackup = onSchedule({ schedule: '40 4 * * *', timeZone: CAL.TZ, r
 });
 
 /* Private-lesson reminders: the evening before and one hour before, to the family (opted in) and the coach (lib/lessons.js). */
+// the weekly contact tracker: JustCall's texts and calls become the week's ticks (every two hours, 7 AM to 9 PM Delray Beach time)
+exports.contactSync = onSchedule({ schedule: '17 7-21/2 * * *', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 300, memory: '256MiB' }, async () => {
+  try { const out = await CONTACTS.sync(DB.get(), { log: (l) => logger.info(l) }); logger.info('contactSync', out); }
+  catch (e) { logger.error('contactSync failed', { message: e.message }); }
+});
+// Friday late morning: each coach hears on Slack which families still have not heard from them this week; the coaches' channel gets the roll-up
+exports.contactNudge = onSchedule({ schedule: '31 11 * * 5', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 120, memory: '256MiB' }, async () => {
+  try { const out = await CONTACTS.nudge(DB.get()); logger.info('contactNudge', out); }
+  catch (e) { logger.error('contactNudge failed', { message: e.message }); }
+});
 exports.lessonReminders = onSchedule({ schedule: '*/15 * * * *', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 120, memory: '256MiB' }, async () => {
   try { const out = await LESSONS.remind(DB.get(), Date.now(), (l) => logger.info('reminder: ' + l)); if (out.sent || out.errors.length) logger.info('lessonReminders', out); }
   catch (e) { logger.error('lessonReminders failed', { message: e.message }); }

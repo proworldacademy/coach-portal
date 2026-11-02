@@ -124,6 +124,8 @@ button.rowb:hover{background:rgba(0,0,0,.045)}
 .chip.go{background:var(--ink);border-color:var(--ink);color:var(--lime)}
 .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.15) inset}
 @media(max-width:700px){.rowb{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 8px}.rowb .mid{display:none}.rowb .chips{justify-content:flex-end;padding-left:0;flex-wrap:nowrap}.rowb .chips .chip{white-space:nowrap}}
+/* a phone: the name on its own line, the chips wrapping under it (three chips — ⚠ contacts · ✕ no contact · MISSING — crushed the name) */
+@media(max-width:560px){.rowb{grid-template-columns:minmax(0,1fr);gap:6px}.rowb .chips{justify-content:flex-start;flex-wrap:wrap;padding-left:48px;row-gap:6px}}
 .empty{padding:30px 20px;font-size:13.5px}
 
 /* ── buttons ── */
@@ -511,10 +513,26 @@ button.notice.remind.wk .wkn{margin-right:2px}
 .crow2 .mid{display:flex;align-items:center}
 .crow2.off .ava{background:var(--wk-off);color:var(--wk-off-ink)}.crow2.on .ava{background:var(--wk-on);color:var(--wk-on-ink)}
 @media(max-width:700px){.crow2{grid-template-columns:minmax(0,1fr) auto}.crow2 .mid{display:none}}
+@media(max-width:560px){.crow2{grid-template-columns:minmax(0,1fr)}}
 .linkb{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
 .nm.linkb{text-decoration:none;font-weight:700}
 .nm.linkb:hover{text-decoration:underline}
 #vtabs small.red,.fchip i.red{display:inline-block;background:var(--wk-off);color:var(--wk-off-ink);border-radius:999px;padding:0 6px;margin-left:6px;font-style:normal;font-size:11px;font-weight:700}
+/* ── the contact check: the numbers JustCall can reach ── */
+.chip.ck-off,body.skin-coach .chip.ck-off{background:#FFF1D6;color:#7A5200;text-transform:none;letter-spacing:.2px;font-size:11.5px;padding:4px 10px;border:0}
+.ckcard{display:grid;gap:10px;margin-bottom:18px;border-left:6px solid #F3C96B}
+.ckcard.on{border-left-color:#6EDC94}
+.ckcard.off .wkword{color:#7A5200}.ckcard.on .wkword{color:var(--wk-on-ink)}
+.ckfiles{display:grid;gap:6px}
+.ckfile{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:13px;padding:8px 12px;border-radius:12px;background:#FFF8E8}
+.ckrows{display:grid;gap:4px}
+.ckrow{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.ckrow:first-child{border-top:0}
+.cklbl{font-weight:700}
+.ckok{color:var(--wk-on-ink)}.ckna{color:var(--muted)}.ckmiss{color:#7A5200;font-weight:700}
+.ckform{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ckform input{height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 12px;font-size:13px;width:150px}
+@media(max-width:700px){.ckrow{grid-template-columns:1fr;gap:4px}}
 /* ── the tone guard in the editor (Kam, Nov 2026): a red flag under a note that would land as negative ── */
 .tflag{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:8px 12px;border-radius:12px;background:var(--wk-off);color:var(--wk-off-ink);font-size:12.5px;line-height:1.45}
 .tflag.soft{background:#FFF1D6;color:#7A5200}
@@ -1602,9 +1620,10 @@ const PW_CONFIG = {
     db: null, sample: null, downloads: null, canWrite: null, dbState: 'connecting',
     players: [], groups: [], assess: [], tryouts: [], loaded: {},
     contacts: [], contactsWeek: '',   // the weekly contact tracker: this week's and last week's ticks, every player
+    checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null },
+    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -1741,7 +1760,7 @@ const PW_CONFIG = {
   const HOW_WORD = { text: 'Text', call: 'Call', person: 'In person' }, WHO_WORD = { parents: 'Parents', player: 'Player', both: 'Parents and player' };
   function contactChip(p) {
     const wk = curWeek(); const c = contactOf(p.id, wk); const on = !!(c && c.done);
-    const tip = on ? `In touch this week${c.by ? ' · ' + c.by : ''}${c.how && HOW_WORD[c.how] ? ' · ' + HOW_WORD[c.how].toLowerCase() : ''}` : 'Nobody has been in touch with this family this week yet';
+    const tip = on ? `In touch this week · ${tickWord(c)}` : 'Nobody has been in touch with this family this week yet';
     return `<span class="chip wk ${on ? 'wk-on' : 'wk-off'}" title="${esc(tip)}">${on ? '✓ in touch' : '✕ no contact'}</span>`;
   }
   // the last weeks as little squares: green = in touch, red = missed, the current week red until it is ticked, grey before the tracker began
@@ -1766,6 +1785,46 @@ const PW_CONFIG = {
   // who is still to reach this week — for the tab count, the home strip and the Dashboard
   function contactTally(list) { const wk = curWeek(); const l = (list || S.players.filter(active)); const done = l.filter((p) => inTouch(p.id, wk)); return { done: done.length, total: l.length, left: l.length - done.length, week: wk }; }
   const myPlayers = () => S.players.filter(active).filter((p) => mine(p));
+  const tickWord = (c) => (!c || !c.done ? '' : c.source === 'justcall' ? `JustCall · ${c.how === 'call' ? 'call' : 'text'}${c.by ? ' · ' + c.by : ''}` : `ticked${c.by ? ' by ' + c.by : ''}`);
+
+  /* ───────────── the contact check (Antonio, Nov 2, 2026) ─────────────
+     JustCall can only find a family when their numbers are on file. contactCheck/{pid} holds the numbers the engine found on the
+     record (onFile) and four slots — mother · father · guardian · player — each confirmed with a number, typed in by the coach,
+     or marked N/A. A player is flagged until every slot is settled and at least one adult has a number. The typed numbers are
+     used by the JustCall match too. */
+  const SLOTS = ['mother', 'father', 'guardian', 'player'];
+  const SLOT_LABEL = { mother: 'Mother', father: 'Father', guardian: 'Guardian (other)', player: 'The player' };
+  const checkOf = (pid) => S.checks[pid] || null;
+  const slotOf = (ck, slot) => (ck && ck.slots && ck.slots[slot]) || null;
+  const slotState = (ck, slot) => { const x = slotOf(ck, slot); return x && (x.state === 'ok' || x.state === 'na') ? x.state : 'missing'; };
+  const checkMissing = (pid) => { const ck = checkOf(pid); return SLOTS.filter((sl) => slotState(ck, sl) === 'missing'); };
+  const checkDone = (pid) => { const ck = checkOf(pid); return !!ck && !checkMissing(pid).length && ['mother', 'father', 'guardian'].some((sl) => slotState(ck, sl) === 'ok'); };
+  const checkChip = (p) => (!S.loaded.checks || checkDone(p.id) ? '' : `<span class="chip ck-off" title="Contacts to confirm for JustCall: ${esc(checkMissing(p.id).map((sl) => SLOT_LABEL[sl].toLowerCase()).join(', ') || 'an adult with a number')}">⚠ contacts</span>`);
+  const toE164 = (v) => { const raw = String(v || '').trim(); if (!raw) return ''; if (raw[0] === '+') return '+' + raw.slice(1).replace(/\D/g, ''); const d = raw.replace(/\D/g, ''); return d.length === 10 ? '+1' + d : d.length === 11 && d[0] === '1' ? '+' + d : d.length >= 10 ? '+' + d : ''; };
+  const fmtPhone = (e) => { const d = String(e || '').replace(/\D/g, ''); return d.length === 11 && d[0] === '1' ? `(${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}` : (e || ''); };
+  async function setSlot(p, slot, patch) {
+    if (!S.db || !p || !SLOTS.includes(slot)) return;
+    const doc = { playerId: p.id, playerName: p.name, slots: { [slot]: Object.assign({ state: '', phone: '', name: '' }, patch, { by: String(signedName()).slice(0, 80), at: Date.now() }) }, by: String(signedName()).slice(0, 80), byEmail: WEB.email || '', at: Date.now() };
+    try { await S.db.doc('contactCheck/' + p.id).set(doc, { merge: true }); }
+    catch (e) { dbFail(e); return; }
+    const cur = S.checks[p.id] || { id: p.id, playerId: p.id, playerName: p.name, slots: {}, onFile: [] }; cur.slots = Object.assign({}, cur.slots || {}, doc.slots); S.checks[p.id] = cur; changed();
+  }
+  function checkCard(p) {
+    const ck = checkOf(p.id); const w = writable() && mine(p); const done = checkDone(p.id);
+    const used = new Set(SLOTS.map((sl) => (slotOf(ck, sl) || {}).phone).filter(Boolean));
+    const onFile = ((ck && ck.onFile) || []).filter((x) => x.phone && !used.has(x.phone));
+    const fileRows = onFile.map((x) => `<div class="ckfile"><span><b>${esc(fmtPhone(x.phone))}</b>${x.name ? ' · ' + esc(x.name) : ''} <span class="muted">on file${x.source === 'consent' ? ' (texts)' : ''} — who is this?</span></span>${w ? `<span class="wkopts">${['mother', 'father', 'guardian', 'player'].map((sl) => `<button class="fchip sm" data-act="slot-use" data-slot="${sl}" data-phone="${esc(x.phone)}" data-name="${esc(x.name || '')}">${SLOT_LABEL[sl]}</button>`).join('')}</span>` : ''}</div>`).join('');
+    const rows = SLOTS.map((sl) => { const st = slotState(ck, sl); const x = slotOf(ck, sl) || {}; const open = S.ui.slotOpen === p.id + ':' + sl;
+      const val = st === 'ok' ? `<span class="ckok">✓ ${esc(fmtPhone(x.phone))}${x.name ? ' · ' + esc(x.name) : ''}</span>` : st === 'na' ? '<span class="ckna">N/A — not needed</span>' : '<span class="ckmiss">⚠ missing</span>';
+      const acts = !w ? '' : open ? `<form class="ckform" data-form="slot" data-pid="${esc(p.id)}" data-slot="${sl}"><input name="phone" type="tel" placeholder="(561) 555-0100" aria-label="${esc(SLOT_LABEL[sl])} phone" required autocomplete="off"><input name="name" type="text" placeholder="Name (optional)" aria-label="${esc(SLOT_LABEL[sl])} name" autocomplete="off"><button class="btn sm pri" type="submit">Save</button><button class="btn sm ghost" type="button" data-act="slot-open" data-slot="">Cancel</button></form>`
+        : `<span class="wkopts">${st === 'ok' ? `<button class="fchip sm" data-act="slot-open" data-slot="${sl}">Change</button>` : `<button class="fchip sm" data-act="slot-open" data-slot="${sl}">Add number</button>`}${st === 'na' ? `<button class="fchip sm" data-act="slot-na" data-slot="${sl}" data-v="off">Undo N/A</button>` : st === 'missing' ? `<button class="fchip sm" data-act="slot-na" data-slot="${sl}" data-v="on">N/A</button>` : ''}</span>`;
+      return `<div class="ckrow ${st}"><span class="cklbl">${esc(SLOT_LABEL[sl])}</span>${val}${acts}</div>`; }).join('');
+    return `<div class="panel ckcard ${done ? 'on' : 'off'}" id="ckcard"><div class="wkmain"><div><div class="lbl">Contacts for JustCall</div>
+        <b class="wkword">${done ? 'Every number is confirmed' : `${checkMissing(p.id).length ? checkMissing(p.id).length + ' to confirm' : 'An adult with a number is needed'}`}</b>
+        <div class="hint">JustCall only finds this family when their numbers are here. Confirm each one, add what is missing, or mark it N/A if that person does not exist for this player.</div></div></div>
+      ${fileRows ? `<div class="ckfiles">${fileRows}</div>` : (!ck && S.loaded.checks ? '<p class="hint">No numbers on file yet. Add the ones you have.</p>' : '')}
+      <div class="ckrows">${rows}</div></div>`;
+  }
 
   /* ───────────── routing ───────────── */
   function parseHash() {
@@ -1915,7 +1974,7 @@ const PW_CONFIG = {
   function docRefOf(r) {
     return { id: r.id, path: r.path,
       get: () => r.get().then(snapOf, (e) => { throw fsError(e); }),
-      set: (d) => guarded(attempt(() => r.set(plain(d)))),
+      set: (d, o) => guarded(attempt(() => (o && o.merge ? r.set(plain(d), { merge: true }) : r.set(plain(d))))),   // set(doc, {merge:true}) deep-merges nested maps (the contact check's slots, the engine's jc counts)
       update: (d) => guarded(attempt(() => r.set(plain(d), { merge: true }))),   // Firestore's own update() REPLACES nested maps; merge-set deep-merges them, which is what the portal relies on
       delete: () => guarded(attempt(() => r.delete())),
       onSnapshot: (next, err) => r.onSnapshot((s) => next(snapOf(s)), (e) => { if (err) err(fsError(e)); }),
@@ -2009,7 +2068,7 @@ const PW_CONFIG = {
     WEB.dead = true; if (navigator.onLine === false) window.addEventListener('online', () => location.reload(), { once: true }); else location.reload();
   }
   const cleanUrl = () => { try { history.replaceState(null, '', location.pathname); } catch (e) { /* noop */ } };
-  function leaveApp() { closeEditor(); unsubscribePlayer(); off(WEB.core); off(WEB.admin); Object.keys(AQ.stop).forEach((k) => { try { AQ.stop[k](); } catch (e) { /* noop */ } }); AQ.sets = {}; AQ.stop = {}; AQ.key = {}; S.db = null; S.players = []; S.groups = []; S.assess = []; S.tryouts = []; S.contacts = []; S.contactsWeek = ''; S.contactsUnsub = null; S.board = null; S.syncLogs = []; S.outbox = []; S.syncCfg = null; S.ui.parentOpen = null; S.ui.parentData = null; S.loaded = {}; S.dbState = 'none'; S.sample = null; const d = $('#dock'); if (d) d.hidden = true; }
+  function leaveApp() { closeEditor(); unsubscribePlayer(); off(WEB.core); off(WEB.admin); Object.keys(AQ.stop).forEach((k) => { try { AQ.stop[k](); } catch (e) { /* noop */ } }); AQ.sets = {}; AQ.stop = {}; AQ.key = {}; S.db = null; S.players = []; S.groups = []; S.assess = []; S.tryouts = []; S.contacts = []; S.contactsWeek = ''; S.contactsUnsub = null; S.checks = {}; S.board = null; S.syncLogs = []; S.outbox = []; S.syncCfg = null; S.ui.parentOpen = null; S.ui.parentData = null; S.loaded = {}; S.dbState = 'none'; S.sample = null; const d = $('#dock'); if (d) d.hidden = true; }
   function onUser(u) {
     off(WEB.gate); if (WEB.stage === 'in') leaveApp();
     WEB.user = u || null; WEB.email = u ? String(u.email || '').trim().toLowerCase() : ''; WEB.isAdmin = false; WEB.isOwner = false; WEB.isDirector = false; WEB.staff = null; WEB.asked = false;
@@ -2049,6 +2108,7 @@ const PW_CONFIG = {
     WEB.core.push(S.db.collection('groups').onSnapshot((s) => { S.groups = rowsOf(s); S.loaded.groups = true; changed(); }, () => {}));
     if (!WEB.tryoutsOnly) {
       WEB.core.push(S.db.collection('players').onSnapshot((s) => { S.players = rowsOf(s).map((p) => (retired(p.coach) || retired(p.coach2) ? Object.assign({}, p, { coach: retired(p.coach) ? '' : p.coach, coach2: retired(p.coach2) ? '' : p.coach2 }) : p)); S.loaded.players = true; changed(); }, () => {}));
+      WEB.core.push(S.db.collection('contactCheck').onSnapshot((s) => { const m = {}; s.docs.forEach((d) => { m[d.id] = Object.assign({ id: d.id }, d.data()); }); S.checks = m; S.loaded.checks = true; changed(); }, () => { S.loaded.checks = true; }));
       // the Monday sync: the Coach Board (one document), the latest change logs, changes still on their way to Monday, owner settings
       WEB.core.push(S.db.doc('board/current').onSnapshot((d) => { S.board = d.exists ? d.data() : null; S.loaded.board = true; changed(); }, () => { S.loaded.board = true; changed(); }));
       WEB.core.push(S.db.collection('syncLog').orderBy('at', 'desc').limit(10).onSnapshot((s) => { S.syncLogs = rowsOf(s).sort((a, b) => (b.at || 0) - (a.at || 0)); S.loaded.sync = true; changed(); }, () => { S.loaded.sync = true; }));
@@ -2331,7 +2391,8 @@ const PW_CONFIG = {
     }).join('');
     // the weekly contact strip: a coach sees their own players, a director everyone
     const wkList = WEB.isDirector ? ct : myCt;
-    const wkStrip = act.length && S.loaded.contacts ? `<button class="notice remind wk${wkList.left ? '' : ' calm'}" ${goAttr({ view: 'contact' })}><b>Weekly contact · ${esc(weekLabel(ct.week))}: ${wkList.left ? `<span class="wkn off">${wkList.left}</span> ${wkList.left === 1 ? 'family' : 'families'} still to reach` : 'every family has heard from their coach'} · ${wkList.done} of ${wkList.total} in touch.</b><span>Open the list</span></button>` : '';
+    const ckList = (WEB.isDirector ? act : myPlayers()).filter((p) => !checkDone(p.id)).length;
+    const wkStrip = act.length && S.loaded.contacts ? `<button class="notice remind wk${wkList.left ? '' : ' calm'}" ${goAttr({ view: 'contact' })}><b>Weekly contact · ${esc(weekLabel(ct.week))}: ${wkList.left ? `<span class="wkn off">${wkList.left}</span> ${wkList.left === 1 ? 'family' : 'families'} still to reach` : 'every family has heard from their coach'} · ${wkList.done} of ${wkList.total} in touch${S.loaded.checks && ckList ? ` · <span class="wkn off">${ckList}</span> with contacts to confirm` : ''}.</b><span>Open the list</span></button>` : '';
     const recent = S.assess.slice(0, 8).map((a) => rowAssess(a, true, false)).join('');
     const fu = followUps(); const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
     const bits = [fu.unsent.length ? plural(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents') : '', fu.noMeeting.length ? plural(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set') : '', fu.late.length ? plural(fu.late.length, 'meeting to confirm', 'meetings to confirm') : ''].filter(Boolean);
@@ -2377,13 +2438,13 @@ const PW_CONFIG = {
     const fc = S.ui.contactCoach; const list = (fc === null || fc === undefined ? all : all.filter((p) => (p.coach || '') === fc)).sort((a, b) => (inTouch(a.id, wk) - inTouch(b.id, wk)) || a.name.localeCompare(b.name));
     const t = contactTally(all), tl = { done: all.filter((p) => inTouch(p.id, last)).length, total: all.length };
     const row = (p) => { const c = contactOf(p.id, wk); const on = !!(c && c.done); const can = w && mine(p);
-      return `<div class="rowb crow2 ${on ? 'on' : 'off'}"><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><button class="nm linkb" ${goAttr({ view: 'player', pid: p.id })}>${esc(p.name)}</button><small>${esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ' · no coach'}${on && c.by ? ' · ticked by ' + esc(c.by) : ''}</small></div></div>
+      return `<div class="rowb crow2 ${on ? 'on' : 'off'}"><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><button class="nm linkb" ${goAttr({ view: 'player', pid: p.id })}>${esc(p.name)}</button><small>${esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ' · no coach'}${on ? ' · ' + esc(tickWord(c)) : ''}</small></div></div>
         <div class="mid">${weekStrip(p.id, 6)}</div>
-        <div class="chips">${contactChip(p)}${can ? `<button class="btn sm ${on ? 'ghost' : 'pri'}" data-act="contact-row" data-pid="${esc(p.id)}" data-v="${on ? 'off' : 'on'}">${on ? 'Undo' : '✓ In touch'}</button>` : ''}</div></div>`; };
+        <div class="chips">${checkChip(p)}${contactChip(p)}${can ? `<button class="btn sm ${on ? 'ghost' : 'pri'}" data-act="contact-row" data-pid="${esc(p.id)}" data-v="${on ? 'off' : 'on'}">${on ? 'Undo' : '✓ In touch'}</button>` : ''}</div></div>`; };
     const rows = list.map(row).join('');
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Weekly contact' }])}
       <div class="head"><div><div class="lbl">Week of ${esc(weekLabel(wk))} · Monday to Sunday</div><h1 class="title">Weekly <em>contact.</em></h1>
-        <div class="sub">Every family hears from their coach every week — one text or one call through JustCall, with the parents or with the player. Tick it off here as you go. <b>Red</b> means nobody has been in touch yet this week.</div></div>
+        <div class="sub">Every family hears from their coach every week — one text or one call through JustCall, with the parents or with the player. JustCall ticks it by itself; tick it here if you spoke in person. <b>Red</b> means nobody has been in touch yet this week.${S.loaded.checks && all.filter((p) => !checkDone(p.id)).length ? ` <span class="chip ck-off">⚠ ${all.filter((p) => !checkDone(p.id)).length} with contacts to confirm</span> — JustCall cannot find a family whose numbers are not on their page.` : ''}</div></div>
         <div class="rowx"><span class="chip wk ${t.left ? 'wk-off' : 'wk-on'}" style="font-size:12px">${t.left ? t.left + ' still to reach' : 'everyone reached'}</span><span class="chip wk wk-on" style="font-size:12px">${t.done} of ${t.total} in touch</span></div></div>
       ${last < TRACK_START ? `<p class="hint due-line"><b>First week.</b> The tracker counts from the week of ${esc(weekLabel(TRACK_START))}; earlier weeks are not held against anyone.</p>` : `<p class="hint due-line"><b>Last week</b> (${esc(weekLabel(last))}): ${tl.done} of ${tl.total} families were in touch${tl.total && tl.done < tl.total ? ` · <span class="chip wk wk-off">${tl.total - tl.done} missed</span>` : ''}.</p>`}
       ${WEB.isDirector && coaches.length > 1 ? `<div class="filters" role="group" aria-label="Filter by coach"><button class="fchip" aria-pressed="${fc === null || fc === undefined}" data-act="fcontact" data-v="__all">All ${all.length}</button>${coaches.map((c) => { const cl = all.filter((p) => (p.coach || '') === c); const left = cl.filter((p) => !inTouch(p.id, wk)).length; return `<button class="fchip" aria-pressed="${fc === c}" data-act="fcontact" data-v="${esc(c)}">${esc(c || 'No coach')} ${cl.length}${left ? ` <i class="red">${left}</i>` : ''}</button>`; }).join('')}</div>` : ''}
@@ -2429,7 +2490,7 @@ const PW_CONFIG = {
         <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
       // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
       if (!mine(p)) return `<div class="rowb locked" title="${esc(p.coach ? 'Coach ' + p.coach + '’s player' : 'No coach yet — ask a director')}">${who}<div class="chips"><span class="chip">${esc(p.coach ? 'with ' + p.coach : 'no coach')}</span></div></div>`;
-      return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${p.pbpNote && /^Added/.test(p.pbpNote) ? '<span class="chip st-working" title="' + esc(p.pbpNote) + '">new · Play by Point</span>' : p.pbpNote && /^Not in/.test(p.pbpNote) ? '<span class="chip st-missing" title="' + esc(p.pbpNote) + '">' + (/Fall 2026/.test(p.pbpNote) ? 'not on the Fall list' : 'not in Play by Point') + '</span>' : ''}${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? contactChip(p) + statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
+      return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${p.pbpNote && /^Added/.test(p.pbpNote) ? '<span class="chip st-working" title="' + esc(p.pbpNote) + '">new · Play by Point</span>' : p.pbpNote && /^Not in/.test(p.pbpNote) ? '<span class="chip st-missing" title="' + esc(p.pbpNote) + '">' + (/Fall 2026/.test(p.pbpNote) ? 'not on the Fall list' : 'not in Play by Point') + '</span>' : ''}${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? checkChip(p) + contactChip(p) + statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
     }).join('');
     const inactiveN = all.length - all.filter(active).length;
     // what is due now, in one line (Antonio, Oct 23): this quarter's 3-month report, and how many players have not started; plus the week's contact count
@@ -2481,7 +2542,7 @@ const PW_CONFIG = {
         <div class="rowx">${web ? `<button class="btn" data-act="parent-info" aria-expanded="${pOpen}" aria-controls="parentbox">${pOpen ? 'Hide parent info' : 'Parent info'}</button>` : ''}${writable() ? `<button class="btn" data-act="toggle-edit">Edit player</button>` : ''}</div></div>
       ${pOpen ? `<div id="parentbox">${parentBox(p)}</div>` : ''}
       <div id="editp" ${S.ui.editing ? '' : 'hidden'}>${S.ui.editing ? editPlayerPanel(p) : ''}</div>
-      ${active(p) ? contactCard(p) : ''}
+      ${active(p) ? contactCard(p) + checkCard(p) : ''}
       <div class="tabs" role="tablist">${tabs}</div>
       ${tab === 'videos' ? tabVideos(p) : tab === 'journal' ? tabJournal(p) : tabAssess(p)}`;
   }
@@ -2501,12 +2562,13 @@ const PW_CONFIG = {
   /* the weekly contact card on a player's page: one tap for the week, the last eight weeks, who and how (optional) */
   function contactCard(p) {
     const wk = curWeek(); const c = contactOf(p.id, wk); const on = !!(c && c.done); const w = writable() && mine(p);
-    const detail = on ? `<div class="wkdetail"><span class="muted">${esc(c.by ? 'Ticked by ' + c.by : 'Ticked')}${c.at ? ' · ' + esc(fmtDate(c.at)) : ''}</span>
+    const jc = on && c.jc ? ` · JustCall saw ${c.jc.texts ? c.jc.texts + (c.jc.texts === 1 ? ' text' : ' texts') : ''}${c.jc.texts && c.jc.calls ? ' and ' : ''}${c.jc.calls ? c.jc.calls + (c.jc.calls === 1 ? ' call' : ' calls') : ''}` : '';
+    const detail = on ? `<div class="wkdetail"><span class="muted">${esc(c.source === 'justcall' ? 'Found by JustCall' + (c.by ? ' · ' + c.by : '') : (c.by ? 'Ticked by ' + c.by : 'Ticked'))}${c.at ? ' · ' + esc(fmtDate(c.at)) : ''}${esc(jc)}</span>
         <span class="wkopts" role="group" aria-label="Who">${['parents', 'player', 'both'].map((k) => `<button class="fchip sm" aria-pressed="${c.who === k}" data-act="contact-who" data-v="${k}" ${w ? '' : 'disabled'}>${WHO_WORD[k]}</button>`).join('')}</span>
         <span class="wkopts" role="group" aria-label="How">${['text', 'call', 'person'].map((k) => `<button class="fchip sm" aria-pressed="${c.how === k}" data-act="contact-how" data-v="${k}" ${w ? '' : 'disabled'}>${HOW_WORD[k]}</button>`).join('')}</span></div>` : '';
     return `<div class="panel wkcard ${on ? 'on' : 'off'}" id="wkcard"><div class="wkmain"><div><div class="lbl">Weekly contact · ${esc(weekLabel(wk))}</div>
         <b class="wkword">${on ? 'In touch this week' : 'Nobody has been in touch this week yet'}</b>
-        <div class="hint">One text or call with the parents or the player, every week, through JustCall. Either one counts — tick it off here.</div></div>
+        <div class="hint">One text or one call with the parents or the player, every week, through JustCall. It ticks itself when JustCall sees it (a one-to-one text you sent, or an answered call); tick it here if you spoke in person.</div></div>
         ${w ? `<button class="btn ${on ? 'ghost' : 'pri'} wkbtn" data-act="contact" data-v="${on ? 'off' : 'on'}">${on ? 'Undo — not yet' : '✓ I was in touch this week'}</button>` : ''}</div>
       <div class="wkhist"><span class="lbl">The last 8 weeks</span>${weekStrip(p.id, 8)}</div>${detail}</div>`;
   }
@@ -3392,6 +3454,9 @@ const PW_CONFIG = {
     else if (act === 'fcontact') { const v = b.getAttribute('data-v'); S.ui.contactCoach = v === '__all' ? null : v; render(); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week
     else if (act === 'contact' || act === 'contact-row') { const p = player(act === 'contact' ? S.route.pid : b.getAttribute('data-pid')); if (!p || !mine(p)) return; const on = b.getAttribute('data-v') === 'on'; b.disabled = true; await setContact(p, on); if (on) toast(`${p.name}: in touch this week. Thank you.`); }
+    else if (act === 'slot-open') { const sl = b.getAttribute('data-slot'); S.ui.slotOpen = sl ? S.route.pid + ':' + sl : null; render(); const i = $('#ckcard input[name="phone"]'); if (i) i.focus(); }
+    else if (act === 'slot-na') { const p = player(S.route.pid); if (!p || !mine(p)) return; const sl = b.getAttribute('data-slot'); b.disabled = true; await setSlot(p, sl, b.getAttribute('data-v') === 'on' ? { state: 'na', phone: '', name: '' } : { state: '', phone: '', name: '' }); }
+    else if (act === 'slot-use') { const p = player(S.route.pid); if (!p || !mine(p)) return; b.disabled = true; await setSlot(p, b.getAttribute('data-slot'), { state: 'ok', phone: b.getAttribute('data-phone') || '', name: b.getAttribute('data-name') || '', from: 'file' }); toast(`${SLOT_LABEL[b.getAttribute('data-slot')]}: confirmed.`); }
     else if (act === 'contact-who' || act === 'contact-how') { const p = player(S.route.pid); if (!p || !mine(p)) return; const v = b.getAttribute('data-v'); const c = contactOf(p.id, curWeek()) || {}; const k = act === 'contact-who' ? 'who' : 'how'; await setContact(p, true, { [k]: c[k] === v ? '' : v }); }
     else if (act === 'pfilter') { const v = b.getAttribute('data-v'); S.ui.partFilter = v && !(S.ui.partFilter === v && S.ui.partFilterGroup === S.route.gid) ? v : null; S.ui.partFilterGroup = S.route.gid; saveUi(); render(); }
     else if (act === 'inactive') { S.ui.showInactive = !S.ui.showInactive; render(); }
@@ -3463,7 +3528,11 @@ const PW_CONFIG = {
     const f = ev.target.closest('[data-form]'); if (!f) return; ev.preventDefault(); if (!S.db) return;
     const kind = f.getAttribute('data-form'); const fd = new FormData(f); const val = (k) => String(fd.get(k) || '').trim(); const t = Date.now();
     try {
-      if (kind === 'add-player') {
+      if (kind === 'slot') {
+        const p = player(f.getAttribute('data-pid')); const sl = f.getAttribute('data-slot'); if (!p || !mine(p)) return;
+        const phone = toE164(val('phone')); if (!phone || phone.length < 11) { toast('A phone like (561) 555-0100 is needed.'); return; }
+        await setSlot(p, sl, { state: 'ok', phone, name: val('name').slice(0, 80), from: 'coach' }); S.ui.slotOpen = null; toast(`${SLOT_LABEL[sl]}: saved. JustCall will find this family on that number too.`); render();
+      } else if (kind === 'add-player') {
         const first = EDITION === 'web' ? val('first') : '', last = EDITION === 'web' ? val('last') : '';
         const name = EDITION === 'web' ? (first + ' ' + last).replace(/\s+/g, ' ').trim() : val('name'); if (!name) return;
         const gid = f.getAttribute('data-gid'); let id = `${gid}-${slug(name)}`; if (player(id)) id += '-' + String(t).slice(-5);

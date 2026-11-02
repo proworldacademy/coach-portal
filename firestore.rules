@@ -211,9 +211,18 @@ service cloud.firestore {
       allow read: if runs() || portal() || backend();
       allow create, update: if (runs() || portal())
         && id.matches('[A-Za-z0-9_-]+_[0-9]{4}-[0-9]{2}-[0-9]{2}')
-        && request.resource.data.keys().hasOnly(['playerId', 'playerName', 'group', 'coach', 'week', 'done', 'by', 'byEmail', 'at', 'how', 'who', 'source', 'note'])
+        && request.resource.data.keys().hasOnly(['playerId', 'playerName', 'group', 'coach', 'week', 'done', 'by', 'byEmail', 'at', 'how', 'who', 'source', 'note', 'jc'])
         && request.resource.data.playerId is string && request.resource.data.week is string && request.resource.data.done is bool
         && id == request.resource.data.playerId + '_' + request.resource.data.week;
+      allow delete: if !runs() && portal() && director();
+    }
+    // The contact check (Nov 2, 2026): the numbers on file for a family (seeded by the engine) and which of mother · father ·
+    // guardian · player the coach confirmed, typed in or marked N/A — JustCall can only work when the numbers are there.
+    match /contactCheck/{id} {
+      allow read: if runs() || portal() || backend();
+      allow create, update: if (runs() || portal())
+        && request.resource.data.keys().hasOnly(['playerId', 'playerName', 'slots', 'onFile', 'by', 'byEmail', 'at', 'fileAt'])
+        && request.resource.data.playerId == id;
       allow delete: if !runs() && portal() && director();
     }
 
