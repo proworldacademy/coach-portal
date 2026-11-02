@@ -505,6 +505,7 @@ ul.lines b.n{flex:none;min-width:30px;padding:2px 9px;border-radius:999px;backgr
 ul.lines b.n.off{background:var(--wk-off);color:var(--wk-off-ink)}ul.lines b.n.on{background:var(--wk-on);color:var(--wk-on-ink)}
 .head ul.sub.lines{margin-top:12px}.head ul.sub.lines li{color:var(--ink-2)}
 button.notice.remind .ttl,body.skin-coach button.notice.remind span.ttl{font-weight:700;flex-basis:100%;background:none;padding:0;border-radius:0;text-decoration:none;font-size:14px}button.notice.remind ul.lines{margin:0;flex:1 1 220px}button.notice.remind>span:last-child{align-self:flex-end}
+ul.lines.plain{gap:3px;margin-top:6px}ul.lines.plain li{font-size:13px}
 .due-list{margin:-6px 0 18px}.due-list .due-line,body.skin-coach .due-list .due-line{margin:0}.due-list ul.lines{margin:6px 0 12px}
 body.skin-coach .head ul.lines b.n{background:#000;color:var(--lime);padding:2px 9px}body.skin-coach .head ul.lines b.n.off{background:var(--wk-off);color:var(--wk-off-ink)}body.skin-coach .head ul.lines b.n.on{background:var(--wk-on);color:var(--wk-on-ink)}
 button.notice.remind.wk .wkn{margin-right:2px}
@@ -3783,16 +3784,12 @@ const PW_CONFIG = {
       + (st ? `<span class="chip">Monday gets “${esc(statusWord({ status: st.to }))}” tomorrow</span>` : '');
   }
   function mondayLine(p) {
+    // Monday is retired (Oct 23): the old "On Monday · schedule · synced" line is gone; what is left is where the player came from and the billing
     const m = p.monday || null; const bits = [];
-    if (p.mondayId && m) {
-      bits.push('On Monday: ' + mGroupWord(m.group) + (m.status === 'away' || m.status === 'finished' ? ' · ' + statusWord({ status: m.status }) : ''));
-      if (m.schedule) bits.push('daily schedule ' + m.schedule);
-      if (m.age) bits.push(m.age);
-      if (m.syncedAt) { const t = Date.parse(m.syncedAt); if (t) bits.push('synced ' + fmtWhen(t)); }
-    } else if (p.source === 'coach') bits.push('Added in the portal' + (p.addedBy ? ' by ' + p.addedBy : '') + ' · not on Monday yet');
-    else if (p.source === 'backend') bits.push('Added at the front desk' + (p.addedBy ? ' by ' + p.addedBy : '') + ' · Monday gets them with the morning sync');
-    else if (p.source === 'enroll') bits.push('Enrolled online · Monday gets them with the morning sync');
-    else if (S.board && S.board.mode === 'live') bits.push('Not found on Monday');
+    if (m && m.schedule) bits.push('Daily schedule ' + m.schedule);
+    if (p.source === 'coach') bits.push('Added in the portal' + (p.addedBy ? ' by ' + p.addedBy : ''));
+    else if (p.source === 'backend') bits.push('Added at the front desk' + (p.addedBy ? ' by ' + p.addedBy : ''));
+    else if (p.source === 'enroll') bits.push('Enrolled online');
     const en = p.enroll || null;
     if (en) {
       const e = [];
@@ -3803,7 +3800,7 @@ const PW_CONFIG = {
     let chips = pendingChips(p);
     if (en && en.at && Date.now() - en.at < 14 * 864e5 && !p.coach && active(p)) chips = '<span class="chip warn">New · assign a coach</span>' + chips;
     if (en && en.hold) chips = '<span class="chip warn">On hold</span>' + chips;
-    return bits.length || chips ? `<div class="mline">${chips}${bits.length ? `<span>${esc(bits.join(' · '))}</span>` : ''}</div>` : '';
+    return bits.length || chips ? `<div class="mline">${chips}${bits.length ? `<ul class="lines plain">${bits.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}</div>` : '';
   }
 
   // parent details: closed until someone asks, read fresh from the database each time, never shown in lists
