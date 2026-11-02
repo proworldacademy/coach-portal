@@ -115,11 +115,14 @@ async function sync(db, opts) {
   const { players, book, onFile } = await phoneBook(db); const staff = await staffIndex(db);
   const agg = new Map();   // `${pid}_${week}` → { pid, week, texts, calls, last, by: Set, byEmail, how }
   let matched = 0, offStaff = 0, noFamily = 0, notCoach = 0;
-  // the week is the COACH's contact with the family: the front desk's and marketing's texts (payments, schedules) do not tick it
-  const COACHING = (r) => !['desk', 'marketing'].includes(String(r || '').toLowerCase());
+  // the week is the PLAYER'S COACH's contact with the family (Antonio, Nov 2): a text or a call counts for the players whose
+  // record carries that person's name (coach or second coach). The front desk, the office or another coach texting the same
+  // family — payments, schedules, a tournament entry — does not tick it, whatever their role.
+  const own = (who, p) => [p.coach, p.coach2].some((c) => c && who.keys.includes(fold(first(c))));
   const take = (ev) => {
-    if (!ev || !ev.phone) return; const who = staff.byEmail.get(ev.email); if (!who) { offStaff++; return; } if (!COACHING(who.role)) { notCoach++; return; }
-    const fams = book.get(ev.phone); if (!fams || !fams.length) { noFamily++; return; }
+    if (!ev || !ev.phone) return; const who = staff.byEmail.get(ev.email); if (!who) { offStaff++; return; }
+    const all = book.get(ev.phone); if (!all || !all.length) { noFamily++; return; }
+    const fams = all.filter((p) => own(who, p)); if (!fams.length) { notCoach++; return; }
     const week = weekOf(ev.when.dateET); matched++;
     for (const p of fams) {
       const k = `${p.id}_${week}`; const a = agg.get(k) || { p, week, texts: 0, calls: 0, last: 0, by: new Set(), byEmail: '', how: '' };
@@ -158,7 +161,7 @@ async function sync(db, opts) {
     await db.doc('contactCheck/' + p.id).set(Object.assign(cur ? {} : { playerId: p.id, playerName: p.name || p.id, slots: {}, by: 'engine', at: now }, { onFile: file, fileAt: now }), { merge: true }); seeded++;
   }
   try { await db.doc('settings/contactSync').set({ at: now, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded }, { merge: true }); } catch (e) { /* the summary is a nicety */ }
-  log(`contacts: ${texts.length} texts, ${calls.length} calls → ${matched} matched (${offStaff} not by staff, ${notCoach} by the front desk, ${noFamily} not a family), ${written} weeks written, ${seeded} checks seeded`);
+  log(`contacts: ${texts.length} texts, ${calls.length} calls → ${matched} matched (${offStaff} not by staff, ${notCoach} not by the player's coach, ${noFamily} not a family), ${written} weeks written, ${seeded} checks seeded`);
   return { ok: true, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded };
 }
 
