@@ -36,7 +36,8 @@ const TEXTS = [
   { id: 3, sms_date: '2026-11-04', sms_time: '15:00:00', agent_email: 'kim@example.test', agent_name: 'Kim Example', contact_number: '+15615550103', direction: 'Inbound', delivery_status: '', medium: 'One-To-One via App', sms_info: { body: 'Thanks coach' } },                      // the family wrote in: does not count
   { id: 4, sms_date: '2026-11-04', sms_time: '16:00:00', agent_email: 'robot@example.test', agent_name: 'API', contact_number: '+15615550103', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'hi' } },                           // not on the staff list: does not count
   { id: 5, sms_date: '2026-10-28', sms_time: '16:00:00', agent_email: 'lee@example.test', agent_name: 'Lee Example', contact_number: '+15615550103', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'last week' } },                // last week: its own week
-  { id: 6, sms_date: '2026-11-04', sms_time: '17:00:00', agent_email: 'desk@example.test', agent_name: 'Dana Desk', contact_number: '+15615550101', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'Your invoice is ready' } },   // the front desk texted Ed's family: not the coach, does not count
+  { id: 6, sms_date: '2026-11-04', sms_time: '17:00:00', agent_email: 'desk@example.test', agent_name: 'Dana Desk', contact_number: '+15615550101', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'Your invoice is ready' } },   // the front desk texted Cy's family: not the coach, does not count
+  { id: 7, sms_date: '2026-11-04', sms_time: '17:30:00', agent_email: 'lee@example.test', agent_name: 'Lee Example', contact_number: '+15615550100', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'See you Saturday' } }           // Lee texted Bo's family, but Bo is Kim's player: does not count for Bo
 ];
 const CALLS = [
   { id: 11, call_date: '2026-11-05', call_time: '01:30:00', agent_email: 'lee@example.test', agent_name: 'Lee Example', contact_number: '+15615550103', call_info: { direction: 'Incoming', type: 'INCOMING_ANSWERED' }, call_duration: { conversation_time: 180 } },   // Wed 8:30 PM ET: the mother called Lee, answered → Di and Ed
@@ -58,9 +59,9 @@ function fakeNet(captured) {
 test('JustCall → the week’s ticks: a one-to-one text or an answered call by someone on staff marks the family, bulk and inbound do not, hand ticks and "not yet" stay', async () => {
   const db = fakeDb(SEED); const captured = []; CONTACTS._useFetch(fakeNet(captured)); NOTIFY._useFetch(fakeNet(captured)); NOTIFY.forget();
   const out = await CONTACTS.sync(db, { now: NOW });
-  assert.equal(out.ok, true); assert.equal(out.texts, 6); assert.equal(out.calls, 2);
+  assert.equal(out.ok, true); assert.equal(out.texts, 7); assert.equal(out.calls, 2);
   assert.equal(out.matched, 3);                 // Kim's text to Cy's mother, Lee's text last week, the answered call
-  assert.equal(out.offStaff, 1); assert.equal(out.notCoach, 1, 'the front desk text is counted apart and ticks nothing'); assert.equal(out.noFamily, 0);
+  assert.equal(out.offStaff, 1); assert.equal(out.notCoach, 2, 'the front desk text and another coach\'s text are counted apart and tick nothing'); assert.equal(out.noFamily, 0);
   assert.equal(out.unticked, 1); const gus = db._docs.get('contacts/past-gus_2026-11-02'); assert.equal(gus.done, false); assert.equal(gus.jc.texts, 0); assert.equal(gus.source, 'justcall');   // the engine's own stale tick went back to red
   const q = captured.filter((c) => /v2\.1\/(texts|calls)/.test(c.url));
   assert.equal(q.length, 2); assert.ok(q.every((c) => c.opts.headers.Authorization === 'k:s' && /from_datetime=2026-10-28%2000%3A00%3A00&to_datetime=2026-11-05%2014%3A59%3A00/.test(c.url)), 'eight days back, up to a minute ago (ET), the key as JustCall wants it: ' + q.map((c) => c.url).join(' '));
