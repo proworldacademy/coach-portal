@@ -124,6 +124,8 @@ button.rowb:hover{background:rgba(0,0,0,.045)}
 .chip.go{background:var(--ink);border-color:var(--ink);color:var(--lime)}
 .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.15) inset}
 @media(max-width:700px){.rowb{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 8px}.rowb .mid{display:none}.rowb .chips{justify-content:flex-end;padding-left:0;flex-wrap:nowrap}.rowb .chips .chip{white-space:nowrap}}
+/* a phone: the name on its own line, the chips wrapping under it (three chips — ⚠ contacts · ✕ no contact · MISSING — crushed the name) */
+@media(max-width:560px){.rowb{grid-template-columns:minmax(0,1fr);gap:6px}.rowb .chips{justify-content:flex-start;flex-wrap:wrap;padding-left:48px;row-gap:6px}}
 .empty{padding:30px 20px;font-size:13.5px}
 
 /* ── buttons ── */
@@ -511,6 +513,7 @@ button.notice.remind.wk .wkn{margin-right:2px}
 .crow2 .mid{display:flex;align-items:center}
 .crow2.off .ava{background:var(--wk-off);color:var(--wk-off-ink)}.crow2.on .ava{background:var(--wk-on);color:var(--wk-on-ink)}
 @media(max-width:700px){.crow2{grid-template-columns:minmax(0,1fr) auto}.crow2 .mid{display:none}}
+@media(max-width:560px){.crow2{grid-template-columns:minmax(0,1fr)}}
 .linkb{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
 .nm.linkb{text-decoration:none;font-weight:700}
 .nm.linkb:hover{text-decoration:underline}
