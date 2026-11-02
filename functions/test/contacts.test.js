@@ -26,14 +26,17 @@ const SEED = {
   'contactCheck/ft-cy-l': { playerId: 'ft-cy-l', playerName: 'Cy Lane', slots: { mother: { state: 'ok', phone: '+15615550199', name: 'Ana Example' } }, onFile: [{ phone: '+15615550101', name: 'Sam Example', source: 'contact' }, { phone: '+15615550102', name: '', source: 'contact' }], by: 'kim@example.test', at: NOW - 864e5 },
   // Bo's coach ticked by hand already; Lee said "not yet" for Ed
   'contacts/ft-bo-k_2026-11-02': { playerId: 'ft-bo-k', playerName: 'Bo Kessler', group: 'ft', coach: 'Kim', week: '2026-11-02', done: true, by: 'Kim', byEmail: 'kim@example.test', at: NOW - 2 * 864e5, how: 'person', who: 'parents', source: 'coach' },
-  'contacts/as-ed-m_2026-11-02': { playerId: 'as-ed-m', playerName: 'Ed Moreau', group: 'as', coach: 'Lee', week: '2026-11-02', done: false, by: 'Lee', byEmail: 'lee@example.test', at: NOW - 864e5, how: '', who: '', source: 'coach' }
+  'contacts/as-ed-m_2026-11-02': { playerId: 'as-ed-m', playerName: 'Ed Moreau', group: 'as', coach: 'Lee', week: '2026-11-02', done: false, by: 'Lee', byEmail: 'lee@example.test', at: NOW - 864e5, how: '', who: '', source: 'coach' },
+  // the engine ticked Gus's week last time from a front-desk text (before the rule); this run no longer sees anything for him
+  'contacts/past-gus_2026-11-02': { playerId: 'past-gus', playerName: 'Gus Vale', group: 'as', coach: 'Lee', week: '2026-11-02', done: true, by: 'Dana', byEmail: 'desk@example.test', at: NOW - 2 * 864e5, how: 'text', who: '', source: 'justcall', jc: { texts: 1, calls: 0, last: NOW - 2 * 864e5, by: ['Dana'] } }
 };
 const TEXTS = [
   { id: 1, sms_date: '2026-11-03', sms_time: '19:05:00', agent_email: 'kim@example.test', agent_name: 'Kim Example', contact_number: '+15615550199', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'Great session today' } },   // Kim → Cy's mother (typed number)
   { id: 2, sms_date: '2026-11-04', sms_time: '14:00:00', agent_email: 'kim@example.test', agent_name: 'Kim Example', contact_number: '+15615550100', direction: 'Outbound', delivery_status: 'Delivered', medium: 'Bulk SMS', sms_info: { body: 'Rain: courts closed' } },               // a bulk text: does not count
   { id: 3, sms_date: '2026-11-04', sms_time: '15:00:00', agent_email: 'kim@example.test', agent_name: 'Kim Example', contact_number: '+15615550103', direction: 'Inbound', delivery_status: '', medium: 'One-To-One via App', sms_info: { body: 'Thanks coach' } },                      // the family wrote in: does not count
   { id: 4, sms_date: '2026-11-04', sms_time: '16:00:00', agent_email: 'robot@example.test', agent_name: 'API', contact_number: '+15615550103', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'hi' } },                           // not on the staff list: does not count
-  { id: 5, sms_date: '2026-10-28', sms_time: '16:00:00', agent_email: 'lee@example.test', agent_name: 'Lee Example', contact_number: '+15615550103', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'last week' } }                 // last week: its own week
+  { id: 5, sms_date: '2026-10-28', sms_time: '16:00:00', agent_email: 'lee@example.test', agent_name: 'Lee Example', contact_number: '+15615550103', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'last week' } },                // last week: its own week
+  { id: 6, sms_date: '2026-11-04', sms_time: '17:00:00', agent_email: 'desk@example.test', agent_name: 'Dana Desk', contact_number: '+15615550101', direction: 'Outbound', delivery_status: 'Delivered', medium: 'One-To-One via App', sms_info: { body: 'Your invoice is ready' } },   // the front desk texted Ed's family: not the coach, does not count
 ];
 const CALLS = [
   { id: 11, call_date: '2026-11-05', call_time: '01:30:00', agent_email: 'lee@example.test', agent_name: 'Lee Example', contact_number: '+15615550103', call_info: { direction: 'Incoming', type: 'INCOMING_ANSWERED' }, call_duration: { conversation_time: 180 } },   // Wed 8:30 PM ET: the mother called Lee, answered → Di and Ed
@@ -55,9 +58,10 @@ function fakeNet(captured) {
 test('JustCall → the week’s ticks: a one-to-one text or an answered call by someone on staff marks the family, bulk and inbound do not, hand ticks and "not yet" stay', async () => {
   const db = fakeDb(SEED); const captured = []; CONTACTS._useFetch(fakeNet(captured)); NOTIFY._useFetch(fakeNet(captured)); NOTIFY.forget();
   const out = await CONTACTS.sync(db, { now: NOW });
-  assert.equal(out.ok, true); assert.equal(out.texts, 5); assert.equal(out.calls, 2);
+  assert.equal(out.ok, true); assert.equal(out.texts, 6); assert.equal(out.calls, 2);
   assert.equal(out.matched, 3);                 // Kim's text to Cy's mother, Lee's text last week, the answered call
-  assert.equal(out.offStaff, 1); assert.equal(out.noFamily, 0);
+  assert.equal(out.offStaff, 1); assert.equal(out.notCoach, 1, 'the front desk text is counted apart and ticks nothing'); assert.equal(out.noFamily, 0);
+  assert.equal(out.unticked, 1); const gus = db._docs.get('contacts/past-gus_2026-11-02'); assert.equal(gus.done, false); assert.equal(gus.jc.texts, 0); assert.equal(gus.source, 'justcall');   // the engine's own stale tick went back to red
   const q = captured.filter((c) => /v2\.1\/(texts|calls)/.test(c.url));
   assert.equal(q.length, 2); assert.ok(q.every((c) => c.opts.headers.Authorization === 'k:s' && /from_datetime=2026-10-28%2000%3A00%3A00&to_datetime=2026-11-05%2014%3A59%3A00/.test(c.url)), 'eight days back, up to a minute ago (ET), the key as JustCall wants it: ' + q.map((c) => c.url).join(' '));
   // Cy: ticked by JustCall from the number the coach typed on the contact check

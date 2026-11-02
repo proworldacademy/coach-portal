@@ -114,9 +114,11 @@ async function sync(db, opts) {
   const [texts, calls] = await Promise.all([pull(keys, 'texts', from, to, log), pull(keys, 'calls', from, to, log)]);
   const { players, book, onFile } = await phoneBook(db); const staff = await staffIndex(db);
   const agg = new Map();   // `${pid}_${week}` → { pid, week, texts, calls, last, by: Set, byEmail, how }
-  let matched = 0, offStaff = 0, noFamily = 0;
+  let matched = 0, offStaff = 0, noFamily = 0, notCoach = 0;
+  // the week is the COACH's contact with the family: the front desk's and marketing's texts (payments, schedules) do not tick it
+  const COACHING = (r) => !['desk', 'marketing'].includes(String(r || '').toLowerCase());
   const take = (ev) => {
-    if (!ev || !ev.phone) return; const who = staff.byEmail.get(ev.email); if (!who) { offStaff++; return; }
+    if (!ev || !ev.phone) return; const who = staff.byEmail.get(ev.email); if (!who) { offStaff++; return; } if (!COACHING(who.role)) { notCoach++; return; }
     const fams = book.get(ev.phone); if (!fams || !fams.length) { noFamily++; return; }
     const week = weekOf(ev.when.dateET); matched++;
     for (const p of fams) {
@@ -135,6 +137,16 @@ async function sync(db, opts) {
     const doc = { playerId: a.p.id, playerName: a.p.name, group: a.p.group, coach: a.p.coach, week: a.week, done: true, by: Array.from(a.by).join(', ').slice(0, 80), byEmail: a.byEmail, at: a.last, how: a.how, who: '', source: 'justcall', jc };
     if (!old || JSON.stringify(Object.assign({}, old, doc)) !== JSON.stringify(old)) { await ref.set(doc, { merge: true }); written++; }
   }
+  // the engine's own ticks are only as good as the last read: a week it ticked earlier but no longer sees (a text deleted in
+  // JustCall, a rule tightened, a seat that was the front desk's) goes back to red — only weeks the window covers in full,
+  // and only records the engine itself wrote (a coach's tick or "not yet" is never touched)
+  let unticked = 0;
+  const firstWeek = weekOf(shiftDays(from.slice(0, 10), 7));   // the first Monday fully inside the window
+  const recent = await db.collection('contacts').where('week', '>=', firstWeek).get();   // one field: no composite index needed; a few hundred rows at most
+  for (const d of recent.docs) {
+    const c = d.data() || {}; if (c.source !== 'justcall' || c.done !== true || agg.has(d.id)) continue;
+    await d.ref.set({ done: false, at: now, how: '', jc: { texts: 0, calls: 0, last: 0, by: [] } }, { merge: true }); unticked++;
+  }
   // the contact check: every active player gets its numbers-on-file card once, refreshed when the file changes
   let seeded = 0;
   for (const p of players) {
@@ -145,9 +157,9 @@ async function sync(db, opts) {
     if (cur && same) continue;
     await db.doc('contactCheck/' + p.id).set(Object.assign(cur ? {} : { playerId: p.id, playerName: p.name || p.id, slots: {}, by: 'engine', at: now }, { onFile: file, fileAt: now }), { merge: true }); seeded++;
   }
-  try { await db.doc('settings/contactSync').set({ at: now, from, to, texts: texts.length, calls: calls.length, matched, written, offStaff, noFamily, seeded }, { merge: true }); } catch (e) { /* the summary is a nicety */ }
-  log(`contacts: ${texts.length} texts, ${calls.length} calls → ${matched} matched (${offStaff} not by staff, ${noFamily} not a family), ${written} weeks written, ${seeded} checks seeded`);
-  return { ok: true, from, to, texts: texts.length, calls: calls.length, matched, written, offStaff, noFamily, seeded };
+  try { await db.doc('settings/contactSync').set({ at: now, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded }, { merge: true }); } catch (e) { /* the summary is a nicety */ }
+  log(`contacts: ${texts.length} texts, ${calls.length} calls → ${matched} matched (${offStaff} not by staff, ${notCoach} by the front desk, ${noFamily} not a family), ${written} weeks written, ${seeded} checks seeded`);
+  return { ok: true, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded };
 }
 
 /* The Friday reminder: each coach hears on their own Slack which families still have not heard from them this week; the
