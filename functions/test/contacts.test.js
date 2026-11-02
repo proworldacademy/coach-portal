@@ -59,7 +59,7 @@ test('JustCall → the week’s ticks: a one-to-one text or an answered call by 
   assert.equal(out.matched, 3);                 // Kim's text to Cy's mother, Lee's text last week, the answered call
   assert.equal(out.offStaff, 1); assert.equal(out.noFamily, 0);
   const q = captured.filter((c) => /v2\.1\/(texts|calls)/.test(c.url));
-  assert.equal(q.length, 2); assert.ok(q.every((c) => c.opts.headers.Authorization === 'k:s' && /from_datetime=2026-10-28&to_datetime=2026-11-06/.test(c.url)), 'eight days back, one day forward, the key as JustCall wants it: ' + q.map((c) => c.url).join(' '));
+  assert.equal(q.length, 2); assert.ok(q.every((c) => c.opts.headers.Authorization === 'k:s' && /from_datetime=2026-10-28%2000%3A00%3A00&to_datetime=2026-11-05%2014%3A59%3A00/.test(c.url)), 'eight days back, up to a minute ago (ET), the key as JustCall wants it: ' + q.map((c) => c.url).join(' '));
   // Cy: ticked by JustCall from the number the coach typed on the contact check
   const cy = db._docs.get('contacts/ft-cy-l_2026-11-02');
   assert.ok(cy); assert.equal(cy.done, true); assert.equal(cy.source, 'justcall'); assert.equal(cy.how, 'text'); assert.equal(cy.by, 'Kim'); assert.equal(cy.byEmail, 'kim@example.test'); assert.deepEqual(cy.jc, { texts: 1, calls: 0, last: Date.UTC(2026, 10, 3, 19, 5, 0), by: ['Kim'] });
