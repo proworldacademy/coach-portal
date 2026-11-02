@@ -31,6 +31,11 @@ function isoOf(d) { return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).
 function weekOf(iso) { const [y, m, d] = String(iso).split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d)); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return isoOf(x); }
 function shiftDays(iso, n) { const [y, m, d] = String(iso).split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return isoOf(x); }
 function todayET(now) { return CAL.todayET ? CAL.todayET(now) : isoOf(new Date((now || Date.now()) - 5 * 3600e3)); }
+/* the moment `now` as JustCall wants a datetime: yyyy-mm-dd hh:mm:ss in the account's (Delray Beach) time — JustCall refuses a to_datetime in the future */
+function stampET(now) {
+  const p = {}; new Intl.DateTimeFormat('en-CA', { timeZone: CAL.TZ || 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(new Date(now || Date.now())).forEach((x) => { p[x.type] = x.value; });
+  return `${p.year}-${p.month}-${p.day} ${p.hour === '24' ? '00' : p.hour}:${p.minute}:${p.second}`;
+}
 /* a UTC date + time from JustCall → the Delray Beach date it happened on */
 function etDate(dateUtc, timeUtc) {
   const d = new Date(`${String(dateUtc || '').slice(0, 10)}T${String(timeUtc || '00:00:00').slice(0, 8)}Z`); if (isNaN(d)) return '';
@@ -105,7 +110,7 @@ async function sync(db, opts) {
   opts = opts || {}; const log = opts.log || (() => {}); const now = opts.now || Date.now();
   const s = await NOTIFY.settings(db, true); const keys = { key: s.justcallKey, secret: s.justcallSecret };
   if (!keys.key || !keys.secret) return { ok: false, why: 'no JustCall keys on settings/notify', texts: 0, calls: 0, matched: 0, written: 0 };
-  const today = todayET(now); const from = shiftDays(today, -(opts.days || 8)), to = shiftDays(today, 1);
+  const today = todayET(now); const from = shiftDays(today, -(opts.days || 8)) + ' 00:00:00', to = stampET(now - 60e3);   // eight days back, up to a minute ago
   const [texts, calls] = await Promise.all([pull(keys, 'texts', from, to, log), pull(keys, 'calls', from, to, log)]);
   const { players, book, onFile } = await phoneBook(db); const staff = await staffIndex(db);
   const agg = new Map();   // `${pid}_${week}` → { pid, week, texts, calls, last, by: Set, byEmail, how }
@@ -187,4 +192,4 @@ async function justcallUsers(db) {
   return { ok: true, users, staffWithout };
 }
 
-module.exports = { sync, nudge, justcallUsers, phoneBook, weekOf, etDate, textCounts, callCounts, SLOTS, _useFetch };
+module.exports = { sync, nudge, justcallUsers, phoneBook, weekOf, etDate, stampET, textCounts, callCounts, SLOTS, _useFetch };
