@@ -498,6 +498,15 @@ footer.pwd-foot{position:relative;z-index:2}
 .wkq.now{outline:2px solid var(--ink);outline-offset:1px}
 .meter.wk i{background:#6EDC94}
 .wkn.off{display:inline-block;background:var(--wk-off);color:var(--wk-off-ink);border-radius:999px;padding:0 8px}
+/* status as a list: one fact per line, the number first (Antonio, Nov 2) */
+ul.lines{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;max-width:60ch}
+ul.lines li{display:flex;gap:10px;align-items:center;font-size:14.5px;line-height:1.35;color:var(--ink-2)}
+ul.lines b.n{flex:none;min-width:30px;padding:2px 9px;border-radius:999px;background:#000;color:var(--lime);text-align:center;font-weight:700;font-size:13px;line-height:1.3;font-variant-numeric:tabular-nums}
+ul.lines b.n.off{background:var(--wk-off);color:var(--wk-off-ink)}ul.lines b.n.on{background:var(--wk-on);color:var(--wk-on-ink)}
+.head ul.sub.lines{margin-top:12px}.head ul.sub.lines li{color:var(--ink-2)}
+button.notice.remind .ttl,body.skin-coach button.notice.remind span.ttl{font-weight:700;flex-basis:100%;background:none;padding:0;border-radius:0;text-decoration:none;font-size:14px}button.notice.remind ul.lines{margin:0;flex:1 1 220px}button.notice.remind>span:last-child{align-self:flex-end}
+.due-list{margin:-6px 0 18px}.due-list .due-line,body.skin-coach .due-list .due-line{margin:0}.due-list ul.lines{margin:6px 0 12px}
+body.skin-coach .head ul.lines b.n{background:#000;color:var(--lime);padding:2px 9px}body.skin-coach .head ul.lines b.n.off{background:var(--wk-off);color:var(--wk-off-ink)}body.skin-coach .head ul.lines b.n.on{background:var(--wk-on);color:var(--wk-on-ink)}
 button.notice.remind.wk .wkn{margin-right:2px}
 .wkcard{display:grid;gap:12px;margin-bottom:18px;border-left:6px solid #F08A8A}
 .wkcard.on{border-left-color:#6EDC94}
@@ -2392,14 +2401,16 @@ const PW_CONFIG = {
     // the weekly contact strip: a coach sees their own players, a director everyone
     const wkList = WEB.isDirector ? ct : myCt;
     const ckList = (WEB.isDirector ? act : myPlayers()).filter((p) => !checkDone(p.id)).length;
-    const wkStrip = act.length && S.loaded.contacts ? `<button class="notice remind wk${wkList.left ? '' : ' calm'}" ${goAttr({ view: 'contact' })}><b>Weekly contact · ${esc(weekLabel(ct.week))}: ${wkList.left ? `<span class="wkn off">${wkList.left}</span> ${wkList.left === 1 ? 'family' : 'families'} still to reach` : 'every family has heard from their coach'} · ${wkList.done} of ${wkList.total} in touch${S.loaded.checks && ckList ? ` · <span class="wkn off">${ckList}</span> with contacts to confirm` : ''}.</b><span>Open the list</span></button>` : '';
+    // Antonio (Nov 2): one fact per line, the number first — never a run-on sentence, above all on the phone
+    const wkStrip = act.length && S.loaded.contacts ? `<button class="notice remind wk${wkList.left ? '' : ' calm'}" ${goAttr({ view: 'contact' })}><span class="ttl">Weekly contact · ${esc(weekLabel(ct.week))}</span><ul class="lines">${wkList.left ? `<li><b class="n off">${wkList.left}</b> ${wkList.left === 1 ? 'family' : 'families'} still to reach</li>` : '<li><b class="n on">✓</b> every family has heard from their coach</li>'}<li><b class="n${wkList.done ? ' on' : ''}">${wkList.done}</b> of ${wkList.total} in touch</li>${S.loaded.checks && ckList ? `<li><b class="n off">${ckList}</b> with contacts to confirm</li>` : ''}</ul><span>Open the list</span></button>` : '';
     const recent = S.assess.slice(0, 8).map((a) => rowAssess(a, true, false)).join('');
     const fu = followUps(); const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-    const bits = [fu.unsent.length ? plural(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents') : '', fu.noMeeting.length ? plural(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set') : '', fu.late.length ? plural(fu.late.length, 'meeting to confirm', 'meetings to confirm') : ''].filter(Boolean);
-    const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><b>${bits.length ? 'Follow-up: ' + esc(bits.join(' · ')) + '.' : esc(plural(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')) + '.'}</b><span>Open the list</span></button>` : '';
+    const line = (n, one, many) => (n ? `<li><b class="n">${n}</b> ${n === 1 ? one : many}</li>` : '');
+    const bits = [line(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents'), line(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set'), line(fu.late.length, 'meeting to confirm', 'meetings to confirm')].filter(Boolean);
+    const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><span class="ttl">Follow-up</span><ul class="lines">${bits.length ? bits.join('') : line(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')}</ul><span>Open the list</span></button>` : '';
     const nOpen = new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size;
     const head = `<div class="head"><div><div class="lbl">Players · reports · ${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div><h1 class="title">Coach <em>Portal.</em></h1>
-      <div class="sub"><b>${act.length}</b> active ${act.length === 1 ? 'player' : 'players'} · <b>${qd}</b> of ${qt} ${esc(q)} 3-month reports done${nOpen ? ` · <b>${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up` : ''}.</div></div></div>`;
+      <ul class="sub lines"><li><b class="n">${act.length}</b> active ${act.length === 1 ? 'player' : 'players'}</li><li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>${nOpen ? `<li><b class="n">${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up</li>` : ''}</ul></div></div>`;
     return `${notice()}${head}${empty}${wkStrip}${remind}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
       ${homeTryouts()}
       <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
@@ -2444,8 +2455,8 @@ const PW_CONFIG = {
     const rows = list.map(row).join('');
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Weekly contact' }])}
       <div class="head"><div><div class="lbl">Week of ${esc(weekLabel(wk))} · Monday to Sunday</div><h1 class="title">Weekly <em>contact.</em></h1>
-        <div class="sub">Every family hears from their coach every week — one text or one call through JustCall, with the parents or with the player. JustCall ticks it by itself; tick it here if you spoke in person. <b>Red</b> means nobody has been in touch yet this week.${S.loaded.checks && all.filter((p) => !checkDone(p.id)).length ? ` <span class="chip ck-off">⚠ ${all.filter((p) => !checkDone(p.id)).length} with contacts to confirm</span> — JustCall cannot find a family whose numbers are not on their page.` : ''}</div></div>
-        <div class="rowx"><span class="chip wk ${t.left ? 'wk-off' : 'wk-on'}" style="font-size:12px">${t.left ? t.left + ' still to reach' : 'everyone reached'}</span><span class="chip wk wk-on" style="font-size:12px">${t.done} of ${t.total} in touch</span></div></div>
+        <div class="sub">One text or one call with every family, every week, through JustCall. JustCall ticks it by itself; tick it here if you spoke in person. <b>Red</b> means nobody has been in touch yet this week.</div>
+        <ul class="sub lines">${t.left ? `<li><b class="n off">${t.left}</b> still to reach</li>` : '<li><b class="n on">✓</b> everyone reached</li>'}<li><b class="n${t.done ? ' on' : ''}">${t.done}</b> of ${t.total} in touch</li>${S.loaded.checks && all.filter((p) => !checkDone(p.id)).length ? `<li><b class="n off">${all.filter((p) => !checkDone(p.id)).length}</b> with contacts to confirm</li>` : ''}</ul></div></div>
       ${last < TRACK_START ? `<p class="hint due-line"><b>First week.</b> The tracker counts from the week of ${esc(weekLabel(TRACK_START))}; earlier weeks are not held against anyone.</p>` : `<p class="hint due-line"><b>Last week</b> (${esc(weekLabel(last))}): ${tl.done} of ${tl.total} families were in touch${tl.total && tl.done < tl.total ? ` · <span class="chip wk wk-off">${tl.total - tl.done} missed</span>` : ''}.</p>`}
       ${WEB.isDirector && coaches.length > 1 ? `<div class="filters" role="group" aria-label="Filter by coach"><button class="fchip" aria-pressed="${fc === null || fc === undefined}" data-act="fcontact" data-v="__all">All ${all.length}</button>${coaches.map((c) => { const cl = all.filter((p) => (p.coach || '') === c); const left = cl.filter((p) => !inTouch(p.id, wk)).length; return `<button class="fchip" aria-pressed="${fc === c}" data-act="fcontact" data-v="${esc(c)}">${esc(c || 'No coach')} ${cl.length}${left ? ` <i class="red">${left}</i>` : ''}</button>`; }).join('')}</div>` : ''}
       ${rows ? `<div class="list clean">${rows}</div>` : `<div class="empty">${S.loaded.players ? (all.length ? 'No players for that coach.' : WEB.isDirector ? 'No active players yet.' : 'No players are on your name yet. A director puts your name on a player’s record.') : 'Loading…'}</div>`}`;
@@ -2496,8 +2507,8 @@ const PW_CONFIG = {
     // what is due now, in one line (Antonio, Oct 23): this quarter's 3-month report, and how many players have not started; plus the week's contact count
     const tally = list.filter(active).map(dueNow); const nMiss = tally.filter((d) => d.overall === 'missing').length, nWork = tally.filter((d) => d.overall === 'working').length, nDone = tally.filter((d) => d.overall === 'done').length;
     const wk = contactTally(list.filter(active));
-    const todo = list.length ? `<p class="hint due-line"><b>Due now:</b> the ${esc(q)} 3-month report · <span class="chip st-missing">${nMiss} missing</span> <span class="chip st-working">${nWork} working on it</span> <span class="chip st-done">${nDone} up to date</span></p>
-      <p class="hint due-line"><b>This week:</b> <button class="linkb" ${goAttr({ view: 'contact' })}>weekly contact</button> · <span class="chip wk ${wk.left ? 'wk-off' : 'wk-on'}">${wk.left ? wk.left + ' still to reach' : 'everyone reached'}</span> <span class="chip wk wk-on">${wk.done} in touch</span></p>` : '';
+    const todo = list.length ? `<div class="due-list"><p class="hint due-line"><b>Due now: the ${esc(q)} 3-month report</b></p><ul class="lines">${nMiss ? `<li><b class="n off">${nMiss}</b> missing</li>` : ''}${nWork ? `<li><b class="n">${nWork}</b> working on it</li>` : ''}<li><b class="n${nDone ? ' on' : ''}">${nDone}</b> up to date</li></ul>
+      <p class="hint due-line"><b>This week: <button class="linkb" ${goAttr({ view: 'contact' })}>weekly contact</button></b></p><ul class="lines">${wk.left ? `<li><b class="n off">${wk.left}</b> still to reach</li>` : '<li><b class="n on">✓</b> everyone reached</li>'}<li><b class="n${wk.done ? ' on' : ''}">${wk.done}</b> of ${wk.total} in touch</li></ul></div>` : '';
     const empty = S.loaded.players || S.dbState === 'none' ? 'No players in this group yet.' : 'Loading roster…';
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label }])}
       <div class="head"><div><div class="lbl">${esc(g.director || '')}</div><h1 class="title">${emT(g.label)}</h1></div>
