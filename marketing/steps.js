@@ -5,18 +5,18 @@
    away until Manu signs off. Loaded after app.js / live.js / engine.js. */
 (function () {
   const $ = (id) => document.getElementById(id);
-  let mode = "steps";
-  try { mode = localStorage.getItem("mk-view") || "steps"; } catch (e) { /* no storage */ }
+  let mode = "app";
+  try { mode = localStorage.getItem("mk-view") || "app"; } catch (e) { /* no storage */ }
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const cardOf = (id) => { const el = $(id); return el ? el.closest(".card") || el : null; };
   const nav = $("nav"); if (!nav) return;
 
   // ── the switch (both modes) ──
   const sw = document.createElement("div"); sw.className = "view-switch"; sw.id = "view-switch";
-  sw.innerHTML = '<span class="small muted">View</span><button type="button" class="vs' + (mode === "steps" ? " on" : "") + '" data-view="steps">App</button><button type="button" class="vs' + (mode === "classic" ? " on" : "") + '" data-view="classic">Classic</button>';
+  sw.innerHTML = '<span class="small muted">View</span>' + [["app", "App"], ["steps", "Three steps"], ["classic", "Classic"]].map(([v, n]) => '<button type="button" class="vs' + (mode === v ? " on" : "") + '" data-view="' + v + '">' + n + "</button>").join("");
   nav.parentNode.insertBefore(sw, nav);
   sw.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("mk-view", b.dataset.view); } catch (e) { /* noop */ } location.hash = ""; location.reload(); }));
-  if (mode !== "steps") return;
+  if (mode !== "app") return;
   document.body.classList.add("app-skin");
 
   // ── the tab bar: a segmented pill on desktop, the bottom bar on the phone ──
