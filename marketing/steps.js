@@ -6,7 +6,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   let mode = "app";
-  try { mode = localStorage.getItem("mk-view") || "app"; } catch (e) { /* no storage */ }
+  try { mode = localStorage.getItem("mk-view") || "app"; if (mode === "steps" && !localStorage.getItem("mk-v3")) { mode = "app"; localStorage.setItem("mk-view", "app"); } localStorage.setItem("mk-v3", "1"); } catch (e) { /* no storage */ }   // Nov 3: everyone lands on App once; their own choice after that
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const cardOf = (id) => { const el = $(id); return el ? el.closest(".card") || el : null; };
   const nav = $("nav"); if (!nav) return;
