@@ -84,7 +84,7 @@
   window.openWeek = function (ws) { openTab("screate"); if (window.PW && PW.showWeek) PW.showWeek(ws); };
 
   // ── helpers ──
-  const fmt = (n) => (n == null || n === "" || isNaN(Number(n)) ? "—" : Number(n) >= 10000 ? (Number(n) / 1000).toFixed(1).replace(/\.0$/, "") + "<small>K</small>" : Number(n).toLocaleString("en-US"));
+  const fmt = (n) => (n == null || n === "" || isNaN(Number(n)) ? "—" : Number(n) >= 100000 ? (Number(n) / 1000).toFixed(1).replace(/\.0$/, "") + "<small>K</small>" : Number(n).toLocaleString("en-US"));
   const money = (n) => (n == null || isNaN(Number(n)) ? "—" : "$" + Math.round(Number(n)).toLocaleString("en-US"));
   const dayL = (d) => { if (!d) return ""; const x = new Date(String(d).length === 10 ? d + "T12:00:00" : d); return isNaN(x) ? String(d) : x.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
   const tile = (lab, n, dl, cls) => '<div class="tile"><div class="lab">' + esc(lab) + '</div><div class="n">' + n + "</div>" + (dl ? '<span class="dl ' + (cls || "") + '">' + dl + "</span>" : "") + "</div>";
