@@ -24,6 +24,7 @@
     const v = S.numbers[ids[ids.length - 1]]; return v && typeof v === "object" ? Object.assign({ id: ids[ids.length - 1] }, v) : null;
   }
   function latestKpi() { return Array.isArray(S.kpi) && S.kpi.length ? S.kpi[0] : null; }
+  if (window.PW) PW.latestNumbers = latestNumbers;
   function latestReport(pred) { const list = Object.keys(S.reports || {}).map((k) => S.reports[k]).filter((r) => r && (!pred || pred(r))).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.at || "").localeCompare(String(a.at || ""))); return list[0] || null; }
   const sundayIso = (d) => { const s = new Date(d); s.setHours(0, 0, 0, 0); s.setDate(s.getDate() - s.getDay()); return s.getFullYear() + "-" + String(s.getMonth() + 1).padStart(2, "0") + "-" + String(s.getDate()).padStart(2, "0"); };
   function weekItems(w) {
@@ -208,7 +209,8 @@
     if (c.status === "paused") return { st: "paused", e };
     if (w.start && w.start <= t) return { st: e && e.status === "missing" ? "missing" : c.status === "live" && !e ? "live" : "missing", e };
     return { st: "planned", e };
-  }
+  }  if (window.PW) PW.campState = campState;
+
   function phaseNow(c) { const t = todayIso(); return (c.phases || []).find((p) => p.start && p.start <= t && (p.end || p.start) >= t) || null; }
   const stChip = (st) => st === "live" ? '<span class="st on">Live</span>' : st === "missing" ? '<span class="st miss">✕ Not live</span>' : st === "ended" ? '<span class="st end">Ended</span>' : st === "paused" ? '<span class="st wait">Paused</span>' : '<span class="st plan">Planned</span>';
   // what the Home page says about the ads

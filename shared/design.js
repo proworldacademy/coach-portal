@@ -11,6 +11,17 @@
          PWDesign.palette([{ name, kind, href }]);  PWDesign.countUp(root);  PWDesign.toast(msg, err);  PWDesign.esc(s);  PWDesign.greet(name)
          A public page (no sign-in) mounts with { strip: false, jump: false }: the wordmark alone, no palette.                            */
 (function () {
+  // The app (Antonio, Nov 3, 2026): every page is installable — "Add to Home Screen" gives a PROWORLD icon, a full-screen window
+  // and the bottom bar; the manifest, the icons and the service worker live in /app and /sw.js. The stores come later on the same code.
+  try {
+    const H = document.head, add = (tag, attrs) => { const el = document.createElement(tag); Object.keys(attrs).forEach((k) => el.setAttribute(k, attrs[k])); H.appendChild(el); };
+    if (!document.querySelector('link[rel="manifest"]')) add("link", { rel: "manifest", href: "/app/manifest.webmanifest" });
+    if (!document.querySelector('meta[name="theme-color"]')) add("meta", { name: "theme-color", content: "#0A0A0A" });
+    add("meta", { name: "apple-mobile-web-app-capable", content: "yes" }); add("meta", { name: "mobile-web-app-capable", content: "yes" });
+    add("meta", { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }); add("meta", { name: "apple-mobile-web-app-title", content: "PROWORLD" });
+    add("link", { rel: "apple-touch-icon", href: "/app/apple-touch-icon.png" });
+    if ("serviceWorker" in navigator && location.protocol === "https:") window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+  } catch (e) { /* the page works without the app bits */ }
   "use strict";
   const P = window.PW_PAGES || { PAGES: [], SECTIONS: [] };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

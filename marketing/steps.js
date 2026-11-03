@@ -1,8 +1,8 @@
-/* Marketing in three steps (Antonio, Oct 26, 2026): the same page re-sorted into the order the work happens —
-   ① Report (what worked, the ads, the competitors) · ② Create (the two weeks, the briefs, the ads in them) · ③ Execute (created · posted ·
-   missing, ticked by the morning run) · More (the reference tabs). Nothing is re-rendered here: the existing cards are MOVED into the
-   step sections, so every renderer, id and run stays exactly as it is. "Classic" (the old tabs) is one tap away; the choice is remembered
-   on this device. Loaded after app.js / live.js / engine.js. */
+/* Marketing in three steps (Antonio, Oct 26 → the app look, Nov 3, 2026): the same page re-sorted into the order the work happens —
+   ① Report (what is happening) · ② Create (the next two weeks, by category — create.js) · ③ Execute (is it happening) · More (everything
+   else). Nothing underneath changes: the existing cards are MOVED into the step sections, so every renderer, id and run stays as it is;
+   what the three screens show is rebuilt here from the record as tiles, rows and chips (app.css). "Classic" (the old tabs) is one tap
+   away until Manu signs off. Loaded after app.js / live.js / engine.js. */
 (function () {
   const $ = (id) => document.getElementById(id);
   let mode = "steps";
@@ -13,65 +13,56 @@
 
   // ── the switch (both modes) ──
   const sw = document.createElement("div"); sw.className = "view-switch"; sw.id = "view-switch";
-  sw.innerHTML = '<span class="small muted">View</span><button type="button" class="vs' + (mode === "steps" ? " on" : "") + '" data-view="steps">Three steps</button><button type="button" class="vs' + (mode === "classic" ? " on" : "") + '" data-view="classic">Classic</button>';
+  sw.innerHTML = '<span class="small muted">View</span><button type="button" class="vs' + (mode === "steps" ? " on" : "") + '" data-view="steps">App</button><button type="button" class="vs' + (mode === "classic" ? " on" : "") + '" data-view="classic">Classic</button>';
   nav.parentNode.insertBefore(sw, nav);
   sw.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("mk-view", b.dataset.view); } catch (e) { /* noop */ } location.hash = ""; location.reload(); }));
   if (mode !== "steps") return;
+  document.body.classList.add("app-skin");
 
-  // ── the step nav ──
-  const STEPS = [
-    ["sreport", "1", "Report", "what worked, the ads, the competitors"],
-    ["screate", "2", "Create", "the two weeks, the briefs, the ads in them"],
-    ["sexecute", "3", "Execute", "created · posted · missing"],
-    ["smore", "", "More", "banks, archive, history, the runs"]
-  ];
-  const steps = document.createElement("nav"); steps.className = "steps"; steps.id = "steps"; steps.setAttribute("aria-label", "Marketing in three steps");
-  steps.innerHTML = STEPS.map(([id, n, name, sub]) => '<button type="button" class="step' + (n ? "" : " more") + '" data-step="' + id + '" role="tab">' + (n ? "<i>" + n + "</i>" : "") + "<span><b>" + name + (n ? "" : " ▾") + "</b><small>" + esc(sub) + "</small></span></button>").join("");
-  nav.parentNode.insertBefore(steps, nav);
+  // ── the tab bar: a segmented pill on desktop, the bottom bar on the phone ──
+  const STEPS = [["sreport", "1", "Report"], ["screate", "2", "Create"], ["sexecute", "3", "Execute"], ["smore", "···", "More"]];
+  const seg = document.createElement("nav"); seg.className = "seg"; seg.id = "steps"; seg.setAttribute("aria-label", "Marketing");
+  seg.innerHTML = STEPS.map(([id, n, name]) => '<button type="button" data-step="' + id + '" role="tab"><i>' + n + "</i>" + name + "</button>").join("");
+  nav.parentNode.insertBefore(seg, nav);
+  const bar = document.createElement("nav"); bar.className = "appbar"; bar.setAttribute("aria-label", "Marketing");
+  bar.innerHTML = STEPS.map(([id, n, name]) => '<button type="button" data-step="' + id + '"><i>' + n + "</i>" + name + "</button>").join("");
+  document.body.appendChild(bar);
   nav.hidden = true; const lib = $("lib-row"); if (lib) lib.hidden = true;
 
-  // ── the step sections, in the same container as the tabs ──
+  // ── the step sections ──
   const host = $("tab-home").parentNode;
-  const mk = (id, title, sub) => { const s = document.createElement("section"); s.className = "tab"; s.id = "tab-" + id; s.innerHTML = '<h1 class="h-display page-title">' + title + '</h1><p class="page-sub">' + sub + "</p>"; host.insertBefore(s, $("tab-home")); return s; };
-  const sReport = mk("sreport", "The <em>report</em>", "Read, nothing to click. Every morning the brain reads our Instagram and the ad account, every Monday the competitors, every Sunday it writes what worked.");
-  const sCreate = mk("screate", "<em>Create</em> the next two weeks", "One button. The brain builds the two weeks from everything it has learned: the banks, the pillars, what worked, the season, the competitors. Then, by category: the coach videos, the carousels and posts, the ads, what is in hand. Approve, swap, send.");
-  const sExec = mk("sexecute", "<em>Execute</em>", "One table: created · posted · missing, ticked by the morning run from Instagram. Missing goes first into the next two weeks.");
-  const sMore = mk("smore", "<em>More</em>", "The reference screens: the banks, the archive, the history, the season, the runs. Same as before, one door.");
+  const mk = (id, title, when) => { const s = document.createElement("section"); s.className = "tab"; s.id = "tab-" + id; s.innerHTML = '<h1 class="h-display page-title">' + title + '</h1><p class="page-when" id="when-' + id + '">' + (when || "") + "</p>"; host.insertBefore(s, $("tab-home")); return s; };
+  const sReport = mk("sreport", "Report.", "");
+  const sCreate = mk("screate", "Create.", "");
+  const sExec = mk("sexecute", "Execute.", "");
+  const sMore = mk("smore", "More.", "The banks, the archive, the history, the season, the runs, the classic screens.");
   const move = (sec, el) => { if (el && el.parentNode !== sec) sec.appendChild(el); };
   const labelled = (title, el) => { if (!el) return null; const c = document.createElement("div"); c.className = "card"; c.innerHTML = '<div class="card-label">' + title + "</div>"; c.appendChild(el); return c; };
 
-  // ① Report
-  move(sReport, $("import-card"));
-  move(sReport, $("home-attn-card"));
-  move(sReport, cardOf("home-ig"));
-  move(sReport, cardOf("home-ads"));
-  move(sReport, labelled("What worked, what did not <span class=\"small muted\">· the readings, newest first</span>", $("reports-list")));
-  move(sReport, labelled("What the competitors are running <span class=\"small muted\">· the Monday read</span>", $("ad-watch")));
-  move(sReport, cardOf("home-top"));
-  move(sReport, cardOf("home-runs"));
+  // ① Report — built below (renderReport); the Needs-you card is the one live.js keeps
+  const rep = document.createElement("div"); rep.id = "report-clean"; sReport.appendChild(rep);
+  const attn = $("home-attn-card");
 
-  // ② Create
+  // ② Create — create.js draws it around #fortnight
   move(sCreate, $("fortnight"));
   move(sCreate, cardOf("brief-buttons"));
   move(sCreate, labelled("The ads in these weeks <span class=\"small muted\">· the ad plan</span>", $("ad-plan")));
-  // the week-by-week assignments (a second view of the same two weeks), the banks and the season: in More (Antonio, Nov 1: "too many windows")
-  const asg = $("tab-assignments"); const asgCards = asg ? Array.from(asg.querySelectorAll(":scope > .card, :scope > .grid-2, :scope > div")) : [];
 
-  // ③ Execute
-  const execCard = document.createElement("div"); execCard.className = "card"; execCard.id = "exec-card"; execCard.innerHTML = '<div class="card-label">What went out <span class="small muted" id="exec-when"></span></div><div id="exec-tiles" class="grid-4" style="margin-bottom:14px"></div><div class="tbl-wrap"><table class="tbl" id="exec-table"></table></div>';
-  sExec.appendChild(execCard);
-  move(sExec, cardOf("home-week"));
-  move(sExec, cardOf("home-score-when"));
-  move(sExec, cardOf("home-adplan"));
-  move(sExec, labelled("The ads in the account <span class=\"small muted\">· live now</span>", $("ads-live")));
+  // ③ Execute — built below (renderExec)
+  const ex = document.createElement("div"); ex.id = "exec-clean"; sExec.appendChild(ex);
 
-  // More: the old library row, visible, plus the workflow pieces nobody opens daily
+  // More: everything else, one door
   if (lib) { lib.hidden = false; sMore.appendChild(lib); }
-  const moreRow = document.createElement("div"); moreRow.className = "nav"; moreRow.style.marginTop = "8px";
-  ["assignments:Coach assignments (classic)", "workflow:Workflow", "ads:Ads (classic)", "reports:Reports (classic)", "home:Home (classic)"].forEach((s) => { const [id, name] = s.split(":"); const b = document.createElement("button"); b.className = "tab-btn"; b.dataset.tab = id; b.textContent = name; b.addEventListener("click", () => openTab(id)); moreRow.appendChild(b); });
+  const moreRow = document.createElement("div"); moreRow.className = "pills"; moreRow.style.margin = "8px 0 16px";
+  ["assignments:Coach assignments", "workflow:Workflow", "ads:Ads", "reports:All reports", "home:Home (classic)"].forEach((s) => { const [id, name] = s.split(":"); const b = document.createElement("button"); b.className = "pill"; b.dataset.tab = id; b.textContent = name; b.addEventListener("click", () => openTab(id)); moreRow.appendChild(b); });
   sMore.appendChild(moreRow);
-  asgCards.forEach((el) => move(sMore, el));
+  move(sMore, cardOf("home-ig")); move(sMore, cardOf("home-ads")); move(sMore, cardOf("home-top")); move(sMore, cardOf("home-runs")); move(sMore, $("import-card"));
+  move(sMore, cardOf("home-week")); move(sMore, cardOf("home-score-when")); move(sMore, cardOf("home-adplan"));
+  move(sMore, labelled("What the competitors are running <span class=\"small muted\">· the Monday read, full table</span>", $("ad-watch")));
+  move(sMore, labelled("The ads in the account <span class=\"small muted\">· live now</span>", $("ads-live")));
+  const asg = $("tab-assignments"); if (asg) Array.from(asg.querySelectorAll(":scope > .card, :scope > .grid-2, :scope > div")).forEach((el) => move(sMore, el));
   move(sMore, labelled("The season <span class=\"small muted\">· posts from · ads from</span>", $("ad-cal")));
+  move(sMore, labelled("Every report <span class=\"small muted\">· newest first</span>", $("reports-list")));
   move(sMore, labelled("How the engine runs", $("pipeline")));
 
   // ── switching ──
@@ -81,45 +72,113 @@
     const t = $("tab-" + id); if (t) t.classList.add("active");
     const b = document.querySelector('.tab-btn[data-tab="' + id + '"]'); if (b) b.classList.add("active");
     const step = STEPS.find((s) => s[0] === id) ? id : "smore";
-    steps.querySelectorAll(".step").forEach((x) => { const on = x.dataset.step === step; x.classList.toggle("on", on); x.setAttribute("aria-selected", on ? "true" : "false"); });
+    document.querySelectorAll(".seg [data-step], .appbar [data-step]").forEach((x) => { const on = x.dataset.step === step; x.classList.toggle("on", on); x.setAttribute("aria-selected", on ? "true" : "false"); });
     window.scrollTo(0, 0);
   }
-  steps.querySelectorAll(".step").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.step)));
-  // the library buttons keep working; they mark More
-  if (lib) lib.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => { steps.querySelectorAll(".step").forEach((x) => x.classList.toggle("on", x.dataset.step === "smore")); }));
-  // old links keep landing in the right step
-  const MAP = { home: "sreport", reports: "sreport", aireplies: "sreport", fortnight: "screate", assignments: "screate", workflow: "screate", ads: "screate", report: "sreport", create: "screate", execute: "sexecute", more: "smore" };
+  document.querySelectorAll(".seg [data-step], .appbar [data-step]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.step)));
+  if (lib) lib.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
+  const MAP = { home: "sreport", reports: "smore", aireplies: "sreport", fortnight: "screate", assignments: "smore", workflow: "smore", ads: "smore", report: "sreport", create: "screate", execute: "sexecute", more: "smore" };
   const fromHash = () => { const h = String(location.hash || "").replace(/^#/, ""); if (!h) return openTab("sreport"); if (MAP[h]) return openTab(MAP[h]); if ($("tab-" + h)) return openTab(h); openTab("sreport"); };
   window.addEventListener("hashchange", fromHash);
-  // app.js's own hash handler may have opened a classic tab already; ours runs last
   setTimeout(fromHash, 0);
   window.openWeek = function (ws) { openTab("screate"); if (window.PW && PW.showWeek) PW.showWeek(ws); };
 
-  // ── ③ the table: every item of the current fortnight, with the run's tick ──
-  function items(w) { const out = []; (w.coaches || []).forEach((c, ci) => (c.ideas || []).forEach((i, ii) => out.push({ who: c.name, it: i, ref: "'" + w.weekStart + "','idea'," + ci + "," + ii }))); (w.production || []).forEach((p, pi) => out.push({ who: "Production", it: p, ref: "'" + w.weekStart + "','prod'," + pi })); return out; }
+  // ── helpers ──
+  const fmt = (n) => (n == null || n === "" || isNaN(Number(n)) ? "—" : Number(n) >= 10000 ? (Number(n) / 1000).toFixed(1).replace(/\.0$/, "") + "<small>K</small>" : Number(n).toLocaleString("en-US"));
+  const money = (n) => (n == null || isNaN(Number(n)) ? "—" : "$" + Math.round(Number(n)).toLocaleString("en-US"));
+  const dayL = (d) => { if (!d) return ""; const x = new Date(String(d).length === 10 ? d + "T12:00:00" : d); return isNaN(x) ? String(d) : x.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  const tile = (lab, n, dl, cls) => '<div class="tile"><div class="lab">' + esc(lab) + '</div><div class="n">' + n + "</div>" + (dl ? '<span class="dl ' + (cls || "") + '">' + dl + "</span>" : "") + "</div>";
+  const rw = (ic, icCls, title, sub, right) => '<div class="rw"><div class="ic ' + (icCls || "") + '">' + ic + '</div><div class="t"><b>' + esc(title) + "</b>" + (sub ? "<span>" + esc(sub) + "</span>" : "") + "</div>" + (right || "") + "</div>";
+  const chip = (cls, t) => '<span class="chip ' + cls + '">' + esc(t) + "</span>";
+  const items = (w) => { const out = []; (w.coaches || []).forEach((c, ci) => (c.ideas || []).forEach((i, ii) => out.push({ who: c.name, it: i, ref: "'" + w.weekStart + "','idea'," + ci + "," + ii }))); (w.production || []).forEach((p, pi) => out.push({ who: /^ad/i.test(p.format || "") ? "Ad video" : "Production", it: p, ref: "'" + w.weekStart + "','prod'," + pi })); return out; };
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Spare"];
+
+  // ── ① Report: four numbers, needs you, what worked, the competitors, the reports ──
+  function renderReport() {
+    const PW = window.PW; if (!PW || !PW.S) return; const S = PW.S;
+    const N = PW.latestNumbers ? PW.latestNumbers() : null, ig = N && N.ig, A = N && N.ads;
+    const thisWS = PW.wsOf(new Date()), w = S.weeks[thisWS], t = w ? PW.weekTally(w) : null;
+    $("when-sreport").textContent = (N ? "Read " + dayL(N.date || N.id) + " in the morning" : "No numbers read yet") + (N && N.range ? " · the 7 days " + dayL(N.range.from) + " – " + dayL(N.range.to) : "");
+    const fc = ig && ig.followersChange7 != null ? Number(ig.followersChange7) : null;
+    const vd = ig && ig.views7 != null && ig.views7prev ? Math.round((ig.views7 - ig.views7prev) / ig.views7prev * 100) : null;
+    const tiles = '<div class="tiles">' +
+      tile("Followers", ig ? fmt(ig.followers) : "—", fc == null ? "" : (fc >= 0 ? "↗ +" : "↘ ") + fmt(fc) + " this week", fc < 0 ? "down" : "") +
+      tile("Views · 7 days", ig ? fmt(ig.views7) : "—", vd == null ? "" : (vd >= 0 ? "↗ +" : "↘ ") + vd + "% vs last week", vd < 0 ? "down" : "") +
+      tile("Posted vs plan", t ? t.posted + " <small>of " + (t.total - t.spare) + "</small>" : "—", t ? (t.missing ? t.missing + " missing" : "on track") : "no plan this week", t && t.missing ? "down" : "") +
+      tile("Ad leads · 7 days", A && A.connected !== false ? fmt(A.leads7) : "—", A && A.leads7 ? money(A.cpl7) + " per lead · " + money(A.spend7) : A ? money(A.spend7) + " spent" : "", "") + "</div>";
+    // what worked / what did not — the newest Monday read
+    const mk = Array.isArray(S.market) && S.market.length ? S.market.find((m) => m && m.by === "instagram-review") || S.market[0] : null;
+    const f = mk ? (mk.findings || []) : [];
+    const pick = (re, n) => f.filter((l) => re.test(l)).slice(0, n);
+    const worked = pick(/^WORKING/i, 2).map((l) => rw("↑", "lime", l.replace(/^WORKING\s*[—-]\s*/i, "").split(/[.:;]/)[0].slice(0, 90), l.replace(/^WORKING\s*[—-]\s*/i, "").slice(0, 160), chip("imp", "Double down")))
+      .concat(pick(/^NOT WORKING/i, 1).map((l) => rw("↓", "bad", l.replace(/^NOT WORKING\s*[—-]\s*/i, "").split(/[.:;]/)[0].slice(0, 90), l.replace(/^NOT WORKING\s*[—-]\s*/i, "").slice(0, 160), chip("miss", "Change"))));
+    // competitors: ads running + news, three lines
+    const aw = Array.isArray(S.adWatch) && S.adWatch[0] ? S.adWatch[0] : null;
+    const comp = (aw ? (aw.rows || []).filter((r) => r && r.active).slice(0, 2).map((r) => rw(String(r.brand || "").split(" ").map((x) => x[0]).join("").slice(0, 2).toUpperCase(), "", r.brand + " · " + r.active + " ad" + (r.active > 1 ? "s" : "") + " running", [r.type, r.program].filter(Boolean).join(" · "), chip("", "Ads"))) : [])
+      .concat(pick(/^NEWS/i, 2).map((l) => { const s = l.replace(/^NEWS\s*[—-]\s*/i, ""); return rw("N", "", s.split(/[.:;(]/)[0].slice(0, 80), s.slice(0, 160), chip("", "News")); })).slice(0, 3);
+    const reps = Object.values(S.reports || {}).filter((r) => r && r.date).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 4);
+    const label = (r) => r.by === "instagram-review" ? "Monday review" : r.by === "engine" ? "Sunday engine" : r.by === "ai-replies" ? "AI replies" : (r.by || "Report");
+    rep.innerHTML = tiles +
+      '<div class="g2" style="margin-top:16px"><div id="slot-attn"></div><div class="card"><div class="card-label">What worked, what did not <span class="small muted">' + (mk ? "· " + dayL(mk.date) : "") + "</span></div>" + (worked.join("") || '<div class="empty">The Monday review writes this.</div>') + "</div></div>" +
+      '<div class="g31" style="margin-top:16px"><div class="card"><div class="card-label">Competitors this week <span class="small muted">' + (aw ? "· " + (aw.rows || []).length + " watched" : "") + "</span></div>" + (comp.join("") || '<div class="empty">The Monday review reads them.</div>') + '</div><div class="card"><div class="card-label">Reports</div><div class="pills">' + reps.map((r) => '<button class="pill" data-rep="' + esc(r.id || "") + '">' + esc(label(r)) + " · " + esc(dayL(r.date)) + "</button>").join("") + '<button class="pill" data-more="reports">All →</button></div></div></div>';
+    if (attn) { const slot = $("slot-attn"); if (slot) { slot.replaceWith(attn); attn.querySelector(".card-label").innerHTML = "Needs you"; } }
+    rep.querySelectorAll("[data-rep],[data-more]").forEach((b) => b.addEventListener("click", () => { openTab("smore"); const el = $("reports-list"); if (el) setTimeout(() => el.scrollIntoView({ block: "start", behavior: "smooth" }), 50); }));
+    const ai = $("ai-replies"); if (ai) sReport.appendChild(ai);
+  }
+
+  // ── ③ Execute: four numbers, one list per week, the ads, add a post ──
   function renderExec() {
-    const PW = window.PW; if (!PW || !PW.S || !$("exec-table")) return;
-    const S = PW.S, fn = PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);
+    const PW = window.PW; if (!PW || !PW.S) return; const S = PW.S;
+    const fn = PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);
     const when = S.delivery && S.delivery.checkedAt ? new Date(S.delivery.checkedAt) : null;
-    $("exec-when").textContent = "· " + PW.fnLabel(fn) + (when ? " · checked against Instagram " + when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + " " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : " · not checked yet");
-    let created = 0, posted = 0, missing = 0, first = 0; const rows = [];
+    $("when-sexecute").textContent = PW.fnLabel(fn) + (when ? " · checked against Instagram and the ad account " + when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + " " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : " · not checked yet");
+    let created = 0, posted = 0, improvised = 0, missing = 0; const weeks = [];
     pair.forEach((ws, wi) => {
-      const w = S.weeks && S.weeks[ws]; if (!w) { rows.push('<tr><td colspan="8" class="muted">Week ' + (wi + 1) + " · " + esc(PW.weekLabel ? PW.weekLabel(ws) : ws) + ' · not built yet. Press "Build the 2 weeks" on Create.</td></tr>'); return; }
-      rows.push('<tr><td colspan="8"><div class="xwk">Week ' + (wi + 1) + " · " + esc(w.weekDates || ws) + (w.locked ? "" : ' <span class="st">draft</span>') + "</div></td></tr>");
+      const w = S.weeks && S.weeks[ws];
+      if (!w) { weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(PW.weekLabel(ws)) + '</span></div><div class="empty">Not built yet — Generate on Create.</div></div>'); return; }
+      let wp = 0, wn = 0; const rows = [];
       items(w).sort((a, b) => DAYS.indexOf(a.it.day || "Spare") - DAYS.indexOf(b.it.day || "Spare")).forEach(({ who, it, ref }) => {
         const r = PW.itemState(ws, it), st = r.st, e = r.e || {};
-        if (st !== "spare") created++;
-        if (st === "posted" || st === "late") posted++; else if (st === "missing") missing++;
-        if (it.carried) first++;
-        const d = PW.dayDate(ws, it.day); const dl = d ? d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : (it.day || "Spare");
-        const ig = st === "posted" || st === "late" ? esc((e.postedAt ? String(e.postedAt).slice(0, 10) + " · " : "") + (e.views ? e.views.toLocaleString() + " views" : "") + (e.matchedBy === "improvised" ? " · improvised" : e.matchedBy && e.matchedBy !== "title" ? " · matched by " + e.matchedBy : "") + (st === "late" ? " · late" : "")) : st === "missing" ? '<span class="miss">not on Instagram</span>' : st === "today" ? "today" : it.carried ? '<span class="st wait">carried · post first</span>' : "";
-        rows.push("<tr" + (st === "missing" ? ' class="is-miss"' : "") + "><td>" + esc(dl) + "</td><td><b>" + esc(it.title || "") + "</b><div class=\"small muted\">" + esc([it.format, it.pillar].filter(Boolean).join(" · ")) + "</div></td><td>" + esc(who) + '</td><td class="c">' + (st === "spare" ? "" : "✓") + '</td><td class="c">' + (st === "posted" || st === "late" ? "✓" : '<span class="muted">·</span>') + '</td><td class="c">' + (st === "missing" ? "✕" : '<span class="muted">·</span>') + "</td><td>" + ig + '</td><td class="xact"><button class="btn ghost xs" title="Edit · mark posted · remove" onclick="fnEdit(' + ref + ')">✎</button></td></tr>');
+        if (st === "spare" && !(it.delivered || st === "posted")) return;   // spares are on Create, not here
+        created++; wn++;
+        let c = "";
+        if (st === "posted" || st === "late") { posted++; wp++; if (e.matchedBy === "improvised") { improvised++; c = chip("imp", "Improvised"); } else if (e.matchedBy === "campaign") c = chip("ok", "Live"); else c = chip("ok", st === "late" ? "Posted late" : "Posted"); }
+        else if (st === "missing") { missing++; c = chip("miss", "Missing"); }
+        else if (st === "today") c = chip("today", "Today"); else c = chip("", DAYS.includes(it.day) ? "Planned" : "In hand");
+        const sub = [who, it.format].concat(e.postedAt ? ["posted " + dayL(e.postedAt) + (e.matchedBy === "improvised" && e.title ? " as “" + String(e.title).slice(0, 40) + "”" : "")] : [], e.views ? [Number(e.views).toLocaleString() + " views"] : []).filter(Boolean).join(" · ");
+        rows.push(rw(esc(it.day || "—"), st === "missing" ? "bad" : st === "posted" || st === "late" ? "lime" : "", it.title || "", sub, c + '<div class="acts"><button title="Edit · mark posted · remove" onclick="fnEdit(' + ref + ')">✎</button></div>'));
       });
+      weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(w.weekDates || ws) + " · " + wp + " of " + wn + (w.locked ? "" : " · draft") + "</span></div>" + (rows.join("") || '<div class="empty">Nothing planned.</div>') + "</div>");
     });
-    $("exec-tiles").innerHTML = [["Created", created], ["Posted", posted], ["Missing", missing], ["Post first", first]].map(([l, n]) => '<div class="stat"><div class="stat-label">' + l + '</div><div class="stat-num">' + n + "</div></div>").join("");
-    $("exec-table").innerHTML = '<thead><tr><th>Day</th><th>Item</th><th>Who</th><th class="c">Created</th><th class="c">Posted</th><th class="c">Missing</th><th>On Instagram</th><th></th></tr></thead><tbody>' + rows.join("") + "</tbody>";
+    // the ads: every campaign in the plan that is not ended
+    const camps = (S.adPlan && Array.isArray(S.adPlan.campaigns) ? S.adPlan.campaigns : []).filter((c) => c && c.status !== "ended");
+    let live = 0; const ads = camps.map((c) => { const r = PW.campState ? PW.campState(c) : { st: c.status }, e = r.e || {}; const on = r.st === "live"; if (on) live++;
+      return rw("$", on ? "lime" : "", String(c.name || "").replace(/^PROWORLD\s*[—-]\s*/, "").replace(/\s*\(Leads\)$/, ""), on ? [money(e.spend7), e.leads7 != null ? e.leads7 + " leads" : "", e.cpl7 != null ? "$" + Number(e.cpl7).toFixed(0) + " each" : ""].filter(Boolean).join(" · ") : "planned " + dayL((c.window || {}).start), chip(on ? "ok" : r.st === "missing" ? "wait" : "", on ? "Live" : r.st === "missing" ? "Not live" : "Planned")); });
+    ex.innerHTML = '<div class="tiles">' + tile("Created", created, "two weeks", "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
+      '<div class="g31" style="margin-top:16px"><div style="display:grid;gap:16px">' + weeks.join("") + '</div><div style="display:grid;gap:14px;align-content:start"><div class="card"><div class="card-label">Ads</div>' + (ads.join("") || '<div class="empty">No campaigns planned.</div>') + '</div><button class="btn pri" id="exec-add" style="justify-content:center">+ Add a post Manu made</button><p class="small muted" style="margin:0;text-align:center">Improvised posts are read from Instagram every morning and matched to the coach. This is for the rare one it cannot place.</p></div></div>';
+    const add = $("exec-add"); if (add) add.onclick = addPost;
   }
-  if (window.PW && PW.hooks) PW.hooks.push(renderExec);
-  renderExec();
+  async function addPost() {
+    const PW = window.PW, S = PW.S; const fn = PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);
+    const weeks = pair.filter((ws) => S.weeks[ws]); if (!weeks.length) { PW.toast("Generate the two weeks first", true); return; }
+    const coaches = (PW.COACHES || []).map((c) => c.name);
+    const r = await PW.askForm("A post that went out", [
+      { key: "title", label: "What was posted", placeholder: "e.g. Soccer Saturdays — this week's session" },
+      { key: "who", label: "Who", type: "select", options: ["Production"].concat(coaches), value: "Production" },
+      { key: "format", label: "Format", type: "select", options: ["Reel", "Talking Head", "Carousel", "Static Post", "Story"], value: "Reel" },
+      { key: "ws", label: "Week", type: "select", options: weeks.map((ws) => S.weeks[ws].weekDates || ws), value: S.weeks[weeks[0]].weekDates || weeks[0] },
+      { key: "day", label: "Day", type: "select", options: DAYS.slice(0, 7), value: "Mon" }
+    ], "Add as posted");
+    if (!r || !r.title) return;
+    const ws = weeks[Math.max(0, weeks.map((x) => S.weeks[x].weekDates || x).indexOf(r.ws))], w = S.weeks[ws];
+    const it = { id: "x_" + Date.now().toString(36), title: r.title, format: r.format, day: r.day, desc: "Added by hand on Execute", hook: "", delivered: true, approved: true, custom: true };
+    if (r.who === "Production") { it.pillar = "culture"; w.production.push(it); }
+    else { let c = (w.coaches || []).find((x) => x.name === r.who); if (!c) { c = { name: r.who, role: "", ideas: [] }; w.coaches.push(c); } c.ideas.push(it); }
+    PW.fnSync(ws); PW.toast("Added as posted");
+  }
+
+  function renderAll() { try { renderReport(); } catch (e) { console.error(e); } try { renderExec(); } catch (e) { console.error(e); } }
+  if (window.PW && PW.hooks) PW.hooks.push(renderAll);
+  renderAll();
+  // live.js redraws Needs-you on its own hooks; when it does, it is already in its slot
 })();

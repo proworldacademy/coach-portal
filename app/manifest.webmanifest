@@ -1,0 +1,22 @@
+{
+  "name": "PROWORLD",
+  "short_name": "PROWORLD",
+  "description": "PROWORLD Academy — players, coaches, marketing, the family account.",
+  "id": "/",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1F1ED",
+  "theme_color": "#0A0A0A",
+  "icons": [
+    { "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/app/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Marketing", "url": "/marketing", "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Coaches", "url": "/portal", "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "My account", "url": "/family", "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

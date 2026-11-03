@@ -1,0 +1,117 @@
+/* The app skin (Antonio, Nov 3, 2026: "make it look like this" — white cards, one lime accent, pill tab bar, rows with a chip).
+   Six parts, used on every screen: the tab bar · tiles · rows · chips · the one button · cards. Scoped to body.app-skin
+   (the three-steps view). Loaded after calm.css, so it wins. Only the look: nothing in the data or the runs changes. */
+body.app-skin{--page:#F1F1ED;--line:#E6E6E1;--muted:#7A7A76;--mintT:#DDFDE7;--orchT:#F9E2F8;--amberT:#FFF1D6;--cyanT:#DFF7F9;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+body.app-skin,html:has(body.app-skin){background:#F1F1ED!important}
+body.app-skin .wrap,body.app-skin main{max-width:1240px}
+body.app-skin .page-sub{display:none}
+body.app-skin .page-title{font-size:clamp(40px,5vw,56px);margin:6px 0 2px}
+body.app-skin .page-title em{color:var(--ink);-webkit-text-stroke:0}
+body.app-skin .page-when{color:var(--muted);font-size:13px;margin:0 0 18px}
+body.app-skin .card{background:#fff;border:0;border-radius:22px;box-shadow:var(--shadow);padding:20px 22px}
+body.app-skin .card-label{font:700 15px/1.2 var(--body);text-transform:none;letter-spacing:0;font-style:normal;color:var(--ink);display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+body.app-skin .card-label::before{display:none}
+body.app-skin .card-label .small{font-weight:400}
+body.app-skin .view-switch{justify-content:flex-end;margin:0}
+/* ── the tab bar ── */
+body.app-skin .seg{display:flex;background:#E9E9E4;border-radius:999px;padding:4px;gap:2px;width:max-content;margin:8px auto 22px}
+body.app-skin .seg button{border:0;background:transparent;padding:9px 18px;border-radius:999px;font:700 13.5px var(--body);color:var(--muted);display:flex;align-items:center;gap:8px;cursor:pointer}
+body.app-skin .seg button i{width:22px;height:22px;border-radius:50%;background:#fff;color:var(--muted);display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:700}
+body.app-skin .seg button.on{background:var(--ink);color:#fff}
+body.app-skin .seg button.on i{background:var(--lime);color:var(--ink)}
+body.app-skin .appbar{display:none}
+/* ── tiles ── */
+body.app-skin .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+body.app-skin .tile{background:#fff;border-radius:20px;padding:16px 20px;box-shadow:var(--shadow);min-width:0}
+body.app-skin .tile .lab,body.app-skin .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+body.app-skin .tile .n{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1;margin:8px 0 6px;white-space:nowrap}
+body.app-skin .tile .n small{color:#B5B5B0;font-weight:700;font-size:.6em}
+body.app-skin .dl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--mintT);color:#0E3B22;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.app-skin .dl.down{background:var(--orchT);color:#5B1A5C}body.app-skin .dl.warn{background:var(--amberT);color:#7A5200}body.app-skin .dl.flat{background:#EFEFEA;color:#6B6B68}
+/* the old stat tiles become the same tile */
+body.app-skin .stat{background:#fff;border:0;border-radius:20px;box-shadow:var(--shadow);padding:16px 20px}
+body.app-skin .stat-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+body.app-skin .stat-label::before{display:none}
+body.app-skin .big-num,body.app-skin .stat-num{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1;font-family:var(--body);font-style:normal}
+body.app-skin .chg{font-size:11.5px;padding:3px 9px}
+/* ── rows ── */
+body.app-skin .rw{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--line)}
+body.app-skin .rw:first-child{border-top:0;padding-top:2px}
+body.app-skin .rw .ic{width:40px;height:40px;border-radius:50%;background:#F1F1ED;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+body.app-skin .rw .ic.lime{background:var(--lime)}body.app-skin .rw .ic.dark{background:var(--ink);color:var(--lime)}body.app-skin .rw .ic.bad{background:var(--orchT)}body.app-skin .rw .ic.warn{background:var(--amberT)}
+body.app-skin .rw .t{flex:1;min-width:0}body.app-skin .rw .t b{display:block;font-size:14px;line-height:1.3}body.app-skin .rw .t span{font-size:12px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.app-skin .rw .acts{display:flex;gap:6px;flex:none}
+body.app-skin .rw .acts button,body.app-skin .acts button{width:30px;height:30px;border-radius:50%;border:0;background:#F1F1ED;display:grid;place-items:center;font-size:12px;color:var(--ink);cursor:pointer;padding:0}
+body.app-skin .rw .acts button:hover{background:var(--lime)}
+/* the plan rows (create.js / app.js) become rows */
+body.app-skin .fn-row{border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;padding:10px 0;margin:0;box-shadow:none;grid-template-columns:30px 54px minmax(0,1fr) auto}
+body.app-skin .fn-row:first-of-type{border-top:0}
+body.app-skin .fn-row.ok{background:transparent}
+body.app-skin .fn-row .chk{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line-2)}
+body.app-skin .fn-row .chk.done{background:var(--lime);border-color:var(--lime);color:var(--ink)}
+body.app-skin .fn-day{font-weight:700;font-size:12px}
+body.app-skin .item-title{font-size:14px}
+body.app-skin .item-hook{border:0;padding:0;margin-top:2px;color:var(--muted);font-size:12px;font-style:normal;background:none}
+body.app-skin .item-actions .btn.ghost.xs{border-radius:50%;width:30px;height:30px;padding:0;justify-content:center;box-shadow:none;background:#F1F1ED;font-size:12px;overflow:hidden}
+body.app-skin .item-actions .btn.ghost.xs.orchid{width:auto;border-radius:999px;padding:0 10px}
+body.app-skin .fn-row.posted .item-title::after{content:"";}
+/* ── chips ── */
+body.app-skin .chip,body.app-skin .st{font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;background:#EFEFEA;color:#6B6B68;white-space:nowrap;letter-spacing:0;text-transform:none}
+body.app-skin .chip.ok,body.app-skin .st.done,body.app-skin .st.today.posted{background:var(--lime);color:var(--ink)}
+body.app-skin .chip.imp{background:var(--mintT);color:#0E3B22}
+body.app-skin .chip.miss,body.app-skin .st.miss{background:var(--orchT);color:#5B1A5C}
+body.app-skin .chip.wait,body.app-skin .st.wait{background:var(--amberT);color:#7A5200}
+body.app-skin .chip.today,body.app-skin .st.today{background:var(--cyanT);color:#0B3F44}
+/* ── buttons ── */
+body.app-skin .btn{border-radius:999px;font:700 14px var(--body);text-transform:none;letter-spacing:0;font-style:normal;padding:12px 20px;background:#fff;color:var(--ink);border:0;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+body.app-skin .btn.sm{padding:9px 14px;font-size:12.5px}body.app-skin .btn.xs{padding:6px 10px;font-size:12px}
+body.app-skin .btn.pri,body.app-skin .btn.mint,body.app-skin .btn.orchid,body.app-skin .btn:not(.ghost):not(.sm):not(.xs):not(.pri):not(.dark){background:var(--lime);color:var(--ink)}
+body.app-skin .btn.sm:not(.ghost){background:var(--ink);color:#fff}
+body.app-skin .btn.dark{background:var(--ink);color:#fff}
+body.app-skin .btn.ghost{background:#fff;color:var(--ink)}
+body.app-skin .btn.ghost.muted{color:var(--muted)}
+body.app-skin .btn[disabled]{opacity:.4}
+/* ── the hero on Create ── */
+body.app-skin .hero{background:var(--ink);color:#fff;border-radius:24px;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:16px}
+body.app-skin .hero .hh{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:38px;line-height:.95}
+body.app-skin .hero .hh em{color:var(--lime);font-style:italic}
+body.app-skin .hero p{margin:6px 0 0;color:#B9B9B4;font-size:13px;max-width:520px}
+body.app-skin .hero .bar{height:8px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden;margin-top:10px;width:240px}
+body.app-skin .hero .bar i{display:block;height:100%;background:var(--lime)}
+body.app-skin .hero .btn.sm.ghost{background:rgba(255,255,255,.1);color:#fff}
+body.app-skin .hero .btn.pri{font-size:15px;padding:14px 22px}
+/* ── layout helpers ── */
+body.app-skin .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.app-skin .g31{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+body.app-skin .pills{display:flex;flex-wrap:wrap;gap:8px}
+body.app-skin .pill{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:#fff;font-size:12px;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.06);cursor:pointer;border:0;color:var(--ink)}
+body.app-skin .pill.on{background:var(--ink);color:var(--lime)}
+body.app-skin .empty{background:#fff;border:1px dashed var(--line-2);border-radius:16px;color:var(--muted);font-size:13px;padding:14px}
+body.app-skin #ask-engine .card-label{font-size:15px}
+body.app-skin #ask-engine textarea{min-height:44px;border-radius:14px}
+body.app-skin #ask-engine .btn{background:var(--ink);color:var(--lime);font-family:var(--body);font-style:normal;text-transform:none;font-size:13.5px}
+body.app-skin .tbl th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+/* ── the phone: the bottom bar is the menu ── */
+@media(max-width:640px){
+  body.app-skin .seg{display:none}
+  body.app-skin .appbar{display:flex;position:fixed;left:14px;right:14px;bottom:14px;height:66px;background:var(--ink);border-radius:999px;align-items:center;justify-content:space-around;padding:0 8px;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  body.app-skin .appbar button{border:0;background:transparent;color:#8E8E8A;font:700 11px var(--body);display:grid;place-items:center;gap:3px;padding:0;cursor:pointer}
+  body.app-skin .appbar button i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:13px}
+  body.app-skin .appbar button.on{color:#fff}body.app-skin .appbar button.on i{background:var(--lime);color:var(--ink)}
+  body.app-skin main,body.app-skin .wrap{padding-bottom:110px}
+  body.app-skin .tiles{grid-template-columns:1fr 1fr;gap:10px}
+  body.app-skin .tile{padding:14px 16px}body.app-skin .tile .n{font-size:26px}
+  body.app-skin .g2,body.app-skin .g31{grid-template-columns:1fr}
+  body.app-skin .card{padding:16px;border-radius:20px}
+  body.app-skin .hero{flex-direction:column;align-items:stretch}body.app-skin .hero .bar{width:100%}
+  body.app-skin .hero .btn.pri{justify-content:center}
+  body.app-skin .page-title{font-size:38px}
+  body.app-skin .rw .acts button{width:34px;height:34px}
+  body.app-skin .view-switch{display:none}
+}
+/* Needs you (live.js) as rows */
+body.app-skin .attn{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);background:none;border-radius:0;margin:0}
+body.app-skin .attn:first-child{border-top:0}
+body.app-skin .attn b{order:2;flex:none;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;background:#EFEFEA;color:#6B6B68;text-transform:none;letter-spacing:0}
+body.app-skin .attn b.bad{background:var(--orchT);color:#5B1A5C}body.app-skin .attn b.lime{background:var(--cyanT);color:#0B3F44}body.app-skin .attn b.info{background:#EFEFEA}
+body.app-skin .attn span{flex:1;font-size:13.5px}
