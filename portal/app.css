@@ -80,3 +80,5 @@ body.app-skin .cp-switch,.cp-switch{display:flex;align-items:center;justify-cont
   body.app-skin .cp-switch{display:none}
   body.app-skin .pwd-burger{display:none!important}
 }
+/* no intro paragraphs in the app look: the facts list (ul.sub.lines) stays, the prose goes */
+body.app-skin .head div.sub:not(.lines){display:none}
