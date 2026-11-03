@@ -98,7 +98,7 @@ body.app-skin .tbl th{font-size:11px;letter-spacing:.1em;text-transform:uppercas
   body.app-skin .appbar button{border:0;background:transparent;color:#8E8E8A;font:700 11px var(--body);display:grid;place-items:center;gap:3px;padding:0;cursor:pointer}
   body.app-skin .appbar button i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:13px}
   body.app-skin .appbar button.on{color:#fff}body.app-skin .appbar button.on i{background:var(--lime);color:var(--ink)}
-  body.app-skin main,body.app-skin .wrap{padding-bottom:110px}
+  body.app-skin main{padding-bottom:110px}
   body.app-skin .tiles{grid-template-columns:1fr 1fr;gap:10px}
   body.app-skin .tile{padding:14px 16px}body.app-skin .tile .n{font-size:26px}
   body.app-skin .g2,body.app-skin .g31{grid-template-columns:1fr}

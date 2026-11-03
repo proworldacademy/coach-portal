@@ -71,7 +71,7 @@ body.app-skin .cp-switch,.cp-switch{display:flex;align-items:center;justify-cont
   body.app-skin .cp-appbar button,body.app-skin .cp-appbar a{border:0;background:transparent;color:#8E8E8A;font:700 11px var(--body);display:grid;place-items:center;gap:3px;padding:0;text-decoration:none;cursor:pointer}
   body.app-skin .cp-appbar i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:14px}
   body.app-skin .cp-appbar .on{color:#fff}body.app-skin .cp-appbar .on i{background:var(--lime);color:var(--ink)}
-  body.app-skin main,body.app-skin .wrap{padding-bottom:110px}
+  body.app-skin main{padding-bottom:110px}
   body.app-skin .dock{bottom:92px}
   body.app-skin .stats{grid-template-columns:1fr 1fr;gap:10px}
   body.app-skin .stat{padding:14px 16px}body.app-skin .stat b{font-size:26px}
