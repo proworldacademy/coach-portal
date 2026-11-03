@@ -1,0 +1,82 @@
+/* The app skin on the Coach Portal (Antonio, Nov 3, 2026: the same language as Marketing — white cards, one lime accent, rows with a
+   chip, the pill tab bar, the phone bottom bar). Scoped to body.app-skin (portal/app.js adds it; "In between" is one tap away).
+   Look only: nothing in the data or the views changes. Loaded after calm.css. */
+body.app-skin{--page:#F1F1ED;--line:#E6E6E1;--muted:#7A7A76;--mintT:#DDFDE7;--orchT:#F9E2F8;--amberT:#FFF1D6;--cyanT:#DFF7F9;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+html:has(body.app-skin),body.app-skin{background:#F1F1ED!important}
+body.app-skin .pwd-sky,body.app-skin .pwd-lights{display:none!important}
+/* the title block */
+body.app-skin .head{margin:6px 0 18px}
+body.app-skin h1.title,body.app-skin .title{font-size:clamp(38px,4.6vw,52px);line-height:.9}
+body.app-skin h1.title em,body.app-skin .title em{color:var(--ink);-webkit-text-stroke:0;font-style:italic}
+body.app-skin .head .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+body.app-skin .head .sub{color:var(--muted);font-size:13px}
+body.app-skin .head .sub b{background:none;padding:0;color:var(--ink)}
+/* the tab bar */
+body.app-skin .tabs.vtabs,body.app-skin #vtabs{display:flex;background:#E9E9E4;border-radius:999px;padding:4px;gap:2px;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none;margin:10px auto 22px;border:0;box-shadow:none}
+body.app-skin #vtabs::-webkit-scrollbar{display:none}
+body.app-skin .vtabs button,body.app-skin .vtabs a{border:0;background:transparent;padding:9px 16px;border-radius:999px;font:700 13px var(--body);color:var(--muted);white-space:nowrap;text-decoration:none;box-shadow:none;flex:none}
+body.app-skin .vtabs button.on,body.app-skin .vtabs a.on{background:var(--ink);color:#fff}
+body.app-skin .vtabs button small{background:var(--lime);color:var(--ink)}
+/* tiles */
+body.app-skin .stats{gap:14px;margin-bottom:18px}
+body.app-skin .stat,body.app-skin .stat.lead{background:#fff;border:0;border-radius:20px;box-shadow:var(--shadow);padding:16px 20px}
+body.app-skin .stat .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+body.app-skin .stat b{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1;font-family:var(--body);font-style:normal;display:block;margin-top:8px}
+body.app-skin .stat b .of{color:#B5B5B0;font-size:.55em;font-weight:700;margin-left:4px}
+/* cards */
+body.app-skin .group,body.app-skin .list,body.app-skin .panel,body.app-skin .notice,body.app-skin .vcard,body.app-skin .jentry,body.app-skin .recap,body.app-skin .follow,body.app-skin .ccard,body.app-skin .bucket,body.app-skin .start{background:#fff;border:0;border-radius:22px;box-shadow:var(--shadow)}
+body.app-skin .group{padding:18px 20px}
+body.app-skin .group .gname{font-family:var(--body);font-style:normal;font-weight:700;text-transform:none;letter-spacing:0;font-size:16px}
+body.app-skin .group .count{font-size:30px;font-weight:700;letter-spacing:-.02em;font-family:var(--body);font-style:normal}
+body.app-skin .group .meter{background:#F1F1ED}body.app-skin .group .meter i{background:var(--lime)}body.app-skin .group .meter.wk i{background:var(--ink)}
+body.app-skin .notice.remind{background:#fff;color:var(--ink)}
+body.app-skin .notice.remind .ttl{color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+body.app-skin .notice.remind .n{background:var(--lime);color:var(--ink);border-radius:999px;padding:1px 8px}
+body.app-skin .sect h2,body.app-skin .ccard .cname,body.app-skin .bucket .bh b{font-family:var(--body);font-style:normal;font-weight:700;text-transform:none;letter-spacing:0;font-size:15px}
+/* rows */
+body.app-skin .rowb{border-radius:0;padding:10px 0;border-top:1px solid var(--line);gap:12px}
+body.app-skin .list{padding:6px 20px}
+body.app-skin .rowb:hover{background:transparent}
+body.app-skin .ava{width:40px;height:40px;font-family:var(--body);font-style:normal;font-size:12px;font-weight:700;text-transform:uppercase;background:#F1F1ED;color:var(--ink)}
+body.app-skin .rowb .nm{font-size:14px;font-weight:700}
+body.app-skin .rowb small{color:var(--muted);font-size:12px}
+body.app-skin .rowb .mid{font-size:12px;color:var(--muted)}
+body.app-skin .bps .bp{padding:10px 0}
+body.app-skin .bps .bp .pn{font-weight:700;font-size:14px}
+/* chips */
+body.app-skin .chip{border:0;background:#EFEFEA;color:#6B6B68;font-size:11.5px;font-weight:700;letter-spacing:0;text-transform:none;padding:5px 10px}
+body.app-skin .chip.done,body.app-skin .chip.ok,body.app-skin .chip.st-done{background:var(--lime);color:var(--ink)}
+body.app-skin .chip.st-missing,body.app-skin .chip.bad,body.app-skin .chip.red,body.app-skin .chip.late{background:var(--orchT);color:#5B1A5C}
+body.app-skin .chip.due,body.app-skin .chip.st-working,body.app-skin .chip.wait,body.app-skin .chip.soon{background:var(--amberT);color:#7A5200}
+body.app-skin .chip.today,body.app-skin .chip.new{background:var(--cyanT);color:#0B3F44}
+/* buttons, inputs */
+body.app-skin .btn,body.app-skin a.btn{border-radius:999px;font:700 13.5px var(--body);text-transform:none;letter-spacing:0;font-style:normal;background:#fff;color:var(--ink);border:0;box-shadow:0 1px 2px rgba(0,0,0,.06);padding:11px 18px}
+body.app-skin .btn.sm{padding:8px 13px;font-size:12.5px}
+body.app-skin .btn.pri,body.app-skin a.btn.pri{background:var(--lime);color:var(--ink)}
+body.app-skin .btn.ghost{background:#fff}
+body.app-skin .search input{background:#fff;border:0;border-radius:999px;box-shadow:var(--shadow);height:46px;padding:0 18px}
+body.app-skin .fchip,body.app-skin .tab{border:0;background:#fff;box-shadow:var(--shadow);border-radius:999px;font:700 12.5px var(--body);text-transform:none;letter-spacing:0}
+body.app-skin .fchip[aria-pressed="true"],body.app-skin .tab[aria-selected="true"]{background:var(--ink);color:var(--lime)}
+body.app-skin .sec-tabs{background:#E9E9E4;border-radius:999px;padding:4px}
+body.app-skin .dock{background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -8px 28px rgba(0,0,0,.08)}
+/* the view switch */
+body.app-skin .cp-switch,.cp-switch{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:4px 0 0}
+.cp-switch span{font-size:12px;color:var(--muted)}
+.cp-switch button{font:700 12px var(--body);border:0;background:transparent;color:var(--muted);padding:5px 10px;border-radius:999px;cursor:pointer}
+.cp-switch button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+/* the phone: the bottom bar is the menu */
+.cp-appbar{display:none}
+@media(max-width:640px){
+  body.app-skin .cp-appbar{display:flex;position:fixed;left:14px;right:14px;bottom:14px;height:66px;background:var(--ink);border-radius:999px;align-items:center;justify-content:space-around;padding:0 8px;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  body.app-skin .cp-appbar button,body.app-skin .cp-appbar a{border:0;background:transparent;color:#8E8E8A;font:700 11px var(--body);display:grid;place-items:center;gap:3px;padding:0;text-decoration:none;cursor:pointer}
+  body.app-skin .cp-appbar i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:14px}
+  body.app-skin .cp-appbar .on{color:#fff}body.app-skin .cp-appbar .on i{background:var(--lime);color:var(--ink)}
+  body.app-skin main,body.app-skin .wrap{padding-bottom:110px}
+  body.app-skin .dock{bottom:92px}
+  body.app-skin .stats{grid-template-columns:1fr 1fr;gap:10px}
+  body.app-skin .stat{padding:14px 16px}body.app-skin .stat b{font-size:26px}
+  body.app-skin h1.title{font-size:38px}
+  body.app-skin .list{padding:4px 16px}
+  body.app-skin .cp-switch{display:none}
+  body.app-skin .pwd-burger{display:none!important}
+}
