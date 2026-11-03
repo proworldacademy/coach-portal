@@ -124,3 +124,15 @@ body.app-skin #mk-hero .live{background:rgba(255,255,255,.1);color:var(--lime)}
 body.app-skin .page-title{display:none}
 body.app-skin .page-when{margin:8px 0 14px}
 body.app-skin .item-actions .btn.ghost.xs{width:auto;height:30px;padding:0 10px;border-radius:999px;font-size:12px}
+/* the plan rows on the phone (Antonio, Nov 3, the screenshot): tick · day, then the title full width, then the actions right */
+@media(max-width:640px){
+  body.app-skin .fn-row{grid-template-columns:30px minmax(0,1fr);row-gap:4px;column-gap:10px;align-items:start}
+  body.app-skin .fn-row .chk{grid-row:1/span 3}
+  body.app-skin .fn-day{grid-column:2;display:flex;align-items:center;gap:8px;font:700 12px var(--body);font-style:normal;text-transform:none;color:var(--muted)}
+  body.app-skin .fn-day .small{display:inline}
+  body.app-skin .fn-body{grid-column:2}
+  body.app-skin .fn-desc{display:none}   /* the filming notes live in ✎ on the phone */
+  body.app-skin .item-actions{grid-column:2;justify-content:flex-end;margin-top:2px}
+  body.app-skin .item-title{font-size:15px;line-height:1.25}
+  body.app-skin .item-hook{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}

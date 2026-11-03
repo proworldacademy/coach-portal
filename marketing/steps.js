@@ -121,9 +121,25 @@
     rep.innerHTML = tiles +
       '<div class="g2" style="margin-top:16px"><div id="slot-attn"></div><div class="card"><div class="card-label">What worked, what did not <span class="small muted">' + (mk ? "· " + dayL(mk.date) : "") + "</span></div>" + (worked.join("") || '<div class="empty">The Monday review writes this.</div>') + "</div></div>" +
       '<div class="g31" style="margin-top:16px"><div class="card"><div class="card-label">Competitors this week <span class="small muted">' + (aw ? "· " + (aw.rows || []).length + " watched" : "") + "</span></div>" + (comp.join("") || '<div class="empty">The Monday review reads them.</div>') + '</div><div class="card"><div class="card-label">Reports</div><div class="pills">' + reps.map((r) => '<button class="pill" data-rep="' + esc(r.id || "") + '">' + esc(label(r)) + " · " + esc(dayL(r.date)) + "</button>").join("") + '<button class="pill" data-more="reports">All →</button></div></div></div>';
-    if (attn) { const slot = $("slot-attn"); if (slot) { slot.replaceWith(attn); attn.querySelector(".card-label").innerHTML = "Needs you"; } }
+    if (attn) { const slot = $("slot-attn"); if (slot) { slot.replaceWith(attn); attn.querySelector(".card-label").innerHTML = "Needs you"; } tidyAttn(); }
     rep.querySelectorAll("[data-rep],[data-more]").forEach((b) => b.addEventListener("click", () => { openTab("smore"); const el = $("reports-list"); if (el) setTimeout(() => el.scrollIntoView({ block: "start", behavior: "smooth" }), 50); }));
     const ai = $("ai-replies"); if (ai) sReport.appendChild(ai);
+  }
+
+  // Needs you as rows: one fact per line, the number first (the old lines were sentences)
+  function tidyAttn() {
+    const box = $("home-attn"); if (!box) return;
+    const lines = Array.from(box.querySelectorAll(".attn")); if (!lines.length) return;
+    box.innerHTML = lines.map((l) => {
+      const b = l.querySelector("b"), cls = b ? b.className : "", word = b ? b.textContent : "";
+      let text = (l.querySelector("span") || l).textContent.replace(/\s+/g, " ").trim();
+      text = text.replace(/\s*·\s*from the (Sunday run|Monday review)\s*\([^)]*\)\s*$/, "").replace(/\.\s*(Post them|Swap them|Plan tab)[^.]*\.?$/, "");
+      let title = text, sub = "";
+      const m = text.match(/^(.{8,80}?)(:\s+|\s+—\s+)(.+)$/); if (m) { title = m[1]; sub = m[3]; }
+      if (title.length > 90) { sub = (title.slice(90) + " " + sub).trim(); title = title.slice(0, 90) + "…"; }
+      const ic = cls === "bad" ? '<div class="ic bad">✕</div>' : cls === "lime" ? '<div class="ic lime">!</div>' : cls === "info" ? '<div class="ic">i</div>' : '<div class="ic warn">·</div>';
+      return '<div class="rw">' + ic + '<div class="t"><b>' + esc(title) + "</b>" + (sub ? "<span>" + esc(sub.slice(0, 140)) + "</span>" : "") + "</div>" + chip(cls === "bad" ? "miss" : cls === "lime" ? "today" : "", word) + "</div>";
+    }).join("");
   }
 
   // ── ③ Execute: four numbers, one list per week, the ads, add a post ──
@@ -155,7 +171,7 @@
     let live = 0; const ads = camps.map((c) => { const r = PW.campState ? PW.campState(c) : { st: c.status }, e = r.e || {}; const on = r.st === "live"; if (on) live++;
       return rw("$", on ? "lime" : "", String(c.name || "").replace(/^PROWORLD\s*[—-]\s*/, "").replace(/\s*\(Leads\)$/, ""), on ? [money(e.spend7), e.leads7 != null ? e.leads7 + " leads" : "", e.cpl7 != null ? "$" + Number(e.cpl7).toFixed(0) + " each" : ""].filter(Boolean).join(" · ") : "planned " + dayL((c.window || {}).start), chip(on ? "ok" : r.st === "missing" ? "wait" : "", on ? "Live" : r.st === "missing" ? "Not live" : "Planned")); });
     ex.innerHTML = '<div class="tiles">' + tile("Created", created, "two weeks", "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
-      '<div class="g31" style="margin-top:16px"><div style="display:grid;gap:16px">' + weeks.join("") + '</div><div style="display:grid;gap:14px;align-content:start"><div class="card"><div class="card-label">Ads</div>' + (ads.join("") || '<div class="empty">No campaigns planned.</div>') + '</div><button class="btn pri" id="exec-add" style="justify-content:center">+ Add a post Manu made</button><p class="small muted" style="margin:0;text-align:center">Improvised posts are read from Instagram every morning and matched to the coach. This is for the rare one it cannot place.</p></div></div>';
+      '<div class="g31" style="margin-top:16px"><div style="display:grid;gap:16px">' + weeks.join("") + '</div><div style="display:grid;gap:14px;align-content:start"><div class="card"><div class="card-label">Ads</div>' + (ads.join("") || '<div class="empty">No campaigns planned.</div>') + '</div><button class="btn pri" id="exec-add" style="justify-content:center">+ Add a post that went out</button><p class="small muted" style="margin:0;text-align:center">Posts are read from Instagram every morning and matched to the plan, improvised ones too. This is for the rare one it cannot place.</p></div></div>';
     const add = $("exec-add"); if (add) add.onclick = addPost;
   }
   async function addPost() {
