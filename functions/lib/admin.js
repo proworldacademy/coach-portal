@@ -17,8 +17,8 @@ async function requireStaff(req) {
   let decoded;
   try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
-  const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
-  if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use the backend.');
+  const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
+  if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
   if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, firstName: String(decoded.name || '').split(' ')[0], role: 'owner', owner: true, admin: true, director: true, billing: true, texting: true };
   const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
@@ -44,8 +44,8 @@ async function requireCoach(req) {
   let decoded;
   try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
-  const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
-  if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use the portal.');
+  const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
+  if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
   const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
   const first = (n) => String(n || '').trim().split(/\s+/)[0] || '';
   if (OWNERS.includes(decoded.uid)) { const name = decoded.name || email; return { uid: decoded.uid, email, name, firstName: first(name), coachAs: '', keys: [fold(first(name))].filter(Boolean), role: 'owner', owner: true, admin: true, director: true }; }
@@ -123,8 +123,8 @@ async function requireMarketing(req) {
   let decoded;
   try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
-  const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
-  if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use this.');
+  const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
+  if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
   if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, owner: true, admin: true, marketing: true };
   const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
