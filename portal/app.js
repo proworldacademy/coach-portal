@@ -22,7 +22,7 @@
     bar.innerHTML = main.map((el, i) => { const name = el.textContent.replace(/\d+$/, "").trim(); return '<button type="button" class="' + (el.classList.contains("on") ? "on" : "") + '" data-i="' + i + '"><i>' + (ICON[name] || "•") + "</i>" + (SHORT[name] || name) + "</button>"; }).join("") +
       '<button type="button" data-more="1"' + (main.some((el) => el.classList.contains("on")) ? "" : ' class="on"') + "><i>···</i>More</button>";
     bar.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => { const el = vt.querySelectorAll("button, a")[Number(b.dataset.i)]; if (el) el.click(); }));
-    const more = bar.querySelector("[data-more]"); more.addEventListener("click", () => { const burger = document.querySelector(".pwd-burger"); if (burger) { burger.click(); return; } const rest = items.slice(3); if (rest.length) rest[0].click(); });
+    const more = bar.querySelector("[data-more]"); more.addEventListener("click", (e) => { e.stopPropagation(); const burger = document.querySelector(".pwd-burger"); if (burger) { burger.click(); return; } const rest = items.slice(3); if (rest.length) rest[0].click(); });   // stopPropagation: the shared bar closes its sheet on any click outside it, and this click would reach the document after the burger opened it
   }
   paint();
   new MutationObserver(paint).observe(vt, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
