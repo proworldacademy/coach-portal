@@ -1,6 +1,6 @@
 /* The app skin on the Coach Portal (Antonio, Nov 3, 2026): the switch (App / In between), and on the phone the bottom bar built from
-   the view tabs — Players · Board · Contact (with the families still to reach, in red) · More (More opens the ☰ sheet of the shared bar;
-   Try-outs and the rest live there). Look only. Loaded last. */
+   the view tabs — Players · Contact (the families still to reach, in red) · Messages (families that wrote back, in red) · More (the ☰ sheet
+   of the shared bar: the Board, Try-outs and the rest). Look only. Loaded last. */
 (function () {
   let mode = "app";
   try { mode = localStorage.getItem("cp-view") || "app"; } catch (e) { /* no storage */ }
@@ -13,11 +13,11 @@
   if (mode !== "app") return;
   document.body.classList.add("app-skin");
 
-  // the bottom bar: Players · Board · Weekly contact (the three a coach opens every day — Antonio, Nov 4; Try-outs is under More) + More
+  // the bottom bar: Players · Contact · Messages (the three a coach opens every day — Antonio, Nov 4) + More, which opens the ☰ sheet
   const bar = document.createElement("nav"); bar.className = "cp-appbar"; bar.setAttribute("aria-label", "Coach Portal"); document.body.appendChild(bar);
   const ICON = { "Players Portal": "●", "Try-outs": "★", "Coach Board": "▦", "Weekly contact": "✆", "Attendance": "✓", "Messages": "✉", "Courts": "◫", "Privates": "◔", "Staff & access": "⚙" };
   const SHORT = { "Players Portal": "Players", "Coach Board": "Board", "Weekly contact": "Contact", "Staff & access": "Staff" };
-  const BAR = ["Players Portal", "Coach Board", "Weekly contact"];
+  const BAR = ["Players Portal", "Weekly contact", "Messages"];   // the three a coach opens every day; the Board and Try-outs are under More (Antonio, Nov 4)
   const nameOf = (el) => el.textContent.replace(/\d+$/, "").trim();
   function paint() {
     const items = Array.from(vt.querySelectorAll("button, a")); if (!items.length) { bar.innerHTML = ""; return; }
