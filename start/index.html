@@ -73,7 +73,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
     <div>
       <div class="eyebrow"><i></i><span>Start here · how PROWORLD HQ works</span></div>
       <h1><span>Start</span> <span><em>here.</em></span></h1>
-      <p class="sum" id="sum">One site, one Google sign-in, five doors. This page shows the doors you hold, what every tab behind them does, and the five things you will do most.</p>
+      <p class="sum" id="sum">One site, one sign-in, five doors. This page shows the doors you hold, what every tab behind them does, and the five things you will do most.</p>
     </div>
     <div class="need" id="mine">
       <div class="ey"><span><i></i>Your doors</span><span><b id="doorN">0</b> open to you</span></div>
@@ -224,7 +224,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
   /* The how-to, step by step: one for coaches, one for directors (Antonio, Oct 24). Each step opens the screen it talks about. */
   const HOWTO = {
     coach: ["How to: your week in the portal", "tap a step to open that screen", "Five screens, one sign-in. You see every player in your group; you open the ones with your name on them. A director sets who coaches whom.", [
-      ["Sign in", "Open the site and sign in with your Google account (the e-mail the academy gave you). The Coaches door is yours; the other doors stay closed.", "/portal"],
+      ["Sign in", "Open the site and sign in with your e-mail and your password. The first time, the academy sends you a link that sets the password; Forgot your password? sends a new one. The Coaches door is yours; the other doors stay closed.", "/portal"],
       ["Players: find yours", "Players shows the groups. Open your group: your players are in black and open with a tap; the others are grey with the coach's name. The word on the right says where the player stands: Up to date, Working on it, Missing.", "/portal"],
       ["Weekly contact", "Every family hears from you every week: one text or one call, with the parents or with the player. Text them from the player's page (it ticks the week by itself) or call through JustCall (an answered call ticks it too); tick it on the player's page only if you spoke in person. Red means nobody has been in touch yet this week; a Slack reminder comes on Friday.", "/portal#/contact"],
       ["Messages: text the family from here", "Open the player, write under Messages, pick the mother, the father or the player, Send. It goes out from the academy number signed with your name; the family answers right there and the Messages tab shows who wrote back. No other app to open.", "/portal#/messages"],
@@ -280,7 +280,7 @@ body.coach-side #dash,body.coach-side #lib,body.coach-side #runs,body.coach-side
       doors.map((d) => { const n = d.items.filter((it) => has(it.page || null) && (it.page || (d.page || []).some(has))).length; return '<a href="' + esc(d.href) + '"><span class="av">' + esc(AV[d.id] || d.name[0]) + '</span><span><b>' + esc(d.name) + '</b><span class="d">' + n + " view" + (n === 1 ? "" : "s") + " in its menu</span></span><em>→</em></a>"; }).join("") +
       (coachSide ? "" : '<a href="/#library"><span class="av">L</span><span><b>Library</b><span class="d">plans, pages and reports</span></span><em>→</em></a>');
     $("#who").textContent = (ctx.owner ? "Owner — every door is yours" : ctx.admin ? "Administrator" : "Signed in as " + (ctx.name || ctx.email));
-    $("#sum").textContent = coachSide ? "One site, one Google sign-in, one door: Coaches. This page shows every screen behind it in plain words, then your week step by step." : "One site, one Google sign-in, five doors. " + (ctx.owner ? "You hold every door: this page walks through all of them, " : "This page shows the " + (doors.length + 1) + " doors you hold, ") + "what every tab behind them does, and the five things you will do most.";
+    $("#sum").textContent = coachSide ? "One site, one sign-in, one door: Coaches. This page shows every screen behind it in plain words, then your week step by step." : "One site, one sign-in, five doors. " + (ctx.owner ? "You hold every door: this page walks through all of them, " : "This page shows the " + (doors.length + 1) + " doors you hold, ") + "what every tab behind them does, and the five things you will do most.";
     // the Dashboard, row by row
     $("#dashRows").innerHTML = rowsHtml(DASH, ["Part of the page", "What it is", "What you do with it"]);
     // one section per door the person holds; every view the menu would show them, with the plain-words line
