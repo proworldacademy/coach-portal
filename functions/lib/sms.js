@@ -391,7 +391,9 @@ async function handleEvent(db, body) {
     const from = e164(d.contact_number || ''); const text = String((d.sms_info && d.sms_info.body) || d.body || '').trim();
     if (!from) return out;
     const stop = STOP_WORDS.test(text), start = !stop && START_WORDS.test(text);
-    const hits = (await recipients(db)).filter((r) => r.phone === from);
+    let hits = (await recipients(db)).filter((r) => r.phone === from);
+    // the family's other numbers — the father's, one the coach typed on the player's page — are in the weekly contact tracker's phone book (chat A, Nov 4)
+    if (!hits.length) { try { hits = ((await require('./contacts').phoneBook(db)).book.get(from) || []).map((p) => ({ id: p.id })); } catch (e) { hits = []; } }
     if (!stop && !start) {
       // a reply from a family on the roster (Oct 24): kept as a line so that family's thread shows it. A text from a number that is
       // not a family (a prospect, a vendor) stays in the JustCall inbox only — the coaches' Messages page is for the families.
@@ -415,4 +417,4 @@ async function handleEvent(db, body) {
   return out;
 }
 
-module.exports = { findId, shapeOf, settings, saveSettings, hideBatch, threadAction, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };
+module.exports = { justcallSend, findId, shapeOf, settings, saveSettings, hideBatch, threadAction, line, requireTexting, recipients, recipient, setOptIn, optInRoster, consentFromSession, switchMatch, switchIndex, send, testSend, continueBatch, retryBatch, history, webhook, signatureOk, segments, render, gsmSafe, placeholdersIn, validPhone, e164, DEFAULT_TEMPLATES, FOOTER, PLACEHOLDERS, _useFetch };

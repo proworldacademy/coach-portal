@@ -207,4 +207,4 @@ async function justcallUsers(db) {
   return { ok: true, users, staffWithout };
 }
 
-module.exports = { sync, nudge, justcallUsers, phoneBook, weekOf, etDate, stampET, textCounts, callCounts, SLOTS, _useFetch };
+module.exports = { sync, nudge, justcallUsers, phoneBook, staffIndex, staffFor, weekOf, etDate, stampET, textCounts, callCounts, SLOTS, _useFetch };

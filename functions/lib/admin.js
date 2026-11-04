@@ -34,6 +34,30 @@ async function requireStaff(req) {
   const isDirector = isAdmin || role === 'director';   // a tennis director (Oct 24): Messages, Courts, coach assignments, who has access
   return { uid: decoded.uid, email, name, firstName: String(name).split(' ')[0], role, owner: rec.owner === true, admin: isAdmin, director: isDirector, billing: isAdmin || pages.includes('billing'), texting: isDirector || role === 'desk' || role === 'coach' || pages.includes('billing') };   // every coach holds Messages (Antonio, Oct 24); opt-in and the log still apply
 }
+/* The Coach Portal's own routes (Nov 4, 2026 — texting a family from the portal): anyone active on the staff list who holds the
+   portal, owners included. Returns who they are as the portal knows them — the name on player records (coachAs or the first name)
+   decides which players are theirs; directors, administrators and owners reach every player. */
+async function requireCoach(req) {
+  const h = String(req.headers.authorization || '');
+  const token = h.startsWith('Bearer ') ? h.slice(7) : '';
+  if (!token) throw S.err(401, 'signin', 'Sign in to the portal first.');
+  let decoded;
+  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  const email = String(decoded.email || '').toLowerCase();
+  const verified = decoded.email_verified === true && decoded.firebase && decoded.firebase.sign_in_provider === 'google.com';
+  if (!verified) throw S.err(403, 'provider', 'Only a confirmed Google sign-in can use the portal.');
+  const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+  const first = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+  if (OWNERS.includes(decoded.uid)) { const name = decoded.name || email; return { uid: decoded.uid, email, name, firstName: first(name), coachAs: '', keys: [fold(first(name))].filter(Boolean), role: 'owner', owner: true, admin: true, director: true }; }
+  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
+  const rec = doc.exists ? doc.data() : null;
+  const active = !!(rec && rec.active === true);
+  const pages = rec && Array.isArray(rec.pages) ? rec.pages : ['coach-portal', 'tryouts'];
+  if (!active || !(rec.owner === true || pages.includes('coach-portal') || pages.includes('backend'))) throw S.err(403, 'access', 'Your access does not include the Coach Portal.');
+  const isAdmin = rec.owner === true || rec.role === 'admin'; const role = String(rec.role || 'coach').toLowerCase();
+  const name = rec.name || decoded.name || email;
+  return { uid: decoded.uid, email, name, firstName: first(name), coachAs: String(rec.coachAs || ''), keys: [rec.coachAs, first(name)].map(fold).filter(Boolean), role, owner: rec.owner === true, admin: isAdmin, director: isAdmin || role === 'director' };
+}
 function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
 
 function planOf(sub) {
@@ -110,4 +134,4 @@ async function requireMarketing(req) {
   return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: rec.owner === true || rec.role === 'admin', marketing: true };
 }
 
-module.exports = { requireStaff, requireMarketing, requireBilling, overview, chargeOnFile, planOf };
+module.exports = { requireStaff, requireCoach, requireMarketing, requireBilling, overview, chargeOnFile, planOf };
