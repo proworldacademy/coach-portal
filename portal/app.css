@@ -71,6 +71,8 @@ body.app-skin .cp-switch,.cp-switch{display:flex;align-items:center;justify-cont
   body.app-skin .cp-appbar button,body.app-skin .cp-appbar a{border:0;background:transparent;color:#8E8E8A;font:700 11px var(--body);display:grid;place-items:center;gap:3px;padding:0;text-decoration:none;cursor:pointer}
   body.app-skin .cp-appbar i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:14px}
   body.app-skin .cp-appbar .on{color:#fff}body.app-skin .cp-appbar .on i{background:var(--lime);color:var(--ink)}
+  body.app-skin .cp-appbar i{position:relative}
+  body.app-skin .cp-appbar em.n{position:absolute;top:-4px;right:-8px;min-width:18px;height:18px;line-height:18px;padding:0 5px;border-radius:999px;background:#FBE3E3;color:#8A1C1C;font-style:normal;font-size:10px;font-weight:700;text-align:center}   /* families still to reach this week */
   body.app-skin main{padding-bottom:110px}
   body.app-skin .dock{bottom:92px}
   body.app-skin .stats{grid-template-columns:1fr 1fr;gap:10px}
