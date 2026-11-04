@@ -31,6 +31,7 @@ const SMS = require('./lib/sms');
 const MONDAY = require('./lib/mondayimport');
 const CONTACTS = require('./lib/contacts');
 const COACHTEXT = require('./lib/coachtext');
+const USERS = require('./lib/users');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -158,6 +159,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         try { await ctx.db.collection('smsLog').doc().set({ at: Date.now(), sentAt: ok ? Date.now() : null, by: who.email, byName: who.name || '', player: fam.id, playerName: fam.name || '', group: fam.group || '', coach: fam.coach || '', phone, body: S.clean(b.body, 600), status: ok ? 'sent' : 'failed', reason: ok ? '' : 'justcall', batch: 'direct' }); } catch (e) { /* the text went; the log line is best effort */ }
         return send(res, 200, { ok });
       }
+      // sign-in accounts for the team (Nov 4, e-mail + password): owners set them up from People & access
+      if (route === 'POST /admin/users/status') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { users: await USERS.status(Array.isArray(b.emails) ? b.emails : []) }); }
+      if (route === 'POST /admin/users/ensure') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await USERS.ensure(b.email, b.name); logger.info('sign-in account', { by: who.email, email: out.user.email, created: out.created }); return send(res, 200, out); }
+      if (route === 'POST /admin/users/reset') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await USERS.resetLink(b.email, b.name); logger.info('sign-in reset link', { by: who.email, email: out.user.email, created: out.created }); return send(res, 200, out); }
+      if (route === 'POST /admin/users/password') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await USERS.setPassword(b.email, b.password, b.name); logger.info('sign-in password set', { by: who.email, email: out.user.email, created: out.created }); return send(res, 200, out); }
       if (route === 'GET /admin/coachalerts') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const st = await NOTIFY.settings(ctx.db, true); const staff = (await ctx.db.collection('staff').where('active', '==', true).get()).docs.map((d) => ({ email: d.id, name: d.data().name || d.id, slack: d.data().slackName || '', linked: !!d.data().slackId, phone: !!d.data().phone })); return send(res, 200, { hasToken: !!st.slackBotToken, staff }); }
       if (route === 'POST /admin/coachalerts') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const tok = S.clean(b.slackBotToken, 200); if (!/^xox[bp]-[A-Za-z0-9-]{20,}$/.test(tok)) throw S.err(400, 'token', 'That does not look like a Slack bot token (it starts with xoxb-).'); await ctx.db.doc('settings/notify').set({ slackBotToken: tok, slackBotBy: who.email, slackBotAt: Date.now() }, { merge: true }); NOTIFY.forget(); return send(res, 200, await LESSONS.linkSlack(ctx.db)); }
       if (route === 'GET /admin/ai') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const st = await IDEAS.settings(ctx.db, true); return send(res, 200, { ready: /^sk-ant-/.test(String(st.anthropicKey || '')), by: st.by || '', at: st.at || 0 }); }
