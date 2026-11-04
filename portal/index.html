@@ -1614,10 +1614,9 @@ const PW_CONFIG = {
     appId: '1:999676464496:web:fa726be60d8da0112393b5',
   },
   // Who the owners are is written in the database rules (firestore.rules), not here: this page is public, the rules are not.
-  // Coaches sign in with Google (a Gmail or Google Workspace address). Set this to true to ALSO offer
-  // "Email me a sign-in link" for coaches with no Google account. It needs two more things or it won't work:
-  //   1. Firebase → Authentication → Sign-in method → Email/Password ON, and "Email link (passwordless sign-in)" ON
-  //   2. in firestore.rules, add 'password' to the list inside okProvider()
+  // Coaches sign in with their e-mail and a password (Antonio, Nov 4, 2026); an owner sets the account up from the Dashboard's
+  // People & access, "Forgot your password?" sends Firebase's reset e-mail. Set this to true to ALSO offer "Email me a sign-in link"
+  // (needs "Email link (passwordless sign-in)" ON under Firebase → Authentication → Sign-in method).
   emailLink: false,
   // Required lines. true = a coach can't move past a blank line, complete a part or mark a report final until every line
   // is filled (or marked N/T). false = blanks are allowed and only counted in the progress figures. Off while the coaches
@@ -2055,14 +2054,14 @@ const PW_CONFIG = {
 
   /* ─────────────────────────────────────────────────────────────────────────────
      WEBSITE EDITION — coach sign-in + Firestore.  (Inactive in the Claude-hosted edition.)
-     Coaches sign in with their own Google account or an emailed link — no Claude account.
+     Coaches sign in with their e-mail and a password (set up by an owner) — no Claude account.
      Nobody reaches a single record until an administrator has approved their email:
      that is enforced by the database rules (firestore.rules), not by this page.
      ───────────────────────────────────────────────────────────────────────────── */
   const CFG = (typeof PW_CONFIG === 'object' && PW_CONFIG) || {};
   const WEB = { auth: null, fs: null, user: null, email: '', isAdmin: false, isOwner: false, isDirector: false, staff: null, stage: 'boot', note: '', lag: 0, gate: [], core: [], admin: [], staffList: [], requests: [], asked: false, busy: '', dead: false, seq: 0 };
   const cfgReady = () => { const f = CFG.firebase || {}; return !!(f.apiKey && f.projectId) && !/^PASTE/i.test(f.apiKey) && !/^PASTE/i.test(f.projectId); };
-  const EMAIL_LINK = CFG.emailLink === true;   // emailed sign-in links are an opt-in extra; Google sign-in is always there
+  const EMAIL_LINK = CFG.emailLink === true;   // emailed sign-in links are an opt-in extra; e-mail + password is the sign-in (Antonio, Nov 4)
   const canDelete = () => (EDITION === 'web' ? WEB.isAdmin : writable());
   const rowsOf = (s) => s.docs.map((d) => Object.assign({ id: d.id }, d.data()));
   const off = (list) => { list.splice(0).forEach((u) => { try { u(); } catch (e) { /* noop */ } }); };
@@ -2189,7 +2188,7 @@ const PW_CONFIG = {
     off(WEB.gate); if (WEB.stage === 'in') leaveApp();
     WEB.user = u || null; WEB.email = u ? String(u.email || '').trim().toLowerCase() : ''; WEB.isAdmin = false; WEB.isOwner = false; WEB.isDirector = false; WEB.staff = null; WEB.asked = false;
     if (!u) { if (WEB.stage !== 'confirm') WEB.stage = 'out'; paintLive(); paintUser(); renderGate(); return; }
-    if (!WEB.email || WEB.email.includes('/') || !u.emailVerified) { WEB.stage = 'unverified'; paintUser(); renderGate(); return; }
+    if (!WEB.email || WEB.email.includes('/') || !u.emailVerified) { WEB.stage = 'unverified'; paintUser(); renderGate(); return; }   // an account an owner set up is verified; one somebody made alone is not
     if (!lsGet('pw_coach') && u.displayName) lsSet('pw_coach', String(u.displayName).trim().split(/\s+/)[0]);
     WEB.stage = 'checking'; paintUser(); renderGate();
     const decide = async (rec) => {
@@ -2247,27 +2246,23 @@ const PW_CONFIG = {
     if (st === 'nosdk') return gateShell(`<div class="panel stack"><b>The sign-in service didn’t load.</b><p class="hint">Check the internet connection and reload. If a content blocker is on, allow gstatic.com and googleapis.com for this site.</p>${note}</div>`);
     if (st === 'checking' || st === 'boot') return gateShell('<div class="panel"><span class="muted">Checking your access…</span></div>');
     if (st === 'noportal') return gateShell(`<div class="panel stack"><b>The Coach Portal isn’t part of your access.</b><p class="hint">You’re signed in as <b>${esc(WEB.email)}</b>. An administrator can tick the Coach Portal for you on the PROWORLD Dashboard.</p><div class="rowx"><a class="btn pri" href="${HUB}">Go to the Dashboard</a><button class="btn ghost" data-wact="signout">Use a different account</button></div></div>`);
-    if (st === 'unverified') return gateShell(`<div class="panel stack"><b>Google couldn’t confirm that email address for us.</b><p class="hint">This can happen when a Google account was made with an address from somewhere else (Yahoo, Outlook, iCloud…). Use a Gmail or Google Workspace account instead${EMAIL_LINK ? ', or an emailed sign-in link' : ''}, and tell your administrator which address you’ll be using.</p><div class="rowx"><button class="btn" data-wact="signout">Use a different account</button></div></div>`);
+    if (st === 'unverified') return gateShell(`<div class="panel stack"><b>This sign-in was not set up by the academy.</b><p class="hint">You are signed in as <b>${esc(WEB.email)}</b>, but that account was not created from the Dashboard. Ask an owner to set it up under People &amp; access, then sign in again.</p><div class="rowx"><button class="btn" data-wact="signout">Use a different account</button></div></div>`);
     if (st === 'pending') return gateShell(`<div class="panel stack"><b>You’re signed in, but not on the staff list yet.</b>
       <p class="hint">An administrator has been told that <b>${esc(WEB.email)}</b> is waiting. This page opens by itself the moment you’re approved — you don’t need to reload.</p>
       <div class="rowx"><button class="btn" data-wact="signout">Use a different account</button></div></div>`);
+    if (st === 'reset') return gateShell(`<div class="panel stack"><b>Check your e-mail.</b><p class="hint">A link to set a new password is on its way to <b>${esc(lsGet('pw_signin_email'))}</b>. It can take a minute; look in spam if it does not show. Open it, choose a password, then sign in here.</p><div class="rowx"><button class="btn ghost" data-wact="back-signin">Back to sign-in</button></div></div>`);
     if (st === 'sent') return gateShell(`<div class="panel stack"><b>Check your email.</b><p class="hint">A sign-in link is on its way to <b>${esc(lsGet('pw_signin_email'))}</b>. Open it on this device and you’re in — there is no password. It can take a minute; look in spam if it doesn’t show.</p><div class="rowx"><button class="btn ghost" data-wact="back-signin">Use a different address</button></div></div>`);
     if (st === 'confirm') return gateShell(`<form class="panel stack" data-wform="confirm"><b>Almost there.</b><p class="hint">This link was opened on a different device from the one that asked for it. Type the same email address to finish signing in.</p>${note}
       <div class="field"><label for="w_cemail">Email address</label><input id="w_cemail" name="email" type="email" required autocomplete="email"></div><div class="rowx"><button class="btn pri" type="submit">Finish signing in</button></div></form>`);
     const link = EMAIL_LINK ? `<div class="or"><span>or</span></div>
       <form class="stack" data-wform="link"><div class="field"><label for="w_email">Your email address</label><input id="w_email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"></div>
         <button class="btn big" type="submit" ${WEB.busy === 'link' ? 'disabled' : ''}>Email me a sign-in link</button></form>` : '';
-    if (IN_APP && !WEB.forceHere && navigator.standalone !== true) return gateShell(`<div class="panel stack signin">${note}
-      <b>Open this page in ${IOS ? 'Safari or Chrome' : 'Chrome'} to sign in.</b>
-      <p class="hint">The link opened inside another app (WhatsApp, Instagram, Facebook…). Google does not allow sign-in from there, so the first try fails. In your real browser it works and you stay signed in.</p>
-      <a class="btn pri big" href="${IOS ? 'x-safari-' + esc(location.href) : 'intent://' + esc(location.host + location.pathname + location.search + location.hash) + '#Intent;scheme=https;package=com.android.chrome;end'}">Open in ${IOS ? 'Safari' : 'Chrome'}</a>
-      <div class="rowx"><button class="btn" data-wact="copy-link">Copy the link</button><button class="btn ghost" data-wact="force-here">Try here anyway</button></div>
-      <p class="hint">Or tap the menu (···) at the top of this screen and choose “Open in ${IOS ? 'Safari' : 'Chrome'}”.</p></div>`);
-    return gateShell(`<div class="panel stack signin">${note}
-      <button class="btn pri big" data-wact="google" ${WEB.busy === 'google' ? 'disabled' : ''}>Continue with Google</button>${link}
-      <p class="hint">For ProWorld coaching staff. ${EMAIL_LINK ? '' : 'Sign in with your Google account (Gmail or Google Workspace). '}The first time you sign in, an administrator approves your email; after that you come straight in. No new password, and no other account needed.</p>
-      ${IN_APP ? `<div class="notice" role="note"><span><b>This page is open inside another app.</b> If Google sign-in doesn’t work here, open it in Safari or Chrome itself: use the compass or “Open in browser” button, or copy the link and paste it there. You also stay signed in that way.</span><button class="btn sm" data-wact="copy-link">Copy link</button></div>`
-        : finePointer() ? '' : `<p class="hint"><b>On a phone:</b> the page hands you over to Google and brings you straight back. Bookmark it in Safari or Chrome and you stay signed in.</p>`}</div>`);
+    return gateShell(`<form class="panel stack signin" data-wform="signin">${note}
+      <div class="field"><label for="w_semail">E-mail</label><input id="w_semail" name="email" type="email" required autocomplete="username" value="${esc(lsGet('pw_signin_email') || '')}"></div>
+      <div class="field"><label for="w_spass">Password</label><input id="w_spass" name="password" type="password" required autocomplete="current-password"></div>
+      <button class="btn pri big" type="submit" ${WEB.busy === 'signin' ? 'disabled' : ''}>${WEB.busy === 'signin' ? 'Signing in…' : 'Sign in'}</button>
+      <div class="rowx"><button class="btn ghost" type="button" data-wact="forgot" ${WEB.busy ? 'disabled' : ''}>Forgot your password? Send me a reset e-mail</button></div>
+      <p class="hint">For ProWorld coaching staff: the e-mail and password the academy set up for you. No sign-in yet? An owner sets it up from the Dashboard and sends you the link that sets your password.${IN_APP ? ' Bookmark this page in Safari or Chrome and you stay signed in.' : ''}</p>${link}</form>`);
   }
   // Google's sign-in window can't hand its answer back when this page is shown inside another app (WhatsApp, Instagram, Gmail…)
   const PHONE_TIP = 'Google couldn’t finish signing you in here. If this page is open inside another app (WhatsApp, Instagram…), open it in Safari or Chrome itself: the compass or “Open in browser” button, or copy the link. You’ll also stay signed in.';
@@ -2278,14 +2273,17 @@ const PW_CONFIG = {
   const IOS = /iPhone|iPad|iPod/.test(UA);
   const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|LinkedInApp|TikTok|Snapchat|Twitter|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA)) || navigator.standalone === true;
   function authMsg(e) {
-    const c = e && e.code; if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return finePointer() ? '' : PHONE_TIP;
+    const c = e && e.code;
+    if (c === 'auth/wrong-password' || c === 'auth/invalid-credential' || c === 'auth/invalid-login-credentials' || c === 'auth/user-not-found') return 'That e-mail and password do not match. Check both, or use “Forgot your password?”.';
+    if (c === 'auth/user-disabled') return 'This sign-in is switched off. Ask an owner.';
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return finePointer() ? '' : PHONE_TIP;
     if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment' || c === 'auth/missing-initial-state' || c === 'auth/missing-or-invalid-nonce') return PHONE_TIP;
     if (c === 'auth/popup-blocked') return `Your browser blocked the Google window. Allow pop-ups for this site and try again${EMAIL_LINK ? ', or use the emailed link' : ''}.`;
     if (c === 'auth/unauthorized-domain') return 'This web address isn’t on the project’s list of authorized domains yet (Firebase → Authentication → Settings).';
     if (c === 'auth/operation-not-allowed') return 'That sign-in method isn’t switched on for this project yet (Firebase → Authentication → Sign-in method).';
     if (c === 'auth/invalid-email') return 'That doesn’t look like an email address.';
     if (c === 'auth/network-request-failed') return 'No connection. Check the internet and try again.';
-    if (c === 'auth/quota-exceeded' || c === 'auth/too-many-requests') return EMAIL_LINK ? 'Too many sign-in emails for now. Try again later or use Google.' : 'Too many sign-in attempts for now. Wait a few minutes and try again.';
+    if (c === 'auth/quota-exceeded' || c === 'auth/too-many-requests') return 'Too many tries for now. Wait a few minutes, or use “Forgot your password?”.';
     return 'Sign-in didn’t work. Try again.';
   }
   // ── the redesign's frame: who is in (for shared/design.js's top bar), and the view switcher ──
@@ -2352,7 +2350,7 @@ const PW_CONFIG = {
       <div class="chips">${manage ? `<input aria-label="Shows on players as" data-wchange="coachAs" data-id="${esc(s.id)}" value="${esc(s.coachAs || '')}" placeholder="on players as…" title="The name on player records that means this person (their first name if empty)" style="width:120px;height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 10px;font-size:12.5px"><input aria-label="Mobile" data-wchange="phone" data-id="${esc(s.id)}" value="${esc(s.phone || '')}" placeholder="mobile for texts" title="Their mobile: a text when a private is booked for them, and the reminders" type="tel" style="width:140px;height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 10px;font-size:12.5px"><select aria-label="Role for ${esc(s.id)}" data-wchange="role" data-id="${esc(s.id)}" style="width:auto"><option value="coach" ${['admin', 'director', 'desk'].includes(s.role) ? '' : 'selected'}>Coach</option><option value="desk" ${s.role === 'desk' ? 'selected' : ''}>Front desk</option><option value="director" ${s.role === 'director' ? 'selected' : ''}>Tennis director</option>${WEB.isAdmin ? `<option value="admin" ${s.role === 'admin' ? 'selected' : ''}>Administrator</option>` : ''}</select>
       <button class="btn sm ghost" data-wact="toggle-staff" data-id="${esc(s.id)}">${s.active === true ? 'Turn access off' : 'Turn access on'}</button><button class="btn sm ghost danger" data-wact="remove-staff" data-id="${esc(s.id)}">Remove</button>` : `<span class="chip">${esc(ROLE_WORD[s.role] || 'Coach')}</span>`}</div></div>`).join('');
     return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Staff & access' }])}
-      <div class="head"><div><div class="lbl">${manage ? 'Directors manage access' : 'The team'}</div><h1 class="title">Staff &amp; <em>access.</em></h1><div class="sub">Coaches sign in with their own Google account${EMAIL_LINK ? ' or an emailed link' : ''}. Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
+      <div class="head"><div><div class="lbl">${manage ? 'Directors manage access' : 'The team'}</div><h1 class="title">Staff &amp; <em>access.</em></h1><div class="sub">Coaches sign in with their e-mail and a password; an owner sets the sign-in up from the Dashboard (People &amp; access). Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
       ${manage ? `<div class="sect"><h2>Waiting for approval</h2><span class="muted" style="font-size:12px">${reqs.length}</span></div>
       ${reqRows ? `<div class="list" style="margin-bottom:26px">${reqRows}</div>` : '<div class="empty" style="margin-bottom:26px">Nobody is waiting. When a coach signs in for the first time they appear here.</div>'}
       <div class="sect"><h2>Add someone before they sign in</h2></div>
@@ -2405,9 +2403,12 @@ const PW_CONFIG = {
     const act = b.getAttribute('data-wact'); if (b.disabled) return;
     try {
       if (act === 'menu') { if (menu) { menu.hidden = !menu.hidden; b.setAttribute('aria-expanded', String(!menu.hidden)); } }
-      else if (act === 'google') { if (WEB.dead) { location.reload(); return; } WEB.note = ''; WEB.busy = 'google'; renderGate();
-        try { if (REDIRECT_SIGNIN) { await WEB.auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); return; } await WEB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-        catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; if (!WEB.user) renderGate(); }
+      else if (act === 'forgot') { if (WEB.dead) { location.reload(); return; } const em = String(($('#w_semail') || {}).value || lsGet('pw_signin_email') || '').trim().toLowerCase();
+        if (!em) { WEB.note = 'Type your e-mail first, then tap Forgot.'; renderGate(); return; }
+        WEB.note = ''; WEB.busy = 'forgot'; renderGate();
+        try { await WEB.auth.sendPasswordResetEmail(em, { url: location.origin + '/portal' }); lsSet('pw_signin_email', em); WEB.stage = 'reset'; }
+        catch (e) { WEB.note = e && e.code === 'auth/user-not-found' ? 'No sign-in for that address yet. Ask an owner to set it up from the Dashboard.' : authMsg(e); }
+        WEB.busy = ''; renderGate(); }
       else if (act === 'copy-link') { const url = location.href.split('#')[0]; let ok = false;
         try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { try { const t = document.createElement('textarea'); t.value = url; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;left:-99px;top:0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch (e2) { ok = false; } }
         toast(ok ? 'Link copied. Open Safari or Chrome and paste it there.' : 'Couldn’t copy. The address is ' + url); }
@@ -2430,7 +2431,12 @@ const PW_CONFIG = {
   document.addEventListener('submit', async (ev) => {
     if (EDITION !== 'web') return; const f = ev.target.closest('[data-wform]'); if (!f) return; ev.preventDefault(); const kind = f.getAttribute('data-wform'); const fd = new FormData(f); const val = (k) => String(fd.get(k) || '').trim();
     try {
-      if (kind === 'link' && EMAIL_LINK) { WEB.note = ''; WEB.busy = 'link'; const em = val('email').toLowerCase(); try { await WEB.auth.sendSignInLinkToEmail(em, { url: location.origin + location.pathname, handleCodeInApp: true }); lsSet('pw_signin_email', em); WEB.stage = 'sent'; } catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; renderGate(); }
+      if (kind === 'signin') { const em = val('email').toLowerCase(); const pw = String(fd.get('password') || '');
+        if (!em || !pw) { WEB.note = 'Your e-mail and your password, please.'; renderGate(); return; }
+        lsSet('pw_signin_email', em); WEB.note = ''; WEB.busy = 'signin'; renderGate();
+        try { await WEB.auth.signInWithEmailAndPassword(em, pw); } catch (e) { WEB.note = authMsg(e); }
+        WEB.busy = ''; if (!WEB.user) renderGate(); }
+      else if (kind === 'link' && EMAIL_LINK) { WEB.note = ''; WEB.busy = 'link'; const em = val('email').toLowerCase(); try { await WEB.auth.sendSignInLinkToEmail(em, { url: location.origin + location.pathname, handleCodeInApp: true }); lsSet('pw_signin_email', em); WEB.stage = 'sent'; } catch (e) { WEB.note = authMsg(e); } WEB.busy = ''; renderGate(); }
       else if (kind === 'confirm' && EMAIL_LINK) { try { await WEB.auth.signInWithEmailLink(val('email').toLowerCase(), location.href); cleanUrl(); } catch (e) { WEB.note = 'That didn’t match the link. Check the address, or ask for a new link.'; renderGate(); } }
       else if (kind === 'add-staff') { const em = val('email').toLowerCase(); if (!em || em.includes('/')) return; await WEB.fs.doc('staff/' + em).set({ email: em, name: val('name'), role: ['admin', 'director', 'desk'].includes(val('role')) && (val('role') !== 'admin' || WEB.isAdmin) ? val('role') : 'coach', active: true, addedBy: WEB.email, addedAt: Date.now() }); f.reset(); toast(`${em} added. They can sign in now.`); }
     } catch (e) { dbFail(fsError(e)); }

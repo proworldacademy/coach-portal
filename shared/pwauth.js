@@ -1,5 +1,6 @@
 /* PROWORLD — one sign-in for the whole site (shared/pwauth.js)
-   Everyone signs in with their own Google account. Who may open what is the staff list in the database
+   Everyone signs in with their e-mail and a password (Antonio, Nov 4, 2026: not everyone has Google). An owner sets the
+   account up from the Dashboard (People & access); "Forgot your password?" sends the reset e-mail. Who may open what is the staff list in the database
    (staff/<email>: name, active, role, pages[]) and the database rules enforce it — this page only shows the
    right screen. Owners are named in the rules, not here: an owner is recognised by asking the database a
    question only an owner or administrator may ask.
@@ -44,6 +45,11 @@
     ".pwa .alt{display:inline-block;margin-top:14px;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.14);color:#3b3d38;border-radius:999px;padding:9px 14px;font:700 12.5px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;text-decoration:none;transition:.2s}",
     ".pwa .alt:hover{border-color:#0A0A0A;color:#0A0A0A}",
     ".pwa .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}",
+    ".pwa form{display:grid;gap:10px;margin-top:6px}",
+    ".pwa label{display:block;font:700 11px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#3b3d38;margin-bottom:5px}",
+    ".pwa input{width:100%;box-sizing:border-box;height:46px;border:1px solid rgba(0,0,0,.18);border-radius:12px;background:#fff;padding:0 14px;font:400 15px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;color:#0A0A0A}",
+    ".pwa input:focus{outline:2px solid #0A0A0A;outline-offset:1px}",
+    ".pwa .forgot{background:none;border:0;padding:0;font:inherit;font-size:13px;color:#0A0A0A;text-decoration:underline;text-decoration-color:#E2FE78;text-decoration-thickness:2px;text-underline-offset:3px;cursor:pointer;justify-self:start}",
     ".pwa .small{font-size:12.5px;color:#6b6e66;margin-top:12px}.pwa a.go{text-decoration:none;box-sizing:border-box;margin-bottom:10px}",
     ".pwa .err{color:#9a2f8f;font-size:12.5px;margin-top:12px;min-height:16px;line-height:1.45}",
     ".pwa .fine{color:#656860;font-size:11px;margin-top:18px;letter-spacing:.3px}",
@@ -53,7 +59,6 @@
     "@media(prefers-reduced-motion:reduce){.pwa .spin{animation:none}.pwa .go,.pwa .alt{transition:none}}"
   ].join("");
   function ensureCss() { if (document.getElementById("pwa-css")) return; const s = document.createElement("style"); s.id = "pwa-css"; s.textContent = CSS; (document.head || document.documentElement).appendChild(s); }
-  const G = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.2 0-11.5-4.2-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
   function overlay() {
     let el = document.getElementById("pwa-gate");
     if (!el) { ensureCss(); el = document.createElement("div"); el.className = "pwa-bg"; el.id = "pwa-gate"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); (document.body || document.documentElement).appendChild(el); }
@@ -67,53 +72,48 @@
     let inner = "";
     if (stage === "boot" || stage === "checking") inner = '<h1>One <em>moment</em></h1><p><span class="spin"></span>&nbsp; Checking your access…</p>';
     else if (stage === "nosdk") inner = '<h1>Can\'t <em>connect</em></h1><p>The sign-in service didn\'t load. Check the internet connection and reload the page.</p><button class="alt" data-a="reload">Reload</button>';
-    else if (stage === "out" && inApp() && !force) inner = '<h1>Open in your <em>browser</em></h1><p>This link opened inside ' + esc(inApp()) + '. Google does not allow sign-in from there, so the first try fails. Open the same page in ' + (ios ? "Safari or Chrome" : "Chrome") + ' and sign in there.</p>' + (ios ? '<a class="go" href="x-safari-' + esc(location.href) + '">Open in Safari</a>' : '<a class="go" href="intent://' + esc(location.host + location.pathname + location.search + location.hash) + '#Intent;scheme=https;package=com.android.chrome;end">Open in Chrome</a>') + '<div class="row"><button class="alt" data-a="copy">Copy the link</button><button class="alt" data-a="force">Try here anyway</button></div><p class="small">Or tap the menu (&middot;&middot;&middot;) at the top of this screen and choose &ldquo;Open in ' + (ios ? "Safari" : "Chrome") + '&rdquo;.</p><div class="err">' + esc(note) + "</div>";
-    else if (stage === "out") inner = '<h1>Sign <em>in</em></h1><p>For the PROWORLD team. Sign in with your Google account — your ProWorld email, or the Google email you were added with. No new password.</p><button class="go" data-a="google"' + (busy ? " disabled" : "") + ">" + G + (busy ? " Opening Google…" : " Sign in with Google") + '</button><div class="err">' + esc(note) + "</div>";
+    else if (stage === "out") inner = '<h1>Sign <em>in</em></h1><p>For the PROWORLD team: your e-mail and your password.</p><form data-f="signin"><div><label for="pwa-email">E-mail</label><input id="pwa-email" name="email" type="email" autocomplete="username" required value="' + esc(lastEmail()) + '"></div><div><label for="pwa-pass">Password</label><input id="pwa-pass" name="password" type="password" autocomplete="current-password" required></div><button class="go" type="submit"' + (busy ? " disabled" : "") + '>' + (busy ? "Signing in…" : "Sign in") + '</button><button class="forgot" type="button" data-a="forgot">Forgot your password? Send me a reset e-mail</button></form><div class="err">' + esc(note) + '</div><p class="small">No sign-in yet? An owner sets it up from the Dashboard and sends you the link that sets your password.</p>';
+    else if (stage === "reset") inner = '<h1>Check your <em>e-mail</em></h1><p>A link to set a new password is on its way to <b>' + esc(who || lastEmail()) + '</b>. It can take a minute; look in spam if it does not show. Open it, choose a password, then sign in here.</p><div class="row"><button class="alt" data-a="back">Back to sign-in</button></div>';
     else if (stage === "pending") inner = '<h1>Almost <em>there</em></h1><p>You\'re signed in as <b>' + esc(who) + '</b>, but this email isn\'t on the PROWORLD team list yet. We\'ve let the administrators know — once you\'re added, this page opens by itself.</p><div class="row"><button class="alt" data-a="out">Use another account</button></div>';
     else if (stage === "noaccess") inner = '<h1>Not <em>yours</em> yet</h1><p>You\'re signed in as <b>' + esc(who) + '</b>. Your access doesn\'t include <b>' + esc(pageName(need)) + '</b>. An administrator can tick it for you on the Dashboard.</p><div class="row"><a class="alt" href="/">Go to the Dashboard</a><button class="alt" data-a="out">Use another account</button></div>';
-    else if (stage === "unverified") inner = '<h1>Use <em>Google</em></h1><p>This page only accepts a confirmed Google sign-in. Sign out and use “Sign in with Google”.</p><button class="alt" data-a="out">Sign out</button>';
+    else if (stage === "unverified") inner = '<h1>Not <em>set up</em> yet</h1><p>This sign-in was not set up by the academy (<b>' + esc(who) + '</b>). Ask an owner to set it up from the Dashboard, People &amp; access, then sign in again.</p><button class="alt" data-a="out">Sign out</button>';
     el.innerHTML = '<div class="pwa"><div class="brand">PROWORLD</div>' + inner + '<div class="fine">Individually built. Fully connected.</div></div>';
     el.querySelectorAll("[data-a]").forEach((b) => b.addEventListener("click", () => act(b.getAttribute("data-a"))));
+    const f = el.querySelector('form[data-f="signin"]'); if (f) f.addEventListener("submit", (ev) => { ev.preventDefault(); signIn(f.email.value, f.password.value); });
   }
-  // links opened from WhatsApp, Instagram, Facebook, Messenger, LinkedIn or TikTok land in that app's own browser; Google refuses
-  // sign-in there (and the redirect ticket is lost when iOS hands Google to Chrome), so we send the person to the real browser first
-  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  let force = false;
-  function inApp() {
-    const ua = navigator.userAgent || "";
-    if (/WhatsApp/i.test(ua)) return "WhatsApp";
-    if (/Instagram/i.test(ua)) return "Instagram";
-    if (/FBAN|FBAV|FB_IAB|Messenger/i.test(ua)) return "Facebook";
-    if (/LinkedInApp/i.test(ua)) return "LinkedIn";
-    if (/musical_ly|TikTok|BytedanceWebview/i.test(ua)) return "TikTok";
-    if (/Snapchat/i.test(ua)) return "Snapchat";
-    if (/; wv\)/.test(ua) && /Android/i.test(ua)) return "another app";
-    if (ios && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua) && /AppleWebKit/.test(ua)) return "another app";
-    return "";
+  const lastEmail = () => { try { return localStorage.getItem("pw_signin_email") || ""; } catch (e) { return ""; } };
+  const remember = (email) => { try { localStorage.setItem("pw_signin_email", email); } catch (e) { /* no storage */ } };
+  async function signIn(email, password) {
+    if (!init()) return; email = String(email || "").trim().toLowerCase(); note = "";
+    if (!email || !password) { note = "Your e-mail and your password, please."; paint(); return; }
+    remember(email); busy = true; paint();   // remembered before the try, so a repaint after a wrong password keeps the address
+    try { await auth.signInWithEmailAndPassword(email, password); }
+    catch (e) { note = explain(e); }
+    busy = false; if (stage === "out") paint();
   }
-  const touch = () => (window.matchMedia && matchMedia("(pointer:coarse)").matches) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  async function forgot() {
+    if (!init()) return; const el = document.getElementById("pwa-email"); const email = String((el && el.value) || lastEmail() || "").trim().toLowerCase();
+    if (!email) { note = "Type your e-mail first, then tap Forgot."; paint(); return; }
+    busy = true; paint();
+    try { await auth.sendPasswordResetEmail(email, { url: location.origin + "/" }); remember(email); ctx = { email }; stage = "reset"; note = ""; }
+    catch (e) { note = e && e.code === "auth/user-not-found" ? "No sign-in for that address yet. Ask an owner to set it up from the Dashboard." : explain(e); }
+    busy = false; paint();
+  }
   async function act(a) {
     if (a === "reload") { location.reload(); return; }
     if (a === "out") { await signOut(); return; }
-    if (a === "force") { force = true; paint(); return; }
-    if (a === "copy") { try { await navigator.clipboard.writeText(location.href); note = "Link copied. Paste it in Safari or Chrome."; } catch (e) { note = location.href; } paint(); return; }
-    if (a === "google") {
-      if (!init()) return; note = ""; busy = true; paint();
-      const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({ prompt: "select_account" });
-      try { if (touch()) { await auth.signInWithRedirect(prov); return; } await auth.signInWithPopup(prov); }
-      catch (e) {
-        const c = e && e.code;
-        if (c === "auth/popup-blocked" || c === "auth/operation-not-supported-in-this-environment") { try { await auth.signInWithRedirect(prov); return; } catch (e2) { note = explain(e2); } }
-        else if (c !== "auth/popup-closed-by-user" && c !== "auth/cancelled-popup-request") note = explain(e);
-      }
-      busy = false; paint();
-    }
+    if (a === "copy") { try { await navigator.clipboard.writeText(location.href); note = "Link copied."; } catch (e) { note = location.href; } paint(); return; }
+    if (a === "forgot") { await forgot(); return; }
+    if (a === "back") { stage = "out"; note = ""; paint(); return; }
   }
   function explain(e) {
     const c = e && e.code;
+    if (c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/invalid-login-credentials" || c === "auth/user-not-found" || c === "auth/invalid-email") return "That e-mail and password do not match. Check both, or use “Forgot your password?”.";
+    if (c === "auth/too-many-requests") return "Too many tries for now. Wait a few minutes, or use “Forgot your password?”.";
+    if (c === "auth/user-disabled") return "This sign-in is switched off. Ask an owner.";
+    if (c === "auth/operation-not-allowed") return "E-mail sign-in is not switched on for this site yet (Firebase → Authentication → Sign-in method).";
     if (c === "auth/unauthorized-domain") return "This web address isn't on the project's list of authorized sign-in domains yet.";
-    if (c === "auth/network-request-failed") return "No connection to Google. Check the internet and try again.";
-    if (c === "auth/account-exists-with-different-credential") return "That email already signs in another way. Ask an administrator.";
+    if (c === "auth/network-request-failed") return "No connection. Check the internet and try again.";
     return "Sign-in didn't finish (" + (c || (e && e.message) || "unknown") + "). Try again.";
   }
 
@@ -123,7 +123,7 @@
     if (!u) { const was = stage; ctx = null; stage = "out"; busy = false; paint(); if (was === "in") location.reload(); return; }
     const email = String(u.email || "").trim().toLowerCase();
     const prov = (u.providerData || []).map((p) => p.providerId);
-    if (!email || !u.emailVerified || !prov.includes("google.com")) { stage = "unverified"; ctx = { email }; paint(); return; }
+    if (!email || !u.emailVerified || !(prov.includes("password") || prov.includes("google.com"))) { stage = "unverified"; ctx = { email }; paint(); return; }   // an account an owner set up is verified; one somebody made alone is not
     stage = "checking"; ctx = { email }; paint();
     const decide = async (rec) => {
       const my = ++seq;
@@ -172,7 +172,6 @@
       if (stage !== "boot") return;
       if (!init()) return;
       paint();
-      auth.getRedirectResult().catch((e) => { note = explain(e); if (stage === "out") paint(); });
       auth.onAuthStateChanged(onUser);
     });
   }

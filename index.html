@@ -57,6 +57,11 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 .acl tr>*:first-child{position:sticky;left:0;z-index:1;background:rgba(255,255,255,.92);min-width:190px;box-shadow:1px 0 0 var(--line)}
 .uname{font-weight:700}
 .uemail{font-size:11px;color:var(--muted);word-break:break-all}
+.usign{margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
+.usign b{color:var(--ink)}.usign .btn.xs{padding:4px 9px;font-size:11.5px}
+.usign form{display:flex;gap:6px;align-items:center}.usign input{height:30px;border:1px solid var(--line-2);border-radius:999px;padding:0 10px;font:inherit;font-size:12.5px;width:150px}
+.usign .show{background:#E2FE78;color:#000;border-radius:999px;padding:3px 10px;font-weight:700;font-family:ui-monospace,Menlo,monospace;user-select:all}
+.usign .link{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Menlo,monospace;font-size:11px}
 .utag{display:inline-block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.07);color:var(--ink-2);margin-left:6px}
 .utag.owner{background:var(--lime);color:var(--ink)}.utag.admin{background:var(--orchid);color:var(--ink)}.utag.off{background:var(--warn);color:var(--ink)}
 .chk{width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px solid var(--line-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:transparent;font-weight:900;user-select:none;transition:background .2s,border-color .2s,transform .2s var(--ease)}
@@ -117,11 +122,11 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   <section class="sec" id="people-sec" hidden>
     <div class="sec-h"><h2>People &amp; access</h2><small id="people-small"></small></div>
     <div class="card">
-      <div class="notice">Everyone signs in with their own Google account. Tick a page to give it, untick to take it away — it takes effect at once. The database enforces this, so a page that isn't ticked can't be opened, even with the link. Owners always have everything. <b>Admin</b> = can manage this list.</div>
+      <div class="notice">Everyone signs in with their e-mail and a password. An owner sets the sign-in up here (<b>Send the password link</b> or a temporary password); nobody can make their own account. Tick a page to give it, untick to take it away — it takes effect at once. The database enforces this, so a page that isn't ticked can't be opened, even with the link. Owners always have everything. <b>Admin</b> = can manage this list.</div>
       <div class="tbl-wrap"><table class="acl" id="acl"></table></div>
       <form class="addf" id="add-form">
         <div class="field"><label for="nu-name">Name</label><input id="nu-name" placeholder="e.g., Manu" autocomplete="off"></div>
-        <div class="field"><label for="nu-email">Google email</label><input id="nu-email" type="email" placeholder="name@proworldacademy.com" autocomplete="off"></div>
+        <div class="field"><label for="nu-email">E-mail</label><input id="nu-email" type="email" placeholder="name@proworldacademy.com" autocomplete="off"></div>
         <div class="field"><label for="nu-preset">Start with</label><select id="nu-preset"></select></div>
         <div class="field"><label>&nbsp;</label><button class="btn orchid sm" type="submit">+ Add person</button></div>
       </form>
@@ -388,7 +393,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       + '<tr><th>Person</th><th class="c">Admin</th>' + SECTIONS.map((s) => PAGES.filter((p) => p.section === s.id && !p.with).map((p) => '<th class="pg"><span>' + esc(p.short || p.name) + "</span></th>").join("")).join("") + "<th></th></tr></thead><tbody>";
     rows.forEach((s) => {
       const owner = s.owner === true, on = s.active === true, ids = pagesOf(s), legacy = !owner && !Array.isArray(s.pages), self = s.id === ctx.email, edit = canEdit(s) && !owner && !self;
-      h += '<tr class="' + (on || owner ? "" : "off") + '"><td><div class="uname">' + esc(s.name || s.id) + (owner ? '<span class="utag owner">Owner</span>' : "") + (!on && !owner ? '<span class="utag off">Access off</span>' : "") + '</div><div class="uemail">' + esc(s.id) + (legacy ? " · from the Coach Portal list" : "") + "</div></td>";
+      h += '<tr class="' + (on || owner ? "" : "off") + '"><td><div class="uname">' + esc(s.name || s.id) + (owner ? '<span class="utag owner">Owner</span>' : "") + (!on && !owner ? '<span class="utag off">Access off</span>' : "") + '</div><div class="uemail">' + esc(s.id) + (legacy ? " · from the Coach Portal list" : "") + "</div>" + signinLine(s) + "</td>";
       h += '<td class="c"><div class="chk' + (owner || s.role === "admin" ? " on" : "") + (edit ? "" : " lock") + '" role="checkbox" aria-checked="' + (owner || s.role === "admin") + '" tabindex="0" title="Can manage this list"' + (edit ? ' data-admin="' + esc(s.id) + '"' : "") + ">✓</div></td>";
       SECTIONS.forEach((sec) => PAGES.filter((p) => p.section === sec.id && !p.with).forEach((p) => {
         const has = owner || ids.includes(p.id), can = edit && minePages().includes(p.id);
@@ -401,12 +406,62 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     $("acl").querySelectorAll("[data-admin]").forEach((el) => { const go2 = () => toggleAdmin(el.getAttribute("data-admin")); el.addEventListener("click", go2); el.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); go2(); } }); });
     $("acl").querySelectorAll("[data-onoff]").forEach((el) => el.addEventListener("click", () => toggleActive(el.getAttribute("data-onoff"))));
     $("acl").querySelectorAll("[data-rm]").forEach((el) => el.addEventListener("click", () => removePerson(el.getAttribute("data-rm"), el)));
+    $("acl").querySelectorAll("[data-si]").forEach((el) => el.addEventListener("click", () => signinAct(el.getAttribute("data-si"), el.getAttribute("data-email"), el)));
+    $("acl").querySelectorAll("form[data-sipw]").forEach((f) => f.addEventListener("submit", (e) => { e.preventDefault(); signinAct("password-save", f.getAttribute("data-sipw"), f); }));
+    loadSignins();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true));
     $("req-card").hidden = !reqs.length; $("req-n").textContent = reqs.length + " waiting";
     $("req-list").innerHTML = reqs.map((r) => '<div class="req"><div><div class="uname">' + esc(r.name || r.email) + '</div><div class="uemail">' + esc(r.email) + (r.at ? " · " + esc(when(r.at)) : "") + '</div></div><div class="rowx"><select class="mini" data-preset-for="' + esc(r.id) + '" aria-label="Start with">' + presetOptions("none") + '</select><button type="button" class="btn sm lime" data-approve="' + esc(r.id) + '">Let in</button><button type="button" class="btn muted xs" data-dismiss="' + esc(r.id) + '">Dismiss</button></div></div>').join("");
     $("req-list").querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", () => approve(b.getAttribute("data-approve"))));
     $("req-list").querySelectorAll("[data-dismiss]").forEach((b) => b.addEventListener("click", () => fs.doc("requests/" + b.getAttribute("data-dismiss")).delete().catch(fail)));
     own(); paintNeed(); signals();
+  }
+  // ── sign-in accounts (Nov 4, e-mail + password): the owner sets them up here; the engine holds the Admin SDK ──
+  let signins = {}, signinsAt = 0, signinOpen = null, signinShown = {};   // e-mail → the account behind it (null = none yet); which row's temporary-password box is open; what was just set, shown once
+  async function api(path, body) {
+    const a = window.PWAuth.auth(); if (!a || !a.currentUser) throw new Error("Sign in first.");
+    const tok = await a.currentUser.getIdToken(); let r;
+    try { r = await fetch("/api/admin/" + path, { method: body ? "POST" : "GET", headers: Object.assign({ authorization: "Bearer " + tok }, body ? { "content-type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }); }
+    catch (e) { throw new Error("No connection. Try again in a moment."); }
+    let j = null; try { j = await r.json(); } catch (e) { j = null; }
+    if (!r.ok) throw new Error((j && j.message) || ("Error " + r.status));
+    return j;
+  }
+  async function loadSignins(force) {
+    if (!ctx || !ctx.owner || !staff.length) return; if (!force && Date.now() - signinsAt < 60000) return; signinsAt = Date.now();
+    try { const out = await api("users/status", { emails: staff.map((s) => s.id) }); signins = out.users || {}; signinsAt = Date.now(); renderPeople(); } catch (e) { /* the column just stays quiet */ }
+  }
+  const whenShort = (iso) => { const d = iso ? new Date(iso) : null; return d && !isNaN(d) ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""; };
+  function signinLine(s) {
+    if (!ctx || !ctx.owner) return "";
+    const u = signins[s.id]; const known = s.id in signins; const shown = signinShown[s.id];
+    let word = !known ? "" : !u ? "<b>No sign-in yet.</b>" : u.disabled ? "<b>Sign-in switched off.</b>" : u.password ? "<b>Password set</b>" + (u.lastSignIn ? " · last sign-in " + esc(whenShort(u.lastSignIn)) : " · never signed in") : (u.providers.includes("google.com") ? "<b>Google only</b> · a reset link adds a password" : "<b>Account without a password</b>");
+    const open = signinOpen === s.id;
+    const btns = open ? '<form data-sipw="' + esc(s.id) + '"><input name="pw" type="text" placeholder="8+ characters, with a number" autocomplete="off" required minlength="8" maxlength="64"><button type="submit" class="btn xs lime">Save</button><button type="button" class="btn muted xs" data-si="password-close" data-email="' + esc(s.id) + '">Cancel</button></form>'
+      : '<button type="button" class="btn muted xs" data-si="reset" data-email="' + esc(s.id) + '">' + (u && u.password ? "Send a reset e-mail" : "Send the password link") + '</button><button type="button" class="btn muted xs" data-si="link" data-email="' + esc(s.id) + '" title="A link to copy and send yourself, when the e-mail does not arrive">Copy a link</button><button type="button" class="btn muted xs" data-si="password" data-email="' + esc(s.id) + '">Temporary password</button>';
+    return '<div class="usign">' + word + btns + (shown ? (shown.pw ? '<span>Tell them: <span class="show">' + esc(shown.pw) + '</span></span>' : '') + (shown.link ? '<span class="link" title="' + esc(shown.link) + '">' + esc(shown.link) + '</span>' : '') + '<button type="button" class="btn muted xs" data-si="hide" data-email="' + esc(s.id) + '">Done</button>' : "") + "</div>";
+  }
+  async function signinAct(what, email, el) {
+    const s = staff.find((x) => x.id === email); const name = s ? s.name || "" : "";
+    try {
+      if (what === "password") { signinOpen = email; renderPeople(); const i = $("acl").querySelector('form[data-sipw="' + CSS.escape(email) + '"] input'); if (i) i.focus(); return; }
+      if (what === "password-close") { signinOpen = null; renderPeople(); return; }
+      if (what === "hide") { delete signinShown[email]; renderPeople(); return; }
+      if (el && el.tagName === "BUTTON") { el.disabled = true; el.textContent = "One moment…"; }
+      if (what === "reset") {
+        await api("users/ensure", { email, name });                                   // the account exists (verified) before Firebase can e-mail it
+        await window.PWAuth.auth().sendPasswordResetEmail(email, { url: location.origin + "/" });
+        toast("E-mail sent to " + email + " with the link that sets their password. It can take a minute; spam folder if not.");
+      } else if (what === "link") {
+        const out = await api("users/reset", { email, name }); signinShown[email] = { link: out.link };
+        let copied = false; try { await navigator.clipboard.writeText(out.link); copied = true; } catch (e) { copied = false; }
+        toast(copied ? "Link copied. Send it to " + (name || email) + " — it sets their password. Good for a few days." : "The link is below the name — copy it and send it to " + (name || email) + ".");
+      } else if (what === "password-save") {
+        const pw = String(el.pw.value || ""); const out = await api("users/password", { email, password: pw, name });
+        signinOpen = null; signinShown[email] = { pw }; toast("Password set for " + (name || email) + (out.created ? " (account created)" : "") + ". Tell them in person; they can change it with “Forgot your password?”.");
+      }
+      await loadSignins(true); renderPeople();
+    } catch (e) { toast((e && e.message) || "That did not work.", true); renderPeople(); }
   }
   const presetOptions = (sel) => Object.keys(P.PRESETS).map((k) => '<option value="' + k + '"' + (k === sel ? " selected" : "") + ">" + esc(P.PRESETS[k].label) + "</option>").join("");
   function fail(e) { console.error(e); toast(e && e.code === "permission-denied" ? "Not allowed — only owners and administrators can change access." : "Couldn't save — " + ((e && e.message) || e), true); }
@@ -424,7 +479,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   }
   function addPerson(name, email, preset) {
     email = String(email || "").trim().toLowerCase(); name = String(name || "").trim();
-    if (!/^[^@\s\/]+@[^@\s\/]+\.[^@\s\/]+$/.test(email)) { toast("Enter the person's Google email", true); return Promise.resolve(false); }
+    if (!/^[^@\s\/]+@[^@\s\/]+\.[^@\s\/]+$/.test(email)) { toast("Enter the person's e-mail address", true); return Promise.resolve(false); }
     const pr = P.PRESETS[preset] || P.PRESETS.none;
     const existing = staff.find((s) => s.id === email);
     if (existing) { toast(email + " is already on the list — tick their pages below", true); return Promise.resolve(false); }
