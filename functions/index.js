@@ -30,6 +30,7 @@ const FAMILY = require('./lib/family');
 const SMS = require('./lib/sms');
 const MONDAY = require('./lib/mondayimport');
 const CONTACTS = require('./lib/contacts');
+const COACHTEXT = require('./lib/coachtext');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -81,6 +82,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // JustCall calls this for texts on the academy's line: STOP / START from a family flips their consent, delivery updates land on the log
       const out = await SMS.webhook(ctx.db, req.headers || {}, req.body || {});
       logger.info('sms webhook', out);
+      if (/^reply kept/.test(String(out.did || '')) && Array.isArray(out.players) && out.players.length) {
+        // a family wrote back: the coach's inbox row and their Slack (Nov 4); the body is trusted because the signature was
+        const d = (req.body && req.body.data) || {}; const text = String((d.sms_info && d.sms_info.body) || d.body || '');
+        try { const r = await COACHTEXT.onReply(ctx.db, { players: out.players, text }); logger.info('coach reply', r); } catch (e) { logger.warn('coach reply not told', { message: e.message }); }
+      }
       return send(res, 200, { ok: true, did: out.did });
     }
 
@@ -112,6 +118,16 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /marketing/ideas') { const out = await IDEAS.ideas(ctx.db, who, b); logger.info('ideas', { by: who.email, coach: b.coach || '', n: out.ideas.length, took: out.took }); return send(res, 200, out); }
       if (route === 'GET /marketing/ideas/status') { const st = await IDEAS.settings(ctx.db, true); return send(res, 200, { ready: /^sk-ant-/.test(String(st.anthropicKey || '')), by: st.by || '', at: st.at || 0 }); }
       throw S.err(404, 'route', 'No such marketing route.');
+    }
+
+    if (path.startsWith('/api/coach/')) {
+      // the Coach Portal's own routes (Nov 4): a text to a family through the academy's JustCall line, the conversation, the inbox.
+      // Anyone active on the staff list with the portal; a coach reaches only the players whose record carries their name.
+      const who = await ADMIN.requireCoach(req); const b = req.body || {};
+      if (route === 'POST /coach/text') { const out = await COACHTEXT.text(ctx.db, who, b); logger.info('coach text', { by: who.email, player: S.clean(b.player, 60), to: out.to && out.to.slot, tick: out.tick }); return send(res, 200, out); }
+      if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { markRead: String(req.query.peek || '') !== '1' }));
+      if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
+      throw S.err(404, 'route', 'No such coach route.');
     }
 
     if (path.startsWith('/api/admin/')) {

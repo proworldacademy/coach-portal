@@ -543,6 +543,31 @@ button.notice.remind.wk .wkn{margin-right:2px}
 .ckform{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .ckform input{height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 12px;font-size:13px;width:150px}
 @media(max-width:700px){.ckrow{grid-template-columns:1fr;gap:4px}}
+/* messages to the family (Nov 4): the conversation as bubbles, the composer under it */
+.msgcard{display:grid;gap:12px;margin-bottom:18px;border-left:6px solid var(--ink)}
+.msgcard .wkword{color:var(--ink)}
+.bubs{display:grid;gap:8px;max-height:360px;overflow:auto;padding:4px 2px;scroll-padding-bottom:8px}
+.bub{max-width:82%;display:grid;gap:3px}
+.bub.b-out{justify-self:end;text-align:right}.bub.b-in{justify-self:start}
+.bub .bt{display:inline-block;padding:9px 13px;border-radius:16px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word;text-align:left}
+.bub.b-out .bt{background:var(--ink);color:#fff;border-bottom-right-radius:4px}
+.bub.b-in .bt{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.bub.failed .bt{background:var(--wk-off);color:var(--wk-off-ink)}
+.bub small{font-size:11px;color:var(--muted)}.bub small .bad{color:var(--wk-off-ink)}
+.bub.b-sys{justify-self:center;font-size:12px;color:var(--muted);text-align:center;padding:2px 0}
+.msgform{display:grid;gap:8px}
+.msgto{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.msgform textarea{width:100%;border-radius:14px;border:1px solid var(--line-2);padding:10px 12px;font:inherit;font-size:14px;line-height:1.4;resize:vertical;min-height:72px;background:#fff}
+.msgform textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
+.msgfoot{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.msgfoot .hint{margin:0;flex:1;min-width:200px}
+.msgno{padding:10px 12px;border-radius:12px;background:#FFF1F1;margin:0}
+.msgrow.new{box-shadow:inset 4px 0 0 var(--lime)}
+.msgrow .nm i.red{display:inline-block;background:var(--wk-off);color:var(--wk-off-ink);border-radius:999px;padding:0 7px;font-style:normal;font-size:11px;font-weight:700;margin-left:6px;vertical-align:1px}
+.msgrow .msglast{display:grid;gap:2px;min-width:0;font-size:13px;align-content:center}
+@media(max-width:700px){.msgrow .mid.msglast{display:grid}}
+.msglast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.msglast span.them{font-weight:700}.msglast small{color:var(--muted);font-size:11px}
+@media(max-width:560px){.bub{max-width:92%}.bubs{max-height:300px}}
 /* ── the tone guard in the editor (Kam, Nov 2026): a red flag under a note that would land as negative ── */
 .tflag{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:8px 12px;border-radius:12px;background:var(--wk-off);color:var(--wk-off-ink);font-size:12.5px;line-height:1.45}
 .tflag.soft{background:#FFF1D6;color:#7A5200}
@@ -1634,7 +1659,7 @@ const PW_CONFIG = {
     checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null },
+    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgTo: {}, msgFocus: null },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -1796,7 +1821,7 @@ const PW_CONFIG = {
   // who is still to reach this week — for the tab count, the home strip and the Dashboard
   function contactTally(list) { const wk = curWeek(); const l = (list || S.players.filter(active)); const done = l.filter((p) => inTouch(p.id, wk)); return { done: done.length, total: l.length, left: l.length - done.length, week: wk }; }
   const myPlayers = () => S.players.filter(active).filter((p) => mine(p));
-  const tickWord = (c) => (!c || !c.done ? '' : c.source === 'justcall' ? `JustCall · ${c.how === 'call' ? 'call' : 'text'}${c.by ? ' · ' + c.by : ''}` : `ticked${c.by ? ' by ' + c.by : ''}`);
+  const tickWord = (c) => (!c || !c.done ? '' : c.source === 'justcall' ? `JustCall · ${c.how === 'call' ? 'call' : 'text'}${c.by ? ' · ' + c.by : ''}` : c.source === 'portal' ? `text from the portal${c.by ? ' · ' + c.by : ''}` : `ticked${c.by ? ' by ' + c.by : ''}`);
 
   /* ───────────── the contact check (Antonio, Nov 2, 2026) ─────────────
      JustCall can only find a family when their numbers are on file. contactCheck/{pid} holds the numbers the engine found on the
@@ -1837,6 +1862,85 @@ const PW_CONFIG = {
       <div class="ckrows">${rows}</div></div>`;
   }
 
+
+  /* ───────────── messages to the family (Antonio, Nov 4, 2026) ─────────────
+     "They don't have to open two apps." A coach writes to the family from here; the engine sends it from the academy's JustCall
+     number, signed with the coach's name, and the week ticks itself. Replies come back through JustCall to the player's page
+     and to the Messages view. Everything goes through the engine (/api/coach/*): the page never holds a key, and a coach
+     reaches only their own players. */
+  S.msg = { inbox: null, at: 0, threads: {}, busy: {} };
+  const MSG_MAX = 600;
+  async function api(path, body) {
+    if (EDITION !== 'web' || !WEB.auth || !WEB.auth.currentUser) throw new Error('Sign in first.');
+    const tok = await WEB.auth.currentUser.getIdToken(); let r;
+    try { r = await fetch('/api/coach/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ authorization: 'Bearer ' + tok }, body ? { 'content-type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined }); }
+    catch (e) { throw new Error('No connection. Try again in a moment.'); }
+    let j = null; try { j = await r.json(); } catch (e) { j = null; }
+    if (!r.ok) { const err = new Error((j && j.message) || ('Error ' + r.status)); err.code = (j && j.error) || r.status; throw err; }
+    return j;
+  }
+  const msgThread = (pid) => S.msg.threads[pid] || null;
+  const msgUnread = () => (S.msg.inbox && S.msg.inbox.unread) || 0;
+  async function loadThread(pid, quiet) {
+    if (EDITION !== 'web' || !pid || S.msg.busy[pid]) return;
+    S.msg.busy[pid] = true; const before = JSON.stringify(((S.msg.threads[pid] || {}).lines || []).map((l) => l.id + l.status + l.delivery));
+    try {
+      const t = await api('thread?player=' + enc(pid)); S.msg.threads[pid] = Object.assign(t, { at: Date.now(), error: '' });
+      if (S.msg.inbox) { const row = S.msg.inbox.rows.find((r) => r.id === pid); if (row && row.unread) { row.unread = false; S.msg.inbox.unread = Math.max(0, S.msg.inbox.unread - 1); } }
+    } catch (e) { S.msg.threads[pid] = Object.assign(S.msg.threads[pid] || { lines: [], numbers: [], line: {} }, { at: Date.now(), error: e.message || String(e) }); }
+    delete S.msg.busy[pid];
+    if (S.route.view !== 'player' || S.route.pid !== pid) return;
+    if (!quiet) { render(); paintViewTabs(); return; }
+    if (JSON.stringify((S.msg.threads[pid].lines || []).map((l) => l.id + l.status + l.delivery)) !== before) render();   // a quiet refresh redraws only when something came in (render keeps the draft)
+  }
+  async function loadInbox(force) {
+    if (EDITION !== 'web' || WEB.stage !== 'in' || S.msg.busy.inbox) return; if (!force && Date.now() - S.msg.at < 45000) return;
+    S.msg.busy.inbox = true; const before = msgUnread();
+    try { S.msg.inbox = Object.assign(await api('inbox'), { error: '' }); } catch (e) { S.msg.inbox = Object.assign(S.msg.inbox || { unread: 0, rows: [] }, { error: e.message || String(e) }); }
+    S.msg.at = Date.now(); delete S.msg.busy.inbox;
+    paintViewTabs(); if (S.route.view === 'messages' || (S.route.view === 'home' && msgUnread() !== before)) render();
+  }
+  function msgTick() {   // the inbox stays fresh while the page is open: about every minute, and the moment the tab comes back
+    if (EDITION !== 'web' || WEB.stage !== 'in' || document.visibilityState !== 'visible') return;
+    loadInbox(false);
+    const t = S.route.view === 'player' && S.route.pid ? msgThread(S.route.pid) : null; if (t && Date.now() - t.at > 20000) loadThread(S.route.pid, true);
+  }
+  setInterval(msgTick, 30000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { S.msg.at = 0; msgTick(); } });
+  const msgWhen = (ms) => { const d = new Date(ms || 0), now = new Date(); const today = d.toDateString() === now.toDateString(); return (today ? 'Today' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+  const toWord = (to) => (to === 'player' ? 'the player' : to === 'guardian' ? 'the guardian' : to ? 'the ' + to : '');
+  function msgCard(p) {
+    const t = msgThread(p.id); const w = writable() && mine(p); const head = (word) => `<div class="wkmain"><div><div class="lbl">Messages · through JustCall</div><b class="wkword">${word}</b></div>${t ? '<button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻ Refresh</button>' : ''}</div>`;
+    if (!t) { if (!S.msg.busy[p.id]) loadThread(p.id); return `<div class="panel msgcard" id="msgcard">${head('Loading the conversation…')}</div>`; }
+    if (t.error && !(t.lines && t.lines.length)) return `<div class="panel msgcard" id="msgcard">${head('The conversation could not be loaded')}<p class="hint">${esc(t.error)}</p></div>`;
+    const lines = t.lines || []; const nums = t.numbers || [];
+    const sel = S.ui.msgTo[p.id] && nums.some((n) => n.phone === S.ui.msgTo[p.id]) ? S.ui.msgTo[p.id] : (nums[0] ? nums[0].phone : '');
+    const bub = (l) => l.dir === 'sys' ? `<div class="bub b-sys">${esc(l.body)}</div>`
+      : `<div class="bub b-${l.dir}${l.status === 'failed' ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? 'The family' + (l.tail ? ' · …' + esc(l.tail) : '') : esc(l.by || '') + (l.to ? ' · to ' + esc(toWord(l.to)) : '')} · ${esc(msgWhen(l.at))}${l.status === 'failed' ? ' · <b class="bad">not sent</b>' : /deliver/i.test(l.delivery || '') ? ' · delivered' : ''}</small></div>`;
+    const bubbles = lines.length ? `<div class="bubs">${lines.map(bub).join('')}</div>` : '<p class="hint">Nothing yet. The first text starts the conversation; the family answers right here.</p>';
+    const chips = nums.map((n) => `<button class="fchip sm" type="button" aria-pressed="${sel === n.phone}" data-act="msg-to" data-phone="${esc(n.phone)}">${esc(n.word)}${n.name ? ' · ' + esc(n.name) : ''} · …${esc(n.tail)}</button>`).join('');
+    const composer = !w ? '' : t.line && t.line.connected === false ? '<p class="hint msgno"><b>JustCall is not connected yet.</b> An owner pastes the key under Players &amp; billing → Notifications.</p>'
+      : t.optOut ? `<p class="hint msgno"><b>${esc(t.optOutWhy || 'The family asked for no texts.')}</b> Call them instead.</p>`
+      : !nums.length ? '<p class="hint msgno"><b>No number on file.</b> Add one under Contacts for JustCall below, then write here.</p>'
+      : `<form class="msgform" data-form="msg" data-pid="${esc(p.id)}"><div class="msgto"><span class="flbl">To</span>${chips}</div><textarea name="body" rows="3" maxlength="${MSG_MAX}" placeholder="Write to the family…" aria-label="Message to the family" required></textarea><div class="msgfoot"><span class="hint">Goes out from the academy number, signed “${esc(t.signature || '')}”. It counts as this week's contact.</span><button class="btn pri" type="submit">Send</button></div></form>`;
+    return `<div class="panel msgcard" id="msgcard">${head(lines.length ? 'The conversation with the family' : 'Write to the family from here')}${bubbles}${composer}</div>`;
+  }
+  /* ───────────── view: messages (the inbox) ───────────── */
+  function viewMessages() {
+    const ib = S.msg.inbox; if (!ib && EDITION === 'web') loadInbox(true);
+    const rows = ib ? ib.rows : []; const n = ib ? ib.unread : 0;
+    const row = (r) => { const p = player(r.id);
+      return `<button class="rowb crow2 msgrow${r.unread ? ' new' : ''}" ${goAttr({ view: 'player', pid: r.id })}><div class="who"><span class="ava">${esc(initials(r.name))}</span><div style="min-width:0"><div class="nm">${esc(r.name)}${r.unread ? ' <i class="red">new</i>' : ''}</div><small>${esc(group(r.group).label)}${r.coach ? ' · Coach ' + esc(r.coach) : ' · no coach'}</small></div></div>
+        <div class="mid msglast">${r.last ? `<span class="${r.last.dir === 'in' ? 'them' : 'me'}">${r.last.dir === 'in' ? 'Them: ' : (r.last.by ? esc(r.last.by) : 'You') + ': '}${esc(r.last.body)}</span><small>${esc(msgWhen(r.last.at))}</small>` : '<span class="muted">No texts yet</span>'}</div>
+        <div class="chips">${p ? contactChip(p) : ''}</div></button>`; };
+    return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Messages' }])}
+      <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
+        <div class="sub">Open a player and write. The text goes out from the academy number, signed with your name; the family answers here. Nothing to open anywhere else.</div>
+        <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'family wrote' : 'families wrote'} back — not read yet</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${rows.length}</b> ${rows.length === 1 ? 'family' : 'families'}</li></ul></div></div>
+      ${ib && ib.error ? `<p class="hint due-line"><b>Could not refresh:</b> ${esc(ib.error)}</p>` : ''}
+      ${rows.length ? `<div class="list">${rows.map(row).join('')}</div>` : `<div class="empty">${ib ? 'No players of yours are active.' : 'Loading…'}</div>`}`;
+  }
+
   /* ───────────── routing ───────────── */
   function parseHash() {
     let p = []; try { p = (location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent); } catch (e) { p = []; }
@@ -1851,11 +1955,12 @@ const PW_CONFIG = {
     if (p[0] === 'commit') return { view: 'commit' };
     if (p[0] === 'contact' || p[0] === 'weekly') return { view: 'contact' };
     if (p[0] === 'parked') return { view: 'parked' };
+    if (p[0] === 'messages' || p[0] === 'inbox') return { view: 'messages' };
     return { view: 'home' };
   }
   const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part]);
   const enc = encodeURIComponent;
-  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : r.view === 'contact' ? '#/contact' : r.view === 'parked' ? '#/parked' : '#/');
+  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : r.view === 'contact' ? '#/contact' : r.view === 'parked' ? '#/parked' : r.view === 'messages' ? '#/messages' : '#/');
   async function go(r, fromHistory) {
     if (E) { try { await flushEd(E, true); } catch (e) { /* keep navigating */ } }
     if (EDITION === 'web' && typeof WEB !== 'undefined' && WEB.tryoutsOnly && r.view !== 'tryouts' && r.view !== 'tryout') r = { view: 'tryouts' };   // try-outs-only access (front desk)
@@ -2202,16 +2307,17 @@ const PW_CONFIG = {
   function paintViewTabs() {
     const el = $('#vtabs'); if (!el) return;
     const on = EDITION === 'web' ? WEB.stage === 'in' : !!S.db; el.hidden = !on; if (!on) { el.innerHTML = ''; const f = $('#fupill'); if (f) f.hidden = true; return; }
-    const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'contact' ? 'contact' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : 'home';
+    const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'contact' ? 'contact' : v === 'messages' ? 'messages' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : 'home';
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
       : [['home', 'Players Portal', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }], ['contact', 'Weekly contact', { view: 'contact' }]]
         // the eight things a coach sees (Antonio, Oct 24): Players Portal · Try-outs · Coach Board · Attendance · Messages · Courts · Privates (Start here dropped Oct 26: a PDF guide instead); Staff & access is directors only
-        .concat(EDITION === 'web' ? [['attendance', 'Attendance', '/backend#attendance'], ['messages', 'Messages', '/backend#messages'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates']] : [])
+        .concat(EDITION === 'web' ? [['messages', 'Messages', { view: 'messages' }], ['attendance', 'Attendance', '/backend#attendance'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates']] : [])
         .concat(EDITION === 'web' && WEB.isDirector ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
-    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'contact' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}</button>`).join('');
+    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'contact' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}${k === 'messages' && msgUnread() ? `<small class="red">${msgUnread()}</small>` : ''}</button>`).join('');
+    if (EDITION === 'web' && WEB.stage === 'in' && !S.msg.at && !S.msg.busy.inbox) loadInbox(true);
     { const on = el.querySelector('.on'); if (on && el.scrollWidth > el.clientWidth + 2) { const x = on.offsetLeft - 16; if (x > 0) el.scrollLeft = x; } }
     if (window.PWDesign) {
       PWDesign.active(sec === 'tryouts' ? 'tryouts' : sec === 'board' ? 'coach-board' : 'coach-portal');
@@ -2219,6 +2325,7 @@ const PW_CONFIG = {
       if (act) sig.push({ cls: 'ok', html: `<b>${act}</b> active players`, href: '#/' });
       if (nOpen) sig.push({ cls: 'due', html: `<b>${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up`, href: '#/followup' });
       if (wkLeft) sig.push({ cls: 'bad', html: `<b>${wkLeft}</b> ${wkLeft === 1 ? 'family' : 'families'} still to reach this week`, href: '#/contact' });
+      if (msgUnread()) sig.push({ cls: 'bad', html: `<b>${msgUnread()}</b> ${msgUnread() === 1 ? 'family wrote' : 'families wrote'} back`, href: '#/messages' });
       PWDesign.signals(sig);
     }
   }
@@ -2333,9 +2440,13 @@ const PW_CONFIG = {
   function render() {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
-    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : viewHome()}</div>`;
+    // a redraw must not eat what the coach is typing to a family (Nov 4): the draft and the caret come back after it
+    const ta0 = $('#msgcard textarea'); const draft = ta0 && ta0.value ? { v: ta0.value, s: ta0.selectionStart, e: ta0.selectionEnd, focus: document.activeElement === ta0 } : null;
+    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
     if (r.view === 'board') bindBoardDrag(m);
+    const ta1 = draft && $('#msgcard textarea'); if (ta1 && !ta1.value) { ta1.value = draft.v; try { ta1.setSelectionRange(draft.s, draft.e); if (draft.focus) ta1.focus({ preventScroll: true }); } catch (e) { /* noop */ } }
+    if (S.ui.msgFocus && r.view === 'player' && r.pid === S.ui.msgFocus) { const ta = $('#msgcard textarea'); if (ta) { S.ui.msgFocus = null; try { $('#msgcard').scrollIntoView({ block: 'start', behavior: 'smooth' }); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } }
   }
   // Coach Board: hold a player, drop them on a coach (Antonio, Oct 25) — the same drag as Attendance; directors only
   const BOARD_MOVES = [];   // this session's moves, newest first, each undoable (Antonio, Oct 25)
@@ -2411,9 +2522,10 @@ const PW_CONFIG = {
     const bits = [line(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents'), line(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set'), line(fu.late.length, 'meeting to confirm', 'meetings to confirm')].filter(Boolean);
     const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><span class="ttl">Follow-up</span><ul class="lines">${bits.length ? bits.join('') : line(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')}</ul><span>Open the list</span></button>` : '';
     const nOpen = new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size;
+    const msgStrip = EDITION === 'web' && msgUnread() ? `<button class="notice remind msg" ${goAttr({ view: 'messages' })}><span class="ttl">Messages</span><ul class="lines"><li><b class="n off">${msgUnread()}</b> ${msgUnread() === 1 ? 'family wrote' : 'families wrote'} back — not read yet</li></ul><span>Open the inbox</span></button>` : '';
     const head = `<div class="head"><div><div class="lbl">Players · reports · ${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div><h1 class="title">Coach <em>Portal.</em></h1>
       <ul class="sub lines"><li><b class="n">${act.length}</b> active ${act.length === 1 ? 'player' : 'players'}</li><li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>${nOpen ? `<li><b class="n">${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up</li>` : ''}</ul></div></div>`;
-    return `${notice()}${head}${empty}${wkStrip}${remind}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
+    return `${notice()}${head}${empty}${msgStrip}${wkStrip}${remind}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
       ${homeTryouts()}
       <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
       <div class="groups">${cards}</div>
@@ -2453,7 +2565,7 @@ const PW_CONFIG = {
     const row = (p) => { const c = contactOf(p.id, wk); const on = !!(c && c.done); const can = w && mine(p);
       return `<div class="rowb crow2 ${on ? 'on' : 'off'}"><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><button class="nm linkb" ${goAttr({ view: 'player', pid: p.id })}>${esc(p.name)}</button><small>${esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ' · no coach'}${on ? ' · ' + esc(tickWord(c)) : ''}</small></div></div>
         <div class="mid">${weekStrip(p.id, 6)}</div>
-        <div class="chips">${checkChip(p)}${contactChip(p)}${can ? `<button class="btn sm ${on ? 'ghost' : 'pri'}" data-act="contact-row" data-pid="${esc(p.id)}" data-v="${on ? 'off' : 'on'}">${on ? 'Undo' : '✓ In touch'}</button>` : ''}</div></div>`; };
+        <div class="chips">${checkChip(p)}${contactChip(p)}${can && EDITION === 'web' ? `<button class="btn sm ghost" data-act="msg-go" data-pid="${esc(p.id)}" title="Text the family from here">✉ Text</button>` : ''}${can ? `<button class="btn sm ${on ? 'ghost' : 'pri'}" data-act="contact-row" data-pid="${esc(p.id)}" data-v="${on ? 'off' : 'on'}">${on ? 'Undo' : '✓ In touch'}</button>` : ''}</div></div>`; };
     const rows = list.map(row).join('');
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Weekly contact' }])}
       <div class="head"><div><div class="lbl">Week of ${esc(weekLabel(wk))} · Monday to Sunday</div><h1 class="title">Weekly <em>contact.</em></h1>
@@ -2555,7 +2667,7 @@ const PW_CONFIG = {
         <div class="rowx">${web ? `<button class="btn" data-act="parent-info" aria-expanded="${pOpen}" aria-controls="parentbox">${pOpen ? 'Hide parent info' : 'Parent info'}</button>` : ''}${writable() ? `<button class="btn" data-act="toggle-edit">Edit player</button>` : ''}</div></div>
       ${pOpen ? `<div id="parentbox">${parentBox(p)}</div>` : ''}
       <div id="editp" ${S.ui.editing ? '' : 'hidden'}>${S.ui.editing ? editPlayerPanel(p) : ''}</div>
-      ${active(p) ? contactCard(p) + checkCard(p) : ''}
+      ${active(p) ? contactCard(p) : ''}${web && mine(p) ? msgCard(p) : ''}${active(p) ? checkCard(p) : ''}
       <div class="tabs" role="tablist">${tabs}</div>
       ${tab === 'videos' ? tabVideos(p) : tab === 'journal' ? tabJournal(p) : tabAssess(p)}`;
   }
@@ -2576,7 +2688,7 @@ const PW_CONFIG = {
   function contactCard(p) {
     const wk = curWeek(); const c = contactOf(p.id, wk); const on = !!(c && c.done); const w = writable() && mine(p);
     const jc = on && c.jc ? ` · JustCall saw ${c.jc.texts ? c.jc.texts + (c.jc.texts === 1 ? ' text' : ' texts') : ''}${c.jc.texts && c.jc.calls ? ' and ' : ''}${c.jc.calls ? c.jc.calls + (c.jc.calls === 1 ? ' call' : ' calls') : ''}` : '';
-    const detail = on ? `<div class="wkdetail"><span class="muted">${esc(c.source === 'justcall' ? 'Found by JustCall' + (c.by ? ' · ' + c.by : '') : (c.by ? 'Ticked by ' + c.by : 'Ticked'))}${c.at ? ' · ' + esc(fmtDate(c.at)) : ''}${esc(jc)}</span>
+    const detail = on ? `<div class="wkdetail"><span class="muted">${esc(c.source === 'justcall' ? 'Found by JustCall' + (c.by ? ' · ' + c.by : '') : c.source === 'portal' ? 'Texted from the portal' + (c.by ? ' · ' + c.by : '') : (c.by ? 'Ticked by ' + c.by : 'Ticked'))}${c.at ? ' · ' + esc(fmtDate(c.at)) : ''}${esc(jc)}</span>
         <span class="wkopts" role="group" aria-label="Who">${['parents', 'player', 'both'].map((k) => `<button class="fchip sm" aria-pressed="${c.who === k}" data-act="contact-who" data-v="${k}" ${w ? '' : 'disabled'}>${WHO_WORD[k]}</button>`).join('')}</span>
         <span class="wkopts" role="group" aria-label="How">${['text', 'call', 'person'].map((k) => `<button class="fchip sm" aria-pressed="${c.how === k}" data-act="contact-how" data-v="${k}" ${w ? '' : 'disabled'}>${HOW_WORD[k]}</button>`).join('')}</span></div>` : '';
     return `<div class="panel wkcard ${on ? 'on' : 'off'}" id="wkcard"><div class="wkmain"><div><div class="lbl">Weekly contact · ${esc(weekLabel(wk))}</div>
@@ -3465,6 +3577,10 @@ const PW_CONFIG = {
     else if (act === 'targets-edit') { S.ui.editTargets = !S.ui.editTargets; render(); }
     else if (act === 'fcoach') { const v = b.getAttribute('data-v'); S.ui.coachFilter = v === '__all' ? null : v; S.ui.coachFilterGroup = S.route.gid; render(); }
     else if (act === 'fcontact') { const v = b.getAttribute('data-v'); S.ui.contactCoach = v === '__all' ? null : v; render(); }
+    // messages to the family (Nov 4): the recipient chip, the refresh, the jump from the weekly list to the player's composer
+    else if (act === 'msg-to') { S.ui.msgTo[S.route.pid] = b.getAttribute('data-phone') || ''; render(); }
+    else if (act === 'msg-refresh' && S.route.pid) { b.disabled = true; await loadThread(S.route.pid); }
+    else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week
     else if (act === 'contact' || act === 'contact-row') { const p = player(act === 'contact' ? S.route.pid : b.getAttribute('data-pid')); if (!p || !mine(p)) return; const on = b.getAttribute('data-v') === 'on'; b.disabled = true; await setContact(p, on); if (on) toast(`${p.name}: in touch this week. Thank you.`); }
     else if (act === 'slot-open') { const sl = b.getAttribute('data-slot'); S.ui.slotOpen = sl ? S.route.pid + ':' + sl : null; render(); const i = $('#ckcard input[name="phone"]'); if (i) i.focus(); }
@@ -3545,6 +3661,23 @@ const PW_CONFIG = {
         const p = player(f.getAttribute('data-pid')); const sl = f.getAttribute('data-slot'); if (!p || !mine(p)) return;
         const phone = toE164(val('phone')); if (!phone || phone.length < 11) { toast('A phone like (561) 555-0100 is needed.'); return; }
         await setSlot(p, sl, { state: 'ok', phone, name: val('name').slice(0, 80), from: 'coach' }); S.ui.slotOpen = null; toast(`${SLOT_LABEL[sl]}: saved. JustCall will find this family on that number too.`); render();
+      } else if (kind === 'msg') {
+        const p = player(f.getAttribute('data-pid')); if (!p || !mine(p)) return;
+        const body = val('body').slice(0, MSG_MAX); if (!body) return;
+        const th = msgThread(p.id) || { numbers: [], lines: [] }; const to = S.ui.msgTo[p.id] && th.numbers.some((x) => x.phone === S.ui.msgTo[p.id]) ? S.ui.msgTo[p.id] : (th.numbers[0] || {}).phone || '';
+        const btn = f.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+        try {
+          const out = await api('text', { player: p.id, to, body });
+          th.lines = (th.lines || []).concat([out.line]); th.at = Date.now(); S.msg.threads[p.id] = th;
+          if (out.tick && out.tick.ticked) {   // the week went green on the engine; show it now, the listener confirms
+            const wk = out.tick.week; const row = { id: contactId(p.id, wk), playerId: p.id, playerName: p.name, group: p.group || '', coach: p.coach || '', week: wk, done: true, by: String((WEB.staff && WEB.staff.coachAs) || signedName()).split(/\s+/)[0].slice(0, 80), byEmail: WEB.email || '', at: out.line.at, how: 'text', who: out.to && out.to.slot === 'player' ? 'player' : 'parents', source: 'portal' };
+            const i = S.contacts.findIndex((c) => c.playerId === p.id && c.week === wk); if (i >= 0) S.contacts[i] = row; else S.contacts.push(row);
+            if (S.pdata.pid === p.id) { const j = S.pdata.contacts.findIndex((c) => c.week === wk); if (j >= 0) S.pdata.contacts[j] = row; else S.pdata.contacts.push(row); }
+          }
+          if (S.msg.inbox) { const r = S.msg.inbox.rows.find((x) => x.id === p.id); if (r) r.last = { at: out.line.at, dir: 'out', body: body.slice(0, 140), by: '' }; }
+          const ta = f.querySelector('textarea'); if (ta) ta.value = '';   // sent: the box empties before the redraw (a redraw keeps a draft)
+          toast(`Sent to ${out.to && out.to.slot ? toWord(out.to.slot) : 'the family'}.${out.tick && out.tick.ticked ? ' This week is ticked.' : ''}`); render(); paintViewTabs();
+        } catch (e) { if (btn) { btn.disabled = false; btn.textContent = 'Send'; } toast(e.message || 'Could not send.'); }
       } else if (kind === 'add-player') {
         const first = EDITION === 'web' ? val('first') : '', last = EDITION === 'web' ? val('last') : '';
         const name = EDITION === 'web' ? (first + ' ' + last).replace(/\s+/g, ' ').trim() : val('name'); if (!name) return;
@@ -3847,7 +3980,7 @@ const PW_CONFIG = {
   function logRun(l, open, newest) {
     const pv = l.mode === 'preview', bad = l.ok === false, bits = summaryBits(l.counts);
     const warns = bad ? 0 : (l.errors || []).length;
-    const label = `<b>${esc(fmtWhen(l.at))}</b>${pv ? '<span class="chip">Preview</span>' : ''}${bad ? '<span class="chip warn">Didn’t finish</span>' : ''}${warns ? `<span class="chip warn">${warns} to check</span>` : ''}<span class="lsum">${esc(bad ? String((l.errors || [])[0] || '') : bits.join(' · ') || 'No changes')}</span>`;
+    const label = `<b>${esc(msgWhen(l.at))}</b>${pv ? '<span class="chip">Preview</span>' : ''}${bad ? '<span class="chip warn">Didn’t finish</span>' : ''}${warns ? `<span class="chip warn">${warns} to check</span>` : ''}<span class="lsum">${esc(bad ? String((l.errors || [])[0] || '') : bits.join(' · ') || 'No changes')}</span>`;
     const head = newest ? `<div class="lhead">${label}</div>` : `<button class="lhead" data-act="log-open" data-id="${esc(l.id)}" aria-expanded="${!!open}">${label}</button>`;
     if (!open) return `<div class="lrun">${head}</div>`;
     const entries = l.entries || []; const shown = S.ui.logAll ? entries : entries.slice(0, 40);
