@@ -171,9 +171,13 @@ async function text(db, who, body) {
   return out;
 }
 
+/* A family's "Yes" or "Start" is an opt-in to the engine, but to the coach it is an answer: it shows as their words ("Yes, we
+   will be there"), with a small "texts on" note. STOP shows as a note (and their words, when they wrote more than the word). */
+const BARE_START = /^\s*(start|unstop|subscribe)\s*[.!]*\s*$/i;
 function publicLine(l) {
   if (l.kind === 'reply') return { id: l.id, at: l.at || 0, dir: 'in', body: String(l.body || ''), tail: tail(l.phone), conv: l.conv || '' };
-  if (l.kind === 'optout' || l.kind === 'optin') return { id: l.id, at: l.at || 0, dir: 'sys', body: l.kind === 'optout' ? 'The family replied STOP: no more texts to this number.' : 'The family replied START: texts are back on.', tail: tail(l.phone), conv: l.conv || '' };
+  if (l.kind === 'optin') { const body = String(l.body || '').trim(); return { id: l.id, at: l.at || 0, dir: 'in', body: body && !BARE_START.test(body) ? body : 'START', tail: tail(l.phone), conv: l.conv || '', note: 'texts on' }; }
+  if (l.kind === 'optout') return { id: l.id, at: l.at || 0, dir: 'sys', body: 'The family replied STOP: no more texts to this number.', words: String(l.body || '').trim().slice(0, 200), tail: tail(l.phone), conv: l.conv || '' };
   return { id: l.id, at: l.at || 0, dir: 'out', body: String(l.body || ''), by: l.byName || l.by || '', status: l.status || '', delivery: l.delivery || '', error: l.error || '', to: l.to || '', toName: l.toName || '', tail: tail(l.phone), portal: l.from === 'portal', conv: l.conv || tail(l.phone), batch: l.batch || '' };
 }
 
@@ -181,7 +185,9 @@ function publicLine(l) {
    (a desk text, or one from before chats existed, is the number's own chat); a reply or STOP/START goes to the chat the family
    last heard from on that number. */
 function fileLines(outs, ins) {
-  const all = outs.map((l) => Object.assign({}, l, { conv: l.conv || tail(l.phone) })).concat(ins).sort((a, b) => (a.at - b.at) || String(a.id).localeCompare(String(b.id)));
+  const sorted = ins.slice().sort((a, b) => (a.at - b.at) || String(a.id).localeCompare(String(b.id)));
+  const dedup = []; sorted.forEach((l) => { const prev = dedup[dedup.length - 1]; if (prev && prev.kind === l.kind && prev.phone === l.phone && String(prev.body || '') === String(l.body || '') && Math.abs((l.at || 0) - (prev.at || 0)) < 120000) return; dedup.push(l); });   // JustCall sends two events per text; a STOP/START kept twice shows once
+  const all = outs.map((l) => Object.assign({}, l, { conv: l.conv || tail(l.phone) })).concat(dedup).sort((a, b) => (a.at - b.at) || String(a.id).localeCompare(String(b.id)));
   const lastTo = {};
   all.forEach((l) => { if (!l.kind) lastTo[l.phone] = l.conv; else l.conv = lastTo[l.phone] || tail(l.phone); });
   return all;
@@ -198,7 +204,7 @@ function chatsOf(numbers, lines, read, pid) {
   const adults = numbers.filter((n) => ADULT.includes(n.slot));
   const together = adults.length >= 2 ? convKey(adults.map((n) => n.phone)) : numbers.length >= 2 ? convKey(numbers.map((n) => n.phone)) : '';
   if (together && !convs.has(together)) { seed(together); convs.get(together).suggested = true; }
-  lines.forEach((l) => { const c = convs.get(l.conv); if (!c) return; c.count++; c.last = { at: l.at || 0, dir: l.kind ? 'in' : 'out', body: preview(l.body), by: l.kind ? 'family' : (l.byName || l.by || '') , tail: tail(l.phone) }; if (l.kind) c.lastReplyAt = Math.max(c.lastReplyAt, l.at || 0); else c.lastOutAt = Math.max(c.lastOutAt, l.at || 0); });
+  lines.forEach((l) => { const c = convs.get(l.conv); if (!c) return; c.count++; c.last = { at: l.at || 0, dir: l.kind ? 'in' : 'out', body: l.kind === 'optout' ? 'STOP' : preview(l.body), by: l.kind ? 'family' : (l.byName || l.by || '') , tail: tail(l.phone) }; if (l.kind) c.lastReplyAt = Math.max(c.lastReplyAt, l.at || 0); else c.lastOutAt = Math.max(c.lastOutAt, l.at || 0); });
   convs.forEach((c) => { const seen = Math.max(read[pid + '|' + c.key] || 0, read[pid] || 0); c.unread = c.lastReplyAt > seen; });
   return Array.from(convs.values()).sort((a, b) => (a.members.length - b.members.length) || (a.members.length === 1 ? slotRank(a.members[0].slot) - slotRank(b.members[0].slot) : 0) || String(a.key).localeCompare(String(b.key)));
 }
@@ -215,10 +221,28 @@ async function thread(db, who, pid, opts) {
   const key = clean(opts.conv, 40);
   if (key && keyOk(key) && opts.markRead !== false) { try { await db.doc('coachInbox/' + who.email).set({ email: who.email, read: { [pid + '|' + key]: Date.now() } }, { merge: true }); } catch (e) { /* a mark only */ } }
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
-  const convs = chatsOf(numbers, all, read, pid).map((c) => Object.assign({}, c, { members: c.members.map(publicMember) }));
+  const chats = chatsOf(numbers, all, read, pid);
+  await fileConvs(db, p, chats);
+  const convs = chats.map((c) => Object.assign({}, c, { members: c.members.map(publicMember) }));
   const lines = all.slice(-400).map(publicLine);
   const ln = await SMS.line(db);
   return { player: { id: p.id, name: p.name || p.id, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', status: p.status || 'active' }, numbers: numbers.map((n) => ({ slot: n.slot, word: n.slot ? SLOT_WORD[n.slot] : 'On file', name: n.name, phone: n.phone, tail: tail(n.phone) })), convs, optOut, optOutWhy, consent, line: { connected: ln.connected, from: ln.from ? tail(ln.from) : '' }, signature: signature(who), lines };
+}
+
+/* The chats as the inbox lists them, written onto coachThreads/<pid>.convs (only the chats with a line in them). A thread
+   from before chats existed (PR #26: no `convs`) is completed this way the first time the family is opened or listed. */
+async function fileConvs(db, p, chats) {
+  const convs = {};
+  chats.filter((c) => c.count).forEach((c) => { convs[c.key] = { key: c.key, members: c.members.map((m) => ({ phone: m.phone || '', tail: m.tail || tail(m.phone), slot: m.slot || '', name: clean(m.name, 80) })), title: c.title, last: c.last, lastOutAt: c.lastOutAt || 0, lastReplyAt: c.lastReplyAt || 0, updatedAt: Date.now() }; });
+  if (!Object.keys(convs).length) return convs;
+  try { await db.doc('coachThreads/' + p.id).set({ playerId: p.id, playerName: p.name || p.id, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', convs, convsAt: Date.now() }, { merge: true }); } catch (e) { /* the page still has the chats */ }
+  return convs;
+}
+async function rebuildConvs(db, p, ins) {
+  const { numbers } = await numbersOf(db, p.id);
+  const outs = (await db.collection('smsLog').where('player', '==', p.id).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => l.status !== 'skipped' && !l.kind);
+  const mine = ins.filter((l) => Array.isArray(l.players) && l.players.includes(p.id));
+  return fileConvs(db, p, chatsOf(numbers, fileLines(outs, mine), {}, p.id));
 }
 
 /* "I read this chat" — the mark alone, when the page already has the lines. */
@@ -230,26 +254,32 @@ async function markRead(db, who, body) {
   return { ok: true, player: pid, conv: key };
 }
 
-/* The inbox: one row per chat of a player of mine (a director: every active player's), the last line, and whether the family
-   wrote since I last opened that chat; rows with something new first, then by the last line. Families with no chat yet are
-   listed apart (`quiet`), so a coach can start one from here. */
+/* The inbox: every family of mine (a director: every active player), as a messages app lists them — one row per chat with
+   texts in it (something new first, then by the last line), then the families with no texts yet, by name, each ready for a
+   first text. A thread from before chats existed (no `convs`) is rebuilt from the record on the spot (a few reads, once). */
 async function inbox(db, who) {
   const players = (await db.collection('players').where('status', '==', 'active').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((p) => p.name && own(who, p));
   const ids = new Set(players.map((p) => p.id));
   const threads = new Map(); (await db.collection('coachThreads').get()).docs.forEach((d) => { const t = d.data() || {}; if (ids.has(t.playerId)) threads.set(t.playerId, t); });
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
+  const legacy = players.filter((p) => { const t = threads.get(p.id); return t && t.last && !(t.convs && typeof t.convs === 'object' && Object.keys(t.convs).length); }).slice(0, 25);
+  if (legacy.length) {
+    const ins = (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {}));
+    for (const p of legacy) { try { const convs = await rebuildConvs(db, p, ins); threads.set(p.id, Object.assign({}, threads.get(p.id), { convs })); } catch (e) { /* listed as the family's chat below */ } }
+  }
   const rows = [], quiet = [];
   players.forEach((p) => {
     const t = threads.get(p.id) || null; const base = { id: p.id, name: p.name, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '' };
     const convs = t && t.convs && typeof t.convs === 'object' ? Object.values(t.convs).filter((c) => c && c.key) : [];
-    if (!convs.length && t && t.last) convs.push({ key: '', members: [], title: 'Family', last: t.last, lastReplyAt: t.lastReplyAt || 0, lastOutAt: t.lastOutAt || 0 });   // a thread from before chats existed: the family's chat, the page picks the newest
-    if (!convs.length) { quiet.push(base); return; }
-    convs.forEach((c) => { const seen = Math.max(read[p.id + '|' + c.key] || 0, read[p.id] || 0); const lastReplyAt = c.lastReplyAt || 0;
+    const seenAll = Math.max(read[p.id] || 0, ...Object.keys(read).filter((k) => k.startsWith(p.id + '|')).map((k) => read[k] || 0));   // a thread from before chats: any mark on this family counts
+    if (!convs.length && t && t.last) convs.push({ key: '', members: [], title: 'Family', last: t.last, lastReplyAt: t.lastReplyAt || 0, lastOutAt: t.lastOutAt || 0, legacy: true });
+    if (!convs.length) { quiet.push(Object.assign({}, base, { conv: '', title: '', members: [], last: null, unread: false, lastReplyAt: 0, quiet: true })); return; }
+    convs.forEach((c) => { const seen = c.legacy ? seenAll : Math.max(read[p.id + '|' + c.key] || 0, read[p.id] || 0); const lastReplyAt = c.lastReplyAt || 0;
       rows.push(Object.assign({}, base, { conv: c.key, title: c.title || titleOf(c.members || []), members: (c.members || []).map(publicMember), last: c.last ? { at: c.last.at || 0, dir: c.last.dir || 'out', body: c.last.body || '', by: c.last.by || '' } : null, unread: lastReplyAt > seen, lastReplyAt })); });
   });
   rows.sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name) || a.conv.localeCompare(b.conv));
   quiet.sort((a, b) => a.name.localeCompare(b.name));
-  return { unread: rows.filter((r) => r.unread).length, unreadFamilies: new Set(rows.filter((r) => r.unread).map((r) => r.id)).size, rows, quiet, at: Date.now() };
+  return { unread: rows.filter((r) => r.unread).length, unreadFamilies: new Set(rows.filter((r) => r.unread).map((r) => r.id)).size, rows, quiet, families: players.length, at: Date.now() };
 }
 
 /* Which chat a reply belongs to: the chat of the last text this number got from this family's record — a group text puts the

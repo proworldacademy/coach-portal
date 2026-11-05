@@ -584,8 +584,9 @@ body.skin-coach .cchip.unread{box-shadow:inset 0 0 0 2px var(--lime)}
 .msgrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 10px}
 .msgrow .mtxt{min-width:0;display:grid;gap:2px}
 .msgrow .nm{display:flex;gap:6px;align-items:baseline;min-width:0;font-weight:700;font-size:14px}
-.msgrow .nm .who{white-space:nowrap;flex:none;max-width:60%;overflow:hidden;text-overflow:ellipsis}
-.msgrow .nm .cw{font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
+.msgrow .nm .pname{display:block;white-space:nowrap;flex:0 0 auto;max-width:calc(100% - 7.5em);overflow:hidden;text-overflow:ellipsis}
+.msgrow .nm .pname:only-child{max-width:100%}   /* .who is the row block's class elsewhere on the page — not reused here */
+.msgrow .nm .cw{display:block;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}   /* the chat word gives way; the name keeps its room */
 .msgrow .nm time{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;white-space:nowrap;flex:none}
 .msgrow .msglast{min-width:0;font-size:13px;color:var(--muted)}
 .msglast span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.msglast span.them{color:var(--ink);font-weight:600}
@@ -594,12 +595,11 @@ body.skin-coach .cchip.unread{box-shadow:inset 0 0 0 2px var(--lime)}
 body.skin-coach .msgrow.on,body.app-skin .msgrow.on{background:#F1F1ED;border-radius:14px}
 body.app-skin .msgrow{padding:10px 8px}
 .msgrow.quiet .ava{opacity:.55}
-.mquiet{margin-top:6px;border-top:1px solid var(--line)}
-.mquiet summary{cursor:pointer;padding:10px 10px;font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--muted);list-style:none;display:flex;gap:8px;align-items:center}
-.mquiet summary b{background:#EFEFEA;border-radius:999px;padding:1px 8px;font-size:11px;color:var(--ink)}
-.mquiet summary::-webkit-details-marker{display:none}
-.mquiet summary::before{content:'›';display:inline-block;transition:transform .15s}
-.mquiet[open] summary::before{transform:rotate(90deg)}
+.mfind{padding:8px 8px 6px}
+.mfind input{width:100%;height:40px;border-radius:999px;border:1px solid var(--line-2);padding:0 16px;font:inherit;font-size:14px;background:#F6F6F2}
+.mfind input:focus{outline:2px solid var(--ink);outline-offset:1px;background:#fff}
+body.app-skin .mfind{padding:10px 0 6px}
+body.app-skin .mfind input{border:0;background:#F1F1ED}
 .mpane{display:grid;gap:12px;align-content:start;min-height:420px}
 .mpane .bubs{max-height:52vh}
 .mhead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
@@ -1710,7 +1710,7 @@ const PW_CONFIG = {
     checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null },
+    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -1749,6 +1749,7 @@ const PW_CONFIG = {
   const ssSet = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage blocked */ } };
   const saveRoute = () => ssSet('pw_route', S.route);
   const saveUi = () => ssSet('pw_ui', { q: S.ui.q, partFilter: S.ui.partFilter, partFilterGroup: S.ui.partFilterGroup, back: S.ui.back });
+  const fold = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();   // for finding by name: accents and case aside
   const slug = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'player';
   const safeUrl = (u) => { const s = String(u || '').trim(); return /^https?:\/\//i.test(s) ? s : ''; };
   const finePointer = () => { try { return window.matchMedia('(pointer:fine)').matches; } catch (e) { return true; } };
@@ -2024,8 +2025,8 @@ const PW_CONFIG = {
       const name = (x) => (x.to ? toWord(x.to) : '…' + x.tail);
       if (ms.length === 1) return (sent.length ? (group ? ' · to ' + esc(name(ms[0])) : '') : '') + (failed.length ? ' · <b class="bad">not sent' + (group ? ' to ' + esc(name(ms[0])) : '') + '</b>' : /deliver/i.test(ms[0].delivery || '') ? ' · delivered' : '');
       return ' · to ' + esc(sent.map(name).join(' and ')) + (failed.length ? ' · <b class="bad">not sent to ' + esc(failed.map(name).join(' and ')) + '</b>' : ms.every((x) => /deliver/i.test(x.delivery || '')) ? ' · delivered' : ''); };
-    const bub = (l) => l.dir === 'sys' ? `<div class="bub b-sys">${esc(l.body)}</div>`
-      : `<div class="bub b-${l.dir}${(l.tos || [l]).every((x) => x.status === 'failed') ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? esc(whoWrote(t, l, key)) + ' · ' + esc(msgWhen(l.at)) : esc(l.by || '') + ' · ' + esc(msgWhen(l.at)) + who(l)}</small></div>`;
+    const bub = (l) => l.dir === 'sys' ? (l.words && !/^\s*(stop|stopall|stop all|unsubscribe|cancel|end|quit)\s*[.!]*\s*$/i.test(l.words) ? `<div class="bub b-in"><span class="bt">${esc(l.words)}</span><small>${esc(whoWrote(t, l, key))} · ${esc(msgWhen(l.at))}</small></div>` : '') + `<div class="bub b-sys">${esc(l.body)}</div>`
+      : `<div class="bub b-${l.dir}${(l.tos || [l]).every((x) => x.status === 'failed') ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? esc(whoWrote(t, l, key)) + ' · ' + esc(msgWhen(l.at)) + (l.note ? ' · ' + esc(l.note) : '') : esc(l.by || '') + ' · ' + esc(msgWhen(l.at)) + who(l)}</small></div>`;
     return lines.length ? `<div class="bubs" id="bubs">${lines.map(bub).join('')}</div>` : `<p class="hint empty-chat">${group ? 'Nothing in this group chat yet. The first text goes to everyone in it; their answers land here.' : 'Nothing yet. The first text starts the chat; the family answers right here.'}</p>`;
   }
   function chatComposer(p, t, key) {
@@ -2052,17 +2053,22 @@ const PW_CONFIG = {
   /* ───────────── view: messages (the inbox, like a messages app: the chats on the left, the open one on the right) ───────────── */
   function viewMessages() {
     const ib = S.msg.inbox; if (EDITION === 'web' && (!ib || Date.now() - S.msg.at > 10000)) loadInbox(true);   // fresh on arrival; the tick keeps it so
-    const rows = ib ? ib.rows.slice().sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name)) : []; const quiet = ib ? ib.quiet || [] : []; const n = ib ? ib.unread : 0;
+    const chats = ib ? ib.rows.slice().sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name)) : [];
+    const quiet = ib ? (ib.quiet || []).slice().sort((a, b) => a.name.localeCompare(b.name)) : [];
+    const n = ib ? ib.unread : 0; const families = ib ? (ib.families || new Set(chats.map((r) => r.id).concat(quiet.map((q) => q.id))).size) : 0;
     // on a computer the newest chat is open beside the list from the start, like a messages app; on the phone the list comes first
-    if (!S.route.pid && window.innerWidth > 900 && rows[0]) { S.route = { view: 'messages', pid: rows[0].id, conv: rows[0].conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
+    if (!S.route.pid && window.innerWidth > 900 && chats[0]) { S.route = { view: 'messages', pid: chats[0].id, conv: chats[0].conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
     const openPid = S.route.pid && player(S.route.pid) && mine(player(S.route.pid)) ? S.route.pid : '';
     const openKey = openPid ? curConv(openPid, S.route.conv) : '';
+    const q = fold(S.ui.msgFind || '');
+    const hit = (r) => !q || fold(r.name).includes(q) || fold(group(r.group).label).includes(q) || fold(r.coach || '').includes(q) || fold(r.title || '').includes(q);
     const row = (r) => { const on = openPid === r.id && (openKey === r.conv || r.conv === ''); const chip = convChip({ members: r.members || [] });
-      return `<button class="rowb msgrow${r.unread ? ' new' : ''}${on ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id, conv: r.conv || undefined })} aria-current="${on ? 'true' : 'false'}"><span class="ava">${esc(initials(r.name))}</span><div class="mtxt"><div class="nm"><span class="who">${esc(r.name)}</span><span class="cw">· ${esc(r.conv ? chip.t || r.title : 'Family')}</span>${r.last ? `<time>${esc(msgAgo(r.last.at))}</time>` : ''}</div>
+      return `<button class="rowb msgrow${r.unread ? ' new' : ''}${on ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id, conv: r.conv || undefined })} aria-current="${on ? 'true' : 'false'}" data-find="${esc(fold(r.name + ' ' + group(r.group).label + ' ' + (r.coach || '') + ' ' + (r.title || '')))}"><span class="ava">${esc(initials(r.name))}</span><div class="mtxt"><div class="nm"><span class="pname">${esc(r.name)}</span><span class="cw">· ${esc(r.conv ? chip.t || r.title : 'Family')}</span>${r.last ? `<time>${esc(msgAgo(r.last.at))}</time>` : ''}</div>
         <div class="msglast">${r.last ? `<span class="${r.last.dir === 'in' ? 'them' : 'me'}">${r.last.dir === 'in' ? '' : (r.last.by ? esc(r.last.by) : 'You') + ': '}${esc(r.last.body)}</span>` : '<span class="muted">No texts yet</span>'}</div></div>${r.unread ? '<i class="dot" aria-label="new"></i>' : ''}</button>`; };
-    const qrow = (q) => `<button class="rowb msgrow quiet${openPid === q.id ? ' on' : ''}" ${goAttr({ view: 'messages', pid: q.id })}><span class="ava">${esc(initials(q.name))}</span><div class="mtxt"><div class="nm">${esc(q.name)}</div><div class="msglast"><span class="muted">${esc(group(q.group).label)}${q.coach ? ' · Coach ' + esc(q.coach) : ''} · no texts yet</span></div></div></button>`;
-    const list = `<div class="list mlist" id="mlist">${rows.length ? rows.map(row).join('') : `<div class="empty">${ib ? (quiet.length ? 'No chats yet. Pick a family below and write the first text.' : 'No players of yours are active.') : 'Loading…'}</div>`}
-      ${quiet.length ? `<details class="mquiet" ${rows.length ? '' : 'open'}><summary>Families with no texts yet <b>${quiet.length}</b></summary>${quiet.map(qrow).join('')}</details>` : ''}</div>`;
+    const qrow = (r) => `<button class="rowb msgrow quiet${openPid === r.id ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id })} aria-current="${openPid === r.id ? 'true' : 'false'}" data-find="${esc(fold(r.name + ' ' + group(r.group).label + ' ' + (r.coach || '')))}"><span class="ava">${esc(initials(r.name))}</span><div class="mtxt"><div class="nm"><span class="pname">${esc(r.name)}</span></div><div class="msglast"><span class="muted">${esc(group(r.group).label)}${r.coach ? ' · Coach ' + esc(r.coach) : ''} · no texts yet</span></div></div></button>`;
+    const shown = chats.filter(hit).map(row).join('') + quiet.filter(hit).map(qrow).join('');
+    const list = `<div class="list mlist" id="mlist"><div class="mfind"><input type="search" id="mfind" placeholder="Find a family…" value="${esc(S.ui.msgFind || '')}" autocomplete="off" aria-label="Find a family"></div>
+      ${shown || `<div class="empty">${!ib ? 'Loading…' : q ? 'No family matches that.' : 'No players of yours are active.'}</div>`}</div>`;
     let pane = '';
     if (openPid) {
       const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
@@ -2072,8 +2078,8 @@ const PW_CONFIG = {
     }
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Messages' }])}
       <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
-        <div class="sub">One chat per number and group chats for the parents together, like your phone. Open a chat and write: the text goes out from the academy number, signed with your name; the family answers here.</div>
-        <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'chat has' : 'chats have'} a new reply</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${rows.length}</b> ${rows.length === 1 ? 'chat' : 'chats'}</li><li><b class="n">${new Set(rows.map((r) => r.id)).size + quiet.length}</b> ${rows.length + quiet.length === 1 ? 'family' : 'families'}</li></ul></div></div>
+        <div class="sub">Every family of yours, like your phone: one chat per number and group chats for the parents together. Open a family and write; the text goes out from the academy number, signed with your name, and the family answers here.</div>
+        <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'chat has' : 'chats have'} a new reply</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${families}</b> ${families === 1 ? 'family' : 'families'}</li></ul></div></div>
       ${ib && ib.error ? `<p class="hint due-line"><b>Could not refresh:</b> ${esc(ib.error)}</p>` : ''}
       <div class="mbox${openPid ? ' open' : ''}">${list}${pane}</div>`;
   }
@@ -2586,11 +2592,13 @@ const PW_CONFIG = {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
     // a redraw must not eat what the coach is typing to a family (Nov 4): every chat's draft and the caret come back after it
+    const fi0 = $('#mfind'); const findFocus = fi0 && document.activeElement === fi0 ? { s: fi0.selectionStart, e: fi0.selectionEnd } : null;
     let focused = null; document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (ta.value) S.ui.msgDraft[k] = ta.value; else delete S.ui.msgDraft[k]; if (document.activeElement === ta) focused = { k, s: ta.selectionStart, e: ta.selectionEnd }; });
     m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
     if (r.view === 'board') bindBoardDrag(m);
     document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (!ta.value && S.ui.msgDraft[k]) ta.value = S.ui.msgDraft[k]; if (focused && focused.k === k) { try { ta.setSelectionRange(focused.s, focused.e); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } });
+    if (findFocus) { const fi = $('#mfind'); if (fi) { try { fi.focus({ preventScroll: true }); fi.setSelectionRange(findFocus.s, findFocus.e); } catch (e) { /* noop */ } } }
     const bb = $('#bubs'); if (bb) bb.scrollTop = bb.scrollHeight;   // a chat opens at its newest line
     if (S.ui.msgFocus && r.view === 'player' && r.pid === S.ui.msgFocus) { const ta = $('#msgcard textarea'); if (ta) { S.ui.msgFocus = null; try { $('#msgcard').scrollIntoView({ block: 'start', behavior: 'smooth' }); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } }
   }
@@ -3806,6 +3814,12 @@ const PW_CONFIG = {
     if (E && t.hasAttribute('data-by')) paintParts();
   });
 
+  // the find box on the Messages list: the rows filter as you type (the value survives a redraw through S.ui.msgFind)
+  document.addEventListener('input', (ev) => {
+    const f = ev.target; if (!f || f.id !== 'mfind') return; S.ui.msgFind = f.value; const q = fold(f.value);
+    let any = false; document.querySelectorAll('#mlist .msgrow').forEach((r) => { const on = !q || (r.getAttribute('data-find') || '').includes(q); r.hidden = !on; any = any || on; });
+    const e = $('#mlist .empty'); if (e) e.hidden = any; else if (!any) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'No family matches that.'; $('#mlist').appendChild(d); }
+  });
   document.addEventListener('submit', async (ev) => {
     const f = ev.target.closest('[data-form]'); if (!f) return; ev.preventDefault(); if (!S.db) return;
     const kind = f.getAttribute('data-form'); const fd = new FormData(f); const val = (k) => String(fd.get(k) || '').trim(); const t = Date.now();

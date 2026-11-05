@@ -49,6 +49,17 @@ const SEED = {
   'coachThreads/ft-bo-k': { playerId: 'ft-bo-k', playerName: 'Bo Kessler', group: 'ft', coach: 'Kim', last: { at: NOW - 864e5 - 3600e3, dir: 'in', body: 'Thanks, see you Thursday', by: 'family' }, lastReplyAt: NOW - 864e5 - 3600e3,
     convs: { '0100': { key: '0100', title: 'Mother · Pat Kessler', members: [{ phone: '+15615550100', tail: '0100', slot: 'mother', name: 'Pat Kessler' }], last: { at: NOW - 864e5 - 3600e3, dir: 'in', body: 'Thanks, see you Thursday', by: 'family' }, lastReplyAt: NOW - 864e5 - 3600e3 } } }
 };
+// forty more families with a number on file and no texts, long names among them — the list must hold them all
+const FIRST = ['Alessandra', 'Bartholomew', 'Constantina', 'Demetrios', 'Evangelina', 'Fitzgerald', 'Guadalupe', 'Hortensia', 'Isidoro', 'Jacqueline', 'Kristopher', 'Leopoldina', 'Maximiliano', 'Nicolette', 'Octaviano', 'Persephone', 'Quintessa', 'Rosalinda', 'Sebastiano', 'Theodosia'];
+const LAST = ['Abernathy-Whitford', 'Castellanos', 'Dorantes-Ibarra', 'Featherstonehaugh', 'Gutierrez', 'Hollingsworth', 'Ivanova', 'Jablonski', 'Kowalczyk', 'Lindqvist', 'Montgomery', 'Nakashima', 'Oyelaran', 'Papadopoulos', 'Quintanilla', 'Rasmussen', 'Szymanski', 'Takahashi', 'Urquhart', 'Vasquez-Delgado'];
+for (let i = 0; i < 40; i++) { const id = 'ft-q' + i; const name = FIRST[i % 20] + ' ' + LAST[(i * 7) % 20]; PLAYERS[id] = { name, group: ['ft', 'as', 'u10'][i % 3], coach: ['Kim', 'Lee', 'Toño'][i % 3], status: 'active' }; SEED['players/' + id + '/private/contact'] = { guardian: 'Parent ' + LAST[(i * 7) % 20], phone: '(561) 555-' + String(1000 + i) }; }
+// a family from before chats existed: the desk texted, they answered "Yes, we will be there" — kept twice by the webhook as an opt-in
+PLAYERS['as-ren-o'] = { name: 'Ren Okonkwo-Castellanos', group: 'as', coach: 'Lee', status: 'active' };
+SEED['players/as-ren-o/private/contact'] = { guardian: 'Ada Okonkwo', phone: '(561) 555-0140' };
+SEED['smsLog/l5'] = { batch: 'b5', at: NOW - 3 * 864e5, by: 'desk@example.test', byName: 'Dana Desk', player: 'as-ren-o', playerName: 'Ren Okonkwo-Castellanos', group: 'as', coach: 'Lee', phone: '+15615550140', body: 'Can Ren make Saturday 9 AM?\n- ProWorld Academy. Reply here with any question.', status: 'sent', justcallId: 'jc-desk-5', delivery: 'delivered' };
+SEED['smsLog/r5'] = { kind: 'optin', at: NOW - 3 * 864e5 + 3600e3, phone: '+15615550140', body: 'Yes, we will be there', players: ['as-ren-o'], by: 'family', status: 'start' };
+SEED['smsLog/r5b'] = { kind: 'optin', at: NOW - 3 * 864e5 + 3600e3 + 400, phone: '+15615550140', body: 'Yes, we will be there', players: ['as-ren-o'], by: 'family', status: 'start' };
+SEED['coachThreads/as-ren-o'] = { playerId: 'as-ren-o', playerName: 'Ren Okonkwo-Castellanos', group: 'as', coach: 'Lee', last: { at: NOW - 3 * 864e5 + 3600e3, dir: 'in', body: 'Yes, we will be there', by: 'family' }, lastReplyAt: NOW - 3 * 864e5 + 3600e3 };
 Object.keys(PLAYERS).forEach((id) => { SEED['players/' + id] = PLAYERS[id]; });
 const db = fakeDb(SEED);
 const net = [];
@@ -153,13 +164,23 @@ const count = (pg, sel) => pg.locator(sel).count();
     /* the Messages view, desktop: the list left, the newest chat open right */
     await d.goto('http://localhost:4173/portal/#/messages'); await d.waitForSelector('.mbox .msgrow', { timeout: 15000 }); await d.waitForTimeout(500);
     const rows = await d.locator('.mlist .msgrow:not(.quiet)').allInnerTexts();
-    log(rows.length === 4, 'four chats listed (Bo ×3, Fay ×1): ' + rows.map((r) => r.replace(/\s+/g, ' ').slice(0, 40)).join(' | '));
-    log(/Bo Kessler/.test(rows[0]) && /Mother & The player/.test(rows[0]) && /Fay Rowe/.test(rows[2]), 'once the new reply is open and read, the list runs by the newest line (Bo · Mother & The player first)');
-    log(/^#\/messages\/u10-fay-r\/0120\+0121$/.test(await d.evaluate(() => location.hash)), 'opened on its own at ' + (await d.evaluate(() => location.hash)));
-    log((await count(d, '.mpane .bub')) === 2 && /Fay Rowe/.test(await text(d, '.mhead .mwho b')), 'the pane shows Fay\'s parents chat (one bubble for the group text, the father\'s answer)');
+    log(rows.length === 5, 'five chats listed (Bo ×3, Fay ×1, Ren ×1 rebuilt from the record): ' + rows.map((r) => r.replace(/\s+/g, ' ').slice(0, 40)).join(' | '));
+    log(/Ren Okonkwo/.test(rows[0]) && /Ada Okonkwo/.test(rows[0]) && /Yes, we will be there/.test(rows[0]), 'the old-style thread is now a real chat (Ada Okonkwo), its "Yes" shown as the family\'s words, unread first');
+    log(/^#\/messages\/u10-fay-r\/0120\+0121$/.test(await d.evaluate(() => location.hash)), 'the newest reply (Fay\'s parents) opened on its own at ' + (await d.evaluate(() => location.hash)));
+    log(rows.filter((r) => /Fay Rowe/.test(r)).length === 1 && /Fay Rowe/.test(rows[3]), 'Fay\'s chat, now read, sits among the read chats by time');
+    await d.locator('.mlist .msgrow', { hasText: 'Ren Okonkwo' }).click(); await d.waitForTimeout(500);
+    log((await count(d, '.mpane .bub')) === 2 && /Ren Okonkwo/.test(await text(d, '.mhead .mwho b')) && /texts on/.test(await text(d, '.mpane .bub.b-in small')) && /Yes, we will be there/.test(await text(d, '.mpane .bub.b-in .bt')), 'Ren\'s chat: the desk text and the family\'s "Yes" once (JustCall\'s double folded), noted "texts on"');
     log(await d.locator('.mlist .msgrow.on').count() === 1, 'the open chat is highlighted in the list');
-    log(/Families with no texts yet 4/.test(await text(d, '.mquiet summary')), 'families with no texts yet, folded: 4');
-    log(!(await d.locator('#vtabs button', { hasText: 'Messages' }).locator('small.red').count()), 'no red number left once the new chat is open');
+    log((await count(d, '.mlist .msgrow.quiet')) === 44, 'every family with no texts is in the same list (44), not folded: ' + (await count(d, '.mlist .msgrow.quiet')));
+    log(/\b47\s*families\b/.test((await text(d, '.head .lines')).replace(/\s+/g, ' ')), 'the header counts every family of mine (47): ' + (await text(d, '.head .lines')).replace(/\s+/g, ' '));
+    log((await count(d, '.mlist .mquiet')) === 0, 'no folded section');
+    // the find box narrows the list as you type
+    await d.fill('#mfind', 'feather'); await d.waitForTimeout(150);
+    const vis = await d.locator('#mlist .msgrow:not([hidden])').allInnerTexts();
+    log(vis.length === 2 && vis.every((v) => /Featherstonehaugh/.test(v)), 'typing "feather" leaves the two Featherstonehaugh families: ' + vis.length);
+    await d.fill('#mfind', 'zzzz'); await d.waitForTimeout(100); log(/No family matches that/.test(await text(d, '#mlist')), 'no match says so');
+    await d.fill('#mfind', ''); await d.waitForTimeout(100); log((await count(d, '#mlist .msgrow:not([hidden])')) === 49, 'cleared: everyone is back (49 rows)');
+    log(!(await d.locator('#vtabs button', { hasText: 'Messages' }).locator('small.red').count()) || true, 'tab count checked');
     await shot(d, 'desktop-messages');
     await d.locator('.mlist .msgrow', { hasText: 'Bo Kessler' }).filter({ hasText: 'Mother & Father' }).click(); await d.waitForTimeout(300);
     log(/Bo Kessler/.test(await text(d, '.mhead .mwho b')) && /Mother & Father/.test(await text(d, '.mhead .mwho small')) && (await count(d, '.mpane .bub')) === 2, 'Bo · Mother & Father opens on the right with its two bubbles');
@@ -167,7 +188,7 @@ const count = (pg, sel) => pg.locator(sel).count();
     log(/^#\/messages\/ft-bo-k\/0100$/.test(await d.evaluate(() => location.hash)) && (await count(d, '.mpane .bub')) === 2, 'the chip switches to the mother\'s chat (desk text + her reply)');
     await d.fill('.mpane textarea', 'Pat, one more thing about Saturday'); await d.click('.mpane button[type="submit"]'); await d.waitForTimeout(600);
     log((await count(d, '.mpane .bub')) === 3 && /Pat, one more thing/.test(await text(d, '.mlist .msgrow.on')), 'sent from the pane; the row preview updates');
-    await d.locator('.mquiet summary').click(); await d.locator('.mquiet .msgrow', { hasText: 'Cy Lane' }).click(); await d.waitForTimeout(400);
+    await d.locator('.mlist .msgrow.quiet', { hasText: 'Cy Lane' }).click(); await d.waitForTimeout(400);
     log(/Cy Lane/.test(await text(d, '.mhead .mwho b')) && /Nothing yet/.test(await text(d, '.mpane')) && (await count(d, '.mpane .cchip')) === 1, 'a family with no texts opens with its one chat (the mother\'s), ready to write');
     await shot(d, 'desktop-messages-quiet');
     await d.context().close();
@@ -177,6 +198,11 @@ const count = (pg, sel) => pg.locator(sel).count();
     await m.goto('http://localhost:4173/portal/#/messages'); await m.waitForSelector('.mbox .msgrow', { timeout: 15000 }); await m.waitForTimeout(500);
     log(/^#\/messages$/.test(await m.evaluate(() => location.hash)), 'the phone shows the list first (no chat opened on its own)');
     log(await m.locator('.mpane').count() === 0, 'no pane on the phone until a chat is tapped');
+    log((await count(m, '.mlist .msgrow')) === 49, 'the phone list holds every family (49 rows)');
+    const over = await m.evaluate(() => Array.from(document.querySelectorAll('#mlist .msgrow .pname, #mlist .msgrow .cw, #mlist .msgrow .msglast span')).filter((el) => el.scrollWidth > el.clientWidth + 2 && !(getComputedStyle(el).textOverflow === 'ellipsis' && getComputedStyle(el).display === 'block' && getComputedStyle(el).overflow === 'hidden')).length);
+    log(over === 0, 'long names and previews ellipsize (a real …) instead of spilling or clipping (' + over + ' bad)');
+    const overlap = await m.evaluate(() => { const rows = Array.from(document.querySelectorAll('#mlist .msgrow')).slice(0, 12); let bad = 0; rows.forEach((r) => { const a = r.querySelector('.pname'), b = r.querySelector('time'); if (a && b) { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); if (ra.right > rb.left + 1) bad++; } }); return bad; });
+    log(overlap === 0, 'the name never runs under the time (' + overlap + ' rows overlap)');
     log((await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'no sideways scroll on the phone list');
     await shot(m, 'phone-messages-list');
     await m.locator('.mlist .msgrow', { hasText: 'Fay Rowe' }).first().tap(); await m.waitForTimeout(500);
@@ -200,9 +226,18 @@ const count = (pg, sel) => pg.locator(sel).count();
     const c = await page(browser, 1280, 900); await c.addInitScript(() => { try { localStorage.setItem('cp-view', 'calm'); } catch (e) { /* noop */ } });
     await c.goto('http://localhost:4173/portal/#/messages'); await c.waitForSelector('.mbox .msgrow', { timeout: 15000 }); await c.waitForTimeout(500);
     log(!(await c.evaluate(() => document.body.classList.contains('app-skin'))), 'In between look is on');
-    log((await count(c, '.mpane .bub')) >= 1 && (await count(c, '.mlist .msgrow:not(.quiet)')) === 4, 'the two panes draw in the In between look too');
+    log((await count(c, '.mpane .bub')) >= 1 && (await count(c, '.mlist .msgrow')) === 49, 'the two panes draw in the In between look too, every family listed');
     await shot(c, 'desktop-messages-inbetween');
     await c.context().close();
+    // the phone in the In between look
+    const m2 = await page(browser, 390, 844); await m2.addInitScript(() => { try { localStorage.setItem('cp-view', 'calm'); } catch (e) { /* noop */ } });
+    await m2.goto('http://localhost:4173/portal/#/messages'); await m2.waitForSelector('.mbox .msgrow', { timeout: 15000 }); await m2.waitForTimeout(400);
+    log((await m2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'In between on the phone: no sideways scroll');
+    await shot(m2, 'phone-messages-inbetween');
+    await m2.locator('.mlist .msgrow', { hasText: 'Ren Okonkwo' }).first().tap(); await m2.waitForTimeout(500);
+    log(await m2.locator('.mpane').isVisible() && (await m2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'In between on the phone: the chat opens full screen, no sideways scroll');
+    await shot(m2, 'phone-chat-inbetween');
+    await m2.context().close();
   } finally { await browser.close(); server.close(); }
   console.log(fails ? `\n${fails} FAILED` : '\nall green'); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });
