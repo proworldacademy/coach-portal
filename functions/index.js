@@ -86,7 +86,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (/^reply kept/.test(String(out.did || '')) && Array.isArray(out.players) && out.players.length) {
         // a family wrote back: the coach's inbox row and their Slack (Nov 4); the body is trusted because the signature was
         const d = (req.body && req.body.data) || {}; const text = String((d.sms_info && d.sms_info.body) || d.body || '');
-        try { const r = await COACHTEXT.onReply(ctx.db, { players: out.players, text }); logger.info('coach reply', r); } catch (e) { logger.warn('coach reply not told', { message: e.message }); }
+        try { const r = await COACHTEXT.onReply(ctx.db, { players: out.players, text, phone: SMS.e164(d.contact_number || '') }); logger.info('coach reply', r); } catch (e) { logger.warn('coach reply not told', { message: e.message }); }
       }
       return send(res, 200, { ok: true, did: out.did });
     }
@@ -125,9 +125,10 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // the Coach Portal's own routes (Nov 4): a text to a family through the academy's JustCall line, the conversation, the inbox.
       // Anyone active on the staff list with the portal; a coach reaches only the players whose record carries their name.
       const who = await ADMIN.requireCoach(req); const b = req.body || {};
-      if (route === 'POST /coach/text') { const out = await COACHTEXT.text(ctx.db, who, b); logger.info('coach text', { by: who.email, player: S.clean(b.player, 60), to: out.to && out.to.slot, tick: out.tick }); return send(res, 200, out); }
-      if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { markRead: String(req.query.peek || '') !== '1' }));
+      if (route === 'POST /coach/text') { const out = await COACHTEXT.text(ctx.db, who, b); logger.info('coach text', { by: who.email, player: S.clean(b.player, 60), conv: out.conv, sent: out.sent, failed: out.failed, tick: out.tick }); return send(res, 200, out); }
+      if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: String(req.query.peek || '') !== '1' }));
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
+      if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
       throw S.err(404, 'route', 'No such coach route.');
     }
 
