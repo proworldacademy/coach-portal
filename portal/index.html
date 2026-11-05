@@ -1394,6 +1394,11 @@ const PDF = (() => {
         if (stroke) ops.push(hex(stroke) + ' RG ' + (lw || 0.6) + ' w');
         ops.push(`${x.toFixed(2)} ${Y(y + h)} ${w.toFixed(2)} ${h.toFixed(2)} re ${fill && stroke ? 'B' : fill ? 'f' : 'S'}`);
       },
+      roundRect(x, y, w, h, r, fill, stroke, lw) {   // a card: four corners, one path
+        const k = 0.5523 * r, f = (n) => n.toFixed(2); const x1 = x + w, yt = Y(y), yb = Y(y + h);   // yt = top edge (PDF y up), yb = bottom edge
+        if (fill) ops.push(hex(fill) + ' rg'); if (stroke) ops.push(hex(stroke) + ' RG ' + (lw || 0.6) + ' w');
+        ops.push(`${f(x + r)} ${f(yt)} m ${f(x1 - r)} ${f(yt)} l ${f(x1 - r + k)} ${f(yt)} ${f(x1)} ${f(yt - r + k)} ${f(x1)} ${f(yt - r)} c ${f(x1)} ${f(yb + r)} l ${f(x1)} ${f(yb + r - k)} ${f(x1 - r + k)} ${f(yb)} ${f(x1 - r)} ${f(yb)} c ${f(x + r)} ${f(yb)} l ${f(x + r - k)} ${f(yb)} ${f(x)} ${f(yb + r - k)} ${f(x)} ${f(yb + r)} c ${f(x)} ${f(yt - r)} l ${f(x)} ${f(yt - r + k)} ${f(x + r - k)} ${f(yt)} ${f(x + r)} ${f(yt)} c h ${fill && stroke ? 'B' : fill ? 'f' : 'S'}`);
+      },
       line(x1, y1, x2, y2, color, lw) { ops.push(`${hex(color || 'CCCCCC')} RG ${lw || 0.6} w ${x1.toFixed(2)} ${Y(y1)} m ${x2.toFixed(2)} ${Y(y2)} l S`); },
       circle(cx, cy, r, fill, stroke, lw) {
         const k = 0.5523 * r, y = Y(cy), f = (n) => n.toFixed(2);
@@ -1445,9 +1450,52 @@ const PDF = (() => {
     return api;
   }
 
+  /* ───────────── the 3-month report in the app look (Antonio, Nov 5, 2026): grey page, white cards, the goals in lime ───────────── */
+  function report3mApp(ctx) {
+    const { def, values: v } = ctx; const doc = Doc(); const M = 40, W = PW - M * 2, G = 10, R = 14; let y = 0;
+    const has = (x) => x !== undefined && x !== null && String(x).trim() !== '';
+    const page = () => { doc.page(); doc.rect(0, 0, PW, PH, 'F1F1ED');
+      doc.text('PROWORLD', M, 38, { font: 'F3', size: 15, color: '0A0A0A' });
+      doc.text(`3-month report  ·  ${ctx.player.name}  ·  ${ctx.head.period || ''}`, PW - M, 37, { font: 'F2', size: 7, color: '7A7A76', cs: 0.8, align: 'right', upper: true });
+      doc.text('PROWORLD  ·  Individually built. Fully connected.', M, PH - 30, { font: 'F2', size: 6.5, color: '7A7A76', cs: 0.9, upper: true });
+      doc.text('proworldacademy.com  ·  Delray Beach, FL  ·  for the player and the family', M, PH - 20, { size: 6.5, color: 'A0A09C' });
+      y = 64; };
+    const fits = (h) => { if (y + h > PH - 52) page(); };
+    page();
+    // the title
+    doc.text('3-month report.', M, y + 30, { font: 'F3', size: 36, upper: true, color: '0A0A0A' }); y += 38;
+    doc.text([ctx.head.period, ctx.player.name, ctx.groupLabel, ctx.player.coach ? 'Coach ' + ctx.player.coach : (ctx.head.coach ? 'Coach ' + ctx.head.coach : '')].filter(Boolean).join('  ·  '), M, y + 8, { size: 9.5, color: '7A7A76' }); y += 26;
+    // the goals, in lime
+    const goals = String(v.r_goals || '').replace(/\r/g, '').split('\n').map((l) => l.replace(/^\s*(\d+[.)]|[-•*])\s*/, '').trim()).filter(Boolean);
+    if (goals.length) {
+      const glines = goals.map((g) => wrap(g, 'F1', 10.5, W - 24 - 22)); const gh = 30 + glines.reduce((a, l) => a + l.length * 14.5 + 6, 0) + 8;
+      fits(gh); doc.roundRect(M, y, W, gh, R, 'E2FE78');
+      doc.text('THE NEXT 3 MONTHS', M + 16, y + 19, { font: 'F2', size: 7.5, cs: 1.3, color: '0A0A0A' }); let gy = y + 32;
+      glines.forEach((ls, i) => { doc.text(String(i + 1), M + 16, gy + 11, { font: 'F3', size: 15, color: '0A0A0A' }); ls.forEach((ln) => { doc.text(ln, M + 38, gy + 10.5, { size: 10.5, color: '0A0A0A' }); gy += 14.5; }); gy += 6; });
+      y += gh + G;
+    }
+    // one white card per part: the name, the status word on the right, the note
+    const PART = [['Tennis', 'pulse_tennis', 'r_tennis', 'In tennis, this is what you need to do'], ['Fitness', 'pulse_fitness', 'r_fitness', 'In fitness, this is what you need to do'],
+      ['Mental', 'pulse_mental', 'r_mental', 'Mentally, this is what you need to do'], ['Competition', '', 'r_comp', 'This is how much you need to compete'], ['A note from your coach', '', 's_parents', '']];
+    PART.forEach(([name, pulseId, noteId, lead]) => {
+      if (!has(v[noteId])) return; const pulse = pulseId && has(v[pulseId]) ? String(v[pulseId]) : '';
+      const lines = wrap(v[noteId], 'F1', 10, W - 32); const h = 40 + (lead ? 15 : 0) + lines.length * 13.6 + 8;
+      fits(Math.min(h, PH - 120)); doc.roundRect(M, y, W, h, R, 'FFFFFF');
+      doc.text(name, M + 16, y + 25, { font: 'F2', size: 13, color: '0A0A0A' });
+      if (pulse) { const pw = textWidth(pulse, 'F2', 8) + 20; doc.roundRect(M + W - 16 - pw, y + 13, pw, 18, 9, 'E2FE78'); doc.text(pulse, M + W - 16 - pw / 2, y + 25, { font: 'F2', size: 8, align: 'center', color: '0A0A0A' }); }
+      let ty = y + 40; if (lead) { doc.text(lead, M + 16, ty + 2, { font: 'F2', size: 8, color: '7A7A76' }); ty += 15; }
+      lines.forEach((ln) => { if (ty + 14 > y + h - 4 && ty + 14 > PH - 52) { page(); ty = y + 10; } doc.text(ln, M + 16, ty + 8, { size: 10, color: '1A1A1A' }); ty += 13.6; });
+      y += h + G;
+    });
+    // page numbers
+    const n = doc.pageCount(); for (let i = 0; i < n; i++) doc.onPage(i, () => doc.text(`${i + 1} of ${n}`, PW - M, PH - 20, { font: 'F2', size: 7, color: '7A7A76', align: 'right' }));
+    return doc.build(`${def.title} - ${ctx.player.name} - ${ctx.head.period || ''}`);
+  }
+
   /* ───────────── report layout ───────────── */
   function report(ctx) {
     // ctx: { def, values, prev, player, groupLabel, head, scaleLabels }
+    if (ctx.def && ctx.def.title === '3-Month Report') return report3mApp(ctx);
     const { def, values: v, prev } = ctx; const doc = Doc(); const W = PW - MX * 2; let y = 0;
     const has = (x) => x !== undefined && x !== null && String(x).trim() !== '';
     const SECTIONS = printSections(def);                    // goals print together in the Summary & Action Plan
@@ -1527,8 +1575,11 @@ const PDF = (() => {
       y += 20;
     }
 
+    // the 3-month report (Antonio, Nov 5): clean and simple, black and white with one lime — the goals in lime, the rest grey
+    const LIME_ONLY = def.title === '3-Month Report';
+    const colorOf = (sec) => (LIME_ONLY ? (sec.id === 'goals' ? 'E2FE78' : 'F1F1ED') : (COLORS[sec.pillar] || 'E2FE78'));
     const banner = (sec) => {
-      ensure(46 + 40); const c = COLORS[sec.pillar] || 'E2FE78';
+      ensure(46 + 40); const c = colorOf(sec);
       doc.rect(MX, y, W, 38, c);
       doc.text(sec.label, MX + 12, y + 20, { font: 'F3', size: 17, upper: true, color: '000000' });
       if (sec.sub) doc.text(sec.sub, MX + 12, y + 31, { size: 7.2, color: '2A2A2A' });
@@ -1546,7 +1597,7 @@ const PDF = (() => {
     };
 
     SECTIONS.forEach((sec) => {
-      const fields = sec.fields; const c = COLORS[sec.pillar] || 'E2FE78';
+      const fields = sec.fields; const c = LIME_ONLY ? 'E2FE78' : (COLORS[sec.pillar] || 'E2FE78');
       const filled = fields.some((f) => f.t !== 'head' && f.t !== 'note' && f.t !== 'score' && f.t !== 'recap' && (has(valOf(f)) || has(v[f.id + '__n']) || (f.t === 'talk' && has(v[f.level]))));
       if (!filled) return;
       banner(sec);
