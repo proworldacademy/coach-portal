@@ -170,8 +170,8 @@ test('a reply lands in the chat the family last heard from: the group after a gr
   await COACHTEXT.onReply(db, { players: ['ft-cy-l'], text: 'Hi, Cy here', phone: '+15615550101', dry: true });
   assert.deepEqual(Object.keys(db._docs.get('coachThreads/ft-cy-l').convs), ['0101']);
   const ib = await COACHTEXT.inbox(db, KIM);
-  assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.conv + '/' + r.unread), ['ft-cy-l/0101/true', 'ft-bo-k/0109/true', 'ft-bo-k/0100+0109/true'], 'one row per chat, the new ones first, newest first');
-  assert.equal(ib.unread, 3); assert.equal(ib.unreadFamilies, 2); assert.deepEqual(ib.quiet, [], 'both of Kim\'s players have a chat');
+  assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.conv + '/' + r.unread), ['ft-cy-l/0101/true', 'ft-bo-k/0109/true', 'ft-bo-k/0100+0109/true', 'ft-bo-k/0100/true'], 'one row per chat, the new ones first, newest first (the desk\'s chat with the mother is on the record too)');
+  assert.equal(ib.unread, 4); assert.equal(ib.unreadFamilies, 2); assert.deepEqual(ib.quiet, [], 'both of Kim\'s players have a chat'); assert.equal(ib.families, 2);
   assert.equal(ib.rows[2].title, 'Mother & Father'); assert.deepEqual(ib.rows[2].members.map((m) => m.word), ['Mother', 'Father']);
   assert.ok(!JSON.stringify(ib).includes('+1561'), 'no full numbers in the inbox');
 });
@@ -187,9 +187,16 @@ test('the inbox: a family with no chat yet is listed apart; opening the chat cle
   await new Promise((r) => setTimeout(r, 15)); await COACHTEXT.thread(db, KIM, 'ft-bo-k', { conv: '0100' });
   ib = await COACHTEXT.inbox(db, KIM); assert.equal(ib.unread, 0, 'opening the chat clears it');
   const dir = await COACHTEXT.inbox(db, DIR); assert.equal(dir.rows.length + dir.quiet.length, 6, 'a director sees every active player');
-  // a thread from before chats existed (no convs): one row, the family's chat, which the page opens at its newest line
-  db._docs.set('coachThreads/ft-cy-l', { playerId: 'ft-cy-l', playerName: 'Cy Lane', last: { at: Date.now(), dir: 'in', body: 'old reply', by: 'family' }, lastReplyAt: Date.now() });
-  ib = await COACHTEXT.inbox(db, KIM); const cy = ib.rows.find((r) => r.id === 'ft-cy-l'); assert.ok(cy); assert.equal(cy.conv, ''); assert.equal(cy.title, 'Family'); assert.equal(cy.unread, true);
+  assert.deepEqual(ib.quiet.map((q) => q.id + '/' + q.quiet + '/' + q.conv), ['ft-cy-l/true/'], 'a family with no texts is a row of its own, ready for a first text'); assert.equal(ib.families, 2);
+  // a thread from before chats existed (no convs) is rebuilt from the record: the family's "Yes" is a real chat with their words
+  db._docs.set('smsLog/r9', { kind: 'optin', at: Date.now(), phone: '+15615550101', body: 'Yes, we will be there Saturday', players: ['ft-cy-l'], by: 'family', status: 'start' });
+  db._docs.set('smsLog/r9b', { kind: 'optin', at: Date.now() + 1, phone: '+15615550101', body: 'Yes, we will be there Saturday', players: ['ft-cy-l'], by: 'family', status: 'start' });   // JustCall's double
+  db._docs.set('coachThreads/ft-cy-l', { playerId: 'ft-cy-l', playerName: 'Cy Lane', last: { at: Date.now(), dir: 'in', body: 'Yes, we will be there Saturday', by: 'family' }, lastReplyAt: Date.now() });
+  ib = await COACHTEXT.inbox(db, KIM); const cy = ib.rows.find((r) => r.id === 'ft-cy-l'); assert.ok(cy); assert.equal(cy.conv, '0101'); assert.equal(cy.title, 'Sam Example'); assert.equal(cy.unread, true); assert.equal(cy.last.body, 'Yes, we will be there Saturday');
+  assert.ok(db._docs.get('coachThreads/ft-cy-l').convs['0101'], 'the chat is written onto the thread row'); assert.deepEqual(ib.quiet, []);
+  const t2 = await COACHTEXT.thread(db, KIM, 'ft-cy-l', { conv: '0101' });
+  assert.deepEqual(t2.lines.map((l) => l.dir + ':' + l.body + ':' + (l.note || '')), ['in:Yes, we will be there Saturday:texts on'], 'their words once, as an answer, with the texts-on note');
+  assert.equal((await COACHTEXT.inbox(db, KIM)).unread, 0, 'opening the rebuilt chat clears it');
 });
 
 test('a reply tells the coach on Slack once, even when two siblings share the number; the inbox row carries it', async () => {

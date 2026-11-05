@@ -403,8 +403,10 @@ async function handleEvent(db, body) {
       await db.collection('smsLog').doc().set({ kind: 'reply', at: Date.now(), phone: from, body: text.slice(0, 600), players: hits.map((r) => r.id), by: 'family', status: 'reply', justcallId: jid });
       return Object.assign(out, { did: 'reply kept for ' + hits.length + ' player(s)', players: hits.map((r) => r.id) });
     }
+    const jid2 = String(d.id || '');
+    if (jid2 && !(await db.collection('smsLog').where('justcallId', '==', jid2).limit(1).get()).empty) return Object.assign(out, { did: 'already kept' });   // JustCall sends two events per text (Nov 4: STOP/START too)
     for (const r of hits) await setOptIn(db, r.id, start, { source: stop ? 'stop' : 'start', by: 'family', phone: from });
-    await db.collection('smsLog').doc().set({ kind: stop ? 'optout' : 'optin', at: Date.now(), phone: from, body: text.slice(0, 200), players: hits.map((r) => r.id), by: 'family', status: stop ? 'stop' : 'start' });
+    await db.collection('smsLog').doc().set({ kind: stop ? 'optout' : 'optin', at: Date.now(), phone: from, body: text.slice(0, 200), players: hits.map((r) => r.id), by: 'family', status: stop ? 'stop' : 'start', justcallId: jid2 });
     return Object.assign(out, { did: (stop ? 'opted out' : 'opted in') + ' ' + hits.length + ' player(s)', players: hits.map((r) => r.id) });
   }
   if (/^sms\.(status_updated|delivery_status_updated|sent|updated)$/.test(type) || (type === 'sms.sent_received' && /outgoing|outbound/i.test(d.direction || ''))) {
