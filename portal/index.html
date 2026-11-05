@@ -562,12 +562,64 @@ button.notice.remind.wk .wkn{margin-right:2px}
 .msgfoot{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .msgfoot .hint{margin:0;flex:1;min-width:200px}
 .msgno{padding:10px 12px;border-radius:12px;background:#FFF1F1;margin:0}
-.msgrow.new{box-shadow:inset 4px 0 0 var(--lime)}
-.msgrow .nm i.red{display:inline-block;background:var(--wk-off);color:var(--wk-off-ink);border-radius:999px;padding:0 7px;font-style:normal;font-size:11px;font-weight:700;margin-left:6px;vertical-align:1px}
-.msgrow .msglast{display:grid;gap:2px;min-width:0;font-size:13px;align-content:center}
-@media(max-width:700px){.msgrow .mid.msglast{display:grid}}
-.msglast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.msglast span.them{font-weight:700}.msglast small{color:var(--muted);font-size:11px}
 @media(max-width:560px){.bub{max-width:92%}.bubs{max-height:300px}}
+/* the chats (Nov 4 evening): one per number, group chats — the switcher, the picker, the Messages view as two panes */
+.ctabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.cchip{position:relative;display:inline-flex;align-items:center;gap:5px}
+.cchip small{font-weight:400;opacity:.75;font-size:11px}
+.cchip.sug{border-style:dashed}
+.cchip.add{border:1px dashed var(--line-2);background:transparent;color:var(--muted)}
+.cchip .dot,.msgrow .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 2px #fff;flex:none}
+body.skin-coach .cchip.unread{box-shadow:inset 0 0 0 2px var(--lime)}
+.pick{display:grid;gap:8px;padding:12px 14px;border-radius:14px;background:#F6F6F2;border:1px solid var(--line)}
+.pick .hint{margin:0}
+.pickrows{display:grid;gap:4px}
+.pickrow{display:flex;gap:8px;align-items:center;font-size:13.5px;padding:6px 2px;cursor:pointer}
+.pickrow input{width:18px;height:18px;accent-color:var(--ink);margin:0}
+.fchip.to{cursor:default;background:#F1F1ED;border-color:transparent}
+.empty-chat{margin:0;padding:18px 4px}
+/* the Messages view */
+.mbox{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:18px;align-items:start}
+.mlist{padding:6px 8px;max-height:72vh;overflow:auto}
+.msgrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 10px}
+.msgrow .mtxt{min-width:0;display:grid;gap:2px}
+.msgrow .nm{display:flex;gap:6px;align-items:baseline;min-width:0;font-weight:700;font-size:14px}
+.msgrow .nm .who{white-space:nowrap;flex:none;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.msgrow .nm .cw{font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
+.msgrow .nm time{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;white-space:nowrap;flex:none}
+.msgrow .msglast{min-width:0;font-size:13px;color:var(--muted)}
+.msglast span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.msglast span.them{color:var(--ink);font-weight:600}
+.msgrow.new .nm{color:var(--ink)}.msgrow.new .msglast span{color:var(--ink)}
+.msgrow.on{background:#F1F1ED;border-radius:14px}
+body.skin-coach .msgrow.on,body.app-skin .msgrow.on{background:#F1F1ED;border-radius:14px}
+body.app-skin .msgrow{padding:10px 8px}
+.msgrow.quiet .ava{opacity:.55}
+.mquiet{margin-top:6px;border-top:1px solid var(--line)}
+.mquiet summary{cursor:pointer;padding:10px 10px;font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--muted);list-style:none;display:flex;gap:8px;align-items:center}
+.mquiet summary b{background:#EFEFEA;border-radius:999px;padding:1px 8px;font-size:11px;color:var(--ink)}
+.mquiet summary::-webkit-details-marker{display:none}
+.mquiet summary::before{content:'›';display:inline-block;transition:transform .15s}
+.mquiet[open] summary::before{transform:rotate(90deg)}
+.mpane{display:grid;gap:12px;align-content:start;min-height:420px}
+.mpane .bubs{max-height:52vh}
+.mhead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.mhead .rowx{flex-wrap:nowrap;gap:6px;justify-self:end;margin:0}
+.mwho{display:grid;gap:1px;min-width:0}
+.mwho b,.mwho small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mwho b{font-size:16px}.mwho small{color:var(--muted);font-size:12px}
+.mback{display:none}
+.ppage .short{display:none}
+@media(max-width:900px){
+  .mbox{grid-template-columns:1fr}
+  .mbox.open .mlist{display:none}
+  .mbox:not(.open) .mpane{display:none}
+  .mback{display:inline-flex;padding:6px 10px}
+  .mlist{max-height:none}
+  .mpane .bubs{max-height:48vh}
+  .ppage .long{display:none}.ppage .short{display:inline}
+  main:has(.mbox.open) .head,main:has(.mbox.open) .crumbs{display:none}   /* on the phone an open chat fills the screen: ‹ Chats takes you back */
+  .mbox.open .mpane{margin-top:6px}
+}
 /* ── the tone guard in the editor (Kam, Nov 2026): a red flag under a note that would land as negative ── */
 .tflag{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:8px 12px;border-radius:12px;background:var(--wk-off);color:var(--wk-off-ink);font-size:12.5px;line-height:1.45}
 .tflag.soft{background:#FFF1D6;color:#7A5200}
@@ -1658,7 +1710,7 @@ const PW_CONFIG = {
     checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgTo: {}, msgFocus: null },
+    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -1866,9 +1918,14 @@ const PW_CONFIG = {
      "They don't have to open two apps." A coach writes to the family from here; the engine sends it from the academy's JustCall
      number, signed with the coach's name, and the week ticks itself. Replies come back through JustCall to the player's page
      and to the Messages view. Everything goes through the engine (/api/coach/*): the page never holds a key, and a coach
-     reaches only their own players. */
+     reaches only their own players.
+     Chats (Antonio, Nov 4 evening): like iMessage — one chat per number on the player's page (Mother · Father · Guardian · the
+     player) and group chats (Mother & Father, everyone, any mix), each its own conversation with its own bubbles, draft and
+     unread mark; the Messages view lists chats, not families, with the open chat beside the list on a computer and full-screen
+     on the phone. A chat's key is the numbers' last four digits ('0100', '0100+0109'); the engine files every line in its chat. */
   S.msg = { inbox: null, at: 0, threads: {}, busy: {} };
   const MSG_MAX = 600;
+  const CONV_OK = /^\d{4}(\+\d{4}){0,5}$/;
   async function api(path, body) {
     if (EDITION !== 'web' || !WEB.auth || !WEB.auth.currentUser) throw new Error('Sign in first.');
     const tok = await WEB.auth.currentUser.getIdToken(); let r;
@@ -1880,64 +1937,145 @@ const PW_CONFIG = {
   }
   const msgThread = (pid) => S.msg.threads[pid] || null;
   const msgUnread = () => (S.msg.inbox && S.msg.inbox.unread) || 0;
-  async function loadThread(pid, quiet) {
+  const convKeyOf = (tails) => Array.from(new Set(tails.filter(Boolean))).sort().join('+');
+  const convsOf = (t) => (t && Array.isArray(t.convs) ? t.convs : []);
+  const convOf = (t, key) => convsOf(t).find((c) => c.key === key) || null;
+  /* which chat is open for this player: the one chosen (or on the address), else the one with the newest line, else the first */
+  function curConv(pid, want) {
+    const t = msgThread(pid); const cs = convsOf(t); const w = want || S.ui.msgConv[pid] || '';
+    if (w && cs.some((c) => c.key === w)) return w;
+    if (w && CONV_OK.test(w) && !cs.length) return w;
+    let best = null; cs.forEach((c) => { if (c.last && (!best || c.last.at > best.last.at)) best = c; });
+    return best ? best.key : (cs[0] ? cs[0].key : '');
+  }
+  const linesIn = (t, key) => (t.lines || []).filter((l) => !key || l.conv === key || (!l.conv && !key));
+  /* this chat is read: the row, the chip and the red numbers now; the engine's mark right after */
+  function markReadLocal(pid, key) {
+    if (!pid || !key) return; let was = false;
+    const t = msgThread(pid); const c = convOf(t, key); if (c && c.unread) { c.unread = false; was = true; }
+    if (S.msg.inbox) { S.msg.inbox.rows.forEach((r) => { if (r.id === pid && (r.conv === key || r.conv === '') && r.unread) { r.unread = false; was = true; } }); S.msg.inbox.unread = S.msg.inbox.rows.filter((r) => r.unread).length; }
+    if (was) { paintViewTabs(); api('read', { player: pid, conv: key }).catch(() => {}); }
+  }
+  async function loadThread(pid, quiet, conv) {
     if (EDITION !== 'web' || !pid || S.msg.busy[pid]) return;
     S.msg.busy[pid] = true; const before = JSON.stringify(((S.msg.threads[pid] || {}).lines || []).map((l) => l.id + l.status + l.delivery));
+    const key = conv || curConv(pid);
     try {
-      const t = await api('thread?player=' + enc(pid)); S.msg.threads[pid] = Object.assign(t, { at: Date.now(), error: '' });
-      if (S.msg.inbox) { const row = S.msg.inbox.rows.find((r) => r.id === pid); if (row && row.unread) { row.unread = false; S.msg.inbox.unread = Math.max(0, S.msg.inbox.unread - 1); } }
-    } catch (e) { S.msg.threads[pid] = Object.assign(S.msg.threads[pid] || { lines: [], numbers: [], line: {} }, { at: Date.now(), error: e.message || String(e) }); }
+      const t = await api('thread?player=' + enc(pid) + (key && CONV_OK.test(key) ? '&conv=' + enc(key) : '&peek=1'));
+      const old = S.msg.threads[pid]; const locals = convsOf(old).filter((c) => c.local && !t.convs.some((x) => x.key === c.key));   // a group started here, nothing sent yet
+      S.msg.threads[pid] = Object.assign(t, { convs: t.convs.concat(locals), at: Date.now(), error: '' });
+      if (key && S.msg.inbox) { S.msg.inbox.rows.forEach((r) => { if (r.id === pid && (r.conv === key || r.conv === '')) r.unread = false; }); S.msg.inbox.unread = S.msg.inbox.rows.filter((r) => r.unread).length; }
+    } catch (e) { S.msg.threads[pid] = Object.assign(S.msg.threads[pid] || { lines: [], numbers: [], convs: [], line: {} }, { at: Date.now(), error: e.message || String(e) }); }
     delete S.msg.busy[pid];
-    if (S.route.view !== 'player' || S.route.pid !== pid) return;
+    const here = (S.route.view === 'player' || S.route.view === 'messages') && S.route.pid === pid; if (!here) { paintViewTabs(); return; }
+    if (!key) { const k2 = curConv(pid); const c2 = convOf(S.msg.threads[pid], k2); if (c2 && c2.unread) setTimeout(() => markReadLocal(pid, k2), 0); }   // the chat the page opens on counts as read, like before
     if (!quiet) { render(); paintViewTabs(); return; }
     if (JSON.stringify((S.msg.threads[pid].lines || []).map((l) => l.id + l.status + l.delivery)) !== before) render();   // a quiet refresh redraws only when something came in (render keeps the draft)
+    paintViewTabs();
   }
   async function loadInbox(force) {
     if (EDITION !== 'web' || WEB.stage !== 'in' || S.msg.busy.inbox) return; if (!force && Date.now() - S.msg.at < 45000) return;
     S.msg.busy.inbox = true; const before = msgUnread();
-    try { S.msg.inbox = Object.assign(await api('inbox'), { error: '' }); } catch (e) { S.msg.inbox = Object.assign(S.msg.inbox || { unread: 0, rows: [] }, { error: e.message || String(e) }); }
+    try { S.msg.inbox = Object.assign(await api('inbox'), { error: '' }); } catch (e) { S.msg.inbox = Object.assign(S.msg.inbox || { unread: 0, rows: [], quiet: [] }, { error: e.message || String(e) }); }
     S.msg.at = Date.now(); delete S.msg.busy.inbox;
     paintViewTabs(); if (S.route.view === 'messages' || (S.route.view === 'home' && msgUnread() !== before)) render();
   }
   function msgTick() {   // the inbox stays fresh while the page is open: about every minute, and the moment the tab comes back
     if (EDITION !== 'web' || WEB.stage !== 'in' || document.visibilityState !== 'visible') return;
     loadInbox(false);
-    const t = S.route.view === 'player' && S.route.pid ? msgThread(S.route.pid) : null; if (t && Date.now() - t.at > 20000) loadThread(S.route.pid, true);
+    const pid = (S.route.view === 'player' || S.route.view === 'messages') && S.route.pid ? S.route.pid : ''; const t = pid ? msgThread(pid) : null;
+    if (t && Date.now() - t.at > 20000) loadThread(pid, true, S.route.view === 'messages' ? curConv(pid, S.route.conv) : curConv(pid));
   }
   setInterval(msgTick, 30000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { S.msg.at = 0; msgTick(); } });
   const msgWhen = (ms) => { const d = new Date(ms || 0), now = new Date(); const today = d.toDateString() === now.toDateString(); return (today ? 'Today' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+  const msgAgo = (ms) => { const d = new Date(ms || 0), now = new Date(); if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); if (now - d < 6 * 864e5) return d.toLocaleDateString('en-US', { weekday: 'short' }); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
   const toWord = (to) => (to === 'player' ? 'the player' : to === 'guardian' ? 'the guardian' : to ? 'the ' + to : '');
-  function msgCard(p) {
-    const t = msgThread(p.id); const w = writable() && mine(p); const head = (word) => `<div class="wkmain"><div><div class="lbl">Messages · through JustCall</div><b class="wkword">${word}</b></div>${t ? '<button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻ Refresh</button>' : ''}</div>`;
-    if (!t) { if (!S.msg.busy[p.id]) loadThread(p.id); return `<div class="panel msgcard" id="msgcard">${head('Loading the conversation…')}</div>`; }
-    if (t.error && !(t.lines && t.lines.length)) return `<div class="panel msgcard" id="msgcard">${head('The conversation could not be loaded')}<p class="hint">${esc(t.error)}</p></div>`;
-    const lines = t.lines || []; const nums = t.numbers || [];
-    const sel = S.ui.msgTo[p.id] && nums.some((n) => n.phone === S.ui.msgTo[p.id]) ? S.ui.msgTo[p.id] : (nums[0] ? nums[0].phone : '');
-    const bub = (l) => l.dir === 'sys' ? `<div class="bub b-sys">${esc(l.body)}</div>`
-      : `<div class="bub b-${l.dir}${l.status === 'failed' ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? 'The family' + (l.tail ? ' · …' + esc(l.tail) : '') : esc(l.by || '') + (l.to ? ' · to ' + esc(toWord(l.to)) : '')} · ${esc(msgWhen(l.at))}${l.status === 'failed' ? ' · <b class="bad">not sent</b>' : /deliver/i.test(l.delivery || '') ? ' · delivered' : ''}</small></div>`;
-    const bubbles = lines.length ? `<div class="bubs">${lines.map(bub).join('')}</div>` : '<p class="hint">Nothing yet. The first text starts the conversation; the family answers right here.</p>';
-    const chips = nums.map((n) => `<button class="fchip sm" type="button" aria-pressed="${sel === n.phone}" data-act="msg-to" data-phone="${esc(n.phone)}">${esc(n.word)}${n.name ? ' · ' + esc(n.name) : ''} · …${esc(n.tail)}</button>`).join('');
-    const composer = !w ? '' : t.line && t.line.connected === false ? '<p class="hint msgno"><b>JustCall is not connected yet.</b> An owner pastes the key under Players &amp; billing → Notifications.</p>'
-      : t.optOut ? `<p class="hint msgno"><b>${esc(t.optOutWhy || 'The family asked for no texts.')}</b> Call them instead.</p>`
-      : !nums.length ? '<p class="hint msgno"><b>No number on file.</b> Add one under Contacts for JustCall below, then write here.</p>'
-      : `<form class="msgform" data-form="msg" data-pid="${esc(p.id)}"><div class="msgto"><span class="flbl">To</span>${chips}</div><textarea name="body" rows="3" maxlength="${MSG_MAX}" placeholder="Write to the family…" aria-label="Message to the family" required></textarea><div class="msgfoot"><span class="hint">Goes out from the academy number, signed “${esc(t.signature || '')}”. It counts as this week's contact.</span><button class="btn pri" type="submit">Send</button></div></form>`;
-    return `<div class="panel msgcard" id="msgcard">${head(lines.length ? 'The conversation with the family' : 'Write to the family from here')}${bubbles}${composer}</div>`;
+  const memberWord = (m) => (m.slot ? m.word || m.slot : m.name || ('…' + m.tail));
+  const convTitle = (c) => (c && (c.title || (c.members || []).map(memberWord).join(' & '))) || 'Family';
+  /* a chat's name for a chip: "Mother", "Father", "Mother & Father"; the person's name as the small print */
+  const convChip = (c) => { const ms = c.members || []; return ms.length === 1 ? { t: memberWord(ms[0]), s: ms[0].slot && ms[0].name ? ms[0].name : '' } : { t: ms.map(memberWord).join(' & '), s: ms.length > 2 ? ms.length + ' numbers' : '' }; };
+  const whoWrote = (t, l, key) => { const c = convOf(t, key); const m = (c && (c.members || []).find((x) => x.tail === l.tail)) || (t.numbers || []).find((x) => x.tail === l.tail); return m ? (m.slot ? (m.word || m.slot) + (m.name ? ' · ' + m.name : '') : m.name || 'The family') : 'The family'; };
+
+  /* the chat switcher: one chip per chat (unread = a lime dot), + Group to start a new one */
+  function chatTabs(p, t, sel, inMessages) {
+    const cs = convsOf(t); if (!cs.length) return '';
+    const chip = (c) => { const n = convChip(c); const r = inMessages ? goAttr({ view: 'messages', pid: p.id, conv: c.key }) : `data-act="msg-conv" data-pid="${esc(p.id)}" data-key="${esc(c.key)}"`;
+      return `<button class="fchip sm cchip${c.unread ? ' unread' : ''}${c.suggested && !c.count ? ' sug' : ''}" type="button" aria-pressed="${sel === c.key}" ${r} title="${esc(convTitle(c))}">${c.unread ? '<i class="dot" aria-label="new"></i>' : ''}${esc(n.t)}${n.s ? ` <small>${esc(n.s)}</small>` : ''}</button>`; };
+    const more = (t.numbers || []).length >= 2 ? `<button class="fchip sm cchip add" type="button" data-act="msg-pick" data-pid="${esc(p.id)}" aria-expanded="${S.ui.msgPick === p.id}">+ Group</button>` : '';
+    return `<div class="ctabs" role="tablist" aria-label="Chats with the family">${cs.map(chip).join('')}${more}</div>`;
   }
-  /* ───────────── view: messages (the inbox) ───────────── */
+  /* starting a group chat: tick the numbers, and the chat exists — nothing goes out until the first text */
+  function chatPicker(p, t, inMessages) {
+    if (S.ui.msgPick !== p.id) return ''; const nums = t.numbers || []; const sel = S.ui.msgPickSel || {};
+    const rows = nums.map((n) => `<label class="pickrow"><input type="checkbox" data-act="msg-pick-tog" data-tail="${esc(n.tail)}" ${sel[n.tail] ? 'checked' : ''}> <b>${esc(n.word)}</b>${n.name ? ' · ' + esc(n.name) : ''} <span class="muted">…${esc(n.tail)}</span></label>`).join('');
+    const on = nums.filter((n) => sel[n.tail]); const key = convKeyOf(on.map((n) => n.tail)); const exists = !!convOf(t, key);
+    return `<div class="pick" id="msgpick"><div class="lbl">New group chat</div><p class="hint">Everyone ticked gets each text as their own message, and all their answers show here in one chat.</p>
+      <div class="pickrows">${rows}</div>
+      <div class="rowx"><button class="btn pri sm" type="button" data-act="msg-pick-go" data-pid="${esc(p.id)}" data-in="${inMessages ? 1 : 0}" ${on.length >= 2 ? '' : 'disabled'}>${exists ? 'Open that chat' : 'Start the chat'}${on.length ? ' · ' + on.map((n) => n.word).join(' & ') : ''}</button><button class="btn ghost sm" type="button" data-act="msg-pick-x">Cancel</button></div></div>`;
+  }
+  /* a group text is one bubble (the engine sends it to each number; the bubble says who got it and who did not) */
+  function foldGroup(lines) {
+    const out = []; lines.forEach((l) => { const prev = out[out.length - 1]; if (l.dir === 'out' && l.batch && prev && prev.dir === 'out' && prev.batch === l.batch && prev.body === l.body) { prev.tos.push(l); return; } out.push(Object.assign({}, l, { tos: [l] })); }); return out;
+  }
+  function chatBubbles(t, key, group) {
+    const lines = group ? foldGroup(linesIn(t, key)) : linesIn(t, key);
+    const who = (l) => { const ms = (l.tos || [l]); const failed = ms.filter((x) => x.status === 'failed'), sent = ms.filter((x) => x.status !== 'failed');
+      const name = (x) => (x.to ? toWord(x.to) : '…' + x.tail);
+      if (ms.length === 1) return (sent.length ? (group ? ' · to ' + esc(name(ms[0])) : '') : '') + (failed.length ? ' · <b class="bad">not sent' + (group ? ' to ' + esc(name(ms[0])) : '') + '</b>' : /deliver/i.test(ms[0].delivery || '') ? ' · delivered' : '');
+      return ' · to ' + esc(sent.map(name).join(' and ')) + (failed.length ? ' · <b class="bad">not sent to ' + esc(failed.map(name).join(' and ')) + '</b>' : ms.every((x) => /deliver/i.test(x.delivery || '')) ? ' · delivered' : ''); };
+    const bub = (l) => l.dir === 'sys' ? `<div class="bub b-sys">${esc(l.body)}</div>`
+      : `<div class="bub b-${l.dir}${(l.tos || [l]).every((x) => x.status === 'failed') ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? esc(whoWrote(t, l, key)) + ' · ' + esc(msgWhen(l.at)) : esc(l.by || '') + ' · ' + esc(msgWhen(l.at)) + who(l)}</small></div>`;
+    return lines.length ? `<div class="bubs" id="bubs">${lines.map(bub).join('')}</div>` : `<p class="hint empty-chat">${group ? 'Nothing in this group chat yet. The first text goes to everyone in it; their answers land here.' : 'Nothing yet. The first text starts the chat; the family answers right here.'}</p>`;
+  }
+  function chatComposer(p, t, key) {
+    const w = writable() && mine(p); if (!w) return '';
+    if (t.line && t.line.connected === false) return '<p class="hint msgno"><b>JustCall is not connected yet.</b> An owner pastes the key under Players &amp; billing → Notifications.</p>';
+    if (t.optOut) return `<p class="hint msgno"><b>${esc(t.optOutWhy || 'The family asked for no texts.')}</b> Call them instead.</p>`;
+    if (!(t.numbers || []).length) return '<p class="hint msgno"><b>No number on file.</b> Add one under Contacts for JustCall on the player\'s page, then write here.</p>';
+    const c = convOf(t, key); if (!c) return '<p class="hint msgno">Pick a chat above.</p>';
+    const ms = c.members || []; const to = ms.map((m) => `<span class="fchip sm to">${esc(memberWord(m))}${m.name && m.slot ? ' · ' + esc(m.name) : ''} · …${esc(m.tail)}</span>`).join('');
+    return `<form class="msgform" data-form="msg" data-pid="${esc(p.id)}" data-conv="${esc(key)}"><div class="msgto"><span class="flbl">To</span>${to}</div><textarea name="body" rows="3" maxlength="${MSG_MAX}" data-draft="${esc(p.id + '|' + key)}" placeholder="${ms.length > 1 ? 'Write to everyone in this chat…' : 'Write to the family…'}" aria-label="Message" required></textarea><div class="msgfoot"><span class="hint">${ms.length > 1 ? 'Each of them gets it as their own text, ' : 'Goes out '}from the academy number, signed “${esc(t.signature || '')}”. It counts as this week's contact.</span><button class="btn pri" type="submit">Send</button></div></form>`;
+  }
+  /* the chat itself: the switcher, the bubbles of the open chat, the composer — on the player's page and in Messages */
+  function chatPane(p, t, sel, inMessages) {
+    const c = convOf(t, sel); const group = !!(c && (c.members || []).length > 1);
+    return `${chatTabs(p, t, sel, inMessages)}${chatPicker(p, t, inMessages)}${chatBubbles(t, sel, group)}${chatComposer(p, t, sel)}`;
+  }
+  function msgCard(p) {
+    const t = msgThread(p.id); const head = (word) => `<div class="wkmain"><div><div class="lbl">Messages · through JustCall</div><b class="wkword">${word}</b></div>${t ? '<button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻ Refresh</button>' : ''}</div>`;
+    if (!t) { if (!S.msg.busy[p.id]) loadThread(p.id, false, S.ui.msgConv[p.id] || ''); return `<div class="panel msgcard" id="msgcard">${head('Loading the conversation…')}</div>`; }
+    if (t.error && !(t.lines && t.lines.length)) return `<div class="panel msgcard" id="msgcard">${head('The conversation could not be loaded')}<p class="hint">${esc(t.error)}</p></div>`;
+    const sel = curConv(p.id); const c = convOf(t, sel);
+    return `<div class="panel msgcard" id="msgcard">${head(c && c.count ? convTitle(c) : (t.lines || []).length ? 'The chats with the family' : 'Write to the family from here')}${chatPane(p, t, sel, false)}</div>`;
+  }
+  /* ───────────── view: messages (the inbox, like a messages app: the chats on the left, the open one on the right) ───────────── */
   function viewMessages() {
-    const ib = S.msg.inbox; if (!ib && EDITION === 'web') loadInbox(true);
-    const rows = ib ? ib.rows : []; const n = ib ? ib.unread : 0;
-    const row = (r) => { const p = player(r.id);
-      return `<button class="rowb crow2 msgrow${r.unread ? ' new' : ''}" ${goAttr({ view: 'player', pid: r.id })}><div class="who"><span class="ava">${esc(initials(r.name))}</span><div style="min-width:0"><div class="nm">${esc(r.name)}${r.unread ? ' <i class="red">new</i>' : ''}</div><small>${esc(group(r.group).label)}${r.coach ? ' · Coach ' + esc(r.coach) : ' · no coach'}</small></div></div>
-        <div class="mid msglast">${r.last ? `<span class="${r.last.dir === 'in' ? 'them' : 'me'}">${r.last.dir === 'in' ? 'Them: ' : (r.last.by ? esc(r.last.by) : 'You') + ': '}${esc(r.last.body)}</span><small>${esc(msgWhen(r.last.at))}</small>` : '<span class="muted">No texts yet</span>'}</div>
-        <div class="chips">${p ? contactChip(p) : ''}</div></button>`; };
+    const ib = S.msg.inbox; if (EDITION === 'web' && (!ib || Date.now() - S.msg.at > 10000)) loadInbox(true);   // fresh on arrival; the tick keeps it so
+    const rows = ib ? ib.rows.slice().sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name)) : []; const quiet = ib ? ib.quiet || [] : []; const n = ib ? ib.unread : 0;
+    // on a computer the newest chat is open beside the list from the start, like a messages app; on the phone the list comes first
+    if (!S.route.pid && window.innerWidth > 900 && rows[0]) { S.route = { view: 'messages', pid: rows[0].id, conv: rows[0].conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
+    const openPid = S.route.pid && player(S.route.pid) && mine(player(S.route.pid)) ? S.route.pid : '';
+    const openKey = openPid ? curConv(openPid, S.route.conv) : '';
+    const row = (r) => { const on = openPid === r.id && (openKey === r.conv || r.conv === ''); const chip = convChip({ members: r.members || [] });
+      return `<button class="rowb msgrow${r.unread ? ' new' : ''}${on ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id, conv: r.conv || undefined })} aria-current="${on ? 'true' : 'false'}"><span class="ava">${esc(initials(r.name))}</span><div class="mtxt"><div class="nm"><span class="who">${esc(r.name)}</span><span class="cw">· ${esc(r.conv ? chip.t || r.title : 'Family')}</span>${r.last ? `<time>${esc(msgAgo(r.last.at))}</time>` : ''}</div>
+        <div class="msglast">${r.last ? `<span class="${r.last.dir === 'in' ? 'them' : 'me'}">${r.last.dir === 'in' ? '' : (r.last.by ? esc(r.last.by) : 'You') + ': '}${esc(r.last.body)}</span>` : '<span class="muted">No texts yet</span>'}</div></div>${r.unread ? '<i class="dot" aria-label="new"></i>' : ''}</button>`; };
+    const qrow = (q) => `<button class="rowb msgrow quiet${openPid === q.id ? ' on' : ''}" ${goAttr({ view: 'messages', pid: q.id })}><span class="ava">${esc(initials(q.name))}</span><div class="mtxt"><div class="nm">${esc(q.name)}</div><div class="msglast"><span class="muted">${esc(group(q.group).label)}${q.coach ? ' · Coach ' + esc(q.coach) : ''} · no texts yet</span></div></div></button>`;
+    const list = `<div class="list mlist" id="mlist">${rows.length ? rows.map(row).join('') : `<div class="empty">${ib ? (quiet.length ? 'No chats yet. Pick a family below and write the first text.' : 'No players of yours are active.') : 'Loading…'}</div>`}
+      ${quiet.length ? `<details class="mquiet" ${rows.length ? '' : 'open'}><summary>Families with no texts yet <b>${quiet.length}</b></summary>${quiet.map(qrow).join('')}</details>` : ''}</div>`;
+    let pane = '';
+    if (openPid) {
+      const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
+      if (!t && !S.msg.busy[openPid]) loadThread(openPid, false, openKey && CONV_OK.test(openKey) ? openKey : '');
+      const body = !t ? '<p class="hint">Loading the chat…</p>' : t.error && !(t.lines && t.lines.length) ? `<p class="hint">${esc(t.error)}</p>` : chatPane(p, t, openKey, true);
+      pane = `<section class="panel mpane" id="mpane" aria-label="The open chat"><div class="mhead"><button class="btn sm ghost mback" type="button" ${goAttr({ view: 'messages' })} aria-label="Back to the chats">‹ Chats</button><div class="mwho"><b>${esc(p.name)}</b><small>${c ? esc(convTitle(c)) : esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</small></div><div class="rowx"><button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻</button><button class="fchip sm ppage" ${goAttr({ view: 'player', pid: p.id })}><span class="long">Player's page ›</span><span class="short">Player ›</span></button></div></div>${body}</section>`;
+    }
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Messages' }])}
       <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
-        <div class="sub">Open a player and write. The text goes out from the academy number, signed with your name; the family answers here. Nothing to open anywhere else.</div>
-        <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'family wrote' : 'families wrote'} back — not read yet</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${rows.length}</b> ${rows.length === 1 ? 'family' : 'families'}</li></ul></div></div>
+        <div class="sub">One chat per number and group chats for the parents together, like your phone. Open a chat and write: the text goes out from the academy number, signed with your name; the family answers here.</div>
+        <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'chat has' : 'chats have'} a new reply</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${rows.length}</b> ${rows.length === 1 ? 'chat' : 'chats'}</li><li><b class="n">${new Set(rows.map((r) => r.id)).size + quiet.length}</b> ${rows.length + quiet.length === 1 ? 'family' : 'families'}</li></ul></div></div>
       ${ib && ib.error ? `<p class="hint due-line"><b>Could not refresh:</b> ${esc(ib.error)}</p>` : ''}
-      ${rows.length ? `<div class="list">${rows.map(row).join('')}</div>` : `<div class="empty">${ib ? 'No players of yours are active.' : 'Loading…'}</div>`}`;
+      <div class="mbox${openPid ? ' open' : ''}">${list}${pane}</div>`;
   }
 
   /* ───────────── routing ───────────── */
@@ -1954,16 +2092,16 @@ const PW_CONFIG = {
     if (p[0] === 'commit') return { view: 'commit' };
     if (p[0] === 'contact' || p[0] === 'weekly') return { view: 'contact' };
     if (p[0] === 'parked') return { view: 'parked' };
-    if (p[0] === 'messages' || p[0] === 'inbox') return { view: 'messages' };
+    if (p[0] === 'messages' || p[0] === 'inbox') return p[1] ? { view: 'messages', pid: p[1], conv: p[2] && /^\d{4}(\+\d{4}){0,5}$/.test(p[2]) ? p[2] : undefined } : { view: 'messages' };
     return { view: 'home' };
   }
-  const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part]);
+  const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part, a.conv]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part, b.conv]);
   const enc = encodeURIComponent;
-  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : r.view === 'contact' ? '#/contact' : r.view === 'parked' ? '#/parked' : r.view === 'messages' ? '#/messages' : '#/');
+  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : r.view === 'contact' ? '#/contact' : r.view === 'parked' ? '#/parked' : r.view === 'messages' ? ('#/messages' + (r.pid ? '/' + enc(r.pid) + (r.conv ? '/' + r.conv : '') : '')) : '#/');
   async function go(r, fromHistory) {
     if (E) { try { await flushEd(E, true); } catch (e) { /* keep navigating */ } }
     if (EDITION === 'web' && typeof WEB !== 'undefined' && WEB.tryoutsOnly && r.view !== 'tryouts' && r.view !== 'tryout') r = { view: 'tryouts' };   // try-outs-only access (front desk)
-    S.route = r; saveRoute();
+    S.route = r; saveRoute(); S.ui.msgPick = null;
     // on the website every screen has a real address, so Back works and a link to a player can be shared between coaches
     if (EDITION === 'web' && !fromHistory) { const h = toHash(r); if (location.hash !== h) { try { history.pushState(null, '', h); } catch (e) { /* noop */ } } }
     onRoute(true);
@@ -1980,6 +2118,7 @@ const PW_CONFIG = {
     if (r.view === 'edit') openEditor(r.id, r.part);
     else if (r.view === 'report') openReport(r.id);
     else render();
+    if (r.view === 'messages' && r.pid && msgThread(r.pid)) markReadLocal(r.pid, curConv(r.pid, r.conv));   // the chat on screen is read
     if (scroll) { try { window.scrollTo(0, 0); } catch (e) { /* noop */ } }
   }
 
@@ -2323,7 +2462,7 @@ const PW_CONFIG = {
       if (act) sig.push({ cls: 'ok', html: `<b>${act}</b> active players`, href: '#/' });
       if (nOpen) sig.push({ cls: 'due', html: `<b>${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up`, href: '#/followup' });
       if (wkLeft) sig.push({ cls: 'bad', html: `<b>${wkLeft}</b> ${wkLeft === 1 ? 'family' : 'families'} still to reach this week`, href: '#/contact' });
-      if (msgUnread()) sig.push({ cls: 'bad', html: `<b>${msgUnread()}</b> ${msgUnread() === 1 ? 'family wrote' : 'families wrote'} back`, href: '#/messages' });
+      if (msgUnread()) sig.push({ cls: 'bad', html: `<b>${msgUnread()}</b> ${msgUnread() === 1 ? 'chat has a new reply' : 'chats have new replies'}`, href: '#/messages' });
       PWDesign.signals(sig);
     }
   }
@@ -2446,12 +2585,13 @@ const PW_CONFIG = {
   function render() {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
-    // a redraw must not eat what the coach is typing to a family (Nov 4): the draft and the caret come back after it
-    const ta0 = $('#msgcard textarea'); const draft = ta0 && ta0.value ? { v: ta0.value, s: ta0.selectionStart, e: ta0.selectionEnd, focus: document.activeElement === ta0 } : null;
+    // a redraw must not eat what the coach is typing to a family (Nov 4): every chat's draft and the caret come back after it
+    let focused = null; document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (ta.value) S.ui.msgDraft[k] = ta.value; else delete S.ui.msgDraft[k]; if (document.activeElement === ta) focused = { k, s: ta.selectionStart, e: ta.selectionEnd }; });
     m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
     if (r.view === 'board') bindBoardDrag(m);
-    const ta1 = draft && $('#msgcard textarea'); if (ta1 && !ta1.value) { ta1.value = draft.v; try { ta1.setSelectionRange(draft.s, draft.e); if (draft.focus) ta1.focus({ preventScroll: true }); } catch (e) { /* noop */ } }
+    document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (!ta.value && S.ui.msgDraft[k]) ta.value = S.ui.msgDraft[k]; if (focused && focused.k === k) { try { ta.setSelectionRange(focused.s, focused.e); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } });
+    const bb = $('#bubs'); if (bb) bb.scrollTop = bb.scrollHeight;   // a chat opens at its newest line
     if (S.ui.msgFocus && r.view === 'player' && r.pid === S.ui.msgFocus) { const ta = $('#msgcard textarea'); if (ta) { S.ui.msgFocus = null; try { $('#msgcard').scrollIntoView({ block: 'start', behavior: 'smooth' }); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } }
   }
   // Coach Board: hold a player, drop them on a coach (Antonio, Oct 25) — the same drag as Attendance; directors only
@@ -2528,7 +2668,7 @@ const PW_CONFIG = {
     const bits = [line(fu.unsent.length, 'report not sent to the parents', 'reports not sent to the parents'), line(fu.noMeeting.length, 'parent meeting to set', 'parent meetings to set'), line(fu.late.length, 'meeting to confirm', 'meetings to confirm')].filter(Boolean);
     const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><span class="ttl">Follow-up</span><ul class="lines">${bits.length ? bits.join('') : line(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')}</ul><span>Open the list</span></button>` : '';
     const nOpen = new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size;
-    const msgStrip = EDITION === 'web' && msgUnread() ? `<button class="notice remind msg" ${goAttr({ view: 'messages' })}><span class="ttl">Messages</span><ul class="lines"><li><b class="n off">${msgUnread()}</b> ${msgUnread() === 1 ? 'family wrote' : 'families wrote'} back — not read yet</li></ul><span>Open the inbox</span></button>` : '';
+    const msgStrip = EDITION === 'web' && msgUnread() ? `<button class="notice remind msg" ${goAttr({ view: 'messages' })}><span class="ttl">Messages</span><ul class="lines"><li><b class="n off">${msgUnread()}</b> ${msgUnread() === 1 ? 'chat has a new reply' : 'chats have new replies'} — not read yet</li></ul><span>Open the chats</span></button>` : '';
     const head = `<div class="head"><div><div class="lbl">Players · reports · ${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div><h1 class="title">Coach <em>Portal.</em></h1>
       <ul class="sub lines"><li><b class="n">${act.length}</b> active ${act.length === 1 ? 'player' : 'players'}</li><li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>${nOpen ? `<li><b class="n">${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up</li>` : ''}</ul></div></div>`;
     return `${notice()}${head}${empty}${msgStrip}${wkStrip}${remind}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
@@ -3584,8 +3724,15 @@ const PW_CONFIG = {
     else if (act === 'fcoach') { const v = b.getAttribute('data-v'); S.ui.coachFilter = v === '__all' ? null : v; S.ui.coachFilterGroup = S.route.gid; render(); }
     else if (act === 'fcontact') { const v = b.getAttribute('data-v'); S.ui.contactCoach = v === '__all' ? null : v; render(); }
     // messages to the family (Nov 4): the recipient chip, the refresh, the jump from the weekly list to the player's composer
-    else if (act === 'msg-to') { S.ui.msgTo[S.route.pid] = b.getAttribute('data-phone') || ''; render(); }
-    else if (act === 'msg-refresh' && S.route.pid) { b.disabled = true; await loadThread(S.route.pid); }
+    else if (act === 'msg-conv') { const pid = b.getAttribute('data-pid'), key = b.getAttribute('data-key') || ''; S.ui.msgConv[pid] = key; S.ui.msgPick = null; render(); markReadLocal(pid, key); }
+    else if (act === 'msg-pick') { const pid = b.getAttribute('data-pid'); S.ui.msgPick = S.ui.msgPick === pid ? null : pid; S.ui.msgPickSel = {}; render(); const f = $('#msgpick input'); if (f) f.focus(); }
+    else if (act === 'msg-pick-tog') { const tl = b.getAttribute('data-tail'); S.ui.msgPickSel[tl] = b.checked; const go2 = $('#msgpick [data-act="msg-pick-go"]'); const t = msgThread(S.ui.msgPick); const on = (t && t.numbers || []).filter((n) => S.ui.msgPickSel[n.tail]); if (go2) { go2.disabled = on.length < 2; go2.textContent = (convOf(t, convKeyOf(on.map((n) => n.tail))) ? 'Open that chat' : 'Start the chat') + (on.length ? ' · ' + on.map((n) => n.word).join(' & ') : ''); } }
+    else if (act === 'msg-pick-go') { const pid = b.getAttribute('data-pid'); const t = msgThread(pid); if (!t) return; const on = (t.numbers || []).filter((n) => S.ui.msgPickSel[n.tail]); if (on.length < 2) return;
+      const key = convKeyOf(on.map((n) => n.tail)); if (!convOf(t, key)) t.convs = convsOf(t).concat([{ key, members: on.map((n) => ({ slot: n.slot, word: n.word, name: n.name, tail: n.tail })), title: on.map((n) => n.word).join(' & '), count: 0, last: null, unread: false, suggested: false, local: true }]);
+      S.ui.msgPick = null; S.ui.msgPickSel = {}; S.ui.msgConv[pid] = key; S.ui.msgFocus = pid;
+      if (b.getAttribute('data-in') === '1') go({ view: 'messages', pid, conv: key }); else render(); }
+    else if (act === 'msg-pick-x') { S.ui.msgPick = null; S.ui.msgPickSel = {}; render(); }
+    else if (act === 'msg-refresh' && S.route.pid) { b.disabled = true; await loadThread(S.route.pid, false, S.route.view === 'messages' ? curConv(S.route.pid, S.route.conv) : curConv(S.route.pid)); }
     else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week
     else if (act === 'contact' || act === 'contact-row') { const p = player(act === 'contact' ? S.route.pid : b.getAttribute('data-pid')); if (!p || !mine(p)) return; const on = b.getAttribute('data-v') === 'on'; b.disabled = true; await setContact(p, on); if (on) toast(`${p.name}: in touch this week. Thank you.`); }
@@ -3670,19 +3817,23 @@ const PW_CONFIG = {
       } else if (kind === 'msg') {
         const p = player(f.getAttribute('data-pid')); if (!p || !mine(p)) return;
         const body = val('body').slice(0, MSG_MAX); if (!body) return;
-        const th = msgThread(p.id) || { numbers: [], lines: [] }; const to = S.ui.msgTo[p.id] && th.numbers.some((x) => x.phone === S.ui.msgTo[p.id]) ? S.ui.msgTo[p.id] : (th.numbers[0] || {}).phone || '';
+        const th = msgThread(p.id) || { numbers: [], lines: [], convs: [] }; const key = f.getAttribute('data-conv') || curConv(p.id); if (!CONV_OK.test(key)) { toast('Pick a chat first.'); return; }
         const btn = f.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
         try {
-          const out = await api('text', { player: p.id, to, body });
-          th.lines = (th.lines || []).concat([out.line]); th.at = Date.now(); S.msg.threads[p.id] = th;
+          const out = await api('text', { player: p.id, conv: key, body });
+          th.lines = (th.lines || []).concat(out.lines || [out.line]); th.at = Date.now(); S.msg.threads[p.id] = th;
+          let c = convOf(th, key); if (!c) { c = { key, members: (out.to && [].concat(out.to)) || [], title: out.title || '', count: 0, last: null, unread: false }; th.convs = convsOf(th).concat([c]); }
+          c.local = false; c.suggested = false; c.count = (c.count || 0) + (out.lines || [out.line]).length; c.last = { at: out.line.at, dir: 'out', body: body.slice(0, 140), by: '' };
+          delete S.ui.msgDraft[p.id + '|' + key];
           if (out.tick && out.tick.ticked) {   // the week went green on the engine; show it now, the listener confirms
             const wk = out.tick.week; const row = { id: contactId(p.id, wk), playerId: p.id, playerName: p.name, group: p.group || '', coach: p.coach || '', week: wk, done: true, by: String((WEB.staff && WEB.staff.coachAs) || signedName()).split(/\s+/)[0].slice(0, 80), byEmail: WEB.email || '', at: out.line.at, how: 'text', who: out.to && out.to.slot === 'player' ? 'player' : 'parents', source: 'portal' };
             const i = S.contacts.findIndex((c) => c.playerId === p.id && c.week === wk); if (i >= 0) S.contacts[i] = row; else S.contacts.push(row);
             if (S.pdata.pid === p.id) { const j = S.pdata.contacts.findIndex((c) => c.week === wk); if (j >= 0) S.pdata.contacts[j] = row; else S.pdata.contacts.push(row); }
           }
-          if (S.msg.inbox) { const r = S.msg.inbox.rows.find((x) => x.id === p.id); if (r) r.last = { at: out.line.at, dir: 'out', body: body.slice(0, 140), by: '' }; }
+          if (S.msg.inbox) { let r = S.msg.inbox.rows.find((x) => x.id === p.id && x.conv === key); if (!r) { r = { id: p.id, name: p.name, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', conv: key, title: out.title || convTitle(c), members: c.members, last: null, unread: false, lastReplyAt: 0 }; S.msg.inbox.rows.unshift(r); S.msg.inbox.quiet = (S.msg.inbox.quiet || []).filter((q) => q.id !== p.id); } r.last = { at: out.line.at, dir: 'out', body: body.slice(0, 140), by: '' }; }
           const ta = f.querySelector('textarea'); if (ta) ta.value = '';   // sent: the box empties before the redraw (a redraw keeps a draft)
-          toast(`Sent to ${out.to && out.to.slot ? toWord(out.to.slot) : 'the family'}.${out.tick && out.tick.ticked ? ' This week is ticked.' : ''}`); render(); paintViewTabs();
+          const tos = [].concat(out.to || []); const whom = tos.length > 1 ? tos.map((x) => toWord(x.slot) || ('…' + x.tail)).join(' and ') : (tos[0] && tos[0].slot ? toWord(tos[0].slot) : 'the family');
+          toast(`Sent to ${whom}.${out.failed ? ` ${out.failed} of them did not go — see the chat.` : ''}${out.tick && out.tick.ticked ? ' This week is ticked.' : ''}`); render(); paintViewTabs();
         } catch (e) { if (btn) { btn.disabled = false; btn.textContent = 'Send'; } toast(e.message || 'Could not send.'); }
       } else if (kind === 'add-player') {
         const first = EDITION === 'web' ? val('first') : '', last = EDITION === 'web' ? val('last') : '';
