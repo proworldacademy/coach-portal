@@ -110,7 +110,8 @@ const shot = (pg, name) => pg.screenshot({ path: path.join(SHOTS, name + '.png')
 const text = async (pg, sel) => (await pg.locator(sel).first().innerText()).replace(/\s+/g, ' ').trim();
 const count = (pg, sel) => pg.locator(sel).count();
 
-(async () => {
+module.exports = { server, page, shot, text, count, log, fails: () => fails, db, net, reply, chromium, CLIENT_SEED, PLAYERS };   // app2.harness.js borrows the setup
+if (require.main === module) (async () => {
   await new Promise((r) => server.listen(4173, r));
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   try {

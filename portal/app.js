@@ -1,4 +1,4 @@
-/* The app skin on the Coach Portal (Antonio, Nov 3, 2026): the switch (App / In between), and on the phone the bottom bar built from
+/* The app skin on the Coach Portal (Antonio, Nov 3, 2026): the switch (App 2 / App / In between), and on the phone the bottom bar built from
    the view tabs — Players · Contact (the families still to reach, in red) · Messages (families that wrote back, in red) · More (the ☰ sheet
    of the shared bar: the Board, Try-outs and the rest). Look only. Loaded last. */
 (function () {
@@ -7,11 +7,13 @@
   const vt = document.getElementById("vtabs"); if (!vt) return;
   // the switch sits above the tab row
   const sw = document.createElement("div"); sw.className = "cp-switch";
-  sw.innerHTML = '<span>Look</span>' + [["app", "App"], ["calm", "In between"]].map(([v, n]) => '<button type="button" class="' + (mode === v ? "on" : "") + '" data-view="' + v + '">' + n + "</button>").join("");
+  sw.innerHTML = '<span>Look</span>' + [["app2", "App 2"], ["app", "App"], ["calm", "In between"]].map(([v, n]) => '<button type="button" class="' + (mode === v ? "on" : "") + '" data-view="' + v + '">' + n + "</button>").join("");
   vt.parentNode.insertBefore(sw, vt);
   sw.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("cp-view", b.dataset.view); } catch (e) { /* noop */ } location.reload(); }));
-  if (mode !== "app") return;
+  if (mode !== "app" && mode !== "app2") return;
   document.body.classList.add("app-skin");
+  if (mode === "app2") document.body.classList.add("app2");
+  if (mode === "app2") { const g = document.createElement("div"); g.className = "a2glow"; g.setAttribute("aria-hidden", "true"); document.body.appendChild(g); }   // the pink glow behind the bar (portal/app2.css)   // the phone-first look (Antonio, Nov 5): portal/app2.css, the screens drawn by the page itself
 
   // the bottom bar: Players · Contact · Messages (the three a coach opens every day — Antonio, Nov 4) + More, which opens the ☰ sheet
   const bar = document.createElement("nav"); bar.className = "cp-appbar"; bar.setAttribute("aria-label", "Coach Portal"); document.body.appendChild(bar);
