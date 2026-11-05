@@ -627,7 +627,7 @@ body.app-skin .mfind input{border:0;background:#F1F1ED}
 .tflag .btn{height:28px;padding:0 10px;font-size:12px}
 </style>
 <link rel="stylesheet" href="/portal/calm.css">
-<link rel="stylesheet" href="/portal/app.css"><!-- the app skin (Nov 3): tiles, rows, chips, the pill tab bar, the phone bottom bar; portal/app.js switches it --><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, one pale colour per group — loaded last so it wins -->
+<link rel="stylesheet" href="/portal/app.css"><link rel="stylesheet" href="/portal/app2.css"><!-- the app skin (Nov 3): tiles, rows, chips, the pill tab bar, the phone bottom bar; portal/app.js switches it --><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, one pale colour per group — loaded last so it wins -->
 </head><body class="skin-coach">
 <script src="/shared/pages.js"></script>
 <script>
@@ -2588,13 +2588,183 @@ const PW_CONFIG = {
   });
 
   /* ───────────── render: shell ───────────── */
+  /* ───────────── App 2: the phone-first look (Antonio, Nov 5, 2026) ─────────────
+     The daily four as an app: Players (needs you · today · the groups), the group, the player, Contact, Messages and the chat.
+     Built next to today's looks: the switch above the tabs (App 2 · App · In between), nothing deleted. Everything here draws
+     from the same state and fires the same data-act / data-go handlers as the other looks; portal/app2.css is the skin.
+     The Board, Try-outs, the report editor and the rest keep their screens under More. */
+  const APP2 = (() => { try { return localStorage.getItem('cp-view') === 'app2'; } catch (e) { return false; } })();
+  const A2_ICON = {
+    msg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8 9.7a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.7a2 2 0 0 1 1.7 2z"/></svg>',
+    file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  };
+  const a2i = (k, cls) => `<i class="a2i${cls ? ' ' + cls : ''}" aria-hidden="true">${A2_ICON[k] || ''}</i>`;
+  const a2chev = () => a2i('chev', 'chev');
+  // the day: Thursday, Nov 5
+  const a2day = (d) => d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  // a ring: done of total, the number inside
+  function a2ring(done, total, size, sw) {
+    size = size || 40; sw = sw || 4.5; const r = (size - sw) / 2, c = 2 * Math.PI * r, f = total ? c * done / total : 0;
+    return `<svg class="a2ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${done} of ${total}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#ECECE7" stroke-width="${sw}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#0A0A0A" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${f.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${Math.round(size * .3)}" fill="#0A0A0A">${done}</text></svg>`;
+  }
+  // one row: a thing on the left, a title and one line under it, a thing on the right. A button when it goes somewhere.
+  const a2row = (left, title, sub, right, attrs, cls) => `<${attrs ? 'button type="button" ' + attrs : 'div'} class="a2row${cls ? ' ' + cls : ''}">${left}<span class="a2t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span><span class="a2r">${right || ''}</span></${attrs ? 'button' : 'div'}>`;
+  const a2ava = (name, dot) => `<span class="a2ava${dot === undefined ? '' : dot ? ' on' : ' off'}">${esc(initials(name))}</span>`;
+  const a2n = (n, cls) => `<span class="a2n${cls ? ' ' + cls : ''}">${n}</span>`;
+  const a2sec = (t, r) => `<div class="a2sec"><span>${t}</span>${r ? `<em>${r}</em>` : ''}</div>`;
+  const a2title = (t, sub) => `<div class="a2lt">${esc(t)}</div>${sub ? `<div class="a2ls">${sub}</div>` : ''}`;
+  const a2nav = (back, r, right) => `<div class="a2nav"><button type="button" class="a2bk" ${goAttr(r)}>${a2i('back')}${esc(back)}</button><span class="a2nr">${right || ''}</span></div>`;
+  const a2status = (p) => { const d = dueNow(p); return `<span class="a2chip st-${d.overall}">${STATUS_WORD[d.overall]}</span>`; };
+  // when a family last heard from the coach: the newest tick on file
+  function a2lastTouch(pid) {
+    const cs = S.contacts.filter((c) => c.playerId === pid && c.done); if (!cs.length) return 'never';
+    const wk = cs.map((c) => c.week).sort().pop(); const c = cs.find((x) => x.week === wk); const at = c.at ? new Date(c.at) : new Date(wk + 'T12:00:00');
+    return 'last ' + at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  // the family's numbers, from the contact check: Mother · Carla, (561) ••• 0100
+  function a2family(p) {
+    const ck = checkOf(p.id); const out = [];
+    SLOTS.forEach((sl) => { const x = slotOf(ck, sl); if (x && x.state === 'ok' && x.phone) out.push({ slot: sl, word: sl === 'player' ? 'The player' : SLOT_LABEL[sl].replace(' (other)', ''), name: sl === 'player' ? '' : (x.name || ''), phone: x.phone, tail: String(x.phone).replace(/\D/g, '').slice(-4) }); });
+    return out;
+  }
+  /* "Today" on the home: the sessions of the coach's groups and the coach's privates, from the backend's shared record when this
+     account holds the backend page (directors, owners); a coach who does not sees nothing here, until Attendance moves over. */
+  const A2T = { state: null, at: 0, busy: false };
+  function a2loadToday() {
+    if (EDITION !== 'web' || !WEB.fs || A2T.busy || Date.now() - A2T.at < 120000) return; A2T.busy = true;
+    WEB.fs.doc('backend/state').get().then((d) => { A2T.state = d.exists ? d.data() : null; A2T.at = Date.now(); A2T.busy = false; if (S.route.view === 'home') softRender(); }, () => { A2T.state = null; A2T.at = Date.now(); A2T.busy = false; });
+  }
+  const a2hour = (h) => { const hh = Math.floor(h), mm = Math.round((h - hh) * 60); const ap = hh >= 12 ? 'PM' : 'AM'; return [`${hh % 12 || 12}:${String(mm).padStart(2, '0')}`, ap]; };
+  function a2today() {
+    const st = A2T.state; if (!st) return '';
+    const now = new Date(), dow = now.getDay(), iso = todayISO(); const nowH = now.getHours() + now.getMinutes() / 60;
+    const myGroups = new Set(myPlayers().map((p) => group(p.group).label.replace(/\s*4PM$/i, '').toLowerCase()));
+    const blocks = (st.blocks || []).filter((b) => !b.event && (b.dows || []).includes(dow) && myGroups.has(String(b.label || '').toLowerCase()));
+    const me = fold(signedName()).split(' ')[0];
+    const privs = (st.privates || []).filter((x) => x.date === iso && (WEB.isDirector ? true : fold(x.coach || '').split(' ')[0] === me));
+    const items = blocks.map((b) => ({ at: b.start, kind: 'block', b })).concat(privs.map((x) => ({ at: Number(x.start) / 100 + (Number(x.start) % 100) / 60 - Math.floor(Number(x.start) % 100) / 100, kind: 'priv', x }))).sort((a, b) => a.at - b.at);
+    if (!items.length) return '';
+    const tile = (h, on) => { const [t, ap] = a2hour(h); return `<span class="a2day${on ? ' on' : ''}"><b>${t}</b><span>${ap}</span></span>`; };
+    const rows = items.slice(0, 5).map((it) => {
+      if (it.kind === 'block') { const b = it.b; const on = nowH >= b.start && nowH < b.end; return a2row(tile(b.start, on), esc(b.label), `Courts ${esc((b.courts || []).join(', '))}${on ? ' · tap to mark who came' : ''}`, on ? '<span class="a2chip cyan">Now</span>' : a2chev(), `data-href="/backend#attendance"`); }
+      const x = it.x; const p = player(x.pid); const h = Math.floor(Number(x.start) / 100) + (Number(x.start) % 100) / 60;
+      return a2row(tile(h, false), 'Private · ' + esc(p ? p.name : x.pid || ''), `${x.court ? 'Court ' + esc(x.court) : ''}${x.dur ? ' · ' + esc(x.dur) + ' min' : ''}${x.coach && WEB.isDirector ? ' · Coach ' + esc(x.coach) : ''}`, a2chev(), `data-href="/backend#privates"`);
+    }).join('');
+    const more = items.length > 5 ? `<a class="a2more" href="/backend#attendance">${items.length - 5} more today${a2chev()}</a>` : '';
+    return a2sec('Today') + `<div class="a2card">${rows}${more}</div>`;
+  }
+  /* ── the home ── */
+  function view2Home() {
+    const now = new Date(), q = curQ(); a2loadToday();
+    const my = myPlayers(); const ct = contactTally(my); const nMiss = my.filter((p) => dueNow(p).overall === 'missing').length, nWork = my.filter((p) => dueNow(p).overall === 'working').length;
+    const needs = [];
+    if (EDITION === 'web' && msgUnread()) needs.push(a2row(a2n(msgUnread(), 'red'), msgUnread() === 1 ? 'Chat with a new reply' : 'Chats with new replies', 'Not read yet', a2chev(), goAttr({ view: 'messages' })));
+    if (S.loaded.contacts && ct.left) needs.push(a2row(a2n(ct.left, 'red'), 'Families to reach this week', 'Ends Sunday', a2chev(), goAttr({ view: 'contact' })));
+    if (S.loaded.assess && (nMiss + nWork)) needs.push(a2row(a2n(nMiss + nWork), `3-month ${nMiss + nWork === 1 ? 'report' : 'reports'} to write`, `${esc(q)}${nWork ? ' · ' + nWork + ' started' : ''}`, a2chev(), `data-act="a2reports"`));
+    const fu = followUps(); const nOpen = new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size;
+    if (nOpen) needs.push(a2row(a2n(nOpen), nOpen === 1 ? 'Report to follow up' : 'Reports to follow up', 'Sent to the parents, parent meeting', a2chev(), goAttr({ view: 'followup' })));
+    const needsCard = needs.length ? `<div class="a2card">${needs.join('')}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2ico mint">${a2i('check')}</span><span class="a2t"><b>Nothing waiting for you</b><small>${S.loaded.contacts ? 'Every family heard from you this week' : 'Loading…'}</small></span></div></div>`;
+    const act = S.players.filter(active);
+    const gs = groups().map((g) => { const list = (WEB.isDirector ? act : my).filter((p) => p.group === g.id); if (!list.length) return ''; const w = contactTally(list); const done = list.filter((p) => dueNow(p).overall === 'done').length;
+      return a2row(`<span class="a2ico" style="background:${GCOLOR[g.color] || 'var(--lime)'}33">${a2i('users')}</span>`, esc(g.label), `${list.length} ${list.length === 1 ? 'player' : 'players'} · ${done} ${done === 1 ? 'report' : 'reports'} done`, a2ring(w.done, w.total, 38) + a2chev(), goAttr({ view: 'group', gid: g.id })); }).join('');
+    const empty = S.loaded.players && !gs ? `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>No players on your name yet</b><small>A director puts your name on a player’s record.</small></span></div></div>` : '';
+    return `${notice()}${a2title('Players.', esc(a2day(now)))}${a2sec('Needs you')}${needsCard}${a2today()}${a2sec('Your groups', 'in touch this week')}${gs ? `<div class="a2card">${gs}</div>` : empty}`;
+  }
+  /* ── a group ── */
+  function view2Group(gid) {
+    const g = group(gid); const q = curQ(); const f = S.ui.a2filter && S.ui.a2filterGroup === gid ? S.ui.a2filter : 'all';
+    const all = S.players.filter((p) => p.group === gid && active(p) && mine(p)).sort((a, b) => a.name.localeCompare(b.name)); const wk = curWeek();
+    const nRep = all.filter((p) => dueNow(p).overall !== 'done').length, nReach = all.filter((p) => !inTouch(p.id, wk)).length;
+    const list = f === 'report' ? all.filter((p) => dueNow(p).overall !== 'done') : f === 'reach' ? all.filter((p) => !inTouch(p.id, wk)) : all;
+    const seg = `<div class="a2seg" role="group" aria-label="Show">${[['all', 'All ' + all.length, 0], ['report', 'Report', nRep], ['reach', 'To reach', nReach]].map(([k, t, n]) => `<button type="button" class="${f === k ? 'on' : ''}" data-act="a2filter" data-gid="${esc(gid)}" data-v="${k}">${t}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>`;
+    const rows = list.map((p) => a2row(a2ava(p.name, inTouch(p.id, wk)), esc(p.name), `${p.tier ? 'Tier ' + esc(p.tier) + ' · ' : ''}${p.coach ? 'Coach ' + esc(p.coach) : 'No coach'}`, a2status(p), goAttr({ view: 'player', pid: p.id }))).join('');
+    return `${notice()}${a2nav('Players', { view: 'home' }, '')}${a2title(g.label + '.', `${all.length} ${all.length === 1 ? 'player' : 'players'} · ${esc(q)} 3-month report`)}${seg}${rows ? `<div class="a2card">${rows}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? (all.length ? 'Nobody here' : 'No players of yours in this group') : 'Loading…'}</b></span></div></div>`}`;
+  }
+  /* ── the player ── */
+  function view2Player(pid, tab) {
+    const p = player(pid); if (!p) return `${notice()}${a2nav('Players', { view: 'home' })}<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? 'This player is not on the roster.' : 'Loading…'}</b></span></div></div>`;
+    if (!mine(p)) return `${a2nav(group(p.group).label, { view: 'group', gid: p.group })}${a2title(p.name, esc(p.coach ? 'With Coach ' + p.coach : 'No coach yet') + ' · a director can put your name on the record')}`;
+    const g = group(p.group); const wk = curWeek(); const c = contactOf(p.id, wk); const on = !!(c && c.done); const w = writable();
+    const fam = a2family(p); const tel = fam.length ? `href="tel:${esc(fam[0].phone)}"` : '';
+    const d = dueNow(p); const rep = reportFor(p.id, curQ());
+    const qa = `<div class="a2qa"><button type="button" class="on" ${goAttr({ view: 'messages', pid: p.id })}><span>${a2i('msg')}</span>Text</button>${tel ? `<a ${tel}><span>${a2i('phone')}</span>Call</a>` : `<button type="button" disabled><span>${a2i('phone')}</span>Call</button>`}${w ? `<button type="button" data-act="start" data-type="${esc(DUE_TYPE)}"><span>${a2i('file')}</span>Report</button>` : ''}</div>`;
+    const week = a2row(`<span class="a2ico ${on ? 'mint' : 'red'}">${a2i(on ? 'check' : 'users')}</span>`, on ? 'In touch this week' : 'Not in touch yet this week', on ? esc(tickWord(c)) + (c.at ? ' · ' + esc(new Date(c.at).toLocaleDateString('en-US', { weekday: 'long' })) : '') : 'A text from here ticks it', w ? `<button type="button" class="a2tick${on ? ' on' : ''}" data-act="contact" data-v="${on ? 'off' : 'on'}" aria-label="${on ? 'Undo' : 'I was in touch this week'}">${a2i('check')}</button>` : '');
+    const report = a2row(`<span class="a2ico ${d.overall === 'done' ? 'mint' : d.overall === 'working' ? 'lime' : 'orch'}">${a2i('file')}</span>`, STATUS_WORD[d.overall], d.overall === 'done' ? `${esc(curQ())} · final` : rep ? `${esc(curQ())} · started${rep.updatedAt ? ' · ' + esc(fmtDate(rep.updatedAt)) : ''}` : `${esc(curQ())} · not started`, a2chev(), w ? `data-act="start" data-type="${esc(DUE_TYPE)}"` : '');
+    const famRows = fam.map((m) => a2row(a2ava(m.name || m.word), esc(m.word) + (m.name ? ' · ' + esc(m.name.split(/\s+/)[0]) : ''), `(${esc(String(m.phone).replace(/\D/g, '').slice(-10, -7))}) ••• ${esc(m.tail)}`, a2chev(), goAttr({ view: 'messages', pid: p.id, conv: m.tail }))).join('')
+      + (w ? a2row(`<span class="a2ico">${a2i('plus')}</span>`, fam.length ? 'Add a number' : 'Add the family’s number', fam.length ? 'The player, a guardian' : 'So the portal can text them', a2chev(), `data-act="a2numbers"`) : '');
+    const numbers = S.ui.a2numbers === p.id ? `<div class="a2old">${checkCard(p)}</div>` : '';
+    const onFile = playerAssess(p.id); const files = onFile.length ? a2sec('On file', `${onFile.filter((a) => a.status === 'final').length} final`) + `<div class="a2card a2old">${onFile.map((a) => rowAssess(a, false, true)).join('')}</div>` : '';
+    return `${notice()}${a2nav(g.id ? g.label : 'Players', g.id ? { view: 'group', gid: g.id } : { view: 'home' }, w ? `<button type="button" class="a2cb" data-act="toggle-edit" aria-label="Edit player">···</button>` : '')}
+      <div class="a2head"><span class="a2ava big">${esc(initials(p.name))}</span><div><div class="a2lt s">${esc(p.name)}</div><div class="a2ls">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</div></div></div>
+      <div id="editp" ${S.ui.editing ? '' : 'hidden'}>${S.ui.editing ? editPlayerPanel(p) : ''}</div>
+      ${qa}${a2sec('This week')}<div class="a2card">${week}</div>${a2sec('3-month report', esc(curQ()))}<div class="a2card">${report}</div>
+      ${a2sec('Family')}<div class="a2card">${famRows}</div>${numbers}${files}`;
+  }
+  /* ── Contact: the week ── */
+  function view2Contact() {
+    const wk = curWeek(); const w = writable(); const all = (WEB.isDirector ? S.players.filter(active) : myPlayers()).sort((a, b) => a.name.localeCompare(b.name));
+    const t = contactTally(all); const tab = S.ui.a2ctab || 'reach';
+    const list = tab === 'done' ? all.filter((p) => inTouch(p.id, wk)) : all.filter((p) => !inTouch(p.id, wk));
+    const big = `<div class="a2card a2big">${a2ring(t.done, t.total, 72, 8)}<div><b>${t.done} of ${t.total} in touch</b><small>${t.left ? t.left + ' to reach · ends Sunday' : 'Everyone reached · ' + esc(weekLabel(wk))}</small></div></div>`;
+    const seg = `<div class="a2seg" role="group" aria-label="Show">${[['reach', 'To reach', t.left], ['done', 'Done ' + t.done, 0]].map(([k, l, n]) => `<button type="button" class="${tab === k ? 'on' : ''}" data-act="a2ctab" data-v="${k}">${l}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>`;
+    const rows = list.map((p) => { const on = inTouch(p.id, wk); const can = w && mine(p);
+      return a2row(a2ava(p.name, on), esc(p.name), `${esc(group(p.group).label)} · ${esc(on ? tickWord(contactOf(p.id, wk)) : a2lastTouch(p.id))}${WEB.isDirector && p.coach ? ' · ' + esc(p.coach) : ''}`,
+        (can && EDITION === 'web' ? `<button type="button" class="a2ckr" ${goAttr({ view: 'messages', pid: p.id })} aria-label="Text ${esc(p.name)}’s family">${a2i('msg')}</button>` : '') + (can ? `<button type="button" class="a2tick${on ? ' on' : ''}" data-act="contact-row" data-pid="${esc(p.id)}" data-v="${on ? 'off' : 'on'}" aria-label="${on ? 'Undo' : 'In touch'}">${a2i('check')}</button>` : ''), '', 'a2c'); }).join('');
+    return `${notice()}${a2title('Contact.', 'Week of ' + esc(weekLabel(wk)))}${big}${seg}${rows ? `<div class="a2card">${rows}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${!S.loaded.players ? 'Loading…' : tab === 'done' ? 'Nobody yet this week' : all.length ? 'Everyone has heard from you this week' : 'No players on your name yet'}</b></span></div></div>`}`;
+  }
+  /* ── Messages: every family, the ones who wrote back first; the chat opens full screen on the phone, beside the list on a computer ── */
+  function view2Messages() {
+    const ib = S.msg.inbox; if (EDITION === 'web' && (!ib || Date.now() - S.msg.at > 10000)) loadInbox(true);
+    const chats = ib ? ib.rows.slice().sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name)) : [];
+    const quiet = ib ? (ib.quiet || []).slice().sort((a, b) => a.name.localeCompare(b.name)) : [];
+    const wide = window.innerWidth > 900;
+    if (!S.route.pid && wide && chats[0]) { S.route = { view: 'messages', pid: chats[0].id, conv: chats[0].conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
+    const openPid = S.route.pid && player(S.route.pid) && mine(player(S.route.pid)) ? S.route.pid : '';
+    const openKey = openPid ? curConv(openPid, S.route.conv) : '';
+    const q = fold(S.ui.msgFind || ''); const hit = (r) => !q || fold(r.name).includes(q) || fold(group(r.group).label).includes(q) || fold(r.coach || '').includes(q) || fold(r.title || '').includes(q);
+    const row = (r) => { const on = openPid === r.id && (openKey === r.conv || r.conv === ''); const chip = convChip({ members: r.members || [] });
+      return `<button type="button" class="a2row a2m${r.unread ? ' new' : ''}${on ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id, conv: r.conv || undefined })} data-find="${esc(fold(r.name + ' ' + group(r.group).label + ' ' + (r.coach || '') + ' ' + (r.title || '')))}">${a2ava(r.name)}<span class="a2t"><b><span class="pname">${esc(r.name)}</span><span class="cw">· ${esc(r.conv ? chip.t || r.title : 'Family')}</span></b><small class="${r.unread ? 'new' : ''}">${r.last ? (r.last.dir === 'in' ? '' : (r.last.by ? esc(r.last.by.split(/\s+/)[0]) : 'You') + ': ') + esc(r.last.body) : 'No texts yet'}</small></span><span class="a2r col">${r.last ? `<time>${esc(msgAgo(r.last.at))}</time>` : ''}${r.unread ? '<i class="a2dot"></i>' : '<i class="a2dot off"></i>'}</span></button>`; };
+    const qrow = (r) => `<button type="button" class="a2row a2m quiet${openPid === r.id ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id })} data-find="${esc(fold(r.name + ' ' + group(r.group).label + ' ' + (r.coach || '')))}">${a2ava(r.name)}<span class="a2t"><b><span class="pname">${esc(r.name)}</span></b><small>${esc(group(r.group).label)}${WEB.isDirector && r.coach ? ' · Coach ' + esc(r.coach) : ''} · no texts yet</small></span><span class="a2r">${a2chev()}</span></button>`;
+    const shownChats = chats.filter(hit), shownQuiet = quiet.filter(hit);
+    const list = `<div class="a2list" id="mlist"><div class="a2find">${a2i('search')}<input type="search" id="mfind" placeholder="Find a family" value="${esc(S.ui.msgFind || '')}" autocomplete="off" aria-label="Find a family"></div>
+      ${shownChats.length ? `<div class="a2card">${shownChats.map(row).join('')}</div>` : ''}${shownQuiet.length ? a2sec('No texts yet', shownQuiet.length) + `<div class="a2card">${shownQuiet.map(qrow).join('')}</div>` : ''}
+      ${shownChats.length || shownQuiet.length ? '' : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${!ib ? 'Loading…' : q ? 'No family matches that' : 'No players of yours are active'}</b></span></div></div>`}</div>`;
+    let pane = '';
+    if (openPid) {
+      const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
+      if (!t && !S.msg.busy[openPid]) loadThread(openPid, false, openKey && CONV_OK.test(openKey) ? openKey : '');
+      const body = !t ? '<p class="a2hint">Loading the chat…</p>' : t.error && !(t.lines && t.lines.length) ? `<p class="a2hint">${esc(t.error)}</p>` : chatPane(p, t, openKey, true);
+      const tel = (t && (t.numbers || [])[0] && t.numbers[0].phone) ? `<a class="a2cb" href="tel:${esc(t.numbers[0].phone)}" aria-label="Call">${a2i('phone')}</a>` : '';
+      pane = `<section class="a2chat" id="mpane" aria-label="The open chat"><div class="a2nav"><button type="button" class="a2bk" ${goAttr({ view: 'messages' })} aria-label="Back to the chats">${a2i('back')}Chats</button><button type="button" class="a2who" ${goAttr({ view: 'player', pid: p.id })}><b>${esc(p.name)}</b><small>${esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</small></button><span class="a2nr">${tel}</span></div>${body}${t && t.signature ? `<div class="a2sig">Every text ends with “${esc(t.signature)}”</div>` : ''}</section>`;
+    }
+    return `${notice()}${openPid && !wide ? pane : `${a2title('Messages.')}${ib && ib.error ? `<p class="a2hint">Could not refresh: ${esc(ib.error)}</p>` : ''}<div class="a2mbox${openPid ? ' open' : ''}">${list}${pane}</div>`}`;
+  }
+  function render2(r) {
+    const v = r.view;
+    const chatOpen = v === 'messages' && !!r.pid && window.innerWidth <= 900 && player(r.pid) && mine(player(r.pid));
+    document.body.classList.toggle('a2-chat', !!chatOpen);
+    const a2 = v === 'home' || v === 'group' || v === 'player' || v === 'contact' || v === 'messages';
+    document.body.classList.toggle('a2-screen', a2);
+    if (!a2) return null;
+    return `<div class="a2">${v === 'group' ? view2Group(r.gid) : v === 'player' ? view2Player(r.pid, r.tab) : v === 'contact' ? view2Contact() : v === 'messages' ? view2Messages() : view2Home()}</div>`;
+  }
+
   function render() {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
     // a redraw must not eat what the coach is typing to a family (Nov 4): every chat's draft and the caret come back after it
     const fi0 = $('#mfind'); const findFocus = fi0 && document.activeElement === fi0 ? { s: fi0.selectionStart, e: fi0.selectionEnd } : null;
     let focused = null; document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (ta.value) S.ui.msgDraft[k] = ta.value; else delete S.ui.msgDraft[k]; if (document.activeElement === ta) focused = { k, s: ta.selectionStart, e: ta.selectionEnd }; });
-    m.innerHTML = `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : viewHome()}</div>`;
+    const a2html = APP2 ? render2(r) : null;
+    m.innerHTML = a2html ? `<div class="wrap">${a2html}</div>` : `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
     if (r.view === 'board') bindBoardDrag(m);
     document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (!ta.value && S.ui.msgDraft[k]) ta.value = S.ui.msgDraft[k]; if (focused && focused.k === k) { try { ta.setSelectionRange(focused.s, focused.e); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } });
@@ -3700,6 +3870,7 @@ const PW_CONFIG = {
   }
 
   document.addEventListener('click', async (ev) => {
+    const hrefEl = ev.target.closest('[data-href]'); if (hrefEl) { ev.preventDefault(); location.href = hrefEl.getAttribute('data-href'); return; }
     const goEl = ev.target.closest('[data-go]'); if (goEl) { ev.preventDefault(); let r; try { r = JSON.parse(goEl.getAttribute('data-go')); } catch (e) { return; } S.ui.adding = false; S.ui.editing = false; S.ui.parentOpen = null; S.ui.parentData = null; if (r.view !== 'edit') { S.ui.back = null; saveUi(); } closeResults(); go(r); return; }
     const b = ev.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT' || b.disabled) return; const act = b.getAttribute('data-act');
     if (act === 'toggle-add') { S.ui.adding = !S.ui.adding; render(); const i = $('#ap_name'); if (i) i.focus(); }
@@ -3741,6 +3912,10 @@ const PW_CONFIG = {
       if (b.getAttribute('data-in') === '1') go({ view: 'messages', pid, conv: key }); else render(); }
     else if (act === 'msg-pick-x') { S.ui.msgPick = null; S.ui.msgPickSel = {}; render(); }
     else if (act === 'msg-refresh' && S.route.pid) { b.disabled = true; await loadThread(S.route.pid, false, S.route.view === 'messages' ? curConv(S.route.pid, S.route.conv) : curConv(S.route.pid)); }
+    else if (act === 'a2filter') { S.ui.a2filter = b.getAttribute('data-v'); S.ui.a2filterGroup = b.getAttribute('data-gid'); render(); }
+    else if (act === 'a2ctab') { S.ui.a2ctab = b.getAttribute('data-v'); render(); }
+    else if (act === 'a2numbers') { S.ui.a2numbers = S.ui.a2numbers === S.route.pid ? null : S.route.pid; render(); }
+    else if (act === 'a2reports') { const g = groups().find((x) => myPlayers().some((p) => p.group === x.id && dueNow(p).overall !== 'done')); if (!g) return; S.ui.a2filter = 'report'; S.ui.a2filterGroup = g.id; go({ view: 'group', gid: g.id }); }
     else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week
     else if (act === 'contact' || act === 'contact-row') { const p = player(act === 'contact' ? S.route.pid : b.getAttribute('data-pid')); if (!p || !mine(p)) return; const on = b.getAttribute('data-v') === 'on'; b.disabled = true; await setContact(p, on); if (on) toast(`${p.name}: in touch this week. Thank you.`); }
@@ -3817,7 +3992,8 @@ const PW_CONFIG = {
   // the find box on the Messages list: the rows filter as you type (the value survives a redraw through S.ui.msgFind)
   document.addEventListener('input', (ev) => {
     const f = ev.target; if (!f || f.id !== 'mfind') return; S.ui.msgFind = f.value; const q = fold(f.value);
-    let any = false; document.querySelectorAll('#mlist .msgrow').forEach((r) => { const on = !q || (r.getAttribute('data-find') || '').includes(q); r.hidden = !on; any = any || on; });
+    let any = false; document.querySelectorAll('#mlist .msgrow, #mlist .a2m').forEach((r) => { const on = !q || (r.getAttribute('data-find') || '').includes(q); r.hidden = !on; any = any || on; });
+    document.querySelectorAll('#mlist .a2card').forEach((c) => { const alive = Array.from(c.querySelectorAll('.a2m')).some((r) => !r.hidden); c.hidden = !alive; const sec = c.previousElementSibling; if (sec && sec.classList.contains('a2sec')) sec.hidden = !alive; });
     const e = $('#mlist .empty'); if (e) e.hidden = any; else if (!any) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'No family matches that.'; $('#mlist').appendChild(d); }
   });
   document.addEventListener('submit', async (ev) => {
