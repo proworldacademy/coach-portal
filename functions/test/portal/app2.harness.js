@@ -46,7 +46,7 @@ if (require.main === module) (async () => {
     await m.locator('.a2row', { hasText: 'Bo Kessler' }).first().click(); await m.waitForTimeout(400);
     log(/Bo Kessler/i.test(await text(m, '.a2lt.s')), 'player: the name');
     log(await count(m, '.a2qa > *') === 3 && /Text/.test(await text(m, '.a2qa')) && /Call/.test(await text(m, '.a2qa')) && /Report/.test(await text(m, '.a2qa')), 'player: Text · Call · Report');
-    log(await m.locator('.a2qa a[href^="tel:"]').count() === 1, 'player: Call dials the first number');
+    log(await m.locator('.a2qa a[href^="https://app.justcall.io/dialer?numbers=%2B1"]').count() === 1 && await count(m, 'a[href^="tel:"]') === 0, 'player: Call opens the JustCall dialer with the number, never tel:');
     log(/Not in touch yet this week/.test(await text(m, 'main')) && /Mother · Pat/.test(await text(m, 'main')) && /Father · Lou/.test(await text(m, 'main')), 'player: the week and the family');
     log(!(await overflow(m)).length, 'player: nothing wider than the phone ' + JSON.stringify(await overflow(m)));
     await shot(m, 'app2-phone-player');
