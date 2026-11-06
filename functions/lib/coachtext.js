@@ -25,6 +25,12 @@
    switched off, is not texted; the page says so and the coach calls instead.
    The signature is deliberately NOT the automated footer ("Reply here with any question" / "Sent automatically"): the AI that
    answers the academy's line treats a text without it as a person taking over, and stays out of that family's thread. */
+/* Every coach on their own number (Antonio, Nov 6: "every coach is getting their own JustCall number… I don't want coaches
+   having access to all the chats, just what's happening on their JustCall, on their number"). A coach with a JustCall number
+   (staff/<email>.justcallNumber, else the number of their JustCall seat under the same e-mail) texts from it, and their chats
+   show only the lines on it: what they sent from the portal or from the JustCall app (the contact sync keeps those as lines),
+   and what the family wrote back to that number. A coach with no number yet sees only what they sent and the answers to it.
+   Directors and owners see every line, as before. Every line carries `line` = the JustCall number it went through. */
 'use strict';
 const S = require('./stripe');
 const NOTIFY = require('./notify');
@@ -53,6 +59,25 @@ const own = (who, p) => !!who.director || [p.coach, p.coach2].some((c) => c && w
 const pidOf = (v) => { const pid = clean(v, 60); if (!/^[a-z0-9-]{1,60}$/i.test(pid)) throw S.err(400, 'player', 'A player id is required.'); return pid; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pace = (ms) => sleep(ms);
+
+/* The coach's own JustCall number: on the staff record, else their JustCall seat's (looked up once in ten minutes). */
+const SEATS = { at: 0, byEmail: new Map() };
+async function ownLine(db, who) {
+  if (!who) return '';
+  const set = e164(who.justcallNumber || ''); if (set) return set;
+  if (Date.now() - SEATS.at > 600000) {
+    try { const r = await CONTACTS.justcallUsers(db); if (r && r.ok) { SEATS.byEmail = new Map(r.users.map((u) => [u.email, (u.own || [])[0] || ''])); SEATS.at = Date.now(); } } catch (e) { /* no seat known: the academy line */ }
+  }
+  return SEATS.byEmail.get(String(who.email || '').toLowerCase()) || '';
+}
+/* What one coach may see of a family's record: a director everything; a coach the lines on their own number — or, before they
+   have one, the texts they sent and the family's answers to those numbers after them. */
+function scopeLines(who, mine, outs, ins) {
+  if (who.director) return { outs, ins };
+  if (mine) return { outs: outs.filter((l) => l.line === mine), ins: ins.filter((l) => l.line === mine) };
+  const o = outs.filter((l) => l.by === who.email); const first = new Map(); o.forEach((l) => { if (!first.has(l.phone) || l.at < first.get(l.phone)) first.set(l.phone, l.at); });
+  return { outs: o, ins: ins.filter((l) => first.has(l.phone) && (l.at || 0) > first.get(l.phone) && !l.line) };
+}
 
 /* The chat key: the last four digits of every number in it, sorted, joined with '+'. One number → its own chat. */
 const convKey = (phones) => Array.from(new Set((phones || []).map(tail).filter(Boolean))).sort().join('+');
@@ -147,7 +172,8 @@ async function text(db, who, body) {
   const tos = recipientsOf(body, numbers); const key = convKey(tos.map((t) => t.phone));
   const ln = await SMS.line(db);
   if (!ln.connected) throw S.err(409, 'keys', 'JustCall is not connected yet — an owner pastes the API key under Players & billing → Notifications.');
-  if (!ln.from) throw S.err(409, 'from', 'The academy\'s JustCall number is not set (Players & billing → Notifications).');
+  const mineLine = await ownLine(db, who); const fromNum = mineLine || ln.from;
+  if (!fromNum) throw S.err(409, 'from', 'The academy\'s JustCall number is not set (Players & billing → Notifications).');
   const s = await NOTIFY.settings(db, true);
   const full = (msg + '\n' + signature(who)).slice(0, 1600);
   const at = Date.now(); const batchRef = db.collection('smsBatches').doc();
@@ -157,8 +183,8 @@ async function text(db, who, body) {
     const to = tos[i]; const lineRef = db.collection('smsLog').doc();
     if (i) await pace(PACE_MS);
     let r = null, err = '';
-    try { r = await SMS.justcallSend({ key: s.justcallKey, secret: s.justcallSecret }, ln.from, to.phone, full); } catch (e) { err = String(e.message || e).slice(0, 200); }
-    const line = { batch: batchRef.id, at: at + i, by: who.email, byName: who.name || who.email, player: p.id, playerName: p.name || p.id, group: p.group || '', program: '', coach: p.coach || '', phone: to.phone, to: to.slot || '', toName: to.name || '', conv: key, body: full, status: r ? 'sent' : 'failed', reason: '', attempts: 1, justcallId: r ? r.id : '', delivery: '', error: r ? '' : err, from: 'portal' };
+    try { r = await SMS.justcallSend({ key: s.justcallKey, secret: s.justcallSecret }, fromNum, to.phone, full); } catch (e) { err = String(e.message || e).slice(0, 200); }
+    const line = { batch: batchRef.id, at: at + i, by: who.email, byName: who.name || who.email, player: p.id, playerName: p.name || p.id, group: p.group || '', program: '', coach: p.coach || '', phone: to.phone, to: to.slot || '', toName: to.name || '', conv: key, body: full, status: r ? 'sent' : 'failed', reason: '', attempts: 1, justcallId: r ? r.id : '', delivery: '', error: r ? '' : err, from: 'portal', line: fromNum };
     if (r) { line.sentAt = Date.now(); sent++; } else { line.failedAt = Date.now(); failed++; lastErr = err; if (optedOutError(err)) { try { await SMS.setOptIn(db, p.id, false, { source: 'justcall', by: 'justcall', phone: to.phone }); } catch (e) { /* the line says failed */ } } }
     lines.push(Object.assign({ id: lineRef.id }, line)); await lineRef.set(line);
   }
@@ -216,17 +242,18 @@ async function thread(db, who, pid, opts) {
   const p = await playerOf(db, who, pid);
   const { numbers, optOut, optOutWhy, consent } = await numbersOf(db, pid);
   const outs = (await db.collection('smsLog').where('player', '==', pid).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => l.status !== 'skipped' && !l.kind);
-  const ins = (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => Array.isArray(l.players) && l.players.includes(pid));
-  const all = fileLines(outs, ins);
+  const ins0 = (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => Array.isArray(l.players) && l.players.includes(pid));
+  const mineLine = await ownLine(db, who); const sc = scopeLines(who, mineLine, outs, ins0);
+  const all = fileLines(sc.outs, sc.ins);
   const key = clean(opts.conv, 40);
   if (key && keyOk(key) && opts.markRead !== false) { try { await db.doc('coachInbox/' + who.email).set({ email: who.email, read: { [pid + '|' + key]: Date.now() } }, { merge: true }); } catch (e) { /* a mark only */ } }
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
   const chats = chatsOf(numbers, all, read, pid);
-  await fileConvs(db, p, chats);
+  if (who.director) await fileConvs(db, p, chats);   // the shared inbox rows hold every line; a coach's own view is computed, never written
   const convs = chats.map((c) => Object.assign({}, c, { members: c.members.map(publicMember) }));
   const lines = all.slice(-400).map(publicLine);
   const ln = await SMS.line(db);
-  return { player: { id: p.id, name: p.name || p.id, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', status: p.status || 'active' }, numbers: numbers.map((n) => ({ slot: n.slot, word: n.slot ? SLOT_WORD[n.slot] : 'On file', name: n.name, phone: n.phone, tail: tail(n.phone) })), convs, optOut, optOutWhy, consent, line: { connected: ln.connected, from: ln.from ? tail(ln.from) : '' }, signature: signature(who), lines };
+  return { player: { id: p.id, name: p.name || p.id, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', status: p.status || 'active' }, numbers: numbers.map((n) => ({ slot: n.slot, word: n.slot ? SLOT_WORD[n.slot] : 'On file', name: n.name, phone: n.phone, tail: tail(n.phone) })), convs, optOut, optOutWhy, consent, line: { connected: ln.connected, from: (mineLine || ln.from) ? tail(mineLine || ln.from) : '', own: !!mineLine }, signature: signature(who), lines };
 }
 
 /* The chats as the inbox lists them, written onto coachThreads/<pid>.convs (only the chats with a line in them). A thread
@@ -260,8 +287,9 @@ async function markRead(db, who, body) {
 async function inbox(db, who) {
   const players = (await db.collection('players').where('status', '==', 'active').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((p) => p.name && own(who, p));
   const ids = new Set(players.map((p) => p.id));
-  const threads = new Map(); (await db.collection('coachThreads').get()).docs.forEach((d) => { const t = d.data() || {}; if (ids.has(t.playerId)) threads.set(t.playerId, t); });
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
+  if (!who.director) return coachInbox(db, who, players, read);
+  const threads = new Map(); (await db.collection('coachThreads').get()).docs.forEach((d) => { const t = d.data() || {}; if (ids.has(t.playerId)) threads.set(t.playerId, t); });
   const legacy = players.filter((p) => { const t = threads.get(p.id); return t && t.last && !(t.convs && typeof t.convs === 'object' && Object.keys(t.convs).length); }).slice(0, 25);
   if (legacy.length) {
     const ins = (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {}));
@@ -280,6 +308,26 @@ async function inbox(db, who) {
   rows.sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name) || a.conv.localeCompare(b.conv));
   quiet.sort((a, b) => a.name.localeCompare(b.name));
   return { unread: rows.filter((r) => r.unread).length, unreadFamilies: new Set(rows.filter((r) => r.unread).map((r) => r.id)).size, rows, quiet, families: players.length, at: Date.now() };
+}
+
+/* A coach's inbox, from their own lines only (their number, or what they sent): one row per chat with a line, then every other
+   family of theirs, quiet. Two reads: the lines on their number (or by them), the family replies. */
+async function coachInbox(db, who, players, read) {
+  const mineLine = await ownLine(db, who); const ids = new Set(players.map((p) => p.id));
+  const outsAll = mineLine ? (await db.collection('smsLog').where('line', '==', mineLine).get()).docs : (await db.collection('smsLog').where('by', '==', who.email).get()).docs;
+  const outs = outsAll.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => !l.kind && l.status !== 'skipped' && ids.has(l.player));
+  const ins0 = (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {}));
+  const rows = [], quiet = [];
+  for (const p of players) {
+    const base = { id: p.id, name: p.name, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '' };
+    const sc = scopeLines(who, mineLine, outs.filter((l) => l.player === p.id), ins0.filter((l) => Array.isArray(l.players) && l.players.includes(p.id)));
+    if (!sc.outs.length && !sc.ins.length) { quiet.push(Object.assign({}, base, { conv: '', title: '', members: [], last: null, unread: false, lastReplyAt: 0, quiet: true })); continue; }
+    const { numbers } = await numbersOf(db, p.id);
+    chatsOf(numbers, fileLines(sc.outs, sc.ins), read, p.id).filter((c) => c.count).forEach((c) => rows.push(Object.assign({}, base, { conv: c.key, title: c.title, members: c.members.map(publicMember), last: c.last ? { at: c.last.at, dir: c.last.dir, body: c.last.body, by: c.last.by } : null, unread: c.unread, lastReplyAt: c.lastReplyAt })));
+  }
+  rows.sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name) || a.conv.localeCompare(b.conv));
+  quiet.sort((a, b) => a.name.localeCompare(b.name));
+  return { unread: rows.filter((r) => r.unread).length, unreadFamilies: new Set(rows.filter((r) => r.unread).map((r) => r.id)).size, rows, quiet, families: players.length, at: Date.now(), line: mineLine ? tail(mineLine) : '' };
 }
 
 /* Which chat a reply belongs to: the chat of the last text this number got from this family's record — a group text puts the
@@ -302,13 +350,16 @@ async function onReply(db, ev) {
   const at = ev.at || Date.now(); const body = clean(ev.text, 600); const phone = e164(ev.phone || ''); const out = { threads: 0, dms: 0, coaches: [] };
   if (!ids.length) return out;
   const staff = await CONTACTS.staffIndex(db); const told = new Set();
+  /* a reply to a coach's own number is that coach's: only they hear about it (Nov 6) */
+  const toLine = e164(ev.line || ''); let lineOwner = '';
+  if (toLine) { for (const st of staff.list) { if (e164(st.justcallNumber || '') === toLine || (await ownLine(db, { email: st.email, justcallNumber: st.justcallNumber })) === toLine) { lineOwner = st.email; break; } } }
   for (const pid of ids) {
     const snap = await db.doc('players/' + pid).get(); if (!snap.exists) continue;
     const p = Object.assign({ id: pid }, snap.data() || {});
     const conv = phone ? await convOfReply(db, pid, phone) : { key: '', members: [] };
     await touchThread(db, p, { at, dir: 'in', body, by: 'family' }, conv); out.threads++;
     for (const c of [p.coach, p.coach2]) {
-      const s = c && CONTACTS.staffFor(staff, c); if (!s || told.has(s.email)) continue; told.add(s.email); out.coaches.push(s.short || s.name);
+      const s = c && CONTACTS.staffFor(staff, c); if (!s || told.has(s.email)) continue; if (lineOwner && s.email !== lineOwner) continue; told.add(s.email); out.coaches.push(s.short || s.name);
       const w = String(p.name || pid).trim().split(/\s+/); const short = w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0];
       const whoWrote = conv.members.length > 1 ? (conv.members.find((m) => m.phone === phone) || {}) : {};
       const line = `${short}'s family wrote back${whoWrote.slot ? ' (' + SLOT_WORD[whoWrote.slot].toLowerCase().replace('the ', '') + ')' : ''}: "${body.slice(0, 160)}${body.length > 160 ? '…' : ''}" Answer from the portal: ${SITE}/portal#/messages/${encodeURIComponent(pid)}${conv.key ? '/' + conv.key : ''}`;
@@ -318,4 +369,4 @@ async function onReply(db, ev) {
   return out;
 }
 
-module.exports = { text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, MAX_BODY, _usePace: (fn) => { pace = fn || sleep; } };
+module.exports = { text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };

@@ -70,7 +70,7 @@ async function phoneBook(db) {
 /* ---- the staff list: a JustCall agent's e-mail → the coach ---- */
 async function staffIndex(db) {
   const snap = await db.collection('staff').where('active', '==', true).get(); const byEmail = new Map(); const list = [];
-  for (const d of snap.docs) { const r = d.data() || {}; const rec = { email: String(d.id).toLowerCase(), name: r.name || d.id, short: r.coachAs || first(r.name) || first(d.id), role: r.role || 'coach', slackId: r.slackId || '', phone: r.phone || '', keys: [r.coachAs, first(r.name)].map(fold).filter(Boolean) }; byEmail.set(rec.email, rec); list.push(rec); }
+  for (const d of snap.docs) { const r = d.data() || {}; const rec = { email: String(d.id).toLowerCase(), name: r.name || d.id, short: r.coachAs || first(r.name) || first(d.id), role: r.role || 'coach', slackId: r.slackId || '', phone: r.phone || '', justcallNumber: r.justcallNumber || '', keys: [r.coachAs, first(r.name)].map(fold).filter(Boolean) }; byEmail.set(rec.email, rec); list.push(rec); }
   return { byEmail, list };
 }
 const staffFor = (idx, coachName) => { const want = fold(first(coachName)); return want ? idx.list.find((s) => s.keys.includes(want)) || null : null; };
@@ -96,7 +96,8 @@ function textCounts(row) {   // a one-to-one text the coach sent, to a number, b
   if (!row || row.is_deleted === true) return null;
   if (!/out/i.test(String(row.direction || ''))) return null;
   if (BULK.test(String(row.medium || ''))) return null;
-  return { how: 'text', phone: e164(row.contact_number), email: String(row.agent_email || '').toLowerCase(), agent: row.agent_name || '', when: whenOf(row, 'sms') };
+  return { how: 'text', phone: e164(row.contact_number), email: String(row.agent_email || '').toLowerCase(), agent: row.agent_name || '', when: whenOf(row, 'sms'),
+    id: String(row.id || ''), body: String((row.sms_info && row.sms_info.body) || row.body || '').slice(0, 1600), line: e164(row.justcall_number || '') };
 }
 function callCounts(row) {   // an answered call either way
   if (!row) return null; const info = row.call_info || {}; const type = String(info.type || '').toUpperCase();
@@ -114,6 +115,7 @@ async function sync(db, opts) {
   const [texts, calls] = await Promise.all([pull(keys, 'texts', from, to, log), pull(keys, 'calls', from, to, log)]);
   const { players, book, onFile } = await phoneBook(db); const staff = await staffIndex(db);
   const agg = new Map();   // `${pid}_${week}` → { pid, week, texts, calls, last, by: Set, byEmail, how }
+  const mirror = [];
   let matched = 0, offStaff = 0, noFamily = 0, notCoach = 0;
   // the week is the PLAYER'S COACH's contact with the family (Antonio, Nov 2): a text or a call counts for the players whose
   // record carries that person's name (coach or second coach). The front desk, the office or another coach texting the same
@@ -124,6 +126,7 @@ async function sync(db, opts) {
     const all = book.get(ev.phone); if (!all || !all.length) { noFamily++; return; }
     const fams = all.filter((p) => own(who, p)); if (!fams.length) { notCoach++; return; }
     const week = weekOf(ev.when.dateET); matched++;
+    if (ev.how === 'text' && ev.id && ev.body) mirror.push({ ev, who, fams });   // the coach texted from the JustCall app: the portal's chat shows it too (Nov 6)
     for (const p of fams) {
       const k = `${p.id}_${week}`; const a = agg.get(k) || { p, week, texts: 0, calls: 0, last: 0, by: new Set(), byEmail: '', how: '' };
       a[ev.how === 'call' ? 'calls' : 'texts']++; if (ev.when.ms >= a.last) { a.last = ev.when.ms; a.how = ev.how; a.byEmail = who.email; } a.by.add(who.short || who.name);
@@ -131,6 +134,15 @@ async function sync(db, opts) {
     }
   };
   texts.forEach((r) => take(textCounts(r))); calls.forEach((r) => take(callCounts(r)));
+  /* The coach's own JustCall texts, kept as lines of the family's record (one doc per JustCall text, `jc_<id>`, so a second run
+     writes nothing new): the coach's chats in the portal show what they texted from the JustCall app, on their number. */
+  let mirrored = 0;
+  for (const { ev, who, fams } of mirror) {
+    const ref = db.doc('smsLog/jc_' + ev.id.replace(/[^A-Za-z0-9_-]/g, '')); const cur = await ref.get(); if (cur.exists) continue;
+    const p = fams[0];
+    await ref.set({ at: ev.when.ms, by: who.email, byName: who.name || who.email, player: p.id, players: fams.map((x) => x.id), playerName: p.name || p.id, group: p.group || '', coach: p.coach || '', phone: ev.phone, to: '', toName: '', conv: ev.phone.slice(-4), body: ev.body, status: 'sent', justcallId: ev.id, line: ev.line, from: 'justcall' });
+    mirrored++;
+  }
   let written = 0;
   for (const [k, a] of agg) {
     const ref = db.doc('contacts/' + k); const cur = await ref.get(); const old = cur.exists ? (cur.data() || {}) : null;
@@ -160,9 +172,9 @@ async function sync(db, opts) {
     if (cur && same) continue;
     await db.doc('contactCheck/' + p.id).set(Object.assign(cur ? {} : { playerId: p.id, playerName: p.name || p.id, slots: {}, by: 'engine', at: now }, { onFile: file, fileAt: now }), { merge: true }); seeded++;
   }
-  try { await db.doc('settings/contactSync').set({ at: now, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded }, { merge: true }); } catch (e) { /* the summary is a nicety */ }
+  try { await db.doc('settings/contactSync').set({ at: now, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded, mirrored }, { merge: true }); } catch (e) { /* the summary is a nicety */ }
   log(`contacts: ${texts.length} texts, ${calls.length} calls → ${matched} matched (${offStaff} not by staff, ${notCoach} not by the player's coach, ${noFamily} not a family), ${written} weeks written, ${seeded} checks seeded`);
-  return { ok: true, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded };
+  return { ok: true, from, to, texts: texts.length, calls: calls.length, matched, written, unticked, offStaff, notCoach, noFamily, seeded, mirrored };
 }
 
 /* The Friday reminder: each coach hears on their own Slack which families still have not heard from them this week; the
@@ -192,6 +204,10 @@ async function nudge(db, opts) {
 }
 
 /* Who on the staff list has a JustCall seat (by e-mail), for the owners' check. */
+/* A JustCall user's own numbers (owned first, then shared), as E.164 — the account answers strings or objects, both are read. */
+function ownNumbers(u) {
+  return [].concat(u.owned_numbers || [], u.shared_numbers || []).map((n) => e164(typeof n === 'string' || typeof n === 'number' ? n : (n && (n.justcall_number || n.number || n.phone_number || n.phone)) || '')).filter((n) => n && n.length >= 11);
+}
 async function justcallUsers(db) {
   const s = await NOTIFY.settings(db, true); const keys = { key: s.justcallKey, secret: s.justcallSecret };
   if (!keys.key || !keys.secret) return { ok: false, why: 'no JustCall keys on settings/notify', users: [], staffWithout: [] };
@@ -201,10 +217,10 @@ async function justcallUsers(db) {
   if (!res.ok) throw S.err(502, 'justcall', 'JustCall users: ' + String((j && (j.message || j.error)) || res.status).slice(0, 160));
   const rows = Array.isArray(j && j.data) ? j.data : Array.isArray(j) ? j : [];
   const staff = await staffIndex(db);
-  const users = rows.map((u) => { const email = String(u.email || '').toLowerCase(); const st = staff.byEmail.get(email); return { id: u.id, name: u.name || '', email, role: u.role || '', onStaff: !!st, staffName: st ? st.name : '', numbers: [].concat(u.owned_numbers || [], u.shared_numbers || []).length }; });
+  const users = rows.map((u) => { const email = String(u.email || '').toLowerCase(); const st = staff.byEmail.get(email); return { id: u.id, name: u.name || '', email, role: u.role || '', onStaff: !!st, staffName: st ? st.name : '', numbers: [].concat(u.owned_numbers || [], u.shared_numbers || []).length, own: ownNumbers(u) }; });
   const have = new Set(users.map((u) => u.email));
   const staffWithout = staff.list.filter((s2) => !have.has(s2.email) && s2.role !== 'desk').map((s2) => ({ email: s2.email, name: s2.name, role: s2.role }));
   return { ok: true, users, staffWithout };
 }
 
-module.exports = { sync, nudge, justcallUsers, phoneBook, staffIndex, staffFor, weekOf, etDate, stampET, textCounts, callCounts, SLOTS, _useFetch };
+module.exports = { sync, nudge, justcallUsers, ownNumbers, phoneBook, staffIndex, staffFor, weekOf, etDate, stampET, textCounts, callCounts, SLOTS, _useFetch };

@@ -78,7 +78,7 @@ if (require.main === module) (async () => {
     log(await count(m, '.a2chat .bub') >= 2, 'chat: the bubbles');
     log(!(await overflow(m)).length, 'chat: nothing wider than the phone ' + JSON.stringify(await overflow(m)));
     await shot(m, 'app2-phone-chat');
-    const before = net.length;
+    const before = net.filter((c) => /texts\/new/.test(c.url)).length;
     await m.fill('.a2chat textarea', 'See you Saturday at 9!'); await m.click('.a2chat button[type="submit"]'); await m.waitForTimeout(700);
     log(net.filter((c) => /texts\/new/.test(c.url)).length - before === 2, 'chat: a text to the parents together goes out as two texts');
     log(/See you Saturday at 9!/.test(await text(m, '.a2chat .bubs')), 'chat: the new bubble');
