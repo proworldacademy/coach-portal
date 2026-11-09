@@ -10,6 +10,8 @@ const { fakeDb } = require('./fake-db');
 
 /* Invented families and staff only. "Now" is Thu Nov 5, 2026, 3 PM Delray Beach (the week of Mon Nov 2). */
 const NOW = Date.UTC(2026, 10, 5, 20, 0, 0);
+// the week a text sent now ticks: computed the way the engine does, so the tests do not break when the calendar turns (the rule: never a hard-coded today)
+const WK = require('../lib/contacts').weekOf(require('../lib/calendar').todayET(Date.now()));
 const KIM = { uid: 'u-kim', email: 'kim@example.test', name: 'Kim Example', firstName: 'Kim', coachAs: 'Kim', keys: ['kim'], role: 'coach', owner: false, admin: false, director: false };
 const LEE = { uid: 'u-lee', email: 'lee@example.test', name: 'Lee Example', firstName: 'Lee', coachAs: '', keys: ['lee'], role: 'coach', owner: false, admin: false, director: false };
 const DIR = { uid: 'u-dir', email: 'dir@example.test', name: 'Dee Director', firstName: 'Dee', coachAs: '', keys: ['dee'], role: 'director', owner: false, admin: false, director: true };
@@ -64,14 +66,14 @@ test('a coach texts the family from the portal: the academy number, the signatur
   const line = [...db._docs.entries()].find(([k, v]) => k.startsWith('smsLog/') && v.from === 'portal'); assert.ok(line, 'a smsLog line');
   assert.equal(line[1].status, 'sent'); assert.equal(line[1].player, 'ft-bo-k'); assert.equal(line[1].to, 'father'); assert.equal(line[1].conv, '0109'); assert.equal(line[1].byName, 'Kim Example'); assert.ok(line[1].justcallId);
   const batch = db._docs.get('smsBatches/' + line[1].batch); assert.equal(batch.template, 'coach'); assert.equal(batch.thread, 'f:ft-bo-k'); assert.equal(batch.counts.sent, 1);
-  const tick = db._docs.get('contacts/ft-bo-k_2026-11-02'); assert.ok(tick, 'the week is ticked');
+  const tick = db._docs.get('contacts/ft-bo-k_' + WK + ''); assert.ok(tick, 'the week is ticked');
   assert.equal(tick.done, true); assert.equal(tick.source, 'portal'); assert.equal(tick.how, 'text'); assert.equal(tick.who, 'parents'); assert.equal(tick.by, 'Kim');
-  assert.deepEqual(out.tick, { week: '2026-11-02', ticked: true });
+  assert.deepEqual(out.tick, { week: WK, ticked: true });
   const th = db._docs.get('coachThreads/ft-bo-k'); assert.equal(th.last.dir, 'out'); assert.equal(th.last.by, 'Kim'); assert.ok(th.lastOutAt); assert.ok(!th.lastReplyAt);
   assert.deepEqual(Object.keys(th.convs), ['0109']); assert.equal(th.convs['0109'].title, 'Father · Lou Example'); assert.equal(th.convs['0109'].members[0].slot, 'father');
   // the same week again: already green, left alone
   const again = await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', to: '+15615550100', body: 'And bring the second racket' });
-  assert.deepEqual(again.tick, { week: '2026-11-02', ticked: false, already: true }); assert.equal(again.to.slot, 'mother'); assert.equal(again.conv, '0100');
+  assert.deepEqual(again.tick, { week: WK, ticked: false, already: true }); assert.equal(again.to.slot, 'mother'); assert.equal(again.conv, '0100');
 });
 
 test('a group text: one text per number from the academy line, one chat in the record, the week ticked once', async () => {
@@ -85,7 +87,7 @@ test('a group text: one text per number from the academy line, one chat in the r
   assert.ok(lines.every((l) => l.conv === '0100+0109' && l.batch === lines[0].batch), 'both lines in one chat, one batch');
   assert.deepEqual(lines.map((l) => l.to), ['mother', 'father']);
   const batch = db._docs.get('smsBatches/' + lines[0].batch); assert.equal(batch.counts.total, 2); assert.equal(batch.counts.sent, 2); assert.equal(batch.conv, '0100+0109');
-  assert.equal(db._docs.get('contacts/ft-bo-k_2026-11-02').who, 'parents');
+  assert.equal(db._docs.get('contacts/ft-bo-k_' + WK + '').who, 'parents');
   const th = db._docs.get('coachThreads/ft-bo-k'); assert.deepEqual(Object.keys(th.convs), ['0100+0109']); assert.deepEqual(th.convs['0100+0109'].members.map((m) => m.tail), ['0100', '0109']);
   // the same chat by its numbers, and in any order: the same key
   const same = await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', to: ['+15615550109', '+15615550100'], body: 'Practice moves to 4' });
@@ -101,7 +103,7 @@ test('a group text where one number fails: the other still goes, the line says w
   const db = fakeDb(SEED); const net = wire(db, { refuse: (b) => (b.contact_number === '+15615550109' ? 'Contact has opted out of SMS' : '') });
   const out = await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', conv: '0100+0109', body: 'See you Saturday' });
   assert.equal(out.sent, 1); assert.equal(out.failed, 1); assert.deepEqual(out.lines.map((l) => l.status), ['sent', 'failed']); assert.match(out.lines[1].error, /opted out/);
-  assert.equal(texts(net).length, 2); assert.ok(db._docs.get('contacts/ft-bo-k_2026-11-02'), 'ticked: one parent got it');
+  assert.equal(texts(net).length, 2); assert.ok(db._docs.get('contacts/ft-bo-k_' + WK + ''), 'ticked: one parent got it');
   assert.equal(db._docs.get('players/ft-bo-k/private/sms').optIn, false, 'the opted-out answer switches the family off, like a one-to-one text');
 });
 
@@ -115,14 +117,14 @@ test('only the player\'s own coach or a director; only a number on the page; a f
   await assert.rejects(COACHTEXT.text(db, KIM, { player: 'nobody', slot: 'mother', body: 'hi' }), (e) => e.status === 404);
   const d = await COACHTEXT.text(db, DIR, { player: 'as-di-m', to: '+15615550103', body: 'From the director' }); assert.equal(d.ok, true);   // a director reaches every player
   const c2 = await COACHTEXT.text(db, LEE, { player: 'ft-cy-l', to: '+15615550101', body: 'Second coach here' }); assert.equal(c2.ok, true);   // coach2 counts too
-  assert.equal(db._docs.get('contacts/as-di-m_2026-11-02').by, 'Dee');
+  assert.equal(db._docs.get('contacts/as-di-m_' + WK + '').by, 'Dee');
 });
 
 test('JustCall refuses: the line says failed, nothing ticks, the error reaches the page; an opted-out answer switches the family off', async () => {
   const db = fakeDb(SEED); wire(db, { refuse: 'Contact has opted out of SMS' });
   await assert.rejects(COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'mother', body: 'hi' }), (e) => e.status === 502 && /did not take it/.test(e.message));
   const line = [...db._docs.values()].find((v) => v.from === 'portal'); assert.equal(line.status, 'failed'); assert.match(line.error, /opted out/);
-  assert.ok(!db._docs.get('contacts/ft-bo-k_2026-11-02'), 'no tick');
+  assert.ok(!db._docs.get('contacts/ft-bo-k_' + WK + ''), 'no tick');
   assert.equal(db._docs.get('players/ft-bo-k/private/sms').optIn, false);
   await assert.rejects(COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'mother', body: 'hi again' }), (e) => e.code === 'optout');
 });
