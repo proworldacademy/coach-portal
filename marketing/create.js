@@ -15,7 +15,8 @@
     const it = x.it, ref = "'" + x.ws + "','" + x.kind + "'," + (x.kind === "idea" ? x.ci + "," + x.ii : x.pi);
     const ex = PW.isExtra(it);
     const rep = x.kind === "idea" && !ex ? '<button class="btn ghost xs" title="Another coach or a completely different idea for this slot" onclick="fnReplaceVideo(' + ref + ')">↔</button>' : "";
-    return '<div class="fn-row' + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')">' + (it.approved ? "✓" : "") + "</div>" +
+    const kind = x.kind === "idea" ? (isStory(it) ? "k-story" : "k-video") : isAd(it) ? "k-ad" : isStory(it) ? "k-story" : "k-post";
+    return '<div class="fn-row ' + kind + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')">' + (it.approved ? "✓" : "") + "</div>" +
       '<div class="fn-day">' + (ex ? '<span class="tag orchid" style="margin:0">In hand</span>' : esc(it.day)) + '<div class="small muted">' + esc(dayDate(x.ws, it.day)) + "</div></div>" +
       '<div class="fn-body"><div class="item-title">' + esc(it.title) + '</div><div class="small muted">' + esc(x.who) + (x.role ? " · " + esc(x.role) : "") + " · " + esc(it.format) + " " + PW.stateChip(x.ws, it) + "</div>" + (it.hook ? '<div class="item-hook">' + esc(it.hook) + "</div>" : "") + (it.desc ? '<div class="small muted fn-desc" style="margin-top:4px">' + esc(String(it.desc).slice(0, 220)) + (String(it.desc).length > 220 ? "…" : "") + "</div>" : "") + "</div>" +
       '<div class="item-actions" style="margin:0">' + (ex ? '<button class="btn ghost xs orchid" onclick="useExtra(' + ref + ')">↑ Use instead of…</button>' : '<button class="btn ghost xs" onclick="fnSwap(' + ref + ')">↻ Swap</button>') + '<button class="btn ghost xs" onclick="fnEdit(' + ref + ')" title="Edit · who films it · mark posted · remove">✎</button>' + rep + "</div></div>";
@@ -31,9 +32,6 @@
   const PWM = window.PWM;
   const DAYN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const dayDate = (ws, day) => { const k = DAYN.indexOf(day); if (k < 0) return ""; const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 1 + k); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
-  // every day accounted for (Antonio, Nov 9): one chip per day of the week — who or what posts; an empty day is orchid with ＋
-  const dayStrip = (ws) => { const w = S.weeks[ws]; if (!w) return ""; const on = {}; PW.fnItems(ws).forEach((x) => { if (!PW.isExtra(x.it)) (on[x.it.day] = on[x.it.day] || []).push(x.kind === "idea" ? x.who : /^ad/i.test(x.it.format || "") ? "Ad" : /carousel/i.test(x.it.format || "") ? "Carousel" : "Post"); });
-    return '<div class="daystrip">' + DAYN.map((d) => on[d] ? '<span class="dchip"><b>' + d + "</b>" + esc(on[d].join(" · ")) + "</span>" : '<button type="button" class="dchip open" onclick="fnAddVideo(\'' + ws + "','" + d + '\')" title="Nothing planned — add a video"><b>' + d + "</b>＋ nothing yet</button>").join("") + "</div>"; };
   const monLabel = (ws) => { const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 1); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
   const ymOf = (n) => { const [y, m] = PWM.cur.split("-").map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
   const addBtn = (ws, fn, label) => '<div class="fn-add"><button class="btn ghost xs" onclick="' + fn + "('" + ws + "')\">＋ " + label + "</button></div>";
@@ -48,19 +46,24 @@
     const wk = (ws) => "Week of " + monLabel(ws) + " · " + (S.weeks[ws] ? S.weeks[ws].weekDates || PW.weekLabel(ws) : PW.weekLabel(ws)) + (S.weeks[ws] && S.weeks[ws].locked ? " · set" : S.weeks[ws] ? "" : " · not built");
     const items = pair.map((ws) => PW.fnItems(ws));
     const by = (pred, add) => pair.map((ws, wi) => [wk(ws), items[wi].filter((x) => pred(x.it, x)).map((x) => row(x, wi)).concat(S.weeks[ws] && add ? [add(ws)] : [])]);
-    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it), (ws) => addBtn(ws, "fnAddVideo", "Add a video")).map(([t, rows], wi) => [t, S.weeks[pair[wi]] ? [dayStrip(pair[wi])].concat(rows) : ['<div class="small muted" style="padding:6px 0 10px">Not built yet — ⚡ above builds it.</div>']]);
-    const postRows = by((it, x) => x.kind === "prod" && !isAd(it) && !isStory(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddPost", "Add a carousel or post"));
-    const adRows = by((it, x) => x.kind === "prod" && isAd(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddAd", "Add an ad"));
+    // the calendar (Antonio, Nov 9): one list per week, day by day, every kind together — videos white, carousels and posts cyan,
+    // ads lime, stories orchid; a day with nothing is a row of its own with ＋
+    const calRows = pair.map((ws, wi) => {
+      if (!S.weeks[ws]) return [wk(ws), ['<div class="small muted" style="padding:6px 0 10px">Not built yet — ⚡ above builds it.</div>']];
+      const list = items[wi].filter((x) => !PW.isExtra(x.it)); const rows = [];
+      DAYN.forEach((d) => { const here = list.filter((x) => x.it.day === d); if (here.length) here.forEach((x) => rows.push(row(x, wi))); else rows.push('<div class="fn-row k-empty"><div></div><div class="fn-day">' + d + '<div class="small muted">' + esc(dayDate(ws, d)) + '</div></div><div class="fn-body"><div class="small" style="color:#5B1A5C">Nothing planned</div></div><div class="item-actions" style="margin:0"><button class="btn ghost xs" onclick="fnAddVideo(\'' + ws + "','" + d + '\')">＋ Video</button><button class="btn ghost xs" onclick="fnAddPost(\'' + ws + "','" + d + '\')">＋ Post</button></div></div>'); });
+      rows.push('<div class="fn-add">' + ['fnAddVideo:Add a video', 'fnAddPost:Add a carousel or post', 'fnAddAd:Add an ad'].map((p) => { const [f, l] = p.split(":"); return '<button class="btn ghost xs" onclick="' + f + "('" + ws + '\')">＋ ' + l + "</button>"; }).join(" ") + "</div>");
+      return [wk(ws), rows];
+    });
     const handRows = by((it) => PW.isExtra(it) || isStory(it));
     const whenEl = $("when-screate"); if (whenEl) whenEl.textContent = PWM.label() + " · " + pair.length + " weeks · Mon to Sun";
     const [y, m] = PWM.cur.split("-").map(Number); const lastDay = new Date(y, m, 0).getDate();
     host.innerHTML =
       '<div class="' + (document.body.classList.contains("app-skin") ? "hero" : "card gen-plain") + '" id="gen-card"><div><div class="hh">' + esc(PWM.label()).replace(/ (\d{4})$/, ' <em>$1</em>') + '</div><p>' + (built ? planned + " to make over " + pair.length + " weeks (" + lastDay + " days) · " + extras + " in hand" + (missing ? " · " + missing + " week" + (missing > 1 ? "s" : "") + " not built yet" : "") + ". Approve each one, swap what is not right, then set the month." : "One button builds the month, week by week, from everything the brain has learned: the banks, the pillars, what worked, the season, the competitors. Every coach once a fortnight. The campus three times.") + '</p><div class="btn-row" style="margin-top:12px;gap:6px"><button class="btn sm ghost" onclick="PWM.shift(-1)">‹ ' + esc(PWM.label(ymOf(-1))) + '</button><button class="btn sm ghost" onclick="PWM.now()">This month</button><button class="btn sm ghost" onclick="PWM.shift(1)">' + esc(PWM.label(ymOf(1))) + ' ›</button>' + (built ? '<button class="btn sm ghost" onclick="pushMonth()" title="Everything not posted moves one week later (a lost week: a storm, a break)">Push a week →</button>' : "") + '</div></div>' +
       '<div style="text-align:right;flex:none"><button class="btn pri" onclick="genMonth()">⚡ ' + (missing ? (built ? "Build the " + missing + " missing week" + (missing > 1 ? "s" : "") : "Generate " + PWM.label().split(" ")[0]) : "Rebuild the month") + '</button><div class="gen-sub" style="margin-top:10px;font-size:12px">' + (built ? approved + " of " + planned + " approved" : "not built yet") + '</div><div class="bar"><i style="width:' + (planned ? Math.round(approved / planned * 100) : 0) + '%"></i></div><div class="btn-row" style="margin-top:10px;justify-content:flex-end;gap:6px"><button class="btn sm ghost" onclick="approveMonth()"' + (planned && approved < planned ? "" : " disabled") + '>✓ Approve all</button><button class="btn sm" onclick="setMonth()"' + (built && !allLocked ? "" : " disabled") + '>' + (allLocked ? "✓ Month set" : "Set the month") + '</button></div></div></div>' +
-      section("Coach videos", "what each coach records · the photographer list", coachRows, "Generate the month to see who films what.") +
+      section("The month, day by day", '<span class="kd k-video">coach videos</span> <span class="kd k-post">carousels &amp; posts</span> <span class="kd k-ad">ads</span> <span class="kd k-story">stories</span>', calRows, "Generate the month to see the calendar.") +
       '<div id="create-briefs"></div>' +
-      section("Carousels &amp; posts", "designed by the editor", postRows, "No carousels or posts yet.") +
-      section("Ads", "the ad videos this month · the campaigns they serve below", adRows, "No ad video yet.") + '<div id="create-adplan"></div>' +
+      '<div id="create-adplan"></div>' +
       section("In hand", "spares, stories, anything else · use one instead of a weak post", handRows, "Nothing in hand.");
     const bc = bcard(); const slot = $("create-briefs");
     if (bc && slot) { slot.appendChild(bc); const lab = bc.querySelector(".card-label"); if (lab) lab.innerHTML = 'Send it <span class="small muted">· coach brief · photographer shot list · editor · posting plan</span>'; }
@@ -102,7 +105,7 @@
   window.fnReplaceVideo = function (ws, kind, ci, ii) { if (kind !== "idea") return; window.fnAddVideo(ws, { ci, ii }); };
 
   // ＋ Add an ad / ＋ Add a carousel or post (Antonio, Nov 9): one of the production bank's pieces, or my own; remove is in ✎
-  function addProd(ws, isAdKind) {
+  function addProd(ws, isAdKind, day0) {
     const w = S.weeks[ws]; if (!w) { PW.toast("Generate the month first", true); return; }
     const fits = (x) => (isAdKind ? isAd(x) : PW.isPostItem(x));
     const avail = (PW.availableProd(ws) || []).filter((x) => fits(x) && !(w.production || []).some((p) => p.id === x.id));
@@ -112,7 +115,7 @@
     const root = PW.openModal("<h3>" + (isAdKind ? "Add an ad" : "Add a carousel or post") + "</h3>" +
       sel("ap-idea", isAdKind ? "The ad" : "The piece", avail.map((i) => ({ v: i.id, t: i.title })).concat([{ v: "__own", t: "✎ Write my own…" }]), "") +
       '<div id="ap-own" hidden><label class="f"><span>Title</span><input id="ap-title"></label><label class="f"><span>What it shows</span><input id="ap-desc" placeholder="the shots, the slides, the headline"></label>' + sel("ap-format", "Format", fmts.map((f) => ({ v: f, t: f })), fmts[0]) + "</div>" +
-      sel("ap-day", "Post day", DAYS.map((d) => ({ v: d, t: d })), isAdKind ? "Thu" : "Wed") +
+      sel("ap-day", "Post day", DAYS.map((d) => ({ v: d, t: d })), day0 || (isAdKind ? "Thu" : "Wed")) +
       '<div class="btn-row"><button class="btn ghost muted" id="ap-cancel">Cancel</button><button class="btn" id="ap-ok">Add</button></div>');
     const idea = root.querySelector("#ap-idea"), own = root.querySelector("#ap-own"); const onIdea = () => { own.hidden = idea.value !== "__own"; }; idea.addEventListener("change", onIdea); onIdea();
     root.querySelector("#ap-cancel").onclick = PW.closeModal;
@@ -123,8 +126,8 @@
       w.production.push(it); PW.closeModal(); PW.fnSync(ws); PW.toast("Added — approve it when it is right");
     };
   }
-  window.fnAddAd = (ws) => addProd(ws, true);
-  window.fnAddPost = (ws) => addProd(ws, false);
+  window.fnAddAd = (ws, day) => addProd(ws, true, day);
+  window.fnAddPost = (ws, day) => addProd(ws, false, day);
 
   // the month: generate the missing weeks, approve all, set (lock) the built ones, push by a week
   window.genMonth = async function () {
