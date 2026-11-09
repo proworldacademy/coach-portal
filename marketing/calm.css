@@ -138,9 +138,9 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
 .dchip.open{background:#F9E2F8;color:#5B1A5C;cursor:pointer}.dchip.open b{color:#5B1A5C}
 @media(max-width:640px){.daystrip{grid-template-columns:repeat(4,minmax(0,1fr))}}
 /* the calendar's shades: videos white · carousels & posts cyan · ads lime · stories orchid · empty day */
-.fn-row.k-post{background:#EEFBFC;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
-.fn-row.k-ad{background:#F4FFD9;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
+.fn-row.k-post{background:#E3F6F8;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
+.fn-row.k-ad{background:#EEFFC4;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
 .fn-row.k-story{background:#FBEFFB;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
 .fn-row.k-empty{background:repeating-linear-gradient(45deg,#FBEFFB 0 6px,#fff 6px 12px);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
 .kd{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);margin-right:4px;text-transform:none;letter-spacing:0;font-family:var(--body);font-weight:700}
-.kd.k-post{background:#EEFBFC}.kd.k-ad{background:#F4FFD9}.kd.k-story{background:#FBEFFB}
+.kd.k-post{background:#E3F6F8}.kd.k-ad{background:#EEFFC4}.kd.k-story{background:#FBEFFB}
