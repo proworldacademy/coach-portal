@@ -152,19 +152,23 @@
     pair.forEach((ws, wi) => {
       const w = S.weeks && S.weeks[ws];
       if (!w) { weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(PW.weekLabel(ws)) + '</span></div><div class="empty">Not built yet — Generate on Create.</div></div>'); return; }
-      let wp = 0, wn = 0; const rows = [];
+      let wp = 0, wn = 0; const rows = []; const usedExtra = new Set();
       items(w).sort((a, b) => DAYS.indexOf(a.it.day || "Spare") - DAYS.indexOf(b.it.day || "Spare")).forEach(({ who, it, ref }) => {
         const r = PW.itemState(ws, it), st = r.st, e = r.e || {};
         if (st === "spare" && !(it.delivered || st === "posted")) return;   // spares are on Create, not here
         created++; wn++;
         let c = "";
-        if (st === "posted" || st === "late") { posted++; wp++; if (e.matchedBy === "improvised") { improvised++; c = chip("imp", "Improvised"); } else if (e.matchedBy === "campaign") c = chip("ok", "Live"); else c = chip("ok", st === "late" ? "Posted late" : "Posted"); }
+        if (st === "posted" || st === "late") { posted++; wp++; if (e.matchedBy === "improvised") { improvised++; usedExtra.add(e.postedAt + "|" + e.title); c = chip("imp", "Improvised"); } else if (e.matchedBy === "campaign") c = chip("ok", "Live"); else c = chip("ok", st === "late" ? "Posted late" : "Posted"); }
         else if (st === "missing") { missing++; c = chip("miss", "Missing"); }
         else if (st === "today") c = chip("today", "Today"); else c = chip("", DAYS.includes(it.day) ? "Planned" : "In hand");
         const sub = [who, it.format].concat(e.postedAt ? ["posted " + dayL(e.postedAt) + (e.matchedBy === "improvised" && e.title ? " as “" + String(e.title).slice(0, 40) + "”" : "")] : [], e.views ? [Number(e.views).toLocaleString() + " views"] : []).filter(Boolean).join(" · ");
         rows.push(rw(esc(it.day || "—"), st === "missing" ? "bad" : st === "posted" || st === "late" ? "lime" : "", it.title || "", sub, c + '<div class="acts"><button title="Edit · mark posted · remove" onclick="fnEdit(' + ref + ')">✎</button></div>'));
       });
-      weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(w.weekDates || ws) + " · " + wp + " of " + wn + (w.locked ? "" : " · draft") + "</span></div>" + (rows.join("") || '<div class="empty">Nothing planned.</div>') + "</div>");
+      // what else went out that week (Antonio, Nov 9): improvised posts the plan had no slot for — one tap puts them in the plan,
+      // and they are already in the archive, so the brain never offers that topic again
+      const end = PW.shiftWS ? PW.shiftWS(ws, 1) : ws; const extras = (S.delivery && Array.isArray(S.delivery.extras) ? S.delivery.extras : []).map((x, i) => [x, i]).filter(([x]) => x && x.date >= ws && x.date < end && !usedExtra.has(x.date + "|" + x.title));
+      const also = extras.map(([x, i]) => rw(esc(dayL(x.date).split(" ")[1] ? new Date(x.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" }) : "—"), "lime", x.title || "", [x.coach && x.coach !== "—" ? x.coach : "Production", x.format, "went out " + dayL(x.date)].filter(Boolean).join(" · "), chip("imp", "Not planned") + '<div class="acts"><button title="Put it in the plan as posted" data-extra="' + i + '" data-ws="' + ws + '">＋</button></div>'));
+      weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(w.weekDates || ws) + " · " + wp + " of " + wn + (w.locked ? "" : " · draft") + "</span></div>" + (rows.join("") || '<div class="empty">Nothing planned.</div>') + (also.length ? '<div class="lab" style="margin:12px 0 2px">Also went out · not in the plan</div>' + also.join("") : "") + "</div>");
     });
     // the ads: every campaign in the plan that is not ended
     const camps = (S.adPlan && Array.isArray(S.adPlan.campaigns) ? S.adPlan.campaigns : []).filter((c) => c && c.status !== "ended");
@@ -173,6 +177,17 @@
     ex.innerHTML = '<div class="tiles">' + tile("Created", created, "two weeks", "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
       '<div class="g31" style="margin-top:16px"><div style="display:grid;gap:16px">' + weeks.join("") + '</div><div style="display:grid;gap:14px;align-content:start"><div class="card"><div class="card-label">Ads</div>' + (ads.join("") || '<div class="empty">No campaigns planned.</div>') + '</div><button class="btn pri" id="exec-add" style="justify-content:center">+ Add a post that went out</button><p class="small muted" style="margin:0;text-align:center">Posts are read from Instagram every morning and matched to the plan, improvised ones too. This is for the rare one it cannot place.</p></div></div>';
     const add = $("exec-add"); if (add) add.onclick = addPost;
+    ex.querySelectorAll("[data-extra]").forEach((b) => b.addEventListener("click", () => adoptExtra(b.dataset.ws, Number(b.dataset.extra))));
+  }
+  // an improvised post becomes a plan item, already posted (it stays in the archive and in the ledger's extras — the record is the run's)
+  function adoptExtra(ws, i) {
+    const PW = window.PW, S = PW.S, w = S.weeks[ws], x = (S.delivery.extras || [])[i]; if (!w || !x) return;
+    const day = new Date(x.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" });
+    const fmt = /carousel/i.test(x.format || "") ? "Carousel" : /reel|video/i.test(x.format || "") ? "Reel" : /story/i.test(x.format || "") ? "Story" : "Static Post";
+    const it = { id: "x_" + Date.now().toString(36), title: x.title || "Post", format: fmt, day: DAYS.includes(day) ? day : "Mon", desc: "Improvised · went out " + x.date + (x.note ? " · " + String(x.note).slice(0, 140) : ""), hook: "", delivered: true, approved: true, custom: true };
+    if (x.coach && x.coach !== "—") { let c = (w.coaches || []).find((k) => k.name === x.coach); if (!c) { const def = (PW.COACHES || []).find((k) => k.name === x.coach); c = { name: x.coach, role: def ? def.role : "", ideas: [] }; w.coaches.push(c); } c.ideas.push(it); }
+    else { it.pillar = "culture"; w.production.push(it); }
+    PW.fnSync(ws); PW.toast("In the plan as posted");
   }
   async function addPost() {
     const PW = window.PW, S = PW.S; const fn = PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);
