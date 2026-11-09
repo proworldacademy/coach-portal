@@ -995,6 +995,25 @@
   }
   const fnGet = (ws, kind, a, b) => { const w = S.weeks[ws]; if (!w) return null; return kind === "idea" ? (w.coaches[a] && w.coaches[a].ideas[b]) : w.production[a]; };
   function fnSync(ws) { recomputeUsed(); save("weeks"); renderWeekViews(); renderFortnight(); }
+  // Antonio (Nov 9, after the tropical storm): push what has not gone out by a week — every open post of the two weeks moves to the same
+  // day one week later (into the next week's document, created if needed); posted ones stay where they are, so the record is untouched.
+  window.pushFortnight = async function (days) {
+    const n = Math.max(1, Math.round((days || 7) / 7)); const weeks = fnWeeks().filter((ws) => S.weeks[ws]);
+    if (!weeks.length) { toast("Nothing to push — generate the two weeks first", true); return; }
+    const open = weeks.reduce((k, ws) => k + fnItems(ws).filter((x) => !isDone(ws, x.it)).length, 0);
+    if (!open) { toast("Everything in these two weeks is already posted", true); return; }
+    if (!(await askConfirm("Push by " + (n === 1 ? "a week" : n + " weeks"), open + " posts that have not gone out move to the same day " + (n === 1 ? "one week" : n + " weeks") + " later. Posted ones stay.", "Push"))) return;
+    weeks.slice().reverse().forEach((ws) => {   // the later week first, so nothing is moved twice
+      const w = S.weeks[ws], to = shiftWS(ws, n);
+      if (!S.weeks[to]) S.weeks[to] = { weekStart: to, weekDates: weekLabel(to), theme: w.theme || "", themePillar: w.themePillar || "", locked: false, createdAt: Date.now(), coaches: [], production: [], warnings: [] };
+      const t = S.weeks[to];
+      (w.coaches || []).forEach((c) => { const keep = [], move = []; c.ideas.forEach((i) => (isDone(ws, i) ? keep : move).push(i)); if (move.length) { let tc = t.coaches.find((x) => x.name === c.name); if (!tc) { tc = { name: c.name, role: c.role, ideas: [] }; t.coaches.push(tc); } move.forEach((i) => { i.approved = false; tc.ideas.push(i); }); } c.ideas = keep; });
+      w.coaches = (w.coaches || []).filter((c) => c.ideas.length);
+      const keepP = [], moveP = []; (w.production || []).forEach((p) => (isDone(ws, p) ? keepP : moveP).push(p)); moveP.forEach((p) => { p.approved = false; t.production.push(p); }); w.production = keepP;
+      if (t.locked) t.locked = false;
+    });
+    recomputeUsed(); save("weeks"); renderWeekViews(); renderFortnight(); toast("Pushed — approve the two weeks again when they are right");
+  };
   window.toggleApprove = function (ws, kind, a, b) { const it = fnGet(ws, kind, a, b); if (!it) return; it.approved = !it.approved; fnSync(ws); };
   window.approveAllFortnight = function () { fnWeeks().forEach((ws) => fnItems(ws).forEach((x) => { if (!isExtra(x.it)) x.it.approved = true; })); save("weeks"); renderFortnight(); toast("All planned posts approved — now set the two weeks"); };
   window.setFortnight = async function () {
