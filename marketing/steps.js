@@ -145,7 +145,7 @@
   // ── ③ Execute: four numbers, one list per week, the ads, add a post ──
   function renderExec() {
     const PW = window.PW; if (!PW || !PW.S) return; const S = PW.S;
-    const fn = PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);
+    const fn = PW.curFN ? PW.curFN() : PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);   // follows Previous / Now / Next, like Create
     const when = S.delivery && S.delivery.checkedAt ? new Date(S.delivery.checkedAt) : null;
     $("when-sexecute").textContent = PW.fnLabel(fn) + (when ? " · checked against Instagram and the ad account " + when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + " " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : " · not checked yet");
     let created = 0, posted = 0, improvised = 0, missing = 0; const weeks = [];
@@ -174,7 +174,8 @@
     const camps = (S.adPlan && Array.isArray(S.adPlan.campaigns) ? S.adPlan.campaigns : []).filter((c) => c && c.status !== "ended");
     let live = 0; const ads = camps.map((c) => { const r = PW.campState ? PW.campState(c) : { st: c.status }, e = r.e || {}; const on = r.st === "live"; if (on) live++;
       return rw("$", on ? "lime" : "", String(c.name || "").replace(/^PROWORLD\s*[—-]\s*/, "").replace(/\s*\(Leads\)$/, ""), on ? [money(e.spend7), e.leads7 != null ? e.leads7 + " leads" : "", e.cpl7 != null ? "$" + Number(e.cpl7).toFixed(0) + " each" : ""].filter(Boolean).join(" · ") : "planned " + dayL((c.window || {}).start), chip(on ? "ok" : r.st === "missing" ? "wait" : "", on ? "Live" : r.st === "missing" ? "Not live" : "Planned")); });
-    ex.innerHTML = '<div class="tiles">' + tile("Created", created, "two weeks", "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
+    ex.innerHTML = '<div class="btn-row" style="margin-bottom:12px;gap:6px"><button class="btn sm ghost" onclick="shiftFortnight(-1)">‹ Previous</button><button class="btn sm ghost" onclick="goThisFortnight()">Now</button><button class="btn sm ghost" onclick="shiftFortnight(1)">Next ›</button></div>' +
+      '<div class="tiles">' + tile("Created", created, "two weeks", "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
       '<div class="g31" style="margin-top:16px"><div style="display:grid;gap:16px">' + weeks.join("") + '</div><div style="display:grid;gap:14px;align-content:start"><div class="card"><div class="card-label">Ads</div>' + (ads.join("") || '<div class="empty">No campaigns planned.</div>') + '</div><button class="btn pri" id="exec-add" style="justify-content:center">+ Add a post that went out</button><p class="small muted" style="margin:0;text-align:center">Posts are read from Instagram every morning and matched to the plan, improvised ones too. This is for the rare one it cannot place.</p></div></div>';
     const add = $("exec-add"); if (add) add.onclick = addPost;
     ex.querySelectorAll("[data-extra]").forEach((b) => b.addEventListener("click", () => adoptExtra(b.dataset.ws, Number(b.dataset.extra))));
@@ -210,6 +211,8 @@
 
   function renderAll() { try { renderReport(); } catch (e) { console.error(e); } try { renderExec(); } catch (e) { console.error(e); } }
   if (window.PW && PW.hooks) PW.hooks.push(renderAll);
+  // Previous / Now / Next (shared with Create) redraw Execute too
+  ["shiftFortnight", "goThisFortnight"].forEach((k) => { const f = window[k]; if (typeof f === "function") window[k] = function () { f.apply(this, arguments); renderExec(); }; });
   renderAll();
   // live.js redraws Needs-you on its own hooks; when it does, it is already in its slot
 })();
