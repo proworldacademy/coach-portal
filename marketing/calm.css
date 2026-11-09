@@ -131,3 +131,9 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
 .hero .gen-sub{color:#B9B9B4}
 .fn-add{padding:8px 0 2px}
 .modal label.f{display:block;margin:10px 0}.modal label.f span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}.modal label.f input,.modal label.f select{width:100%}
+/* every day of the week, one chip each (Create → Coach videos) */
+.daystrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:4px 0 10px}
+.dchip{display:flex;flex-direction:column;gap:2px;padding:7px 8px;border-radius:12px;background:#F1F1ED;font:12px var(--body);color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0;text-align:left}
+.dchip b{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.dchip.open{background:#F9E2F8;color:#5B1A5C;cursor:pointer}.dchip.open b{color:#5B1A5C}
+@media(max-width:640px){.daystrip{grid-template-columns:repeat(4,minmax(0,1fr))}}

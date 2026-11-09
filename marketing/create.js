@@ -16,7 +16,7 @@
     const ex = PW.isExtra(it);
     const rep = x.kind === "idea" && !ex ? '<button class="btn ghost xs" title="Another coach or a completely different idea for this slot" onclick="fnReplaceVideo(' + ref + ')">↔</button>' : "";
     return '<div class="fn-row' + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')">' + (it.approved ? "✓" : "") + "</div>" +
-      '<div class="fn-day">' + (ex ? '<span class="tag orchid" style="margin:0">In hand</span>' : esc(it.day)) + '<div class="small muted">' + esc(monLabel(x.ws)) + "</div></div>" +
+      '<div class="fn-day">' + (ex ? '<span class="tag orchid" style="margin:0">In hand</span>' : esc(it.day)) + '<div class="small muted">' + esc(dayDate(x.ws, it.day)) + "</div></div>" +
       '<div class="fn-body"><div class="item-title">' + esc(it.title) + '</div><div class="small muted">' + esc(x.who) + (x.role ? " · " + esc(x.role) : "") + " · " + esc(it.format) + " " + PW.stateChip(x.ws, it) + "</div>" + (it.hook ? '<div class="item-hook">' + esc(it.hook) + "</div>" : "") + (it.desc ? '<div class="small muted fn-desc" style="margin-top:4px">' + esc(String(it.desc).slice(0, 220)) + (String(it.desc).length > 220 ? "…" : "") + "</div>" : "") + "</div>" +
       '<div class="item-actions" style="margin:0">' + (ex ? '<button class="btn ghost xs orchid" onclick="useExtra(' + ref + ')">↑ Use instead of…</button>' : '<button class="btn ghost xs" onclick="fnSwap(' + ref + ')">↻ Swap</button>') + '<button class="btn ghost xs" onclick="fnEdit(' + ref + ')" title="Edit · who films it · mark posted · remove">✎</button>' + rep + "</div></div>";
   };
@@ -29,6 +29,11 @@
   const bcard = () => { const b = $("brief-buttons"); return b ? (b.closest(".card") || b) : null; };
   const acard = () => { const a = $("ad-plan"); return a ? a.closest(".card") : null; };
   const PWM = window.PWM;
+  const DAYN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const dayDate = (ws, day) => { const k = DAYN.indexOf(day); if (k < 0) return ""; const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 1 + k); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  // every day accounted for (Antonio, Nov 9): one chip per day of the week — who or what posts; an empty day is orchid with ＋
+  const dayStrip = (ws) => { const w = S.weeks[ws]; if (!w) return ""; const on = {}; PW.fnItems(ws).forEach((x) => { if (!PW.isExtra(x.it)) (on[x.it.day] = on[x.it.day] || []).push(x.kind === "idea" ? x.who : /^ad/i.test(x.it.format || "") ? "Ad" : /carousel/i.test(x.it.format || "") ? "Carousel" : "Post"); });
+    return '<div class="daystrip">' + DAYN.map((d) => on[d] ? '<span class="dchip"><b>' + d + "</b>" + esc(on[d].join(" · ")) + "</span>" : '<button type="button" class="dchip open" onclick="fnAddVideo(\'' + ws + "','" + d + '\')" title="Nothing planned — add a video"><b>' + d + "</b>＋ nothing yet</button>").join("") + "</div>"; };
   const monLabel = (ws) => { const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 1); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
   const ymOf = (n) => { const [y, m] = PWM.cur.split("-").map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
   const addBtn = (ws, fn, label) => '<div class="fn-add"><button class="btn ghost xs" onclick="' + fn + "('" + ws + "')\">＋ " + label + "</button></div>";
@@ -43,7 +48,7 @@
     const wk = (ws) => "Week of " + monLabel(ws) + " · " + (S.weeks[ws] ? S.weeks[ws].weekDates || PW.weekLabel(ws) : PW.weekLabel(ws)) + (S.weeks[ws] && S.weeks[ws].locked ? " · set" : S.weeks[ws] ? "" : " · not built");
     const items = pair.map((ws) => PW.fnItems(ws));
     const by = (pred, add) => pair.map((ws, wi) => [wk(ws), items[wi].filter((x) => pred(x.it, x)).map((x) => row(x, wi)).concat(S.weeks[ws] && add ? [add(ws)] : [])]);
-    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it), (ws) => addBtn(ws, "fnAddVideo", "Add a video")).map(([t, rows], wi) => [t, rows.length ? rows : ['<div class="small muted" style="padding:6px 0 10px">Not built yet — ⚡ above builds it.</div>']]);
+    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it), (ws) => addBtn(ws, "fnAddVideo", "Add a video")).map(([t, rows], wi) => [t, S.weeks[pair[wi]] ? [dayStrip(pair[wi])].concat(rows) : ['<div class="small muted" style="padding:6px 0 10px">Not built yet — ⚡ above builds it.</div>']]);
     const postRows = by((it, x) => x.kind === "prod" && !isAd(it) && !isStory(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddPost", "Add a carousel or post"));
     const adRows = by((it, x) => x.kind === "prod" && isAd(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddAd", "Add an ad"));
     const handRows = by((it) => PW.isExtra(it) || isStory(it));
@@ -66,6 +71,7 @@
   // one window: who films it · one of their bank ideas or my own · the day. Replace takes the old post out (back to its bank).
   const FORMATS = ["Talking Head", "Reel", "Story"];
   window.fnAddVideo = function (ws, rep) {
+    if (typeof rep === "string") { const day = rep; rep = null; window.__avDay = day; } else window.__avDay = null;
     const w = S.weeks[ws]; if (!w) { PW.toast("Generate the two weeks first", true); return; }
     const old = rep ? PW.fnGet(ws, "idea", rep.ci, rep.ii) : null, oldCoach = rep ? w.coaches[rep.ci].name : "";
     const names = Array.from(new Set((PW.COACHES || []).map((c) => c.name).concat((w.coaches || []).map((c) => c.name)))).filter(Boolean);
@@ -77,7 +83,7 @@
       sel("av-who", "Who films it", names.map((n) => ({ v: n, t: n })), rep ? oldCoach : names[0]) +
       '<div id="av-ideas">' + sel("av-idea", "The idea", ideaOpts(rep ? oldCoach : names[0]), "") + "</div>" +
       '<div id="av-own" hidden><label class="f"><span>Title</span><input id="av-title" placeholder="What the coach says, in one line"></label><label class="f"><span>Hook</span><input id="av-hook" placeholder="The first line, in quotes"></label>' + sel("av-format", "Format", FORMATS.map((f) => ({ v: f, t: f })), "Talking Head") + "</div>" +
-      sel("av-day", "Post day", DAYS.map((d) => ({ v: d, t: d })), rep ? old.day : "Spare") +
+      sel("av-day", "Post day", DAYS.map((d) => ({ v: d, t: d })), rep ? old.day : (window.__avDay || "Spare")) +
       '<div class="btn-row"><button class="btn ghost muted" id="av-cancel">Cancel</button><button class="btn" id="av-ok">' + (rep ? "Replace" : "Add") + "</button></div>");
     const who = root.querySelector("#av-who"), idea = () => root.querySelector("#av-idea"), own = root.querySelector("#av-own");
     const onIdea = () => { own.hidden = idea().value !== "__own"; };
