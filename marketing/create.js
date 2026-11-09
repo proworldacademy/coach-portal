@@ -14,10 +14,11 @@
   const row = (x, wi) => {
     const it = x.it, ref = "'" + x.ws + "','" + x.kind + "'," + (x.kind === "idea" ? x.ci + "," + x.ii : x.pi);
     const ex = PW.isExtra(it);
+    const rep = x.kind === "idea" && !ex ? '<button class="btn ghost xs" title="Another coach or a completely different idea for this slot" onclick="fnReplaceVideo(' + ref + ')">↔</button>' : "";
     return '<div class="fn-row' + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')">' + (it.approved ? "✓" : "") + "</div>" +
       '<div class="fn-day">' + (ex ? '<span class="tag orchid" style="margin:0">In hand</span>' : esc(it.day)) + '<div class="small muted">wk ' + (wi + 1) + "</div></div>" +
       '<div class="fn-body"><div class="item-title">' + esc(it.title) + '</div><div class="small muted">' + esc(x.who) + (x.role ? " · " + esc(x.role) : "") + " · " + esc(it.format) + " " + PW.stateChip(x.ws, it) + "</div>" + (it.hook ? '<div class="item-hook">' + esc(it.hook) + "</div>" : "") + (it.desc ? '<div class="small muted fn-desc" style="margin-top:4px">' + esc(String(it.desc).slice(0, 220)) + (String(it.desc).length > 220 ? "…" : "") + "</div>" : "") + "</div>" +
-      '<div class="item-actions" style="margin:0">' + (ex ? '<button class="btn ghost xs orchid" onclick="useExtra(' + ref + ')">↑ Use instead of…</button>' : '<button class="btn ghost xs" onclick="fnSwap(' + ref + ')">↻ Swap</button>') + '<button class="btn ghost xs" onclick="fnEdit(' + ref + ')" title="Edit · mark posted · remove">✎</button></div></div>';
+      '<div class="item-actions" style="margin:0">' + (ex ? '<button class="btn ghost xs orchid" onclick="useExtra(' + ref + ')">↑ Use instead of…</button>' : '<button class="btn ghost xs" onclick="fnSwap(' + ref + ')">↻ Swap</button>') + '<button class="btn ghost xs" onclick="fnEdit(' + ref + ')" title="Edit · who films it · mark posted · remove">✎</button>' + rep + "</div></div>";
   };
   const section = (label, sub, groups, empty) => {
     const body = groups.map(([title, rows]) => rows.length ? '<div class="fhead" style="margin:10px 0 4px"><b>' + esc(title) + "</b></div>" + rows.join("") : "").join("");
@@ -35,7 +36,7 @@
     const wk = (ws, wi) => "Week " + (wi + 1) + " · " + (S.weeks[ws] ? S.weeks[ws].weekDates || PW.weekLabel(ws) : PW.weekLabel(ws));
     const items = pair.map((ws) => PW.fnItems(ws));
     const by = (pred) => pair.map((ws, wi) => [wk(ws, wi), items[wi].filter((x) => pred(x.it, x)).map((x) => row(x, wi))]);
-    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it));
+    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it)).map(([title, rows], wi) => [title, rows.concat(S.weeks[pair[wi]] ? ['<div class="fn-add"><button class="btn ghost xs" onclick="fnAddVideo(\'' + pair[wi] + '\')">＋ Add a video</button></div>'] : [])]);
     const postRows = by((it, x) => x.kind === "prod" && !isAd(it) && !isStory(it) && !PW.isExtra(it));
     const adRows = by((it, x) => x.kind === "prod" && isAd(it) && !PW.isExtra(it));
     const handRows = by((it) => PW.isExtra(it) || isStory(it));
@@ -53,6 +54,39 @@
     const apc = acard(); const aslot = $("create-adplan"); if (apc && aslot) aslot.appendChild(apc);
     host.querySelectorAll(".chk").forEach((k) => k.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); k.click(); } }));
   }
+  // ＋ Add a video / ↔ Replace (Antonio, Nov 9: "if we need to switch completely to a person or a completely different idea") —
+  // one window: who films it · one of their bank ideas or my own · the day. Replace takes the old post out (back to its bank).
+  const FORMATS = ["Talking Head", "Reel", "Story"];
+  window.fnAddVideo = function (ws, rep) {
+    const w = S.weeks[ws]; if (!w) { PW.toast("Generate the two weeks first", true); return; }
+    const old = rep ? PW.fnGet(ws, "idea", rep.ci, rep.ii) : null, oldCoach = rep ? w.coaches[rep.ci].name : "";
+    const names = Array.from(new Set((PW.COACHES || []).map((c) => c.name).concat((w.coaches || []).map((c) => c.name)))).filter(Boolean);
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Spare"];
+    const sel = (id, label, opts, val) => '<label class="f"><span>' + label + '</span><select id="' + id + '">' + opts.map((o) => '<option value="' + esc(o.v) + '"' + (o.v === val ? " selected" : "") + ">" + esc(o.t) + "</option>").join("") + "</select></label>";
+    const ideasOf = (who) => (PW.availableIdeas(who, ws) || []).filter((i) => !(w.coaches || []).some((c) => c.ideas.some((x) => x.id === i.id)));
+    const ideaOpts = (who) => ideasOf(who).map((i) => ({ v: i.id, t: i.title })).concat([{ v: "__own", t: "✎ Write my own idea…" }]);
+    const root = PW.openModal("<h3>" + (rep ? "Replace this video" : "Add a video") + "</h3>" + (rep ? '<p class="small muted">' + esc(oldCoach) + " · “" + esc(old.title) + "” goes back to the bank.</p>" : "") +
+      sel("av-who", "Who films it", names.map((n) => ({ v: n, t: n })), rep ? oldCoach : names[0]) +
+      '<div id="av-ideas">' + sel("av-idea", "The idea", ideaOpts(rep ? oldCoach : names[0]), "") + "</div>" +
+      '<div id="av-own" hidden><label class="f"><span>Title</span><input id="av-title" placeholder="What the coach says, in one line"></label><label class="f"><span>Hook</span><input id="av-hook" placeholder="The first line, in quotes"></label>' + sel("av-format", "Format", FORMATS.map((f) => ({ v: f, t: f })), "Talking Head") + "</div>" +
+      sel("av-day", "Post day", DAYS.map((d) => ({ v: d, t: d })), rep ? old.day : "Spare") +
+      '<div class="btn-row"><button class="btn ghost muted" id="av-cancel">Cancel</button><button class="btn" id="av-ok">' + (rep ? "Replace" : "Add") + "</button></div>");
+    const who = root.querySelector("#av-who"), idea = () => root.querySelector("#av-idea"), own = root.querySelector("#av-own");
+    const onIdea = () => { own.hidden = idea().value !== "__own"; };
+    who.addEventListener("change", () => { root.querySelector("#av-ideas").innerHTML = sel("av-idea", "The idea", ideaOpts(who.value), ""); idea().addEventListener("change", onIdea); onIdea(); });
+    idea().addEventListener("change", onIdea); onIdea();
+    root.querySelector("#av-cancel").onclick = PW.closeModal;
+    root.querySelector("#av-ok").onclick = () => {
+      const name = who.value, day = root.querySelector("#av-day").value; let it;
+      if (idea().value === "__own") { const t = root.querySelector("#av-title").value.trim(); if (!t) { root.querySelector("#av-title").focus(); return; } it = { id: "c_" + Date.now().toString(36), title: t, hook: root.querySelector("#av-hook").value.trim(), format: root.querySelector("#av-format").value, day, desc: "Written on the plan", delivered: false, approved: false, custom: true }; }
+      else { const src = ideasOf(name).find((i) => i.id === idea().value); if (!src) return; it = PW.pick(src); it.day = day; }
+      if (rep) { w.coaches[rep.ci].ideas.splice(rep.ii, 1); if (!w.coaches[rep.ci].ideas.length && !w.locked) w.coaches.splice(rep.ci, 1); }
+      let c = (w.coaches || []).find((k) => k.name === name); if (!c) { const def = (PW.COACHES || []).find((k) => k.name === name); c = { name, role: def ? def.role : "", ideas: [] }; w.coaches.push(c); }
+      c.ideas.push(it); PW.closeModal(); PW.fnSync(ws); PW.toast(rep ? "Replaced — approve it when it is right" : "Added — approve it when it is right");
+    };
+  };
+  window.fnReplaceVideo = function (ws, kind, ci, ii) { if (kind !== "idea") return; window.fnAddVideo(ws, { ci, ii }); };
+
   render();
   new MutationObserver(render).observe(fort, { childList: true });
   PW.hooks.push(render);
