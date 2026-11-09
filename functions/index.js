@@ -86,7 +86,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (/^reply kept/.test(String(out.did || '')) && Array.isArray(out.players) && out.players.length) {
         // a family wrote back: the coach's inbox row and their Slack (Nov 4); the body is trusted because the signature was
         const d = (req.body && req.body.data) || {}; const text = String((d.sms_info && d.sms_info.body) || d.body || '');
-        try { const r = await COACHTEXT.onReply(ctx.db, { players: out.players, text, phone: SMS.e164(d.contact_number || '') }); logger.info('coach reply', r); } catch (e) { logger.warn('coach reply not told', { message: e.message }); }
+        try { const r = await COACHTEXT.onReply(ctx.db, { players: out.players, text, phone: SMS.e164(d.contact_number || ''), line: SMS.e164(d.justcall_number || '') }); logger.info('coach reply', r); } catch (e) { logger.warn('coach reply not told', { message: e.message }); }
       }
       return send(res, 200, { ok: true, did: out.did });
     }

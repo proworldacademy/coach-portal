@@ -130,7 +130,7 @@ if (require.main === module) (async () => {
     log(/Nothing in this group chat yet/.test(await text(d, '#msgcard')), 'the group chat is empty');
     log(/Mother · Pat Kessler · …0100/.test(await text(d, '#msgcard .msgto')) && /Father · Lou Kessler · …0109/.test(await text(d, '#msgcard .msgto')), 'the composer says To: Mother · Father');
     await d.fill('#msgcard textarea', 'Bo played great today. Tournament Saturday at 9, please be there 8:30.');
-    const before = net.length;
+    const before = net.filter((c) => /texts\/new/.test(c.url)).length;
     await d.click('#msgcard button[type="submit"]'); await d.waitForTimeout(600);
     log(net.filter((c) => /texts\/new/.test(c.url)).length - before === 2, 'two texts went out (one per parent)');
     log((await count(d, '#msgcard .bub.b-out')) === 1, 'one bubble in the group chat for the group text');

@@ -59,6 +59,10 @@ function fakeNet(captured) {
 test('JustCall → the week’s ticks: a one-to-one text or an answered call by someone on staff marks the family, bulk and inbound do not, hand ticks and "not yet" stay', async () => {
   const db = fakeDb(SEED); const captured = []; CONTACTS._useFetch(fakeNet(captured)); NOTIFY._useFetch(fakeNet(captured)); NOTIFY.forget();
   const out = await CONTACTS.sync(db, { now: NOW });
+  // the coach's own JustCall texts are kept as lines of the family's record, so the portal's chats show them (Nov 6)
+  const jc1 = db._docs.get('smsLog/jc_1'); assert.ok(jc1, 'Kim\'s one-to-one text is kept'); assert.equal(jc1.from, 'justcall'); assert.equal(jc1.by, 'kim@example.test'); assert.match(jc1.body, /^Great/);
+  assert.ok(!db._docs.get('smsLog/jc_2'), 'a bulk text is not'); assert.ok(!db._docs.get('smsLog/jc_3'), 'an inbound one is not (the webhook keeps those)');
+  assert.equal(out.mirrored >= 1, true);
   assert.equal(out.ok, true); assert.equal(out.texts, 7); assert.equal(out.calls, 2);
   assert.equal(out.matched, 3);                 // Kim's text to Cy's mother, Lee's text last week, the answered call
   assert.equal(out.offStaff, 1); assert.equal(out.notCoach, 2, 'the front desk text and another coach\'s text are counted apart and tick nothing'); assert.equal(out.noFamily, 0);

@@ -135,9 +135,12 @@ test('the thread, chat by chat: a chat per number, the parents together suggeste
   assert.deepEqual(t.numbers.map((n) => n.slot + ':' + n.tail + ':' + n.word), ['mother:0100:Mother', 'father:0109:Father']);
   assert.deepEqual(t.convs.map((c) => c.key), ['0100', '0109', '0100+0109'], 'the mother, the father, and the parents together (suggested, empty)');
   assert.deepEqual(t.convs.map((c) => c.title), ['Mother · Pat Example', 'Father · Lou Example', 'Mother & Father']);
-  assert.deepEqual(t.convs.map((c) => c.count), [3, 0, 0]); assert.equal(t.convs[2].suggested, true); assert.equal(t.convs[0].last.body, 'See you Saturday');
-  assert.deepEqual(t.lines.map((l) => l.dir + ':' + l.conv), ['out:0100', 'in:0100', 'out:0100'], 'the desk text, the reply, the coach text — all in the mother\'s chat');
-  assert.equal(t.lines[0].by, 'Dana Desk'); assert.equal(t.lines[0].portal, false); assert.equal(t.lines[1].body, 'Thanks, see you Thursday'); assert.equal(t.lines[2].portal, true); assert.equal(t.lines[2].to, 'mother');
+  assert.deepEqual(t.convs.map((c) => c.count), [1, 0, 0]); assert.equal(t.convs[2].suggested, true); assert.equal(t.convs[0].last.body, 'See you Saturday');
+  assert.deepEqual(t.lines.map((l) => l.dir + ':' + l.conv), ['out:0100'], 'a coach sees only their own conversation: not the desk\'s text, not the answer to it (Nov 6)');
+  assert.equal(t.lines[0].portal, true); assert.equal(t.lines[0].to, 'mother');
+  const d = await COACHTEXT.thread(db, DIR, 'ft-bo-k', { markRead: false });
+  assert.deepEqual(d.lines.map((l) => l.dir + ':' + l.conv), ['out:0100', 'in:0100', 'out:0100'], 'a director sees the whole record: the desk text, the reply, the coach text');
+  assert.equal(d.lines[0].by, 'Dana Desk'); assert.equal(d.lines[0].portal, false); assert.equal(d.lines[1].body, 'Thanks, see you Thursday');
   assert.ok(!JSON.stringify(t.lines).includes('+1561') && !JSON.stringify(t.convs).includes('+1561'), 'full numbers are not in the lines or the chats');
   assert.ok(db._docs.get('coachInbox/kim@example.test').read['ft-bo-k|0100'] > 0, 'the mother\'s chat is marked read');
   await assert.rejects(COACHTEXT.thread(db, LEE, 'ft-bo-k'), (e) => e.status === 403);
@@ -170,9 +173,10 @@ test('a reply lands in the chat the family last heard from: the group after a gr
   await COACHTEXT.onReply(db, { players: ['ft-cy-l'], text: 'Hi, Cy here', phone: '+15615550101', dry: true });
   assert.deepEqual(Object.keys(db._docs.get('coachThreads/ft-cy-l').convs), ['0101']);
   const ib = await COACHTEXT.inbox(db, KIM);
-  assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.conv + '/' + r.unread), ['ft-cy-l/0101/true', 'ft-bo-k/0109/true', 'ft-bo-k/0100+0109/true', 'ft-bo-k/0100/true'], 'one row per chat, the new ones first, newest first (the desk\'s chat with the mother is on the record too)');
-  assert.equal(ib.unread, 4); assert.equal(ib.unreadFamilies, 2); assert.deepEqual(ib.quiet, [], 'both of Kim\'s players have a chat'); assert.equal(ib.families, 2);
-  assert.equal(ib.rows[2].title, 'Mother & Father'); assert.deepEqual(ib.rows[2].members.map((m) => m.word), ['Mother', 'Father']);
+  assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.conv + '/' + r.unread), ['ft-bo-k/0109/true', 'ft-bo-k/0100+0109/true'], 'one row per chat of Kim\'s own, newest first — not the desk\'s chat with the mother, not Cy\'s mother who wrote before Kim ever texted her');
+  assert.equal(ib.unread, 2); assert.equal(ib.unreadFamilies, 1); assert.deepEqual(ib.quiet.map((q) => q.id), ['ft-cy-l']); assert.equal(ib.families, 2);
+  assert.equal(ib.rows[1].title, 'Mother & Father'); assert.deepEqual(ib.rows[1].members.map((m) => m.word), ['Mother', 'Father']);
+  const dib = await COACHTEXT.inbox(db, DIR); assert.ok(dib.rows.some((r) => r.id === 'ft-cy-l' && r.conv === '0101' && r.unread), 'a director sees Cy\'s mother');
   assert.ok(!JSON.stringify(ib).includes('+1561'), 'no full numbers in the inbox');
 });
 
@@ -180,7 +184,9 @@ test('the inbox: a family with no chat yet is listed apart; opening the chat cle
   const db = fakeDb(SEED); wire(db);
   await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'mother', body: 'See you Saturday' });
   await COACHTEXT.thread(db, KIM, 'ft-bo-k', { conv: '0100' });
-  await new Promise((r) => setTimeout(r, 15)); await COACHTEXT.onReply(db, { players: ['ft-bo-k'], text: 'Can Bo come at 9 instead?', phone: '+15615550100', dry: true });
+  await new Promise((r) => setTimeout(r, 15));
+  db._docs.set('smsLog/r5', { kind: 'reply', at: Date.now(), phone: '+15615550100', body: 'Can Bo come at 9 instead?', players: ['ft-bo-k'], by: 'family', status: 'reply', justcallId: 'jc-in-5' });   // what the webhook keeps
+  await COACHTEXT.onReply(db, { players: ['ft-bo-k'], text: 'Can Bo come at 9 instead?', phone: '+15615550100', dry: true });
   let ib = await COACHTEXT.inbox(db, KIM);
   assert.equal(ib.unread, 1); assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.conv), ['ft-bo-k/0100']); assert.deepEqual(ib.quiet.map((q) => q.id), ['ft-cy-l']);   // Kim's two active players; Lee's and the finished one are not hers
   assert.equal(ib.rows[0].unread, true); assert.equal(ib.rows[0].last.dir, 'in'); assert.equal(ib.rows[0].last.body, 'Can Bo come at 9 instead?'); assert.equal(ib.rows[0].title, 'Mother · Pat Example');
@@ -192,11 +198,12 @@ test('the inbox: a family with no chat yet is listed apart; opening the chat cle
   db._docs.set('smsLog/r9', { kind: 'optin', at: Date.now(), phone: '+15615550101', body: 'Yes, we will be there Saturday', players: ['ft-cy-l'], by: 'family', status: 'start' });
   db._docs.set('smsLog/r9b', { kind: 'optin', at: Date.now() + 1, phone: '+15615550101', body: 'Yes, we will be there Saturday', players: ['ft-cy-l'], by: 'family', status: 'start' });   // JustCall's double
   db._docs.set('coachThreads/ft-cy-l', { playerId: 'ft-cy-l', playerName: 'Cy Lane', last: { at: Date.now(), dir: 'in', body: 'Yes, we will be there Saturday', by: 'family' }, lastReplyAt: Date.now() });
-  ib = await COACHTEXT.inbox(db, KIM); const cy = ib.rows.find((r) => r.id === 'ft-cy-l'); assert.ok(cy); assert.equal(cy.conv, '0101'); assert.equal(cy.title, 'Sam Example'); assert.equal(cy.unread, true); assert.equal(cy.last.body, 'Yes, we will be there Saturday');
-  assert.ok(db._docs.get('coachThreads/ft-cy-l').convs['0101'], 'the chat is written onto the thread row'); assert.deepEqual(ib.quiet, []);
-  const t2 = await COACHTEXT.thread(db, KIM, 'ft-cy-l', { conv: '0101' });
+  ib = await COACHTEXT.inbox(db, KIM); assert.deepEqual(ib.quiet.map((q) => q.id), ['ft-cy-l'], 'Kim never texted Cy\'s family: their answer to the desk is not hers');
+  ib = await COACHTEXT.inbox(db, DIR); const cy = ib.rows.find((r) => r.id === 'ft-cy-l'); assert.ok(cy); assert.equal(cy.conv, '0101'); assert.equal(cy.title, 'Sam Example'); assert.equal(cy.unread, true); assert.equal(cy.last.body, 'Yes, we will be there Saturday');
+  assert.ok(db._docs.get('coachThreads/ft-cy-l').convs['0101'], 'the chat is written onto the thread row');
+  const t2 = await COACHTEXT.thread(db, DIR, 'ft-cy-l', { conv: '0101' });
   assert.deepEqual(t2.lines.map((l) => l.dir + ':' + l.body + ':' + (l.note || '')), ['in:Yes, we will be there Saturday:texts on'], 'their words once, as an answer, with the texts-on note');
-  assert.equal((await COACHTEXT.inbox(db, KIM)).unread, 0, 'opening the rebuilt chat clears it');
+  assert.equal((await COACHTEXT.inbox(db, DIR)).rows.find((r) => r.id === 'ft-cy-l').unread, false, 'opening the rebuilt chat clears it');
 });
 
 test('a reply tells the coach on Slack once, even when two siblings share the number; the inbox row carries it', async () => {
@@ -221,5 +228,45 @@ test('the JustCall webhook keeps a reply from the father\'s number too (the phon
   const out = await SMS.webhook(db, { 'x-justcall-signature': sig, 'x-justcall-request-timestamp': ts }, body);
   assert.match(out.did, /^reply kept for 1 player/); assert.deepEqual(out.players, ['ft-bo-k']);
   const kept = [...db._docs.values()].find((v) => v.kind === 'reply' && v.justcallId === 'jc-in-9'); assert.ok(kept); assert.deepEqual(kept.players, ['ft-bo-k']);
-  const t = await COACHTEXT.thread(db, KIM, 'ft-bo-k'); const last = t.lines[t.lines.length - 1]; assert.equal(last.body, 'This is Lou, Bo is sick today'); assert.equal(last.tail, '0109'); assert.equal(last.conv, '0109', 'never texted: his own chat');
+  const t = await COACHTEXT.thread(db, DIR, 'ft-bo-k'); const last = t.lines[t.lines.length - 1]; assert.equal(last.body, 'This is Lou, Bo is sick today'); assert.equal(last.tail, '0109'); assert.equal(last.conv, '0109', 'never texted: his own chat');
+});
+
+test('every coach on their own JustCall number: texts go out from it, the chats show only what is on it, a reply to it lands there (Nov 6)', async () => {
+  const db = fakeDb(Object.assign({}, SEED, { 'staff/kim@example.test': Object.assign({}, SEED['staff/kim@example.test'], { justcallNumber: '+15615557777' }) }));
+  const net = wire(db); const KIMN = Object.assign({}, KIM, { justcallNumber: '+15615557777' });
+  // a text Lee once sent from the academy line, and a reply to it: not Kim's
+  db._docs.set('smsLog/x1', { at: Date.now() - 5000, by: 'lee@example.test', byName: 'Lee Example', player: 'ft-cy-l', phone: '+15615550101', body: 'Lee here', status: 'sent', from: 'portal', line: '+15614030008', conv: '0101' });
+  const out = await COACHTEXT.text(db, KIMN, { player: 'ft-bo-k', slot: 'mother', body: 'Kim here, from my number' });
+  assert.equal(texts(net)[0].justcall_number, '+15615557777', 'from the coach\'s own number, not the academy line');
+  assert.equal([...db._docs.values()].find((v) => v.body && String(v.body).startsWith('Kim here')).line, '+15615557777');
+  await new Promise((r) => setTimeout(r, 5));
+  db._docs.set('smsLog/rk', { kind: 'reply', at: Date.now(), phone: '+15615550100', body: 'Got it Kim', players: ['ft-bo-k'], by: 'family', status: 'reply', justcallId: 'jc-k', line: '+15615557777' });
+  db._docs.set('smsLog/rd', { kind: 'reply', at: Date.now() + 1, phone: '+15615550100', body: 'To the desk', players: ['ft-bo-k'], by: 'family', status: 'reply', justcallId: 'jc-d', line: '+15614030008' });
+  const t = await COACHTEXT.thread(db, KIMN, 'ft-bo-k', { markRead: false });
+  assert.deepEqual(t.lines.map((l) => l.dir + ':' + l.body.split('\n')[0]), ['out:Kim here, from my number', 'in:Got it Kim'], 'only the lines on Kim\'s number');
+  assert.equal(t.line.from, '7777'); assert.equal(t.line.own, true);
+  const ib = await COACHTEXT.inbox(db, KIMN);
+  assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.conv + '/' + r.last.body), ['ft-bo-k/0100/Got it Kim']); assert.deepEqual(ib.quiet.map((q) => q.id), ['ft-cy-l'], 'Lee\'s text to Cy is not on Kim\'s number'); assert.equal(ib.line, '7777');
+  // a director still sees the whole record
+  const d = await COACHTEXT.thread(db, DIR, 'ft-bo-k', { markRead: false }); assert.ok(d.lines.some((l) => l.body === 'To the desk'));
+});
+
+test('the coach\'s number from their JustCall seat when the staff record has none; the webhook keeps the number a family wrote to', async () => {
+  const db = fakeDb(SEED); const net = wire(db); COACHTEXT._seats({ 'kim@example.test': '+15615558888' });
+  await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'father', body: 'From the seat' });
+  assert.equal(texts(net)[0].justcall_number, '+15615558888');
+  COACHTEXT._seats({});
+  const ts = String(Math.floor(Date.now() / 1000)); const url = 'https://proworld-coach-portal.web.app/api/sms/webhook';
+  const body = { webhook_url: url, type: 'sms.received', data: { id: 'jc-in-77', contact_number: '+15615550109', justcall_number: '+15615558888', direction: 'Incoming', sms_info: { body: 'Thanks Kim' } } };
+  const sig = crypto.createHmac('sha256', 's').update(`s|${encodeURIComponent(url)}|sms.received|${ts}`).digest('hex');
+  await SMS.webhook(db, { 'x-justcall-signature': sig, 'x-justcall-request-timestamp': ts }, body);
+  const kept = [...db._docs.values()].find((v) => v.kind === 'reply' && v.justcallId === 'jc-in-77'); assert.equal(kept.line, '+15615558888');
+  assert.deepEqual(COACHTEXT.scopeLines(KIM, '+15615558888', [{ line: '+15615558888' }, { line: '+15614030008' }], [kept]).outs.length, 1);
+});
+
+test('a reply to a coach\'s own number tells only that coach, not the other coach on the record', async () => {
+  const db = fakeDb(Object.assign({}, SEED, { 'staff/lee@example.test': Object.assign({}, SEED['staff/lee@example.test'], { justcallNumber: '+15615556666' }) }));
+  const net = wire(db); COACHTEXT._seats({});
+  const r = await COACHTEXT.onReply(db, { players: ['ft-cy-l'], text: 'For Lee', phone: '+15615550101', line: '+15615556666' });   // Cy: coach Kim, second coach Lee
+  assert.deepEqual(r.coaches, ['Lee']); assert.equal(net.filter((c) => /chat\.postMessage/.test(c.url)).length, 1);
 });

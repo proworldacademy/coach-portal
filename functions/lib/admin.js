@@ -56,7 +56,7 @@ async function requireCoach(req) {
   if (!active || !(rec.owner === true || pages.includes('coach-portal') || pages.includes('backend'))) throw S.err(403, 'access', 'Your access does not include the Coach Portal.');
   const isAdmin = rec.owner === true || rec.role === 'admin'; const role = String(rec.role || 'coach').toLowerCase();
   const name = rec.name || decoded.name || email;
-  return { uid: decoded.uid, email, name, firstName: first(name), coachAs: String(rec.coachAs || ''), keys: [rec.coachAs, first(name)].map(fold).filter(Boolean), role, owner: rec.owner === true, admin: isAdmin, director: isAdmin || role === 'director' };
+  return { uid: decoded.uid, email, name, firstName: first(name), coachAs: String(rec.coachAs || ''), justcallNumber: String(rec.justcallNumber || ''), keys: [rec.coachAs, first(name)].map(fold).filter(Boolean), role, owner: rec.owner === true, admin: isAdmin, director: isAdmin || role === 'director' };
 }
 function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
 
