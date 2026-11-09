@@ -137,10 +137,7 @@ body.skin-studio .empty{background:#fff;border:1px dashed var(--line-2);border-r
 .dchip b{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .dchip.open{background:#F9E2F8;color:#5B1A5C;cursor:pointer}.dchip.open b{color:#5B1A5C}
 @media(max-width:640px){.daystrip{grid-template-columns:repeat(4,minmax(0,1fr))}}
-/* the calendar's shades: videos white · carousels & posts cyan · ads lime · stories orchid · empty day */
-.fn-row.k-post{background:#E3F6F8;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
-.fn-row.k-ad{background:#EEFFC4;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
-.fn-row.k-story{background:#FBEFFB;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
-.fn-row.k-empty{background:repeating-linear-gradient(45deg,#FBEFFB 0 6px,#fff 6px 12px);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
-.kd{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);margin-right:4px;text-transform:none;letter-spacing:0;font-family:var(--body);font-weight:700}
-.kd.k-post{background:#E3F6F8}.kd.k-ad{background:#EEFFC4}.kd.k-story{background:#FBEFFB}
+/* the calendar: no row colours — a grey bubble says what kind of post it is; the status bubbles keep their colours */
+.kc{display:inline-block;font:700 11px var(--body);letter-spacing:0;text-transform:none;padding:3px 9px;border-radius:999px;background:#E9E9E4;color:var(--ink);vertical-align:middle}
+.kc.k-post{background:#CFCFC9}.kc.k-static{background:#B9B9B4}.kc.k-ad{background:#4A4A47;color:#fff}.kc.k-story{background:#8E8E8A;color:#fff}
+.fn-row.k-empty{margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
