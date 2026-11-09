@@ -28,26 +28,34 @@
   const stash = document.createElement("div"); stash.hidden = true; document.body.appendChild(stash);
   const bcard = () => { const b = $("brief-buttons"); return b ? (b.closest(".card") || b) : null; };
   const acard = () => { const a = $("ad-plan"); return a ? a.closest(".card") : null; };
+  const PWM = window.PWM;
+  const monLabel = (ws) => { const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 1); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  const ymOf = (n) => { const [y, m] = PWM.cur.split("-").map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+  const addBtn = (ws, fn, label) => '<div class="fn-add"><button class="btn ghost xs" onclick="' + fn + "('" + ws + "')\">＋ " + label + "</button></div>";
   function render() {
     [bcard(), acard()].forEach((el) => { if (el) stash.appendChild(el); });   // the two cards survive the redraw
-    const fn = PW.curFN(), pair = PW.fnPair(fn), c = PW.fnCounts();
-    const allLocked = pair.every((ws) => S.weeks[ws] && S.weeks[ws].locked);
-    const built = pair.filter((ws) => S.weeks[ws]).length;
-    const wk = (ws, wi) => "Week " + (wi + 1) + " · " + (S.weeks[ws] ? S.weeks[ws].weekDates || PW.weekLabel(ws) : PW.weekLabel(ws));
+    const pair = PWM.weeks();   // the month: 4 or 5 weeks
+    const builtWs = pair.filter((ws) => S.weeks[ws]), built = builtWs.length, missing = pair.length - built;
+    const allLocked = built > 0 && builtWs.every((ws) => S.weeks[ws].locked);
+    let planned = 0, approved = 0, extras = 0;
+    builtWs.forEach((ws) => PW.fnItems(ws).forEach((x) => { if (PW.isExtra(x.it)) extras++; else { planned++; if (x.it.approved) approved++; } }));
+    const c = { planned, approved, extras };
+    const wk = (ws) => "Week of " + monLabel(ws) + " · " + (S.weeks[ws] ? S.weeks[ws].weekDates || PW.weekLabel(ws) : PW.weekLabel(ws)) + (S.weeks[ws] && S.weeks[ws].locked ? " · set" : S.weeks[ws] ? "" : " · not built");
     const items = pair.map((ws) => PW.fnItems(ws));
-    const by = (pred) => pair.map((ws, wi) => [wk(ws, wi), items[wi].filter((x) => pred(x.it, x)).map((x) => row(x, wi))]);
-    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it)).map(([title, rows], wi) => [title, rows.concat(S.weeks[pair[wi]] ? ['<div class="fn-add"><button class="btn ghost xs" onclick="fnAddVideo(\'' + pair[wi] + '\')">＋ Add a video</button></div>'] : [])]);
-    const postRows = by((it, x) => x.kind === "prod" && !isAd(it) && !isStory(it) && !PW.isExtra(it));
-    const adRows = by((it, x) => x.kind === "prod" && isAd(it) && !PW.isExtra(it));
+    const by = (pred, add) => pair.map((ws, wi) => [wk(ws), items[wi].filter((x) => pred(x.it, x)).map((x) => row(x, wi)).concat(S.weeks[ws] && add ? [add(ws)] : [])]);
+    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it), (ws) => addBtn(ws, "fnAddVideo", "Add a video"));
+    const postRows = by((it, x) => x.kind === "prod" && !isAd(it) && !isStory(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddPost", "Add a carousel or post"));
+    const adRows = by((it, x) => x.kind === "prod" && isAd(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddAd", "Add an ad"));
     const handRows = by((it) => PW.isExtra(it) || isStory(it));
-    const whenEl = $("when-screate"); if (whenEl) whenEl.textContent = PW.fnLabel(fn) + " · Mon to Sun · the next two weeks";
+    const whenEl = $("when-screate"); if (whenEl) whenEl.textContent = PWM.label() + " · " + pair.length + " weeks · Mon to Sun";
+    const [y, m] = PWM.cur.split("-").map(Number); const lastDay = new Date(y, m, 0).getDate();
     host.innerHTML =
-      '<div class="' + (document.body.classList.contains("app-skin") ? "hero" : "card gen-plain") + '" id="gen-card"><div><div class="hh">' + esc(PW.fnLabel(fn)).replace(/–/, '<em>–</em>') + '</div><p>' + (built ? c.planned + " to make over the two weeks · " + c.extras + " in hand. Approve each one, swap what is not right, then set both weeks." : "One button builds the two weeks from everything the brain has learned: the banks, the pillars, what worked, the season, the competitors. Every coach once. The campus three times.") + '</p><div class="btn-row" style="margin-top:12px;gap:6px"><button class="btn sm ghost" onclick="shiftFortnight(-1)">‹ Previous</button><button class="btn sm ghost" onclick="goThisFortnight()">Now</button><button class="btn sm ghost" onclick="shiftFortnight(1)">Next ›</button>' + (built ? '<button class="btn sm ghost" onclick="pushFortnight(7)" title="Everything not posted moves one week later (a lost week: a storm, a break)">Push a week →</button>' : "") + '</div></div>' +
-      '<div style="text-align:right;flex:none"><button class="btn pri" onclick="genFortnight()">⚡ ' + (built ? "Rebuild the 2 weeks" : "Generate the next 2 weeks") + '</button><div class="gen-sub" style="margin-top:10px;font-size:12px">' + (built ? c.approved + " of " + c.planned + " approved" : "not built yet") + '</div><div class="bar"><i style="width:' + (c.planned ? Math.round(c.approved / c.planned * 100) : 0) + '%"></i></div><div class="btn-row" style="margin-top:10px;justify-content:flex-end;gap:6px"><button class="btn sm ghost" onclick="approveAllFortnight()"' + (c.planned && c.approved < c.planned ? "" : " disabled") + '>✓ Approve all</button><button class="btn sm" onclick="setFortnight()"' + (built === 2 && !allLocked ? "" : " disabled") + '>' + (allLocked ? "✓ Both weeks set" : "Set the two weeks") + '</button></div></div></div>' +
-      section("Coach videos", "what each coach records · the photographer list", coachRows, "Generate the two weeks to see who films what.") +
+      '<div class="' + (document.body.classList.contains("app-skin") ? "hero" : "card gen-plain") + '" id="gen-card"><div><div class="hh">' + esc(PWM.label()).replace(/ (\d{4})$/, ' <em>$1</em>') + '</div><p>' + (built ? planned + " to make over " + pair.length + " weeks (" + lastDay + " days) · " + extras + " in hand" + (missing ? " · " + missing + " week" + (missing > 1 ? "s" : "") + " not built yet" : "") + ". Approve each one, swap what is not right, then set the month." : "One button builds the month, week by week, from everything the brain has learned: the banks, the pillars, what worked, the season, the competitors. Every coach once a fortnight. The campus three times.") + '</p><div class="btn-row" style="margin-top:12px;gap:6px"><button class="btn sm ghost" onclick="PWM.shift(-1)">‹ ' + esc(PWM.label(ymOf(-1))) + '</button><button class="btn sm ghost" onclick="PWM.now()">This month</button><button class="btn sm ghost" onclick="PWM.shift(1)">' + esc(PWM.label(ymOf(1))) + ' ›</button>' + (built ? '<button class="btn sm ghost" onclick="pushMonth()" title="Everything not posted moves one week later (a lost week: a storm, a break)">Push a week →</button>' : "") + '</div></div>' +
+      '<div style="text-align:right;flex:none"><button class="btn pri" onclick="genMonth()">⚡ ' + (missing ? (built ? "Build the " + missing + " missing week" + (missing > 1 ? "s" : "") : "Generate " + PWM.label().split(" ")[0]) : "Rebuild the month") + '</button><div class="gen-sub" style="margin-top:10px;font-size:12px">' + (built ? approved + " of " + planned + " approved" : "not built yet") + '</div><div class="bar"><i style="width:' + (planned ? Math.round(approved / planned * 100) : 0) + '%"></i></div><div class="btn-row" style="margin-top:10px;justify-content:flex-end;gap:6px"><button class="btn sm ghost" onclick="approveMonth()"' + (planned && approved < planned ? "" : " disabled") + '>✓ Approve all</button><button class="btn sm" onclick="setMonth()"' + (built && !allLocked ? "" : " disabled") + '>' + (allLocked ? "✓ Month set" : "Set the month") + '</button></div></div></div>' +
+      section("Coach videos", "what each coach records · the photographer list", coachRows, "Generate the month to see who films what.") +
       '<div id="create-briefs"></div>' +
       section("Carousels &amp; posts", "designed by the editor", postRows, "No carousels or posts yet.") +
-      section("Ads", "the ad videos these weeks · the campaigns they serve below", adRows, "No ad video yet.") + '<div id="create-adplan"></div>' +
+      section("Ads", "the ad videos this month · the campaigns they serve below", adRows, "No ad video yet.") + '<div id="create-adplan"></div>' +
       section("In hand", "spares, stories, anything else · use one instead of a weak post", handRows, "Nothing in hand.");
     const bc = bcard(); const slot = $("create-briefs");
     if (bc && slot) { slot.appendChild(bc); const lab = bc.querySelector(".card-label"); if (lab) lab.innerHTML = 'Send it <span class="small muted">· coach brief · photographer shot list · editor · posting plan</span>'; }
@@ -86,6 +94,67 @@
     };
   };
   window.fnReplaceVideo = function (ws, kind, ci, ii) { if (kind !== "idea") return; window.fnAddVideo(ws, { ci, ii }); };
+
+  // ＋ Add an ad / ＋ Add a carousel or post (Antonio, Nov 9): one of the production bank's pieces, or my own; remove is in ✎
+  function addProd(ws, isAdKind) {
+    const w = S.weeks[ws]; if (!w) { PW.toast("Generate the month first", true); return; }
+    const fits = (x) => (isAdKind ? isAd(x) : PW.isPostItem(x));
+    const avail = (PW.availableProd(ws) || []).filter((x) => fits(x) && !(w.production || []).some((p) => p.id === x.id));
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Spare"];
+    const sel = (id, label, opts, val) => '<label class="f"><span>' + label + '</span><select id="' + id + '">' + opts.map((o) => '<option value="' + esc(o.v) + '"' + (o.v === val ? " selected" : "") + ">" + esc(o.t) + "</option>").join("") + "</select></label>";
+    const fmts = isAdKind ? ["Ad Video"] : ["Carousel", "Static Post", "Reel"];
+    const root = PW.openModal("<h3>" + (isAdKind ? "Add an ad" : "Add a carousel or post") + "</h3>" +
+      sel("ap-idea", isAdKind ? "The ad" : "The piece", avail.map((i) => ({ v: i.id, t: i.title })).concat([{ v: "__own", t: "✎ Write my own…" }]), "") +
+      '<div id="ap-own" hidden><label class="f"><span>Title</span><input id="ap-title"></label><label class="f"><span>What it shows</span><input id="ap-desc" placeholder="the shots, the slides, the headline"></label>' + sel("ap-format", "Format", fmts.map((f) => ({ v: f, t: f })), fmts[0]) + "</div>" +
+      sel("ap-day", "Post day", DAYS.map((d) => ({ v: d, t: d })), isAdKind ? "Thu" : "Wed") +
+      '<div class="btn-row"><button class="btn ghost muted" id="ap-cancel">Cancel</button><button class="btn" id="ap-ok">Add</button></div>');
+    const idea = root.querySelector("#ap-idea"), own = root.querySelector("#ap-own"); const onIdea = () => { own.hidden = idea.value !== "__own"; }; idea.addEventListener("change", onIdea); onIdea();
+    root.querySelector("#ap-cancel").onclick = PW.closeModal;
+    root.querySelector("#ap-ok").onclick = () => {
+      const day = root.querySelector("#ap-day").value; let it;
+      if (idea.value === "__own") { const t = root.querySelector("#ap-title").value.trim(); if (!t) { root.querySelector("#ap-title").focus(); return; } it = { id: "c_" + Date.now().toString(36), title: t, desc: root.querySelector("#ap-desc").value.trim(), hook: "", format: root.querySelector("#ap-format").value, day, pillar: isAdKind ? "promo" : "culture", delivered: false, approved: false, custom: true }; }
+      else { const src = avail.find((i) => i.id === idea.value); if (!src) return; it = PW.pick(src, { pillar: src.pillar }); it.day = day; }
+      w.production.push(it); PW.closeModal(); PW.fnSync(ws); PW.toast("Added — approve it when it is right");
+    };
+  }
+  window.fnAddAd = (ws) => addProd(ws, true);
+  window.fnAddPost = (ws) => addProd(ws, false);
+
+  // the month: generate the missing weeks, approve all, set (lock) the built ones, push by a week
+  window.genMonth = async function () {
+    const pair = PWM.weeks(); const missing = pair.filter((ws) => !S.weeks[ws]); const open = pair.filter((ws) => S.weeks[ws] && !S.weeks[ws].locked);
+    let todo = missing;
+    if (!missing.length) { if (!open.length) { PW.toast("Every week of " + PWM.label() + " is set. Unlock a week from More to rebuild it.", true); return; } if (!(await PW.askConfirm("Rebuild " + PWM.label(), open.length + " unset week" + (open.length > 1 ? "s" : "") + " get a fresh plan; your swaps and edits on them are lost. Set weeks stay.", "Rebuild", true))) return; todo = open; }
+    else if (!(await PW.askConfirm("Build " + PWM.label(), "Build the " + missing.length + " missing week" + (missing.length > 1 ? "s" : "") + " (" + missing.map(monLabel).join(", ") + ") from the banks? The weeks already built stay.", "Build"))) return;
+    todo.forEach((ws) => { const t = PW.detectWeekTheme(PW.wsDate(ws)); S.weeks[ws] = PW.buildWeek(ws, t.theme, t.pillar); PW.fnSync(ws); });
+    PW.toast(todo.length + " week" + (todo.length > 1 ? "s" : "") + " built — approve, swap, then set the month");
+  };
+  window.approveMonth = function () { PWM.weeks().forEach((ws) => PW.fnItems(ws).forEach((x) => { if (!PW.isExtra(x.it)) x.it.approved = true; })); PW.fnSync(PWM.weeks()[0]); PW.toast("All planned posts approved — now set the month"); };
+  window.setMonth = async function () {
+    const weeks = PWM.weeks().filter((ws) => S.weeks[ws] && !S.weeks[ws].locked); if (!weeks.length) return;
+    let planned = 0, approved = 0; weeks.forEach((ws) => PW.fnItems(ws).forEach((x) => { if (!PW.isExtra(x.it)) { planned++; if (x.it.approved) approved++; } }));
+    const msg = approved < planned ? approved + " of " + planned + " posts are approved. Set the month anyway? Everything in it is locked out of future weeks." : "All " + planned + " posts approved. Lock the month? Its ideas never get assigned again.";
+    if (!(await PW.askConfirm("Set " + PWM.label(), msg, "Set the month"))) return;
+    weeks.forEach((ws) => { const w = S.weeks[ws]; w.locked = true; w.approvedAt = new Date().toISOString(); delete w.warnings; });
+    PW.fnSync(weeks[0]); PW.toast("Month set — send the briefs");
+  };
+  window.pushMonth = async function () {
+    const weeks = PWM.weeks().filter((ws) => S.weeks[ws]); if (!weeks.length) return;
+    const open = weeks.reduce((k, ws) => k + PW.fnItems(ws).filter((x) => !PW.isDone(ws, x.it)).length, 0);
+    if (!open) { PW.toast("Everything this month is already posted", true); return; }
+    if (!(await PW.askConfirm("Push by a week", open + " posts that have not gone out move to the same day one week later. Posted ones stay.", "Push"))) return;
+    weeks.slice().reverse().forEach((ws) => {
+      const w = S.weeks[ws], to = PW.shiftWS(ws, 1);
+      if (!S.weeks[to]) S.weeks[to] = { weekStart: to, weekDates: PW.weekLabel(to), theme: w.theme || "", themePillar: w.themePillar || "", locked: false, createdAt: Date.now(), coaches: [], production: [], warnings: [] };
+      const t = S.weeks[to];
+      (w.coaches || []).forEach((c) => { const keep = [], move = []; c.ideas.forEach((i) => (PW.isDone(ws, i) ? keep : move).push(i)); if (move.length) { let tc = t.coaches.find((x) => x.name === c.name); if (!tc) { tc = { name: c.name, role: c.role, ideas: [] }; t.coaches.push(tc); } move.forEach((i) => { i.approved = false; tc.ideas.push(i); }); } c.ideas = keep; });
+      w.coaches = (w.coaches || []).filter((c) => c.ideas.length);
+      const keepP = [], moveP = []; (w.production || []).forEach((p) => (PW.isDone(ws, p) ? keepP : moveP).push(p)); moveP.forEach((p) => { p.approved = false; t.production.push(p); }); w.production = keepP;
+      t.locked = false;
+    });
+    PW.fnSync(weeks[0]); PW.toast("Pushed — approve the weeks again where they landed");
+  };
+  PWM.on(render);
 
   render();
   new MutationObserver(render).observe(fort, { childList: true });

@@ -83,10 +83,25 @@
   setTimeout(fromHash, 0);
   window.openWeek = function (ws) { openTab("screate"); if (window.PW && PW.showWeek) PW.showWeek(ws); };
 
+  // ── the month (Antonio, Nov 9: "just do monthly work — November, December — adjust to the 30 or 31 days") ──
+  // a month = the weeks whose Monday falls in it (4 or 5 week documents); the data stays weekly, the runs keep building fortnights.
+  const PWM = window.PWM = (() => {
+    const pad = (n) => String(n).padStart(2, "0");
+    const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    let cur = (() => { const d = new Date(Date.now() + 4 * 864e5); return d.getFullYear() + "-" + pad(d.getMonth() + 1); })();
+    const weeks = (ym) => { ym = ym || cur; const [y, m] = ym.split("-").map(Number); const out = []; const d = new Date(y, m - 1, 1); while (d.getMonth() === m - 1) { if (d.getDay() === 1) { const sun = new Date(d); sun.setDate(d.getDate() - 1); out.push(iso(sun)); } d.setDate(d.getDate() + 1); } return out; };
+    const label = (ym) => { ym = ym || cur; const [y, m] = ym.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" }); };
+    const shift = (n) => { const [y, m] = cur.split("-").map(Number); const d = new Date(y, m - 1 + n, 1); cur = d.getFullYear() + "-" + pad(d.getMonth() + 1); fire(); };
+    const now = () => { const d = new Date(Date.now() + 4 * 864e5); cur = d.getFullYear() + "-" + pad(d.getMonth() + 1); fire(); };
+    const subs = []; const fire = () => subs.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
+    return { get cur() { return cur; }, weeks, label, shift, now, on: (f) => subs.push(f) };
+  })();
+
   // ── helpers ──
   const fmt = (n) => (n == null || n === "" || isNaN(Number(n)) ? "—" : Number(n) >= 100000 ? (Number(n) / 1000).toFixed(1).replace(/\.0$/, "") + "<small>K</small>" : Number(n).toLocaleString("en-US"));
   const money = (n) => (n == null || isNaN(Number(n)) ? "—" : "$" + Math.round(Number(n)).toLocaleString("en-US"));
   const dayL = (d) => { if (!d) return ""; const x = new Date(String(d).length === 10 ? d + "T12:00:00" : d); return isNaN(x) ? String(d) : x.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  const monLabel = (ws) => { const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 1); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
   const tile = (lab, n, dl, cls) => '<div class="tile"><div class="lab">' + esc(lab) + '</div><div class="n">' + n + "</div>" + (dl ? '<span class="dl ' + (cls || "") + '">' + dl + "</span>" : "") + "</div>";
   const rw = (ic, icCls, title, sub, right) => '<div class="rw"><div class="ic ' + (icCls || "") + '">' + ic + '</div><div class="t"><b>' + esc(title) + "</b>" + (sub ? "<span>" + esc(sub) + "</span>" : "") + "</div>" + (right || "") + "</div>";
   const chip = (cls, t) => '<span class="chip ' + cls + '">' + esc(t) + "</span>";
@@ -145,13 +160,13 @@
   // ── ③ Execute: four numbers, one list per week, the ads, add a post ──
   function renderExec() {
     const PW = window.PW; if (!PW || !PW.S) return; const S = PW.S;
-    const fn = PW.curFN ? PW.curFN() : PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);   // follows Previous / Now / Next, like Create
+    const pair = PWM.weeks();   // the month on screen (Previous / Now / Next, shared with Create)
     const when = S.delivery && S.delivery.checkedAt ? new Date(S.delivery.checkedAt) : null;
-    $("when-sexecute").textContent = PW.fnLabel(fn) + (when ? " · checked against Instagram and the ad account " + when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + " " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : " · not checked yet");
+    $("when-sexecute").textContent = PWM.label() + (when ? " · checked against Instagram and the ad account " + when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + " " + when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : " · not checked yet");
     let created = 0, posted = 0, improvised = 0, missing = 0; const weeks = [];
     pair.forEach((ws, wi) => {
       const w = S.weeks && S.weeks[ws];
-      if (!w) { weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(PW.weekLabel(ws)) + '</span></div><div class="empty">Not built yet — Generate on Create.</div></div>'); return; }
+      if (!w) { weeks.push('<div class="card"><div class="card-label">Week of ' + esc(monLabel(ws)) + ' <span class="small muted">· ' + esc(PW.weekLabel(ws)) + '</span></div><div class="empty">Not built yet — Generate the month on Create.</div></div>'); return; }
       let wp = 0, wn = 0; const rows = []; const usedExtra = new Set();
       items(w).sort((a, b) => DAYS.indexOf(a.it.day || "Spare") - DAYS.indexOf(b.it.day || "Spare")).forEach(({ who, it, ref }) => {
         const r = PW.itemState(ws, it), st = r.st, e = r.e || {};
@@ -168,14 +183,14 @@
       // and they are already in the archive, so the brain never offers that topic again
       const end = PW.shiftWS ? PW.shiftWS(ws, 1) : ws; const extras = (S.delivery && Array.isArray(S.delivery.extras) ? S.delivery.extras : []).map((x, i) => [x, i]).filter(([x]) => x && x.date >= ws && x.date < end && !usedExtra.has(x.date + "|" + x.title));
       const also = extras.map(([x, i]) => rw(esc(dayL(x.date).split(" ")[1] ? new Date(x.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" }) : "—"), "lime", x.title || "", [x.coach && x.coach !== "—" ? x.coach : "Production", x.format, "went out " + dayL(x.date)].filter(Boolean).join(" · "), chip("imp", "Not planned") + '<div class="acts"><button title="Put it in the plan as posted" data-extra="' + i + '" data-ws="' + ws + '">＋</button></div>'));
-      weeks.push('<div class="card"><div class="card-label">Week ' + (wi + 1) + ' <span class="small muted">· ' + esc(w.weekDates || ws) + " · " + wp + " of " + wn + (w.locked ? "" : " · draft") + "</span></div>" + (rows.join("") || '<div class="empty">Nothing planned.</div>') + (also.length ? '<div class="lab" style="margin:12px 0 2px">Also went out · not in the plan</div>' + also.join("") : "") + "</div>");
+      weeks.push('<div class="card"><div class="card-label">Week of ' + esc(monLabel(ws)) + ' <span class="small muted">· ' + esc(w.weekDates || ws) + " · " + wp + " of " + wn + (w.locked ? "" : " · draft") + "</span></div>" + (rows.join("") || '<div class="empty">Nothing planned.</div>') + (also.length ? '<div class="lab" style="margin:12px 0 2px">Also went out · not in the plan</div>' + also.join("") : "") + "</div>");
     });
     // the ads: every campaign in the plan that is not ended
     const camps = (S.adPlan && Array.isArray(S.adPlan.campaigns) ? S.adPlan.campaigns : []).filter((c) => c && c.status !== "ended");
     let live = 0; const ads = camps.map((c) => { const r = PW.campState ? PW.campState(c) : { st: c.status }, e = r.e || {}; const on = r.st === "live"; if (on) live++;
       return rw("$", on ? "lime" : "", String(c.name || "").replace(/^PROWORLD\s*[—-]\s*/, "").replace(/\s*\(Leads\)$/, ""), on ? [money(e.spend7), e.leads7 != null ? e.leads7 + " leads" : "", e.cpl7 != null ? "$" + Number(e.cpl7).toFixed(0) + " each" : ""].filter(Boolean).join(" · ") : "planned " + dayL((c.window || {}).start), chip(on ? "ok" : r.st === "missing" ? "wait" : "", on ? "Live" : r.st === "missing" ? "Not live" : "Planned")); });
-    ex.innerHTML = '<div class="btn-row" style="margin-bottom:12px;gap:6px"><button class="btn sm ghost" onclick="shiftFortnight(-1)">‹ Previous</button><button class="btn sm ghost" onclick="goThisFortnight()">Now</button><button class="btn sm ghost" onclick="shiftFortnight(1)">Next ›</button></div>' +
-      '<div class="tiles">' + tile("Created", created, "two weeks", "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
+    ex.innerHTML = '<div class="btn-row" style="margin-bottom:12px;gap:6px"><button class="btn sm ghost" onclick="PWM.shift(-1)">‹ ' + esc(PWM.label(prevYM())) + '</button><button class="btn sm ghost" onclick="PWM.now()">This month</button><button class="btn sm ghost" onclick="PWM.shift(1)">' + esc(PWM.label(nextYM())) + ' ›</button></div>' +
+      '<div class="tiles">' + tile("Created", created, PWM.label().split(" ")[0], "flat") + tile("Posted", posted, improvised ? improvised + " improvised" : "", "") + tile("Missing", missing, missing ? "carried forward" : "none", missing ? "down" : "") + tile("Ads live", live + " <small>of " + camps.length + "</small>", camps.length - live ? (camps.length - live) + " not launched" : "", camps.length - live ? "warn" : "") + "</div>" +
       '<div class="g31" style="margin-top:16px"><div style="display:grid;gap:16px">' + weeks.join("") + '</div><div style="display:grid;gap:14px;align-content:start"><div class="card"><div class="card-label">Ads</div>' + (ads.join("") || '<div class="empty">No campaigns planned.</div>') + '</div><button class="btn pri" id="exec-add" style="justify-content:center">+ Add a post that went out</button><p class="small muted" style="margin:0;text-align:center">Posts are read from Instagram every morning and matched to the plan, improvised ones too. This is for the rare one it cannot place.</p></div></div>';
     const add = $("exec-add"); if (add) add.onclick = addPost;
     ex.querySelectorAll("[data-extra]").forEach((b) => b.addEventListener("click", () => adoptExtra(b.dataset.ws, Number(b.dataset.extra))));
@@ -191,8 +206,8 @@
     PW.fnSync(ws); PW.toast("In the plan as posted");
   }
   async function addPost() {
-    const PW = window.PW, S = PW.S; const fn = PW.fnOf(PW.wsOf(new Date())), pair = PW.fnPair(fn);
-    const weeks = pair.filter((ws) => S.weeks[ws]); if (!weeks.length) { PW.toast("Generate the two weeks first", true); return; }
+    const PW = window.PW, S = PW.S; const pair = PWM.weeks();
+    const weeks = pair.filter((ws) => S.weeks[ws]); if (!weeks.length) { PW.toast("Generate the month first", true); return; }
     const coaches = (PW.COACHES || []).map((c) => c.name);
     const r = await PW.askForm("A post that went out", [
       { key: "title", label: "What was posted", placeholder: "e.g. Soccer Saturdays — this week's session" },
@@ -211,8 +226,9 @@
 
   function renderAll() { try { renderReport(); } catch (e) { console.error(e); } try { renderExec(); } catch (e) { console.error(e); } }
   if (window.PW && PW.hooks) PW.hooks.push(renderAll);
-  // Previous / Now / Next (shared with Create) redraw Execute too
-  ["shiftFortnight", "goThisFortnight"].forEach((k) => { const f = window[k]; if (typeof f === "function") window[k] = function () { f.apply(this, arguments); renderExec(); }; });
+  const prevYM = () => { const [y, m] = PWM.cur.split("-").map(Number); const d = new Date(y, m - 2, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+  const nextYM = () => { const [y, m] = PWM.cur.split("-").map(Number); const d = new Date(y, m, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+  PWM.on(renderExec);
   renderAll();
   // live.js redraws Needs-you on its own hooks; when it does, it is already in its slot
 })();
