@@ -2608,6 +2608,14 @@ const PW_CONFIG = {
   };
   const a2i = (k, cls) => `<i class="a2i${cls ? ' ' + cls : ''}" aria-hidden="true">${A2_ICON[k] || ''}</i>`;
   const a2chev = () => a2i('chev', 'chev');
+  /* Call goes through JustCall (Antonio, Nov 6: every coach gets a JustCall number): the academy number shows to the family, the call
+     is logged in JustCall and the contact sync ticks the week. The dialer opens with the number filled in; the player rides along
+     as metadata. Never tel: — that would ring from the coach's own phone. */
+  function jcCall(phone, pid) {
+    const d = String(phone || '').replace(/[^\d+]/g, ''); if (!d) return '';
+    const e164 = d.startsWith('+') ? d : d.length === 10 ? '+1' + d : d.length === 11 && d[0] === '1' ? '+' + d : '+' + d;
+    return `href="https://app.justcall.io/dialer?numbers=${encodeURIComponent(e164)}&medium=custom&metadata=${encodeURIComponent(pid || '')}&metadata_type=string" target="_blank" rel="noopener"`;
+  }
   // the day: Thursday, Nov 5
   const a2day = (d) => d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   // a ring: done of total, the number inside
@@ -2693,7 +2701,7 @@ const PW_CONFIG = {
     const p = player(pid); if (!p) return `${notice()}${a2nav('Players', { view: 'home' })}<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? 'This player is not on the roster.' : 'Loading…'}</b></span></div></div>`;
     if (!mine(p)) return `${a2nav(group(p.group).label, { view: 'group', gid: p.group })}${a2title(p.name, esc(p.coach ? 'With Coach ' + p.coach : 'No coach yet') + ' · a director can put your name on the record')}`;
     const g = group(p.group); const wk = curWeek(); const c = contactOf(p.id, wk); const on = !!(c && c.done); const w = writable();
-    const fam = a2family(p); const tel = fam.length ? `href="tel:${esc(fam[0].phone)}"` : '';
+    const fam = a2family(p); const tel = fam.length ? jcCall(fam[0].phone, p.id) : '';
     const d = dueNow(p); const rep = reportFor(p.id, curQ());
     const qa = `<div class="a2qa"><button type="button" class="on" ${goAttr({ view: 'messages', pid: p.id })}><span>${a2i('msg')}</span>Text</button>${tel ? `<a ${tel}><span>${a2i('phone')}</span>Call</a>` : `<button type="button" disabled><span>${a2i('phone')}</span>Call</button>`}${w ? `<button type="button" data-act="start" data-type="${esc(DUE_TYPE)}"><span>${a2i('file')}</span>Report</button>` : ''}</div>`;
     const week = a2row(`<span class="a2ico ${on ? 'mint' : 'red'}">${a2i(on ? 'check' : 'users')}</span>`, on ? 'In touch this week' : 'Not in touch yet this week', on ? esc(tickWord(c)) + (c.at ? ' · ' + esc(new Date(c.at).toLocaleDateString('en-US', { weekday: 'long' })) : '') : 'A text from here ticks it', w ? `<button type="button" class="a2tick${on ? ' on' : ''}" data-act="contact" data-v="${on ? 'off' : 'on'}" aria-label="${on ? 'Undo' : 'I was in touch this week'}">${a2i('check')}</button>` : '');
@@ -2742,7 +2750,8 @@ const PW_CONFIG = {
       const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
       if (!t && !S.msg.busy[openPid]) loadThread(openPid, false, openKey && CONV_OK.test(openKey) ? openKey : '');
       const body = !t ? '<p class="a2hint">Loading the chat…</p>' : t.error && !(t.lines && t.lines.length) ? `<p class="a2hint">${esc(t.error)}</p>` : chatPane(p, t, openKey, true);
-      const tel = (t && (t.numbers || [])[0] && t.numbers[0].phone) ? `<a class="a2cb" href="tel:${esc(t.numbers[0].phone)}" aria-label="Call">${a2i('phone')}</a>` : '';
+      const callTo = (() => { if (!t) return ''; const cv = convOf(t, openKey); const tail0 = cv && cv.members && cv.members[0] && cv.members[0].tail; const n = (t.numbers || []).find((x) => tail0 && x.tail === tail0) || (t.numbers || [])[0]; return n && n.phone ? n.phone : ''; })();
+      const tel = callTo ? `<a class="a2cb" ${jcCall(callTo, p.id)} aria-label="Call through JustCall">${a2i('phone')}</a>` : '';
       pane = `<section class="a2chat" id="mpane" aria-label="The open chat"><div class="a2nav"><button type="button" class="a2bk" ${goAttr({ view: 'messages' })} aria-label="Back to the chats">${a2i('back')}Chats</button><button type="button" class="a2who" ${goAttr({ view: 'player', pid: p.id })}><b>${esc(p.name)}</b><small>${esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</small></button><span class="a2nr">${tel}</span></div>${body}${t && t.signature ? `<div class="a2sig">Every text ends with “${esc(t.signature)}”</div>` : ''}</section>`;
     }
     return `${notice()}${openPid && !wide ? pane : `${a2title('Messages.')}${ib && ib.error ? `<p class="a2hint">Could not refresh: ${esc(ib.error)}</p>` : ''}<div class="a2mbox${openPid ? ' open' : ''}">${list}${pane}</div>`}`;
