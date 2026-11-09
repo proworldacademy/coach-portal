@@ -1013,14 +1013,27 @@
   window.fnEdit = async function (ws, kind, a, b) {
     const w = S.weeks[ws], it = fnGet(ws, kind, a, b); if (!w || !it) return;
     const done = isDone(ws, it);
-    const r = await askForm("Edit this post", ideaFields(it), "Save changes", null, [
+    // Antonio + Manu (Nov 9): the person filming is editable too — a great idea may suit another coach better
+    const cur = kind === "idea" ? w.coaches[a].name : "";
+    const names = Array.from(new Set(COACHES.map((c) => c.name).concat((w.coaches || []).map((c) => c.name), cur ? [cur] : []))).filter(Boolean);
+    const fields = kind === "idea" ? [{ key: "who", label: "Who films it", type: "select", options: names, value: cur }].concat(ideaFields(it)) : ideaFields(it);
+    const r = await askForm("Edit this post", fields, "Save changes", null, [
       { id: "posted", label: it.delivered ? "Unmark posted" : done ? "✓ Posted (by the run)" : "✓ Mark posted", cls: "ghost mint" },
       { id: "remove", label: "✕ Remove from the plan", cls: "ghost muted" }
     ]);
     if (!r) return;
     if (r.action === "posted") { if (it.delivered) { it.delivered = false; toast("Unmarked"); } else if (!done) { it.delivered = true; it.approved = true; toast("Marked posted by hand"); } fnSync(ws); return; }
     if (r.action === "remove") { if (!(await askConfirm("Remove this post", "Take it out of the plan? It goes back in the bank for a future week (unless it was posted).", "Remove", true))) return; if (kind === "idea") w.coaches[a].ideas.splice(b, 1); else w.production.splice(a, 1); fnSync(ws); toast("Removed"); return; }
-    if (!r.title) return; Object.assign(it, { title: r.title, desc: r.desc, day: r.day, format: r.format, hook: r.hook, custom: true }); fnSync(ws);
+    if (!r.title) return; Object.assign(it, { title: r.title, desc: r.desc, day: r.day, format: r.format, hook: r.hook, custom: true });
+    if (kind === "idea" && r.who && r.who !== cur) {   // hand the idea to another coach in the same week
+      w.coaches[a].ideas.splice(b, 1);
+      let tc = (w.coaches || []).find((c) => c.name === r.who);
+      if (!tc) { const def = COACHES.find((c) => c.name === r.who); tc = { name: r.who, role: def ? def.role : "", ideas: [] }; w.coaches.push(tc); }
+      tc.ideas.push(it);
+      if (!w.coaches[a].ideas.length && !w.locked) w.coaches.splice(a, 1);   // a coach left with nothing to film drops off this week's list
+      toast("Now with " + r.who);
+    }
+    fnSync(ws);
   };
   window.fnSkip = async function (ws, kind, a, b) { const w = S.weeks[ws]; const it = fnGet(ws, kind, a, b); if (!w || !it) return; if (!(await askConfirm("Drop this post", "Take it out of the plan? It goes back in the bank for a future week.", "Drop", true))) return; if (kind === "idea") w.coaches[a].ideas.splice(b, 1); else w.production.splice(a, 1); fnSync(ws); };
   window.useExtra = function (ws, kind, a, b) {
