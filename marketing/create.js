@@ -43,7 +43,7 @@
     const wk = (ws) => "Week of " + monLabel(ws) + " · " + (S.weeks[ws] ? S.weeks[ws].weekDates || PW.weekLabel(ws) : PW.weekLabel(ws)) + (S.weeks[ws] && S.weeks[ws].locked ? " · set" : S.weeks[ws] ? "" : " · not built");
     const items = pair.map((ws) => PW.fnItems(ws));
     const by = (pred, add) => pair.map((ws, wi) => [wk(ws), items[wi].filter((x) => pred(x.it, x)).map((x) => row(x, wi)).concat(S.weeks[ws] && add ? [add(ws)] : [])]);
-    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it), (ws) => addBtn(ws, "fnAddVideo", "Add a video"));
+    const coachRows = by((it, x) => x.kind === "idea" && !PW.isExtra(it) && !isStory(it), (ws) => addBtn(ws, "fnAddVideo", "Add a video")).map(([t, rows], wi) => [t, rows.length ? rows : ['<div class="small muted" style="padding:6px 0 10px">Not built yet — ⚡ above builds it.</div>']]);
     const postRows = by((it, x) => x.kind === "prod" && !isAd(it) && !isStory(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddPost", "Add a carousel or post"));
     const adRows = by((it, x) => x.kind === "prod" && isAd(it) && !PW.isExtra(it), (ws) => addBtn(ws, "fnAddAd", "Add an ad"));
     const handRows = by((it) => PW.isExtra(it) || isStory(it));
