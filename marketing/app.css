@@ -143,3 +143,13 @@ body.app-skin .fn-who{font-size:15px;font-weight:800;color:var(--ink);letter-spa
 body.app-skin .fn-role{font-style:italic;font-weight:400;color:#8E8E8A;font-size:12.5px}
 body.app-skin .fn-row .item-hook{font-style:italic;color:#3A3A38;font-size:13.5px;margin-top:3px}
 body.app-skin .fn-desc{font-size:12px;color:#9A9A96;font-weight:400}
+/* the plan assistant */
+body.app-skin #plan-ai{margin-bottom:16px}
+.pa-log{display:grid;gap:8px;max-height:320px;overflow:auto;margin-bottom:10px}
+.pa-msg{padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.4;max-width:88%}
+.pa-msg.me{background:var(--ink);color:#fff;justify-self:end;border-bottom-right-radius:4px}
+.pa-msg.ai{background:#F1F1ED;color:var(--ink);justify-self:start;border-bottom-left-radius:4px}
+.pa-done{margin:8px 0 6px;padding-left:18px;font-size:12.5px}
+.pa-row{display:flex;gap:8px;align-items:flex-end}
+.pa-row textarea{flex:1;min-height:48px;border:1px solid var(--line-2);border-radius:14px;padding:10px 14px;font:inherit;font-size:14px;resize:vertical;background:#fff}
+@media(max-width:640px){.pa-row{flex-direction:column;align-items:stretch}.pa-msg{max-width:100%}}

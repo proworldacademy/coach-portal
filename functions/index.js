@@ -13,6 +13,7 @@ const logger = require('firebase-functions/logger');
 const BACKUP = require('./lib/backup');
 const LESSONS = require('./lib/lessons');
 const IDEAS = require('./lib/ideas');
+const PLAN = require('./lib/plan');
 const CAL = require('./lib/calendar');
 const CAT = require('./lib/catalog');
 const S = require('./lib/stripe');
@@ -117,6 +118,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       const who = await ADMIN.requireMarketing(req);
       const b = req.body || {};
       if (route === 'POST /marketing/ideas') { const out = await IDEAS.ideas(ctx.db, who, b); logger.info('ideas', { by: who.email, coach: b.coach || '', n: out.ideas.length, took: out.took }); return send(res, 200, out); }
+      if (route === 'POST /marketing/plan') { const out = await PLAN.assist(ctx.db, who, b); return send(res, 200, out); }
       if (route === 'GET /marketing/ideas/status') { const st = await IDEAS.settings(ctx.db, true); return send(res, 200, { ready: /^sk-ant-/.test(String(st.anthropicKey || '')), by: st.by || '', at: st.at || 0 }); }
       throw S.err(404, 'route', 'No such marketing route.');
     }
