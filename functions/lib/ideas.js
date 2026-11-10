@@ -95,7 +95,7 @@ async function ideas(db, who, b) {
   ].filter(Boolean).join('\n');
 
   const t0 = Date.now();
-  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 6000, temperature: 1, system: sys, messages: [{ role: 'user', content: user }] }) });
+  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 6000, system: sys, messages: [{ role: 'user', content: user }] }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw S.err(502, 'claude', 'The idea engine could not answer (' + (j && j.error && j.error.message ? clip(j.error.message, 160) : r.status) + ').');
   const text = (j.content || []).map((c) => c.text || '').join('');

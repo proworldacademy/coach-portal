@@ -45,7 +45,7 @@ async function assist(db, who, b) {
   const msgs = history.map((h) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: clip(h.text, 1200) })).concat([{ role: 'user', content: message }]);
 
   const t0 = Date.now();
-  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 3000, temperature: 0.3, system: sys, messages: msgs }) });
+  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 3000, system: sys, messages: msgs }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw S.err(502, 'claude', 'The assistant could not answer (' + (j && j.error && j.error.message ? clip(j.error.message, 160) : r.status) + ').');
   const text = (j.content || []).map((c) => c.text || '').join('');
