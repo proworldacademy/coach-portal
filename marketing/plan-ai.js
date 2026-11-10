@@ -51,11 +51,31 @@
     box = document.createElement("div"); box.className = "card"; box.id = "plan-ai";
     box.innerHTML = '<div class="card-label">Ask about the plan <span class="small muted">· it moves, swaps, edits, adds or removes posts on this month\'s calendar · nothing else</span></div>' +
       '<div id="pa-log" class="pa-log"></div>' +
-      '<div class="pa-row"><textarea id="pa-in" rows="2" placeholder="e.g. The Delray ITF post is 13 days late — put it on the day of the qualifier. · Move the last-spots ad to the 3 days before camp. · Add a drone video of the campus for Nico."></textarea><button class="btn pri" id="pa-go">Send</button></div>' +
+      '<div class="pa-row"><textarea id="pa-in" rows="2" placeholder="e.g. The Delray ITF post is 13 days late — put it on the day of the qualifier. · Move the last-spots ad to the 3 days before camp. · Add a drone video of the campus for Nico."></textarea>' +
+      '<button class="btn ghost" id="pa-mic" type="button" title="Dictate" aria-label="Dictate">🎙</button><button class="btn pri" id="pa-go">Send</button></div>' +
       '<div class="small muted" id="pa-note"></div>';
     gen.insertAdjacentElement("afterend", box);
     $("pa-go").addEventListener("click", send);
     $("pa-in").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); });
+    dictation();
+  }
+  // ── dictation (the browser's own speech recognition; Chrome, Safari, the iPhone) ──
+  let REC = null, listening = false;
+  function dictation() {
+    const mic = $("pa-mic"), inp = $("pa-in"), note = $("pa-note");
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { mic.style.display = "none"; return; }
+    let base = "";
+    const stop = () => { listening = false; mic.classList.remove("on"); mic.textContent = "🎙"; note.textContent = ""; try { REC && REC.stop(); } catch (e) {} };
+    mic.addEventListener("click", () => {
+      if (listening) return stop();
+      REC = new SR(); REC.lang = "en-US"; REC.interimResults = true; REC.continuous = true;
+      base = inp.value.trim(); listening = true; mic.classList.add("on"); mic.textContent = "■"; note.textContent = "Listening… tap ■ when you are done, then Send.";
+      REC.onresult = (e) => { let fin = "", tmp = ""; for (let i = 0; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) fin += r[0].transcript + " "; else tmp += r[0].transcript; } inp.value = (base ? base + " " : "") + (fin + tmp).replace(/\s+/g, " ").trim(); };
+      REC.onerror = (e) => { note.textContent = e.error === "not-allowed" ? "The browser blocked the microphone — allow it in the address bar and try again." : "Dictation stopped (" + e.error + ")."; listening = false; mic.classList.remove("on"); mic.textContent = "🎙"; };
+      REC.onend = () => { if (listening) { try { REC.start(); } catch (e) { stop(); } } };
+      try { REC.start(); } catch (e) { stop(); note.textContent = "Dictation is not available here."; }
+    });
   }
   function line(role, html) { const log = $("pa-log"); const d = document.createElement("div"); d.className = "pa-msg " + role; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; }
   async function send() {
