@@ -243,6 +243,8 @@
   window.copyBrief = function () { const m = monthMerged(); if (!m) { if (_cp) _cp(); return; }
     const lines = ["PROWORLD — COACH VIDEO BRIEF · " + m.weekDates, ""]; m.coaches.forEach((c) => { if (!c.ideas.length) return; lines.push("• " + c.name.toUpperCase() + " (" + c.role + ")"); c.ideas.forEach((i) => { lines.push("   – " + i.title + " — " + i.format + ", post " + i.day); if (i.hook) lines.push("     " + i.hook); }); lines.push(""); });
     const txt = lines.join("\n"); const done = () => toast("Brief copied — paste it into Slack"); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => fallback(txt, done)); else fallback(txt, done); };
+  if (window.PWM) PWM.on(() => { try { renderWorkflow(); } catch (e) { /* noop */ } });
+  PW.briefMonthText = (kind) => briefText(buildBriefMonth(kind));
   function briefText(doc) { return [doc.title, doc.sub, ""].concat(doc.sections.map((s) => s.h.toUpperCase() + "\n" + s.lines.join("\n") + "\n")).join("\n"); }
   function briefPDFDoc(doc) {
     if (!window.jspdf) { toast("PDF library didn't load — try again in a moment", true); return; }
