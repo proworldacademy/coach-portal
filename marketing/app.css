@@ -136,3 +136,10 @@ body.app-skin .item-actions .btn.ghost.xs{width:auto;height:30px;padding:0 10px;
   body.app-skin .item-title{font-size:15px;line-height:1.25}
   body.app-skin .item-hook{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
+/* the calendar row, four weights (Antonio, Nov 9): title bold · the coach big and bold · the group light italic · the hook italic · the notes small and light */
+body.app-skin .fn-row .item-title{font-size:15px;font-weight:700;line-height:1.25}
+body.app-skin .fn-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 2px;font-size:12px;color:var(--muted)}
+body.app-skin .fn-who{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+body.app-skin .fn-role{font-style:italic;font-weight:400;color:#8E8E8A;font-size:12.5px}
+body.app-skin .fn-row .item-hook{font-style:italic;color:#3A3A38;font-size:13.5px;margin-top:3px}
+body.app-skin .fn-desc{font-size:12px;color:#9A9A96;font-weight:400}
