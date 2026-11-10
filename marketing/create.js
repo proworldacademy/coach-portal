@@ -18,7 +18,8 @@
     const kind = x.kind === "idea" ? (isStory(it) ? "k-story" : "k-video") : isAd(it) ? "k-ad" : isStory(it) ? "k-story" : /carousel/i.test(it.format || "") ? "k-post" : "k-static";
     const KN = { "k-video": "Video", "k-post": "Carousel", "k-static": "Static post", "k-ad": "Ad", "k-story": "Story" };
     const kchip = '<span class="kc ' + kind + '">' + KN[kind] + "</span>";
-    return '<div class="fn-row ' + kind + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')">' + (it.approved ? "✓" : "") + "</div>" +
+    const addr = ' data-ws="' + x.ws + '" data-kind="' + x.kind + '" data-a="' + (x.kind === "idea" ? x.ci : x.pi) + '" data-b="' + (x.kind === "idea" ? x.ii : 0) + '" data-day="' + esc(it.day) + '"' + (ex ? "" : ' draggable="true" title="Hold and drag to another day"');
+    return '<div class="fn-row ' + kind + (it.approved ? " ok" : "") + (ex ? " extra" : "") + '"' + addr + '><div class="chk' + (it.approved ? " done" : "") + '" role="checkbox" aria-checked="' + !!it.approved + '" tabindex="0" title="' + (it.approved ? "Approved" : "Approve") + '" onclick="toggleApprove(' + ref + ')">' + (it.approved ? "✓" : "") + "</div>" +
       '<div class="fn-day">' + (ex ? '<span class="tag orchid" style="margin:0">In hand</span>' : esc(it.day)) + '<div class="small muted">' + esc(dayDate(x.ws, it.day)) + "</div></div>" +
       '<div class="fn-body"><div class="item-title">' + esc(it.title) + '</div><div class="fn-meta">' + kchip + ' <span class="fn-who">' + esc(x.who) + "</span>" + (x.role ? ' <span class="fn-role">' + esc(x.role) + "</span>" : "") + " " + PW.stateChip(x.ws, it) + "</div>" + (it.hook ? '<div class="item-hook">' + esc(it.hook) + "</div>" : "") + (it.desc ? '<div class="small muted fn-desc" style="margin-top:4px">' + esc(String(it.desc).slice(0, 220)) + (String(it.desc).length > 220 ? "…" : "") + "</div>" : "") + "</div>" +
       '<div class="item-actions" style="margin:0">' + (ex ? '<button class="btn ghost xs orchid" onclick="useExtra(' + ref + ')">↑ Use instead of…</button>' : '<button class="btn ghost xs" onclick="fnSwap(' + ref + ')">↻ Swap</button>') + '<button class="btn ghost xs" onclick="fnEdit(' + ref + ')" title="Edit · who films it · mark posted · remove">✎</button>' + rep + "</div></div>";
@@ -53,7 +54,7 @@
     const calRows = pair.map((ws, wi) => {
       if (!S.weeks[ws]) return [wk(ws), ['<div class="small muted" style="padding:6px 0 10px">Not built yet — ⚡ above builds it.</div>']];
       const list = items[wi].filter((x) => !PW.isExtra(x.it)); const rows = [];
-      DAYN.forEach((d) => { const here = list.filter((x) => x.it.day === d); if (here.length) here.forEach((x) => rows.push(row(x, wi))); else rows.push('<div class="fn-row k-empty"><div></div><div class="fn-day">' + d + '<div class="small muted">' + esc(dayDate(ws, d)) + '</div></div><div class="fn-body"><span class="st miss">Nothing planned</span></div><div class="item-actions" style="margin:0"><button class="btn ghost xs" onclick="fnAddVideo(\'' + ws + "','" + d + '\')">＋ Video</button><button class="btn ghost xs" onclick="fnAddPost(\'' + ws + "','" + d + '\')">＋ Post</button></div></div>'); });
+      DAYN.forEach((d) => { const here = list.filter((x) => x.it.day === d); if (here.length) here.forEach((x) => rows.push(row(x, wi))); else rows.push('<div class="fn-row k-empty" data-ws="' + ws + '" data-day="' + d + '"><div></div><div class="fn-day">' + d + '<div class="small muted">' + esc(dayDate(ws, d)) + '</div></div><div class="fn-body"><span class="st miss">Nothing planned</span></div><div class="item-actions" style="margin:0"><button class="btn ghost xs" onclick="fnAddVideo(\'' + ws + "','" + d + '\')">＋ Video</button><button class="btn ghost xs" onclick="fnAddPost(\'' + ws + "','" + d + '\')">＋ Post</button></div></div>'); });
       rows.push('<div class="fn-add">' + ['fnAddVideo:Add a video', 'fnAddPost:Add a carousel or post', 'fnAddAd:Add an ad'].map((p) => { const [f, l] = p.split(":"); return '<button class="btn ghost xs" onclick="' + f + "('" + ws + '\')">＋ ' + l + "</button>"; }).join(" ") + "</div>");
       return [wk(ws), rows];
     });
@@ -71,6 +72,58 @@
     if (bc && slot) { slot.appendChild(bc); const lab = bc.querySelector(".card-label"); if (lab) lab.innerHTML = 'Send it <span class="small muted">· coach brief · photographer shot list · editor · posting plan</span>'; }
     const apc = acard(); const aslot = $("create-adplan"); if (apc && aslot) aslot.appendChild(apc);
     host.querySelectorAll(".chk").forEach((k) => k.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); k.click(); } }));
+    bindDrag();
+  }
+
+  // ── hold a post and move it to another day (Antonio, Nov 9: "same as moving a player to a group") ──
+  // drop on a day: the two posts swap days (or the post takes the empty day); across weeks the post moves into that week. One-step Undo.
+  const MOVES = [];
+  function getItem(ws, kind, a, b) { return PW.fnGet(ws, kind, a, b); }
+  function detach(ws, kind, a, b) { const w = S.weeks[ws]; if (kind === "idea") { const c = w.coaches[a], it = c.ideas.splice(b, 1)[0]; if (!c.ideas.length && !w.locked) w.coaches.splice(a, 1); return { it, coach: c.name, role: c.role }; } return { it: w.production.splice(a, 1)[0] }; }
+  function attach(ws, rec, day) { const w = S.weeks[ws]; rec.it.day = day; if (rec.coach) { let c = (w.coaches || []).find((k) => k.name === rec.coach); if (!c) { c = { name: rec.coach, role: rec.role || "", ideas: [] }; w.coaches.push(c); } c.ideas.push(rec.it); } else w.production.push(rec.it); }
+  function moveTo(src, tgt) {
+    const sw = S.weeks[src.ws], tw = S.weeks[tgt.ws]; if (!sw || !tw) return;
+    const sIt = getItem(src.ws, src.kind, src.a, src.b); if (!sIt) return;
+    const tIt = tgt.kind ? getItem(tgt.ws, tgt.kind, tgt.a, tgt.b) : null;
+    const before = { src: { ws: src.ws, day: sIt.day, id: sIt.id }, tgt: tIt ? { ws: tgt.ws, day: tIt.day, id: tIt.id } : null };
+    if (src.ws === tgt.ws) { const d = sIt.day; sIt.day = tgt.day; if (tIt) tIt.day = d; }
+    else {   // across weeks: take both out first (indexes shift), then put each in the other week
+      const sRec = detach(src.ws, src.kind, src.a, src.b);
+      const tRec = tIt ? detach(tgt.ws, tgt.kind, tgt.kind === "idea" ? tw.coaches.findIndex((c) => c.ideas.includes(tIt)) : tw.production.indexOf(tIt), tgt.kind === "idea" ? tw.coaches.find((c) => c.ideas.includes(tIt)).ideas.indexOf(tIt) : 0) : null;
+      attach(tgt.ws, sRec, tgt.day); if (tRec) attach(src.ws, tRec, before.src.day);
+    }
+    MOVES.unshift(before); if (MOVES.length > 5) MOVES.length = 5;
+    PW.fnSync(src.ws); PW.toast((tIt ? "Swapped — " : "Moved — ") + "↶ Undo above");
+  }
+  window.undoMove = function () {
+    const mv = MOVES.shift(); if (!mv) return;
+    const find = (id) => { for (const ws of Object.keys(S.weeks)) { const w = S.weeks[ws]; for (let ci = 0; ci < (w.coaches || []).length; ci++) { const ii = w.coaches[ci].ideas.findIndex((i) => i.id === id); if (ii >= 0) return { ws, kind: "idea", a: ci, b: ii }; } const pi = (w.production || []).findIndex((p) => p.id === id); if (pi >= 0) return { ws, kind: "prod", a: pi, b: 0 }; } return null; };
+    const put = (rec, where) => { if (!rec) return; const at = find(rec.id); if (!at) return; if (at.ws === where.ws) { getItem(at.ws, at.kind, at.a, at.b).day = where.day; } else { const r = detach(at.ws, at.kind, at.a, at.b); attach(where.ws, r, where.day); } };
+    put(mv.src, mv.src); put(mv.tgt, mv.tgt);
+    PW.fnSync(mv.src.ws); PW.toast("Undone");
+  };
+  function addrOf(el) { return { ws: el.dataset.ws, kind: el.dataset.kind || "", a: Number(el.dataset.a || 0), b: Number(el.dataset.b || 0), day: el.dataset.day }; }
+  function bindDrag() {
+    const rows = Array.from(host.querySelectorAll(".fn-row[data-ws]")); let drag = null;
+    const clear = () => rows.forEach((r) => r.classList.remove("over", "dragging"));
+    rows.forEach((r) => {
+      if (r.getAttribute("draggable") === "true") {
+        r.addEventListener("dragstart", (e) => { drag = addrOf(r); r.classList.add("dragging"); try { e.dataTransfer.setData("text/plain", "post"); e.dataTransfer.effectAllowed = "move"; } catch (x) { /* noop */ } });
+        r.addEventListener("dragend", () => { drag = null; clear(); });
+      }
+      r.addEventListener("dragover", (e) => { if (!drag) return; e.preventDefault(); r.classList.add("over"); });
+      r.addEventListener("dragleave", () => r.classList.remove("over"));
+      r.addEventListener("drop", (e) => { if (!drag) return; e.preventDefault(); const tgt = addrOf(r); clear(); if (tgt.ws === drag.ws && tgt.kind === drag.kind && tgt.a === drag.a && tgt.b === drag.b) return; moveTo(drag, tgt); drag = null; });
+      // touch: hold ~350 ms, then slide; drop on the row under the finger
+      if (r.getAttribute("draggable") === "true") {
+        let timer = null, active = false;
+        r.addEventListener("touchstart", (e) => { timer = setTimeout(() => { active = true; drag = addrOf(r); r.classList.add("dragging"); if (navigator.vibrate) navigator.vibrate(20); }, 350); }, { passive: true });
+        r.addEventListener("touchmove", (e) => { if (!active) { clearTimeout(timer); return; } e.preventDefault(); const t = e.touches[0]; const el = document.elementFromPoint(t.clientX, t.clientY); const tr = el && el.closest(".fn-row[data-ws]"); rows.forEach((x) => x.classList.toggle("over", x === tr)); }, { passive: false });
+        r.addEventListener("touchend", (e) => { clearTimeout(timer); if (!active) return; active = false; const t = e.changedTouches[0]; const el = document.elementFromPoint(t.clientX, t.clientY); const tr = el && el.closest(".fn-row[data-ws]"); clear(); if (tr && tr !== r) moveTo(drag, addrOf(tr)); drag = null; });
+        r.addEventListener("touchcancel", () => { clearTimeout(timer); active = false; drag = null; clear(); });
+      }
+    });
+    const gen = $("gen-card"); if (gen && MOVES.length && !gen.querySelector("#undo-move")) { const b = document.createElement("button"); b.id = "undo-move"; b.className = "btn sm ghost"; b.textContent = "↶ Undo move"; b.onclick = window.undoMove; const row = gen.querySelector(".btn-row"); if (row) row.appendChild(b); }
   }
   // ＋ Add a video / ↔ Replace (Antonio, Nov 9: "if we need to switch completely to a person or a completely different idea") —
   // one window: who films it · one of their bank ideas or my own · the day. Replace takes the old post out (back to its bank).
