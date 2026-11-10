@@ -162,8 +162,8 @@
     $("pipeline").innerHTML = stages.map((s) => '<div class="coach" style="border-left-color:var(--' + s.c + ')"><div class="coach-name"><span class="hl ' + s.c + '">' + esc(s.n + " · " + s.t) + '</span></div>' + s.lines.map((l) => '<div class="item-desc" style="margin-top:8px">· ' + esc(l) + "</div>").join("") + "</div>").join("");
     $("rhythm").innerHTML = [["Sunday", "Engine generates the week · owner approves & locks · briefs go out (coaches, photographer, " + (T.editor || "editor") + ", " + (T.manager || "manager") + ")"], ["Monday", "Coaches start filming their piece · production items designed"], [(T.shootDay || "Wed"), "Photographer shoot day — shot list from this page"], ["Within 48h of footage", (T.editor || "Editor") + " delivers edits"], ["Every day", (T.manager || "Manager") + " posts to cadence · Academy Vibes stories · logs posts · replies"], ["Friday", "Delivery check: what's still unfilmed goes to next week or gets swapped"], ["Saturday", "Players in Action recap from the weekend tournaments"], ["Monthly", "Performance review: best and worst posts, saves, comments, growth → the mix and the banks adjust"]].map((r) => '<div class="recur"><strong>' + esc(r[0]) + "</strong> — " + esc(r[1]) + "</div>").join("");
     $("team").innerHTML = [["Marketing manager", T.manager], ["Editor", T.editor], ["Photographer", T.photographer || "— not set"], ["Shoot cadence", (T.photographerCadence || "Weekly") + " · " + (T.shootDay || "Wed")], ["Owner / approver", "Antonio"]].map((r) => '<div class="recur"><strong>' + esc(r[0]) + "</strong> — " + esc(r[1]) + "</div>").join("");
-    const w = PW.cur(), has = !!w;
-    $("brief-buttons").innerHTML = [["Coach brief", "downloadPDF()", "copyBrief()"], ["Photographer shot list", "briefPDF('shots')", "briefCopy('shots')"], ["Editor brief — " + (T.editor || "editor").split(" ")[0], "briefPDF('edit')", "briefCopy('edit')"], ["Posting plan — " + (T.manager || "manager"), "briefPDF('post')", "briefCopy('post')"]].map((b) => '<span class="btn-row" style="gap:4px;margin-right:10px"><button class="btn sm"' + (has ? "" : " disabled") + ' onclick="' + b[1] + '">' + esc(b[0]) + ' PDF</button><button class="btn ghost sm"' + (has ? "" : " disabled") + ' onclick="' + b[2] + '">Copy</button></span>').join("") + (has ? '<div class="small muted" style="margin-top:8px;flex-basis:100%">Built from the week of <strong>' + esc(w.weekDates) + '</strong> (' + (w.locked ? "approved" : "draft — approve it before sending") + ') — the week selected on Coach Assignments.</div>' : '<div class="small muted" style="margin-top:8px">Generate a week on Coach Assignments first.</div>');
+    const w = PW.cur(), has = !!w || !!(monthWeeks() || []).length;
+    $("brief-buttons").innerHTML = [["Coach brief", "downloadPDF()", "copyBrief()"], ["Photographer shot list", "briefPDF('shots')", "briefCopy('shots')"], ["Editor brief — " + (T.editor || "editor").split(" ")[0], "briefPDF('edit')", "briefCopy('edit')"], ["Posting plan — " + (T.manager || "manager"), "briefPDF('post')", "briefCopy('post')"]].map((b) => '<span class="btn-row" style="gap:4px;margin-right:10px"><button class="btn sm"' + (has ? "" : " disabled") + ' onclick="' + b[1] + '">' + esc(b[0]) + ' PDF</button><button class="btn ghost sm"' + (has ? "" : " disabled") + ' onclick="' + b[2] + '">Copy</button></span>').join("") + ((monthWeeks() || []).length ? '<div class="small muted" style="margin-top:8px;flex-basis:100%">Built for <strong>' + esc(PWM.label()) + '</strong> — the ' + monthWeeks().length + ' built week' + (monthWeeks().length > 1 ? "s" : "") + ' on screen, one block per week.</div>' : has ? '<div class="small muted" style="margin-top:8px;flex-basis:100%">Built from the week of <strong>' + esc(w.weekDates) + '</strong> (' + (w.locked ? "approved" : "draft — approve it before sending") + ') — the week selected on Coach Assignments.</div>' : '<div class="small muted" style="margin-top:8px">Generate a week on Coach Assignments first.</div>');
     renderReminders();
   }
   // ── standing to-dos (shared): what still has to happen around the engine
@@ -186,8 +186,19 @@
   const secs = (txt) => { const m = String(txt || "").match(/⏱\s*([^·]+)/); return m ? m[1].trim() : ""; };
   function videoItems(d) { const out = []; d.coaches.forEach((c) => c.ideas.forEach((i) => { if (/Reel|Talking Head|Story/i.test(i.format)) out.push({ who: c.name, role: c.role, idea: i, self: c.name === "Flo" || /Story/i.test(i.format) }); })); (d.production || []).forEach((p) => { if (/^ad\b|ad video/i.test(p.format)) out.push({ who: "Ad video", role: "paid promo — photographer shoots, " + ((S.team && S.team.editor) || "editor").split(" ")[0] + " cuts a 15–30s version too", idea: p, self: false }); else if (/Reel|Story/i.test(p.format)) out.push({ who: "Production", role: "non-video", idea: p, self: /Story/i.test(p.format) }); }); return out; }
   function photoItems(d) { return (d.production || []).filter((p) => /Carousel|Static/i.test(p.format)); }
-  function buildBrief(kind) {
-    const d = PW.cur(), T = S.team, wk = String(d.weekDates || d.weekStart || ""), theme = d.theme ? " · Theme: " + d.theme : "";
+  // the month (Antonio, Nov 9: "the PDF downloads are not reflecting the entire month"): in the app view every brief covers the
+  // weeks of the month on screen, one block per week; the standard blocks (that repeat) appear once
+  const monthWeeks = () => (window.PWM && document.body.classList.contains("app-skin") ? PWM.weeks().filter((ws) => S.weeks[ws]) : null);
+  const weekOf = (d) => { const x = new Date((d.weekStart || today()) + "T12:00:00"); x.setDate(x.getDate() + 1); return x.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  function buildBriefMonth(kind) {
+    const weeks = monthWeeks(); if (!weeks || !weeks.length) return buildBrief(kind);
+    const docs = weeks.map((ws) => buildBrief(kind, S.weeks[ws]));
+    const out = { title: docs[0].title, sub: PWM.label() + " · " + weeks.length + " week" + (weeks.length > 1 ? "s" : ""), wk: PWM.label(), sections: [] }, seen = new Set();
+    docs.forEach((doc, i) => { out.sections.push({ h: "▶ Week of " + weekOf(S.weeks[weeks[i]]) + " · " + (S.weeks[weeks[i]].weekDates || weeks[i]), lines: [] }); doc.sections.forEach((sec) => { const key = sec.h + "|" + sec.lines.join("|"); if (seen.has(key)) return; seen.add(key); out.sections.push(sec); }); });
+    return out;
+  }
+  function buildBrief(kind, dGiven) {
+    const d = dGiven || PW.cur(), T = S.team, wk = String(d.weekDates || d.weekStart || ""), theme = d.theme ? " · Theme: " + d.theme : "";
     const doc = { title: "", sub: "Week of " + wk + theme, wk, sections: [] };
     if (kind === "shots") {
       doc.title = "PHOTOGRAPHER SHOT LIST"; const vids = videoItems(d).filter((v) => !v.self), self = videoItems(d).filter((v) => v.self);
@@ -220,6 +231,18 @@
     }
     return doc;
   }
+  function monthMerged() {
+    const weeks = monthWeeks(); if (!weeks || !weeks.length) return null;
+    const dated = (ws, day) => { const k = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(day); if (k < 0) return day; const x = new Date(ws + "T12:00:00"); x.setDate(x.getDate() + 1 + k); return day + " " + x.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+    const m = { weekStart: weeks[0], weekDates: PWM.label() + " · " + weeks.length + " weeks", theme: "", coaches: [], production: [] };
+    weeks.forEach((ws) => { const w = S.weeks[ws]; (w.coaches || []).forEach((c) => { let t = m.coaches.find((x) => x.name === c.name); if (!t) { t = { name: c.name, role: c.role, ideas: [] }; m.coaches.push(t); } c.ideas.forEach((i) => t.ideas.push(Object.assign({}, i, { day: dated(ws, i.day) }))); }); (w.production || []).forEach((p) => m.production.push(Object.assign({}, p, { day: dated(ws, p.day) }))); });
+    return m;
+  }
+  const _dl = window.downloadPDF, _cp = window.copyBrief;
+  window.downloadPDF = function () { const m = monthMerged(); if (m && PW.generatePDF) { PW.generatePDF(m); return; } if (_dl) _dl(); };
+  window.copyBrief = function () { const m = monthMerged(); if (!m) { if (_cp) _cp(); return; }
+    const lines = ["PROWORLD — COACH VIDEO BRIEF · " + m.weekDates, ""]; m.coaches.forEach((c) => { if (!c.ideas.length) return; lines.push("• " + c.name.toUpperCase() + " (" + c.role + ")"); c.ideas.forEach((i) => { lines.push("   – " + i.title + " — " + i.format + ", post " + i.day); if (i.hook) lines.push("     " + i.hook); }); lines.push(""); });
+    const txt = lines.join("\n"); const done = () => toast("Brief copied — paste it into Slack"); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => fallback(txt, done)); else fallback(txt, done); };
   function briefText(doc) { return [doc.title, doc.sub, ""].concat(doc.sections.map((s) => s.h.toUpperCase() + "\n" + s.lines.join("\n") + "\n")).join("\n"); }
   function briefPDFDoc(doc) {
     if (!window.jspdf) { toast("PDF library didn't load — try again in a moment", true); return; }
@@ -234,8 +257,8 @@
     const fname = "ProWorld_" + doc.title.split(" ")[0].replace(/[^\w]/g, "") + "_" + String(doc.wk || "").replace(/[^\w]/g, "_") + ".pdf";
     PW.deliverFile(fname, pdf.output("blob"), () => pdf.save(fname));
   }
-  window.briefPDF = function (kind) { if (!PW.cur()) { toast("Generate a week first", true); return; } briefPDFDoc(buildBrief(kind)); };
-  window.briefCopy = function (kind) { if (!PW.cur()) { toast("Generate a week first", true); return; } const txt = briefText(buildBrief(kind)); const done = () => toast("Copied — paste it into Slack or an email"); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => fallback(txt, done)); else fallback(txt, done); };
+  window.briefPDF = function (kind) { if (!PW.cur() && !(monthWeeks() || []).length) { toast("Generate a week first", true); return; } briefPDFDoc(buildBriefMonth(kind)); };
+  window.briefCopy = function (kind) { if (!PW.cur() && !(monthWeeks() || []).length) { toast("Generate a week first", true); return; } const txt = briefText(buildBriefMonth(kind)); const done = () => toast("Copied — paste it into Slack or an email"); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => fallback(txt, done)); else fallback(txt, done); };
   function fallback(txt, done) { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { toast("Couldn't copy", true); } ta.remove(); }
 
   // ───────────────────────── market intelligence ─────────────────────────
