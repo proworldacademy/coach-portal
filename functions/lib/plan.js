@@ -42,15 +42,16 @@ async function assist(db, who, b) {
     'THE PLAN ON SCREEN:\n' + plan,
     'Answer with ONE JSON object only: {"reply": "<2–6 short lines in plain words: what you changed and why, or what you suggest / need to know>", "ops": [ ... ]}. Operations, applied in order: {"op":"move","id":"<id>","day":"Mon|…|Sun|Spare","ws":"<Sunday YYYY-MM-DD, only when it changes week>"} (if another post has that day, the two swap days); {"op":"remove","id":"<id>"}; {"op":"edit","id":"<id>","title"?,"hook"?,"desc"?,"format"?,"who"?}; {"op":"add","ws":"<Sunday>","day":"…","who":"<coach name or Production>","format":"Talking Head|Reel|Carousel|Static Post|Ad Video|Story","title":"…","hook":"…","desc":"⏱ <length> · what is filmed or designed"}. Only ids from the plan. A POSTED item is never moved or removed. When the request is unclear or would need a decision (which coach, which day), ask in the reply and return no ops. Keep ops minimal and exact.'
   ].filter(Boolean).join('\n\n');
-  const msgs = history.map((h) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: clip(h.text, 1200) })).concat([{ role: 'user', content: message }]);
+  const msgs = history.map((h) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: clip(h.text, 1200) })).concat([{ role: 'user', content: message }, { role: 'assistant', content: '{' }]);   // the answer starts as JSON
 
   const t0 = Date.now();
   const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: MODEL, max_tokens: 3000, system: sys, messages: msgs }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw S.err(502, 'claude', 'The assistant could not answer (' + (j && j.error && j.error.message ? clip(j.error.message, 160) : r.status) + ').');
-  const text = (j.content || []).map((c) => c.text || '').join('');
+  const text = '{' + (j.content || []).map((c) => c.text || '').join('');
   let out = null;
-  try { const m = text.match(/\{[\s\S]*\}/); out = JSON.parse(m ? m[0] : text); } catch (e) { out = { reply: clip(text, 1200), ops: [] }; }
+  const balanced = (t) => { let d = 0, q = false, esc = false; for (let i = 0; i < t.length; i++) { const ch = t[i]; if (q) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') q = false; continue; } if (ch === '"') q = true; else if (ch === '{') d++; else if (ch === '}') { d--; if (!d) return t.slice(0, i + 1); } } return t; };
+  try { out = JSON.parse(balanced(text)); } catch (e) { try { out = JSON.parse(balanced(text).replace(/\n/g, '\\n')); } catch (e2) { out = { reply: clip(text.replace(/^\{\s*"reply"\s*:\s*"/, ''), 1200), ops: [] }; } }
   const OPS = ['move', 'remove', 'edit', 'add'];
   const ops = (Array.isArray(out.ops) ? out.ops : []).filter((o) => o && OPS.includes(o.op)).slice(0, 30);
   return { reply: clip(out.reply || '', 1500), ops, model: MODEL, took: Date.now() - t0 };
