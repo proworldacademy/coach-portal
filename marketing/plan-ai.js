@@ -5,12 +5,20 @@
 (function () {
   const PW = window.PW, PWM = window.PWM; if (!PW || !PWM || !document.getElementById("tab-screate")) return;
   const { S, $, esc } = PW;
-  const HIST = []; let SNAP = null;
+  let HIST = []; let SNAP = null;
+  // the conversation lives for one day (Antonio, Nov 9: "make sure the conversation is clear every day"); kept in this browser only
+  const DAY = () => new Date().toISOString().slice(0, 10);
+  const KEY = "pa-chat";
+  function load() { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.day === DAY() && Array.isArray(s.hist)) HIST = s.hist.slice(-20); else localStorage.removeItem(KEY); } catch (e) {} }
+  function store() { try { localStorage.setItem(KEY, JSON.stringify({ day: DAY(), hist: HIST.slice(-20) })); } catch (e) {} }
 
   async function token() { const u = window.firebase && firebase.auth && firebase.auth().currentUser; return u ? u.getIdToken() : ""; }
   async function api(body) {
     const t = await token(); if (!t) throw new Error("Sign in first.");
-    const r = await fetch("/api/marketing/plan", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + t }, body: JSON.stringify(body) });
+    const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 75000);
+    let r; try { r = await fetch("/api/marketing/plan", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + t }, body: JSON.stringify(body), signal: ac.signal }); }
+    catch (e) { throw new Error(e && e.name === "AbortError" ? "No answer after 75 seconds — send it again." : "No connection — check the network and send it again."); }
+    finally { clearTimeout(tm); }
     const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j && j.message ? j.message : "The assistant did not answer (" + r.status + ")."); return j;
   }
   const DAYN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -49,7 +57,7 @@
     const gen = $("gen-card"); if (!gen) return;
     if (box) { if (box.previousElementSibling !== gen) gen.insertAdjacentElement("afterend", box); return; }
     box = document.createElement("div"); box.className = "card"; box.id = "plan-ai";
-    box.innerHTML = '<div class="card-label">Ask about the plan <span class="small muted">· it moves, swaps, edits, adds or removes posts on this month\'s calendar · nothing else</span></div>' +
+    box.innerHTML = '<div class="card-label">Ask about the plan <span class="small muted">· it moves, swaps, edits, adds or removes posts on this month\'s calendar · nothing else · <a href="#" id="pa-clear">clear</a></span></div>' +
       '<div id="pa-log" class="pa-log"></div>' +
       '<div class="pa-row"><textarea id="pa-in" rows="2" placeholder="e.g. The Delray ITF post is 13 days late — put it on the day of the qualifier. · Move the last-spots ad to the 3 days before camp. · Add a drone video of the campus for Nico."></textarea>' +
       '<button class="btn ghost" id="pa-mic" type="button" title="Dictate" aria-label="Dictate">🎙</button><button class="btn pri" id="pa-go">Send</button></div>' +
@@ -57,6 +65,8 @@
     gen.insertAdjacentElement("afterend", box);
     $("pa-go").addEventListener("click", send);
     $("pa-in").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); });
+    $("pa-clear").addEventListener("click", (e) => { e.preventDefault(); HIST = []; SNAP = null; store(); $("pa-log").innerHTML = ""; });
+    load(); HIST.forEach((h) => line(h.role === "assistant" ? "ai" : "me", esc(h.text).replace(/\n/g, "<br>")));
     dictation();
   }
   // ── dictation (the browser's own speech recognition; Chrome, Safari, the iPhone) ──
@@ -77,19 +87,24 @@
       try { REC.start(); } catch (e) { stop(); note.textContent = "Dictation is not available here."; }
     });
   }
-  function line(role, html) { const log = $("pa-log"); const d = document.createElement("div"); d.className = "pa-msg " + role; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; }
+  function line(role, html) { const log = $("pa-log"); const d = document.createElement("div"); d.className = "pa-msg " + role; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
   async function send() {
     const inp = $("pa-in"), go = $("pa-go"), msg = inp.value.trim(); if (!msg) return;
-    line("me", esc(msg)); HIST.push({ role: "user", text: msg }); inp.value = ""; go.disabled = true; go.textContent = "Thinking…";
+    line("me", esc(msg)); const hist = HIST.slice(-8); HIST.push({ role: "user", text: msg }); store(); inp.value = ""; go.disabled = true; go.textContent = "Thinking…";
+    const wait = line("ai", '<span class="pa-wait">Reading the month…</span>');
     try {
-      const out = await api({ month: PWM.cur, weeks: compact(), message: msg, history: HIST.slice(-8, -1) });
+      const out = await api({ month: PWM.cur, weeks: compact(), message: msg, history: hist });
       SNAP = JSON.parse(JSON.stringify(S.weeks));
       const done = apply(out.ops || []);
-      HIST.push({ role: "assistant", text: out.reply });
-      line("ai", esc(out.reply).replace(/\n/g, "<br>") + (done.length ? '<ul class="pa-done">' + done.map((d) => "<li>" + esc(d) + "</li>").join("") + "</ul><button class=\"btn ghost xs\" id=\"pa-undo\">↶ Undo these changes</button>" : ""));
+      let reply = String(out.reply || "").trim();
+      if (!reply) reply = done.length ? "Done — " + done.length + " change" + (done.length > 1 ? "s" : "") + " on the calendar:" : "I read it but had nothing to change and no answer came back. Say it another way and I will try again.";
+      else if (done.length && !/\b(moved|added|removed|edited|changed|swapped|done)\b/i.test(reply)) reply += "\n\nDone — " + done.length + " change" + (done.length > 1 ? "s" : "") + ":";
+      else if (!done.length && (out.ops || []).length) reply += "\n\nNothing changed: the posts named are already posted or not on this month.";
+      HIST.push({ role: "assistant", text: reply }); store();
+      wait.innerHTML = esc(reply).replace(/\n/g, "<br>") + (done.length ? '<ul class="pa-done">' + done.map((d) => "<li>" + esc(d) + "</li>").join("") + "</ul><button class=\"btn ghost xs\" id=\"pa-undo\">↶ Undo these changes</button>" : "");
       const u = $("pa-undo"); if (u) u.onclick = () => { if (!SNAP) return; Object.keys(S.weeks).forEach((k) => delete S.weeks[k]); Object.assign(S.weeks, SNAP); SNAP = null; PW.fnSync(PWM.weeks()[0]); u.textContent = "Undone"; u.disabled = true; };
-    } catch (e) { line("ai", '<span style="color:#5B1A5C">' + esc(e.message) + "</span>"); }
-    finally { go.disabled = false; go.textContent = "Send"; }
+    } catch (e) { wait.innerHTML = '<span style="color:#5B1A5C">' + esc(e.message) + "</span>"; HIST.pop(); store(); }
+    finally { go.disabled = false; go.textContent = "Send"; const log = $("pa-log"); if (log) log.scrollTop = log.scrollHeight; }
   }
   mount();
   new MutationObserver(mount).observe($("create-plan") || document.body, { childList: true });

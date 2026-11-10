@@ -150,6 +150,9 @@ body.app-skin #plan-ai{margin-bottom:16px}
 .pa-msg.me{background:var(--ink);color:#fff;justify-self:end;border-bottom-right-radius:4px}
 .pa-msg.ai{background:#F1F1ED;color:var(--ink);justify-self:start;border-bottom-left-radius:4px}
 .pa-done{margin:8px 0 6px;padding-left:18px;font-size:12.5px}
+.pa-wait{color:#8E8E8A;font-style:italic;animation:pa-blink 1.4s ease-in-out infinite}
+@keyframes pa-blink{0%,100%{opacity:.45}50%{opacity:1}}
+#pa-clear{color:inherit;text-decoration:underline}
 .pa-row{display:flex;gap:8px;align-items:flex-end}
 .pa-row textarea{flex:1;min-height:48px;border:1px solid var(--line-2);border-radius:14px;padding:10px 14px;font:inherit;font-size:14px;resize:vertical;background:#fff}
 #pa-mic{min-width:48px;font-size:18px;line-height:1;padding:10px 12px}

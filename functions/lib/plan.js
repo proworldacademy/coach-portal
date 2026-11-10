@@ -40,7 +40,7 @@ async function assist(db, who, b) {
     priorities ? 'STANDING PRIORITIES: ' + clip(JSON.stringify(priorities), 800) : '',
     season.length ? 'THE SEASON:\n' + season.join('\n') : '',
     'THE PLAN ON SCREEN:\n' + plan,
-    'Answer with ONE JSON object only: {"reply": "<2–6 short lines in plain words: what you changed and why, or what you suggest / need to know>", "ops": [ ... ]}. Operations, applied in order: {"op":"move","id":"<id>","day":"Mon|…|Sun|Spare","ws":"<Sunday YYYY-MM-DD, only when it changes week>"} (if another post has that day, the two swap days); {"op":"remove","id":"<id>"}; {"op":"edit","id":"<id>","title"?,"hook"?,"desc"?,"format"?,"who"?}; {"op":"add","ws":"<Sunday>","day":"…","who":"<coach name or Production>","format":"Talking Head|Reel|Carousel|Static Post|Ad Video|Story","title":"…","hook":"…","desc":"⏱ <length> · what is filmed or designed"}. Only ids from the plan. A POSTED item is never moved or removed. When the request is unclear or would need a decision (which coach, which day), ask in the reply and return no ops. Keep ops minimal and exact.'
+    'Answer with ONE JSON object only: {"reply": "<2–6 short lines in plain words. ALWAYS start by confirming: what you changed (each post, its new day), or "Nothing changed —" and the reason, or the question you need answered. Never leave the reply empty.>", "ops": [ ... ]}. Operations, applied in order: {"op":"move","id":"<id>","day":"Mon|…|Sun|Spare","ws":"<Sunday YYYY-MM-DD, only when it changes week>"} (if another post has that day, the two swap days); {"op":"remove","id":"<id>"}; {"op":"edit","id":"<id>","title"?,"hook"?,"desc"?,"format"?,"who"?}; {"op":"add","ws":"<Sunday>","day":"…","who":"<coach name or Production>","format":"Talking Head|Reel|Carousel|Static Post|Ad Video|Story","title":"…","hook":"…","desc":"⏱ <length> · what is filmed or designed"}. Only ids from the plan. A POSTED item is never moved or removed. When the request is unclear or would need a decision (which coach, which day), ask in the reply and return no ops. Keep ops minimal and exact.'
   ].filter(Boolean).join('\n\n');
   const msgs = history.map((h) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: clip(h.text, 1200) })).concat([{ role: 'user', content: message + '\n\n(Answer with the JSON object only — it must start with { and contain nothing before or after it.)' }]);
 
@@ -54,7 +54,9 @@ async function assist(db, who, b) {
   try { out = JSON.parse(balanced(text)); } catch (e) { try { out = JSON.parse(balanced(text).replace(/\n/g, '\\n')); } catch (e2) { out = { reply: clip(text.replace(/^\{\s*"reply"\s*:\s*"/, ''), 1200), ops: [] }; } }
   const OPS = ['move', 'remove', 'edit', 'add'];
   const ops = (Array.isArray(out.ops) ? out.ops : []).filter((o) => o && OPS.includes(o.op)).slice(0, 30);
-  return { reply: clip(out.reply || '', 1500), ops, model: MODEL, took: Date.now() - t0 };
+  let reply = clip(out.reply || '', 1500);
+  if (!reply) reply = ops.length ? 'Done — ' + ops.length + ' change' + (ops.length > 1 ? 's' : '') + ' on the calendar.' : (j.stop_reason === 'max_tokens' ? 'The answer was too long and got cut — ask for one thing at a time.' : 'I read the month but had no answer — say it another way.');
+  return { reply, ops, model: MODEL, took: Date.now() - t0 };
 }
 
 module.exports = { assist };
