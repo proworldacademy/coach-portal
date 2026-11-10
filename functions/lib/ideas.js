@@ -82,6 +82,7 @@ async function ideas(db, who, b) {
     compAds.length ? 'COMPETITOR ADS RUNNING NOW (do what they are not; never name them in a post):\n' + compAds.join('\n') : '',
     compSeen.length ? 'WHAT THE COMPETITORS POSTED LATELY (as far as search sees; ground we leave to them unless we do it better from the campus):\n' + compSeen.join('\n') : '',
     best.length ? 'OUR BEST RECENT POSTS BY VIEWS AND SAVES (the formats and angles to double down on, with new topics):\n' + best.join('\n') : '',
+    'THE LEARNING RULE: at least a third of the ideas build on exactly what the best posts above did (same format, same kind of question or hook, a new topic) and begin their desc with "DOUBLE DOWN on <the winning post\'s title> · ". The college pathway is open again (parent education: what college coaches look for, UTR and how it moves, the timeline from 13 to 17, the honest difference between D1, D2 and D3 — carousels for parents; never promise placement, contacts or a service, never name a college coach, never call it a program).',
     'WHAT WORKS NOW: parent-facing carousels that answer one honest question ("Red, Orange or Green ball? Here is the honest difference") get 5–10x the views and most of the saves; coach talking-head reels sit at 1–1.6K views and work best when the coach tells one concrete thing from the court. The campus is our biggest difference: show it.',
     'ALREADY DONE OR ALREADY IN THE BANK — never repeat these topics, angles or hooks, not even reworded:',
     avoid.join('\n'),
