@@ -223,22 +223,6 @@ if (require.main === module) (async () => {
     log((await m.locator('.cp-appbar button', { hasText: 'Contact' }).count()) === 1, 'the bottom bar has Contact (the chats)');
     await m.context().close();
 
-    /* ── the "In between" look (the other skin): the same screens must hold ── */
-    const c = await page(browser, 1280, 900); await c.addInitScript(() => { try { localStorage.setItem('cp-view', 'calm'); } catch (e) { /* noop */ } });
-    await c.goto('http://localhost:4173/portal/#/messages'); await c.waitForSelector('.mbox .msgrow', { timeout: 15000 }); await c.waitForTimeout(500);
-    log(!(await c.evaluate(() => document.body.classList.contains('app-skin'))), 'In between look is on');
-    log((await count(c, '.mpane .bub')) >= 1 && (await count(c, '.mlist .msgrow')) === 49, 'the two panes draw in the In between look too, every family listed');
-    await shot(c, 'desktop-messages-inbetween');
-    await c.context().close();
-    // the phone in the In between look
-    const m2 = await page(browser, 390, 844); await m2.addInitScript(() => { try { localStorage.setItem('cp-view', 'calm'); } catch (e) { /* noop */ } });
-    await m2.goto('http://localhost:4173/portal/#/messages'); await m2.waitForSelector('.mbox .msgrow', { timeout: 15000 }); await m2.waitForTimeout(400);
-    log((await m2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'In between on the phone: no sideways scroll');
-    await shot(m2, 'phone-messages-inbetween');
-    await m2.locator('.mlist .msgrow', { hasText: 'Ren Okonkwo' }).first().tap(); await m2.waitForTimeout(500);
-    log(await m2.locator('.mpane').isVisible() && (await m2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'In between on the phone: the chat opens full screen, no sideways scroll');
-    await shot(m2, 'phone-chat-inbetween');
-    await m2.context().close();
   } finally { await browser.close(); server.close(); }
   console.log(fails ? `\n${fails} FAILED` : '\nall green'); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

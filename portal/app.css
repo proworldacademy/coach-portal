@@ -59,11 +59,6 @@ body.app-skin .fchip,body.app-skin .tab{border:0;background:#fff;box-shadow:var(
 body.app-skin .fchip[aria-pressed="true"],body.app-skin .tab[aria-selected="true"]{background:var(--ink);color:var(--lime)}
 body.app-skin .sec-tabs{background:#E9E9E4;border-radius:999px;padding:4px}
 body.app-skin .dock{background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -8px 28px rgba(0,0,0,.08)}
-/* the view switch */
-body.app-skin .cp-switch,.cp-switch{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:4px 0 0}
-.cp-switch span{font-size:12px;color:var(--muted)}
-.cp-switch button{font:700 12px var(--body);border:0;background:transparent;color:var(--muted);padding:5px 10px;border-radius:999px;cursor:pointer}
-.cp-switch button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
 /* the phone: the bottom bar is the menu */
 .cp-appbar{display:none}
 @media(max-width:640px){
@@ -79,7 +74,6 @@ body.app-skin .cp-switch,.cp-switch{display:flex;align-items:center;justify-cont
   body.app-skin .stat{padding:14px 16px}body.app-skin .stat b{font-size:26px}
   body.app-skin h1.title{font-size:38px}
   body.app-skin .list{padding:4px 16px}
-  body.app-skin .cp-switch{display:none}
 }
 /* no intro paragraphs in the app look: the facts list (ul.sub.lines) stays, the prose goes */
 body.app-skin .head div.sub:not(.lines){display:none}
