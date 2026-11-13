@@ -4,10 +4,12 @@
 (function () {
   let mode = "app";
   try { mode = localStorage.getItem("cp-view") || "app"; } catch (e) { /* no storage */ }
+  if (mode === "app2") { mode = "app"; try { localStorage.setItem("cp-view", "app"); } catch (e) { /* noop */ } }   // App is the final look (Nov 13): App 2 is retired, its pieces moved onto the App screens
+  document.body.classList.add("a2k");   // the shared pieces from App 2 (three buttons, family card, rows): portal/app2.css
   const vt = document.getElementById("vtabs"); if (!vt) return;
   // the switch sits above the tab row
   const sw = document.createElement("div"); sw.className = "cp-switch";
-  sw.innerHTML = '<span>Look</span>' + [["app2", "App 2"], ["app", "App"], ["calm", "In between"]].map(([v, n]) => '<button type="button" class="' + (mode === v ? "on" : "") + '" data-view="' + v + '">' + n + "</button>").join("");
+  sw.innerHTML = '<span>Look</span>' + [["app", "App"], ["calm", "In between"]].map(([v, n]) => '<button type="button" class="' + (mode === v ? "on" : "") + '" data-view="' + v + '">' + n + "</button>").join("");
   vt.parentNode.insertBefore(sw, vt);
   sw.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("cp-view", b.dataset.view); } catch (e) { /* noop */ } location.reload(); }));
   if (mode !== "app" && mode !== "app2") return;

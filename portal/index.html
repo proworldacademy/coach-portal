@@ -2125,7 +2125,7 @@ const PW_CONFIG = {
       const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
       if (!t && !S.msg.busy[openPid]) loadThread(openPid, false, openKey && CONV_OK.test(openKey) ? openKey : '');
       const body = !t ? '<p class="hint">Loading the chat…</p>' : t.error && !(t.lines && t.lines.length) ? `<p class="hint">${esc(t.error)}</p>` : chatPane(p, t, openKey, true);
-      pane = `<section class="panel mpane" id="mpane" aria-label="The open chat"><div class="mhead"><button class="btn sm ghost mback" type="button" ${goAttr({ view: 'messages' })} aria-label="Back to the chats">‹ Chats</button><div class="mwho"><b>${esc(p.name)}</b><small>${c ? esc(convTitle(c)) : esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</small></div><div class="rowx"><button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻</button><button class="fchip sm ppage" ${goAttr({ view: 'player', pid: p.id })}><span class="long">Player's page ›</span><span class="short">Player ›</span></button></div></div>${body}</section>`;
+      pane = `<section class="panel mpane" id="mpane" aria-label="The open chat"><div class="mhead"><button class="btn sm ghost mback" type="button" ${goAttr({ view: 'messages' })} aria-label="Back to the chats">‹ Chats</button><div class="mwho"><b>${esc(p.name)}</b><small>${c ? esc(convTitle(c)) : esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</small></div><div class="rowx">${(() => { if (!t) return ''; const tail0 = c && c.members && c.members[0] && c.members[0].tail; const nn = (t.numbers || []).find((x) => tail0 && x.tail === tail0) || (t.numbers || [])[0]; return nn && nn.phone ? `<a class="fchip sm call" ${jcCall(nn.phone, p.id)} aria-label="Call through JustCall" title="Call through JustCall">${a2i('phone')}<span class="long">Call</span></a>` : ''; })()}<button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻</button><button class="fchip sm ppage" ${goAttr({ view: 'player', pid: p.id })}><span class="long">Player's page ›</span><span class="short">Player ›</span></button></div></div>${body}</section>`;
     }
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Messages' }])}
       <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
@@ -2644,7 +2644,7 @@ const PW_CONFIG = {
      Built next to today's looks: the switch above the tabs (App 2 · App · In between), nothing deleted. Everything here draws
      from the same state and fires the same data-act / data-go handlers as the other looks; portal/app2.css is the skin.
      The Board, Try-outs, the report editor and the rest keep their screens under More. */
-  const APP2 = (() => { try { return localStorage.getItem('cp-view') === 'app2'; } catch (e) { return false; } })();
+  const APP2 = false;   // Nov 13, 2026 (Antonio, Lorenzo): App is the final look. App 2's screens stay here, off, until App is signed off; its three buttons, family card, Call and ··· now live on the App screens (famCard, viewPlayer, viewMessages).
   const A2_ICON = {
     msg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>',
     phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8 9.7a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.7a2 2 0 0 1 1.7 2z"/></svg>',
@@ -2678,7 +2678,7 @@ const PW_CONFIG = {
   const a2row = (left, title, sub, right, attrs, cls) => `<${attrs ? 'button type="button" ' + attrs : 'div'} class="a2row${cls ? ' ' + cls : ''}">${left}<span class="a2t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span><span class="a2r">${right || ''}</span></${attrs ? 'button' : 'div'}>`;
   const a2ava = (name, dot) => `<span class="a2ava${dot === undefined ? '' : dot ? ' on' : ' off'}">${esc(initials(name))}</span>`;
   const a2n = (n, cls) => `<span class="a2n${cls ? ' ' + cls : ''}">${n}</span>`;
-  const a2sec = (t, r) => `<div class="a2sec"><span>${t}</span>${r ? `<em>${r}</em>` : ''}</div>`;
+  const a2sec = (t, r) => `<div class="a2sec"><span>${t}</span>${r ? (/^<em/.test(String(r)) ? r : `<em>${r}</em>`) : ''}</div>`;
   const a2title = (t, sub) => `<div class="a2lt">${esc(t)}</div>${sub ? `<div class="a2ls">${sub}</div>` : ''}`;
   const a2nav = (back, r, right) => `<div class="a2nav"><button type="button" class="a2bk" ${goAttr(r)}>${a2i('back')}${esc(back)}</button><span class="a2nr">${right || ''}</span></div>`;
   const a2status = (p) => { const d = dueNow(p); return `<span class="a2chip st-${d.overall}">${STATUS_WORD[d.overall]}</span>`; };
@@ -2909,7 +2909,10 @@ const PW_CONFIG = {
     const msgStrip = EDITION === 'web' && msgUnread() ? `<button class="notice remind msg" ${goAttr({ view: 'messages' })}><span class="ttl">Messages</span><ul class="lines"><li><b class="n off">${msgUnread()}</b> ${msgUnread() === 1 ? 'chat has a new reply' : 'chats have new replies'} — not read yet</li></ul><span>Open the chats</span></button>` : '';
     const head = `<div class="head"><div><div class="lbl">Players · reports · ${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div><h1 class="title">Coach <em>Portal.</em></h1>
       <ul class="sub lines"><li><b class="n">${act.length}</b> active ${act.length === 1 ? 'player' : 'players'}</li><li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>${nOpen ? `<li><b class="n">${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up</li>` : ''}</ul></div></div>`;
-    return `${notice()}${head}${empty}${msgStrip}${wkStrip}${remind}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
+    a2loadToday(); const mineP = myPlayers(); const nRep = mineP.filter((p) => dueNow(p).overall !== 'done').length, nStarted = mineP.filter((p) => dueNow(p).overall === 'working').length;
+    const repStrip = S.loaded.assess && nRep && !WEB.isDirector ? `<button class="notice remind" data-act="a2reports"><span class="ttl">3-month reports · ${esc(q)}</span><ul class="lines"><li><b class="n">${nRep}</b> ${nRep === 1 ? 'report' : 'reports'} to write</li>${nStarted ? `<li><b class="n">${nStarted}</b> started</li>` : ''}</ul><span>Open the group</span></button>` : '';
+    const today = a2today() ? `<div class="a2k-today">${a2today()}</div>` : '';
+    return `${notice()}${head}${empty}${msgStrip}${wkStrip}${repStrip}${remind}${today}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
       ${homeTryouts()}
       <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
       <div class="groups">${cards}</div>
@@ -3045,15 +3048,29 @@ const PW_CONFIG = {
     const tabs = [['assessments', 'Assessments'], ['videos', 'Videos'], ['journal', 'Journal']].map(([k, t]) => `<button class="tab" role="tab" aria-selected="${tab === k}" ${goAttr({ view: 'player', pid, tab: k })}>${t}</button>`).join('');
     const web = EDITION === 'web'; const pOpen = web && S.ui.parentOpen === p.id;
     return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.id ? g.label : 'Not placed', r: g.id ? { view: 'group', gid: g.id } : { view: 'home' } }, { t: p.name }])}
-      <div class="head"><div><div class="lbl">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${active(p) ? '' : ' · ' + esc(statusWord(p)) + ' · not active'}</div><h1 class="title">${emT(p.name)}</h1>
+      <div class="head phead"><div><div class="lbl">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${active(p) ? '' : ' · ' + esc(statusWord(p)) + ' · not active'}</div><h1 class="title">${emT(p.name)}</h1>
         <div class="sub">${p.coach ? 'Primary coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · Secondary ' + esc(p.coach2) : ''}${p.fitness ? ' · Fitness ' + esc(p.fitness) : ''}</div>
         ${web ? mondayLine(p) : ''}</div>
-        <div class="rowx">${web ? `<button class="btn" data-act="parent-info" aria-expanded="${pOpen}" aria-controls="parentbox">${pOpen ? 'Hide parent info' : 'Parent info'}</button>` : ''}${writable() ? `<button class="btn" data-act="toggle-edit">Edit player</button>` : ''}</div></div>
-      ${pOpen ? `<div id="parentbox">${parentBox(p)}</div>` : ''}
+        ${writable() ? `<button type="button" class="a2cb" data-act="toggle-edit" aria-label="Edit player" title="Edit player" aria-expanded="${!!S.ui.editing}">···</button>` : ''}</div>
       <div id="editp" ${S.ui.editing ? '' : 'hidden'}>${S.ui.editing ? editPlayerPanel(p) : ''}</div>
-      ${active(p) ? contactCard(p) : ''}${web && mine(p) ? msgCard(p) : ''}${active(p) ? checkCard(p) : ''}
+      ${active(p) ? famCard(p) : (pOpen ? `<div id="parentbox">${parentBox(p)}</div>` : '')}
+      ${active(p) ? contactCard(p) : ''}${web && mine(p) ? msgCard(p) : ''}
       <div class="tabs" role="tablist">${tabs}</div>
       ${tab === 'videos' ? tabVideos(p) : tab === 'journal' ? tabJournal(p) : tabAssess(p)}`;
+  }
+  /* The top of a player's page in the App look (Nov 13, 2026 — from App 2, which Antonio and Lorenzo found cleaner here): three buttons
+     (Text · Call · Report), then the family — one line per number, tap the line to open that chat, the phone to call it through
+     JustCall — with "Add a number" opening the contact check, and the parent info from enrollment one tap away. */
+  function famCard(p) {
+    const web = EDITION === 'web'; const w = writable() && mine(p); const fam = a2family(p); const tel = fam.length ? jcCall(fam[0].phone, p.id) : '';
+    const qa = `<div class="a2qa">${web && mine(p) ? `<button type="button" class="on" data-act="fam-chat" data-pid="${esc(p.id)}"><span>${a2i('msg')}</span>Text</button>` : ''}${tel ? `<a ${tel} aria-label="Call ${esc(fam[0].word)} through JustCall"><span>${a2i('phone')}</span>Call</a>` : `<button type="button" disabled title="No number on file yet"><span>${a2i('phone')}</span>Call</button>`}${writable() ? `<button type="button" data-act="start" data-type="${esc(DUE_TYPE)}"><span>${a2i('file')}</span>Report</button>` : ''}</div>`;
+    const rows = fam.map((m) => { const inner = `${a2ava(m.name || m.word)}<span class="a2t"><b>${esc(m.word)}${m.name ? ' · ' + esc(m.name.split(/\s+/)[0]) : ''}</b><small>(${esc(String(m.phone).replace(/\D/g, '').slice(-10, -7))}) ••• ${esc(m.tail)}</small></span>`;
+      return `<div class="a2row a2f">${web && mine(p) ? `<button type="button" class="a2fam" data-act="fam-chat" data-pid="${esc(p.id)}" data-tail="${esc(m.tail)}" aria-label="Text ${esc(m.word)}">${inner}</button>` : `<span class="a2fam">${inner}</span>`}<span class="a2r"><a class="a2ckr" ${jcCall(m.phone, p.id)} aria-label="Call ${esc(m.word)} through JustCall">${a2i('phone')}</a></span></div>`; }).join('');
+    const miss = checkMissing(p.id).length; const open = S.ui.a2numbers === p.id;
+    const add = w ? a2row(`<span class="a2ico">${a2i('plus')}</span>`, fam.length ? (miss ? 'Add or confirm a number' : 'Add or change a number') : 'Add the family’s number', fam.length ? (miss ? `${miss} still to confirm · mother, father, guardian, the player` : 'Mother, father, guardian, the player') : 'So you can text and call them from here', a2chev(), `data-act="a2numbers" aria-expanded="${open}"`) : '';
+    const pOpen = web && S.ui.parentOpen === p.id;
+    const info = web ? a2row(`<span class="a2ico">${a2i('users')}</span>`, 'Parent info', 'From enrollment', a2chev(), `data-act="parent-info" aria-expanded="${pOpen}" aria-controls="parentbox"`) : '';
+    return `<div class="a2k-p">${qa}${a2sec('Family', S.loaded.checks && !checkDone(p.id) ? `<em class="warn">${miss ? miss + ' to confirm' : 'needs a number'}</em>` : '')}<div class="a2card">${rows}${add}${info}</div>${open ? `<div class="a2old">${checkCard(p)}</div>` : ''}${pOpen ? `<div class="a2old" id="parentbox">${parentBox(p)}</div>` : ''}</div>`;
   }
   function editPlayerPanel(p) {
     const sel = (v, o) => `<option ${v === o ? 'selected' : ''}>${esc(o)}</option>`;
@@ -3976,6 +3993,7 @@ const PW_CONFIG = {
     else if (act === 'a2ctab') { S.ui.a2ctab = b.getAttribute('data-v'); render(); }
     else if (act === 'a2numbers') { S.ui.a2numbers = S.ui.a2numbers === S.route.pid ? null : S.route.pid; render(); }
     else if (act === 'a2reports') { const g = groups().find((x) => myPlayers().some((p) => p.group === x.id && dueNow(p).overall !== 'done')); if (!g) return; S.ui.a2filter = 'report'; S.ui.a2filterGroup = g.id; go({ view: 'group', gid: g.id }); }
+    else if (act === 'fam-chat') { const pid = b.getAttribute('data-pid'), tail = b.getAttribute('data-tail') || ''; if (tail) { S.ui.msgConv[pid] = tail; S.ui.msgPick = null; } S.ui.msgFocus = pid; render(); if (tail) markReadLocal(pid, tail); }
     else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week
     else if (act === 'contact' || act === 'contact-row') { const p = player(act === 'contact' ? S.route.pid : b.getAttribute('data-pid')); if (!p || !mine(p)) return; const on = b.getAttribute('data-v') === 'on'; b.disabled = true; await setContact(p, on); if (on) toast(`${p.name}: in touch this week. Thank you.`); }
