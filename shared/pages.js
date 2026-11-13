@@ -90,9 +90,12 @@
       { name: "Attendance", href: "/backend#attendance" }, { name: "Players & billing", href: "/backend#players" }, { name: "Privates", href: "/backend#privates" },
       { name: "Books", href: "/backend#books" }, { name: "Messages", href: "/backend#messages" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" } ] },
     { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal", "tryouts"], items: [
-      { name: "Players Portal", href: "/portal", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
-      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Weekly contact", href: "/portal#/contact", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
-      { name: "Messages", href: "/portal#/messages", page: "coach-portal" }, { name: "Courts", href: "/backend#courts", page: "backend" }, { name: "Privates", href: "/backend#privates", page: "backend" } ] },   // Messages: the coach texts the family from the portal (Nov 4); the desk's Messages stays under Admin
+      { name: "Reminders", href: "/portal", page: "coach-portal" }, { name: "Players", href: "/portal#/players", page: "coach-portal" },
+      { name: "Contact", href: "/portal#/messages", page: "coach-portal" }, { name: "Privates", href: "/backend#privates", page: "backend" },
+      // what left the coach portal's own row on Nov 13 (Antonio, Lorenzo): here for directors and owners, until each is kept or deleted
+      { name: "Weekly contact", href: "/portal#/contact", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
+      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
+      { name: "Courts", href: "/backend#courts", page: "backend" } ] },   // Messages: the coach texts the family from the portal (Nov 4); the desk's Messages stays under Admin
     { id: "clients", name: "Clients", href: "/clients", page: ["backend"], items: [
       { name: "The client account", href: "/family" }, { name: "Enroll · public link", href: "/enroll" }, { name: "Courts", href: "/backend#courts" },
       { name: "Privates", href: "/backend#privates" }, { name: "Look up an account", href: "/backend#account" } ] },
