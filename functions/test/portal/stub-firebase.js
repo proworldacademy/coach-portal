@@ -13,7 +13,7 @@
     return {
       id: path.split('/').pop(), path,
       get: async () => snapOf(path),
-      set: async (d, o) => { docs[path] = o && o.merge && docs[path] ? Object.assign({}, docs[path], clone(d)) : clone(d); notify(); },
+      set: async (d, o) => { const deep = (x, y) => { const out = Object.assign({}, x); Object.keys(y).forEach((k) => { out[k] = y[k] && typeof y[k] === 'object' && !Array.isArray(y[k]) && x[k] && typeof x[k] === 'object' && !Array.isArray(x[k]) ? deep(x[k], y[k]) : y[k]; }); return out; };   /* merge is deep on maps, as in Firestore */ docs[path] = o && o.merge && docs[path] ? deep(docs[path], clone(d)) : clone(d); notify(); },
       update: async (d) => { docs[path] = Object.assign({}, docs[path] || {}, clone(d)); notify(); },
       delete: async () => { delete docs[path]; notify(); },
       onSnapshot: (next) => { const fire = () => next(snapOf(path)); fire(); listeners.push(fire); return () => { const i = listeners.indexOf(fire); if (i >= 0) listeners.splice(i, 1); }; },
