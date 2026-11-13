@@ -20,7 +20,7 @@
    - coachThreads/<playerId>    the inbox rows: `convs[key]` = members, the last line either way, lastOutAt, lastReplyAt — written on
                                 every portal text and every reply; the top-level `last` is the family's latest across chats
    - coachInbox/<email>         { read: { '<playerId>|<key>': when the coach last opened that chat } } → unread = a reply after that
-   Who may text whom: the player's own coach (coach or coach2 on the record), or a director. Only to a number on the player's
+   Who may text whom: the player's own coach (coach, coach2 or coach3 on the record — a third coach since Nov 13), or a director. Only to a number on the player's
    page (the confirmed contacts, the numbers on file) — never a typed number. A family that said STOP, or whose consent was
    switched off, is not texted; the page says so and the coach calls instead.
    The signature is deliberately NOT the automated footer ("Reply here with any question" / "Sent automatically"): the AI that
@@ -56,7 +56,7 @@ const preview = (body) => clean(String(body || '').replace(/\n- [^\n]*$/, ''), 1
 const shortName = (who) => who.coachAs || who.firstName || first(who.name) || who.email;
 const signature = (who) => `- Coach ${shortName(who)}, ProWorld Academy`;
 const optedOutError = (msg) => /opt(ed)?[ -]?out|unsubscrib|blacklist|blocked|\bdnd\b|do not (disturb|message)/i.test(String(msg || ''));
-const own = (who, p) => !!who.director || [p.coach, p.coach2].some((c) => c && who.keys.includes(fold(first(c))));
+const own = (who, p) => !!who.director || [p.coach, p.coach2, p.coach3].some((c) => c && who.keys.includes(fold(first(c))));
 const pidOf = (v) => { const pid = clean(v, 60); if (!/^[a-z0-9-]{1,60}$/i.test(pid)) throw S.err(400, 'player', 'A player id is required.'); return pid; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pace = (ms) => sleep(ms);
@@ -359,7 +359,7 @@ async function onReply(db, ev) {
     const p = Object.assign({ id: pid }, snap.data() || {});
     const conv = phone ? await convOfReply(db, pid, phone) : { key: '', members: [] };
     await touchThread(db, p, { at, dir: 'in', body, by: 'family' }, conv); out.threads++;
-    for (const c of [p.coach, p.coach2]) {
+    for (const c of [p.coach, p.coach2, p.coach3]) {
       const s = c && CONTACTS.staffFor(staff, c); if (!s || told.has(s.email)) continue; if (lineOwner && s.email !== lineOwner) continue; told.add(s.email); out.coaches.push(s.short || s.name);
       const w = String(p.name || pid).trim().split(/\s+/); const short = w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0];
       const whoWrote = conv.members.length > 1 ? (conv.members.find((m) => m.phone === phone) || {}) : {};
