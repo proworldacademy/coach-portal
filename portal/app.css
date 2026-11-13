@@ -77,3 +77,58 @@ body.app-skin .dock{background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -8p
 }
 /* no intro paragraphs in the app look: the facts list (ul.sub.lines) stays, the prose goes */
 body.app-skin .head div.sub:not(.lines){display:none}
+
+/* ── The design pass (Nov 13, 2026): hierarchy by order of work, icons on the nav, the search tucked away, frosted glass, a little delight ── */
+/* the page: two soft brand tints behind everything, so the glass has something to show */
+body.app-skin{background:radial-gradient(900px 520px at 105% -8%,rgba(226,254,120,.34),transparent 62%),radial-gradient(820px 520px at -8% 108%,rgba(226,134,228,.16),transparent 62%),#F1F1ED!important;background-attachment:fixed!important}
+/* frosted: the tab pill, the cards that sit on the page, the dialer, the toast */
+body.app-skin #vtabs{background:rgba(233,233,228,.62);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3)}
+body.app-skin .list,body.app-skin .panel,body.app-skin .a2card,body.app-skin .foldbox,body.app-skin .notice.remind{background:rgba(255,255,255,.80);-webkit-backdrop-filter:blur(18px) saturate(1.2);backdrop-filter:blur(18px) saturate(1.2)}
+body.app-skin .jcs{background:rgba(255,255,255,.84);-webkit-backdrop-filter:blur(24px) saturate(1.3);backdrop-filter:blur(24px) saturate(1.3)}
+body.app-skin .toast{background:rgba(10,10,10,.80);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+/* icons on the nav */
+body.app-skin .vtabs .a2i.ti{width:15px;height:15px;margin-right:7px;vertical-align:-2px;display:inline-grid}
+body.app-skin .vtabs button,body.app-skin .vtabs a{display:inline-flex;align-items:center}
+body.app-skin .cp-appbar i svg{width:19px;height:19px}
+/* the search: a small widget with its key, not a bar */
+body.app-skin .tools{flex-wrap:nowrap}
+body.app-skin .search{flex:0 0 auto;max-width:none;position:relative}
+body.app-skin .search input{width:190px;height:38px;font-size:13px;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:width .22s ease;padding:0 34px 0 38px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%233b3d38' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") 14px 50% no-repeat}
+body.app-skin .search input:focus{width:min(340px,70vw)}
+body.app-skin .search .sk{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:700 11px var(--body);color:#8E8E8A;background:#F1F1ED;border-radius:6px;padding:2px 6px;pointer-events:none}
+body.app-skin .search input:focus+.sk{display:none}
+body.app-skin .live{font-size:0;gap:0;margin-left:auto}
+/* accordions */
+.foldbox{border-radius:22px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05);margin:14px 0;background:#fff;overflow:hidden}
+.foldsum{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:15px 18px;text-align:left;cursor:pointer;font-family:var(--body);color:var(--ink)}
+.foldsum b{font:700 14.5px var(--body);flex:1;min-width:0}
+.foldsum small{font:400 12.5px var(--body);color:#7A7A76}
+.foldsum .a2i.chev{transition:transform .2s ease}
+.foldbox.open .foldsum .a2i.chev{transform:rotate(90deg)}
+.foldin{padding:0 14px 14px}
+.foldin>.panel,.foldin>.list{box-shadow:none!important;background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;margin:0;padding-left:4px;padding-right:4px}
+body.a2k .wkfold .foldbox{margin:10px 0 0}
+/* delight: Send turns into the win, and the plane flies off and comes back */
+.sendbtn{display:inline-flex!important;align-items:center;gap:8px;overflow:hidden;position:relative}
+.sendbtn .a2i.plane{width:15px;height:15px;display:inline-grid}
+.sendbtn .a2i.plane svg{width:100%;height:100%}
+@keyframes pw-fly{0%{transform:translate(0,0);opacity:1}45%{transform:translate(16px,-16px);opacity:0}46%{transform:translate(-14px,14px);opacity:0}100%{transform:translate(0,0);opacity:1}}
+@keyframes pw-pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@media(hover:hover){
+  .sendbtn:hover .sl{font-size:0}
+  .sendbtn:hover .sl::after{content:attr(data-win);font-size:13.5px}
+  .sendbtn:hover .a2i.plane{animation:pw-fly 1.1s ease-in-out infinite}
+}
+.sendbtn:active .a2i.plane{animation:pw-fly .6s ease-in-out 1}
+body.a2k .a2tick.on{animation:pw-pop .28s ease-out 1}
+@media(prefers-reduced-motion:reduce){.sendbtn .a2i.plane,body.a2k .a2tick.on{animation:none!important}}
+/* the phone: a frosted bar over the pink glow, the search an icon until it is tapped */
+@media(max-width:640px){
+  body.app-skin .cp-appbar{background:rgba(10,10,10,.74);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);border:1px solid rgba(255,255,255,.08)}
+  body.app-skin::after{content:"";position:fixed;left:0;right:0;bottom:0;height:150px;pointer-events:none;z-index:59;background:linear-gradient(rgba(226,134,228,0),rgba(226,134,228,.30) 45%,rgba(226,134,228,.85) 100%)}
+  body.app-skin .search input{width:40px;height:40px;padding:0;color:transparent;background-position:50% 50%}
+  body.app-skin .search input::placeholder{color:transparent}
+  body.app-skin .search input:focus{width:calc(100vw - 32px);color:var(--ink);padding:0 14px 0 40px;background-position:14px 50%}
+  body.app-skin .search input:focus::placeholder{color:var(--muted)}
+  body.app-skin .search .sk{display:none}
+}
