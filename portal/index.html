@@ -638,7 +638,7 @@ window.PWAuth = { get ctx() { return window.__pwCtx || null; }, signOut() { if (
 <div class="wrap frame">
   <div class="pwd-top" id="pwd-top"></div>
   <div class="tools" id="tools">
-    <div class="search" hidden><input id="q" type="text" placeholder="Find a player" aria-label="Find a player" autocomplete="off"><div class="results" id="results" hidden></div></div>
+    <div class="search" hidden><input id="q" type="text" placeholder="Find a player" aria-label="Find a player" autocomplete="off"><kbd class="sk" aria-hidden="true">/</kbd><div class="results" id="results" hidden></div></div>
     <button class="fupill" id="fupill" data-go='{"view":"followup"}' hidden></button>
     <span class="live" id="live" role="status"></span>
     <div class="userbox" id="userbox"></div>
@@ -2087,7 +2087,7 @@ const PW_CONFIG = {
     if (!(t.numbers || []).length) return '<p class="hint msgno"><b>No number on file.</b> Add one under Contacts for JustCall on the player\'s page, then write here.</p>';
     const c = convOf(t, key); if (!c) return '<p class="hint msgno">Pick a chat above.</p>';
     const ms = c.members || []; const to = ms.map((m) => `<span class="fchip sm to">${esc(memberWord(m))}${m.name && m.slot ? ' · ' + esc(m.name) : ''} · …${esc(m.tail)}</span>`).join('');
-    return `<form class="msgform" data-form="msg" data-pid="${esc(p.id)}" data-conv="${esc(key)}"><div class="msgto"><span class="flbl">To</span>${to}</div><textarea name="body" rows="3" maxlength="${MSG_MAX}" data-draft="${esc(p.id + '|' + key)}" placeholder="${ms.length > 1 ? 'Write to everyone in this chat…' : 'Write to the family…'}" aria-label="Message" required></textarea><div class="msgfoot"><span class="hint">${ms.length > 1 ? 'Each of them gets it as their own text, ' : 'Goes out '}from the academy number, signed “${esc(t.signature || '')}”. It counts as this week's contact.</span><button class="btn pri" type="submit">Send</button></div></form>`;
+    return `<form class="msgform" data-form="msg" data-pid="${esc(p.id)}" data-conv="${esc(key)}"><div class="msgto"><span class="flbl">To</span>${to}</div><textarea name="body" rows="3" maxlength="${MSG_MAX}" data-draft="${esc(p.id + '|' + key)}" placeholder="${ms.length > 1 ? 'Write to everyone in this chat…' : 'Write to the family…'}" aria-label="Message" required></textarea><div class="msgfoot"><span class="hint">${ms.length > 1 ? 'Each of them gets it as their own text, ' : 'Goes out '}from the academy number, signed “${esc(t.signature || '')}”. It counts as this week's contact.</span><button class="btn pri sendbtn" type="submit" aria-label="Send"><span class="sl" data-win="Make their day">Send</span>${a2i('plane', 'plane')}</button></div></form>`;
   }
   /* the chat itself: the switcher, the bubbles of the open chat, the composer — on the player's page and in Messages */
   function chatPane(p, t, sel, inMessages) {
@@ -2511,7 +2511,8 @@ const PW_CONFIG = {
         .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['privates', 'Privates', '/backend#privates']] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
-    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'home' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}${k === 'contact' && msgUnread() ? `<small class="red">${msgUnread()}</small>` : ''}</button>`).join('');
+    const TI = { home: 'bell', players: 'users', contact: 'msg', privates: 'cal' }; const ti = (k) => (TI[k] ? a2i(TI[k], 'ti') : '');
+    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${ti(k)}${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${ti(k)}${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'home' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}${k === 'contact' && msgUnread() ? `<small class="red">${msgUnread()}</small>` : ''}</button>`).join('');
     if (EDITION === 'web' && WEB.stage === 'in' && !S.msg.at && !S.msg.busy.inbox) loadInbox(true);
     { const on = el.querySelector('.on'); if (on && el.scrollWidth > el.clientWidth + 2) { const x = on.offsetLeft - 16; if (x > 0) el.scrollLeft = x; } }
     if (window.PWDesign) {
@@ -2657,6 +2658,9 @@ const PW_CONFIG = {
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+    plane: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
   };
   const a2i = (k, cls) => `<i class="a2i${cls ? ' ' + cls : ''}" aria-hidden="true">${A2_ICON[k] || ''}</i>`;
   const a2chev = () => a2i('chev', 'chev');
@@ -2969,12 +2973,27 @@ const PW_CONFIG = {
           <div class="stat"><div class="lbl">Finished this month</div><b>${thisMonth}</b></div>
         </div>`;
     }
-    /* Reminders (the home): what is waiting for this person, then the log of what was done. Nothing else. */
-    const strips = `${msgStrip}${wkStrip}${repStrip}${remind}`;
+    /* Reminders (the home), in the order a coach works (Nov 13, the design pass): what needs you — one card, one line each, the number
+       first — then today, then notifications; the log is folded away. */
+    const web = EDITION === 'web'; const needs = [];
+    if (web && msgUnread()) needs.push(a2row(a2n(msgUnread(), 'red'), msgUnread() === 1 ? 'Chat with a new reply' : 'Chats with new replies', 'Not read yet', a2chev(), goAttr({ view: 'messages' })));
+    if (S.loaded.contacts && wkList.left) needs.push(a2row(a2n(wkList.left, 'red'), wkList.left === 1 ? 'Family to reach this week' : 'Families to reach this week', `Ends Sunday${S.loaded.checks && ckList ? ' · ' + ckList + ' with numbers to confirm' : ''}`, a2chev(), goAttr({ view: 'contact' })));
+    if (S.loaded.assess && nRep) needs.push(a2row(a2n(nRep), `3-month ${nRep === 1 ? 'report' : 'reports'} to write`, `${esc(q)}${nStarted ? ' · ' + nStarted + ' started' : ''}`, a2chev(), `data-act="a2reports"`));
+    if (nOpen) needs.push(a2row(a2n(nOpen), nOpen === 1 ? 'Report to follow up' : 'Reports to follow up', 'Send to the parents, set the parent meeting', a2chev(), goAttr({ view: 'followup' })));
+    const needsCard = `<div class="a2k-today">${a2sec('Needs you', needs.length ? String(needs.length) : '')}<div class="a2card">${needs.length ? needs.join('') : `<div class="a2row quiet"><span class="a2ico mint">${a2i('check')}</span><span class="a2t"><b>Nothing waiting for you</b><small>${S.loaded.contacts ? 'Every family heard from you this week' : 'Loading…'}</small></span></div>`}</div></div>`;
     const head = `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
-    return `${notice()}${head}${strips || (S.loaded.contacts ? `<div class="notice remind calm"><span class="ttl">All clear</span><ul class="lines"><li><b class="n on">✓</b> nothing is waiting for you</li></ul></div>` : '')}${today}${pushCard()}
-      <div class="sect"><h2>Log of activity</h2></div>
-      ${log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`}`;
+    const logN = S.assess.filter((a) => WEB.isDirector || mineIds.has(a.playerId)).length;
+    return `${notice()}${head}${needsCard}${today}${pushCard()}
+      ${foldBox('log', 'Log of activity', logN ? logN + ' on file' : '', log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`)}`;
+  }
+  /* an accordion: what is not needed every day folds under one line (the design pass, Nov 13); open ones are remembered while the page is open */
+  S.ui.fold = S.ui.fold || {};
+  const foldBox = (k, title, note, inner) => { const open = !!S.ui.fold[k]; return `<div class="foldbox${open ? ' open' : ''}"><button type="button" class="foldsum" data-act="fold" data-k="${esc(k)}" aria-expanded="${open}"><b>${esc(title)}</b>${note ? `<small>${esc(note)}</small>` : ''}${a2chev()}</button>${open ? `<div class="foldin">${inner}</div>` : ''}</div>`; };
+  /* the week on a player's page: one line with the tick; the eight weeks and the who/how fold under it */
+  function weekFold(p) {
+    const wk = curWeek(); const c = contactOf(p.id, wk); const on = !!(c && c.done); const w = writable() && mine(p);
+    const row = a2row(`<span class="a2ico ${on ? 'mint' : 'red'}">${a2i(on ? 'check' : 'users')}</span>`, on ? 'In touch this week' : 'Not in touch yet this week', on ? esc(tickWord(c)) : 'A text or a call from here ticks it', w ? `<button type="button" class="a2tick${on ? ' on' : ''}" data-act="contact" data-v="${on ? 'off' : 'on'}" aria-label="${on ? 'Undo: not in touch yet' : 'I was in touch this week'}">${a2i('check')}</button>` : '');
+    return `<div class="a2k-p wkfold">${a2sec('This week', esc(weekLabel(wk)))}<div class="a2card">${row}</div>${foldBox('wk:' + p.id, 'The last 8 weeks, who and how', '', contactCard(p))}</div>`;
   }
   const viewPlayers = () => viewHome();
   /* Notifications on this phone (Nov 13): one button on Reminders. Android Chrome and a computer ask right away; an iPhone only
@@ -3132,7 +3151,7 @@ const PW_CONFIG = {
         ${writable() ? `<button type="button" class="a2cb" data-act="toggle-edit" aria-label="Edit player" title="Edit player" aria-expanded="${!!S.ui.editing}">···</button>` : ''}</div>
       <div id="editp" ${S.ui.editing ? '' : 'hidden'}>${S.ui.editing ? editPlayerPanel(p) : ''}</div>
       ${active(p) ? famCard(p) : (pOpen ? `<div id="parentbox">${parentBox(p)}</div>` : '')}
-      ${active(p) ? contactCard(p) : ''}${web && mine(p) ? msgCard(p) : ''}
+      ${active(p) ? weekFold(p) : ''}${web && mine(p) ? msgCard(p) : ''}
       <div class="tabs" role="tablist">${tabs}</div>
       ${tab === 'videos' ? tabVideos(p) : tab === 'journal' ? tabJournal(p) : tabAssess(p)}`;
   }
@@ -4073,6 +4092,7 @@ const PW_CONFIG = {
     else if (act === 'a2ctab') { S.ui.a2ctab = b.getAttribute('data-v'); render(); }
     else if (act === 'a2numbers') { S.ui.a2numbers = S.ui.a2numbers === S.route.pid ? null : S.route.pid; render(); }
     else if (act === 'a2reports') { go({ view: 'players' }); }
+    else if (act === 'fold') { const k = b.getAttribute('data-k'); S.ui.fold[k] = !S.ui.fold[k]; render(); }
     else if (act === 'push-on') { pushOn(); }
     else if (act === 'push-test') { api('push/test', {}).then((r) => toast(r && r.sent ? 'Sent. It should show in a moment.' : 'Nothing went out: turn notifications on again on this device.'), (e) => toast('Could not send: ' + (e && e.message ? e.message : e))); }
     else if (act === 'fam-chat') { const pid = b.getAttribute('data-pid'), tail = b.getAttribute('data-tail') || ''; if (tail) { S.ui.msgConv[pid] = tail; S.ui.msgPick = null; } S.ui.msgFocus = pid; render(); if (tail) markReadLocal(pid, tail); }
@@ -4247,6 +4267,7 @@ const PW_CONFIG = {
     r.hidden = false; r.innerHTML = hits.length ? hits.map((p) => mine(p) ? `<button ${goAttr({ view: 'player', pid: p.id })}><span>${esc(p.name)}</span><small>${esc(group(p.group).label)}${p.coach ? ' · ' + esc(p.coach) : ''}</small></button>` : `<div class="locked" style="padding:10px 12px;opacity:.6"><span>${esc(p.name)}</span><small style="display:block">${esc(group(p.group).label)} · ${esc(p.coach ? 'with ' + p.coach : 'no coach')}</small></div>`).join('') : '<div class="muted" style="padding:10px;font-size:13px">No player by that name.</div>';
   }
   document.addEventListener('click', (ev) => { if (!ev.target.closest('.search')) closeResults(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === '/' && !ev.metaKey && !ev.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((ev.target && ev.target.tagName) || '') && !(ev.target && ev.target.isContentEditable)) { const q = $('#q'); if (q && q.offsetParent !== null) { ev.preventDefault(); q.focus(); } } });   // "/" jumps to Find a player (⌘K is the Dashboard's own jump box)
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { closeResults(); if (DICT) stopDictation(false);   /* Escape also ends the Mac's own dictation; the box stays ready until Done */ const q = $('#q'); if (q && document.activeElement === q) q.blur(); } });
   window.addEventListener('pagehide', () => { if (E) { stopDictation(true); flush(true); } });
   const fitBar = () => { document.documentElement.style.setProperty('--barh', '52px'); };   // the design's compact bar, once the page has scrolled

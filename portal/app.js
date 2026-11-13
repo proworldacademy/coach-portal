@@ -11,7 +11,7 @@
   const nameOf = (el) => el.textContent.replace(/\d+$/, "").trim();
   function paint() {
     const items = Array.from(vt.querySelectorAll("button, a")).slice(0, 4); if (!items.length) { bar.innerHTML = ""; return; }
-    bar.innerHTML = items.map((el, i) => { const name = nameOf(el); const red = el.querySelector("small.red"); return '<button type="button" class="' + (el.classList.contains("on") ? "on" : "") + '" data-i="' + i + '"><i>' + (ICON[name] || "•") + (red ? '<em class="n">' + red.textContent.trim() + "</em>" : "") + "</i>" + name + "</button>"; }).join("");
+    bar.innerHTML = items.map((el, i) => { const name = nameOf(el); const red = el.querySelector("small.red"); const svg = el.querySelector(".ti"); return '<button type="button" class="' + (el.classList.contains("on") ? "on" : "") + '" data-i="' + i + '"><i>' + (svg ? svg.innerHTML : (ICON[name] || "•")) + (red ? '<em class="n">' + red.textContent.trim() + "</em>" : "") + "</i>" + name + "</button>"; }).join("");
     bar.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => { const el = vt.querySelectorAll("button, a")[Number(b.dataset.i)]; if (el) el.click(); }));
   }
   paint();
