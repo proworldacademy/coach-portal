@@ -173,3 +173,21 @@ body.a2k a.fchip.call .a2i{width:14px;height:14px}
 }
 @media(min-width:641px){ body.app2 .a2glow{display:none} }
 @media(max-width:640px){ body.a2k a.fchip.call .long{display:none} body.a2k a.fchip.call{padding-left:10px;padding-right:10px} }
+/* the in-app dialer (Nov 13): JustCall's own dialer in a sheet — a panel at the bottom right on a computer, the whole screen on a phone */
+.jcs{position:fixed;right:20px;bottom:20px;width:369px;height:min(700px,calc(100vh - 40px));background:#fff;border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.28);z-index:90;display:flex;flex-direction:column;overflow:hidden;font-family:var(--body)}
+.jcs[hidden]{display:none}
+.jcs-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px 10px 18px}
+.jcs-h b{font:700 15px var(--body);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.jcs-h span{display:flex;gap:8px;align-items:center;flex:none}
+.jcs-app,.jcs-x{font:700 12.5px var(--body);border:0;border-radius:999px;padding:8px 12px;background:#EFEFEA;color:var(--ink);text-decoration:none;cursor:pointer}
+.jcs-x{background:var(--ink);color:#fff}
+.jcs-n{margin:0;padding:0 18px 10px;font:400 12.5px/1.4 var(--body);color:#7A7A76}
+.jcs-f{flex:1;min-height:0;background:#F1F1ED}
+.jcs-f iframe{width:100%;height:100%;border:0;display:block}
+.jcs-pill{position:fixed;right:20px;bottom:20px;z-index:89;border:0;border-radius:999px;background:var(--ink);color:var(--lime);font:700 13.5px var(--body);padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);cursor:pointer}
+.jcs-pill[hidden]{display:none}
+@media(max-width:640px){
+  .jcs{left:0;right:0;top:0;bottom:0;width:auto;height:auto;border-radius:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .jcs-pill{right:14px;bottom:92px}
+}
+body.app-skin .notice.remind.push .linkb{font:700 13px var(--body);text-decoration:underline;background:none;border:0;padding:0;cursor:pointer;color:var(--ink)}

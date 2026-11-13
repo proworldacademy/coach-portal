@@ -31,6 +31,12 @@ if (require.main === module) (async () => {
       await m.locator('[data-act="a2numbers"]').click(); await m.waitForTimeout(200);
       await m.locator('.a2fam[data-tail="0109"]').click(); await m.waitForTimeout(700);
       log(await m.locator('#msgcard .cchip[aria-pressed="true"]', { hasText: 'Father' }).count() === 1, n + ' player: tapping the father opens his chat');
+      // Call stays in the app: the JustCall dialer opens in a sheet, the number handed to it (Nov 13)
+      await m.locator('.a2qa a[data-jc]').click(); await m.waitForTimeout(400);
+      log(await m.evaluate(() => { const el = document.querySelector('#jcs'); const f = el && el.querySelector('iframe'); return !!el && !el.hidden && !!f && f.src === 'https://app.justcall.io/dialer' && /microphone/.test(f.allow) && /Bo Kessler/.test(el.querySelector('.jcs-t').textContent) && /justcall:\/\/app\/call\?number=%2B1561555/.test(el.querySelector('.jcs-app').getAttribute('href')); }), n + ' call: the dialer opens inside the portal, with the way out to the JustCall app');
+      log(m.context().pages().length === 1, n + ' call: no other tab opened');
+      await m.locator('.jcs-x').click(); await m.waitForTimeout(200);
+      log(await m.evaluate(() => document.querySelector('#jcs').hidden && !document.querySelector('#jcs-pill').hidden), n + ' call: Hide keeps the dialer one tap away');
       await m.locator('.a2cb[data-act="toggle-edit"]').click(); await m.waitForTimeout(300);
       log(await count(m, 'form[data-form="edit-player"]') === 1, n + ' player: ··· opens Edit player');
       await m.locator('form[data-form="edit-player"] [data-act="toggle-edit"]').click(); await m.waitForTimeout(200);
