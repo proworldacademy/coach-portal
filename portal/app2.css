@@ -158,7 +158,6 @@ body.a2k a.fchip.call .a2i{width:14px;height:14px}
 @media(max-width:640px){
   body.app2 .wrap.frame .tools{display:none}
   body.app2 #vtabs{display:none!important}
-  body.app2 .cp-switch{display:none}
   body.app2 main{padding-bottom:118px}
   body.app2 .a2lt{font-size:42px}
   body.app2 .a2chat{min-height:0;max-height:none;border-radius:0;background:var(--page);padding:0;height:calc(100dvh - 20px);grid-template-rows:auto auto minmax(0,1fr) auto auto}

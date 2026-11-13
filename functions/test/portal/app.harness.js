@@ -16,7 +16,7 @@ if (require.main === module) (async () => {
     for (const [w, h, n] of [[390, 844, 'phone'], [1280, 900, 'computer']]) {
       const m = await page(browser, w, h); await m.addInitScript(() => { try { if (!sessionStorage.getItem('t')) { localStorage.setItem('cp-view', 'app2'); sessionStorage.setItem('t', '1'); } } catch (e) { /* noop */ } });
       await m.goto('http://localhost:4173/portal/#/p/ft-bo-k'); await m.waitForSelector('.a2k-p .a2card', { timeout: 15000 }); await m.waitForTimeout(900);
-      log(await count(m, 'body.app-skin.a2k') === 1 && await count(m, 'body.app2') === 0 && await m.evaluate(() => localStorage.getItem('cp-view')) === 'app', n + ': someone left on App 2 lands on App');
+      log(await count(m, 'body.app-skin.a2k') === 1 && await count(m, 'body.app2') === 0 && await count(m, '.cp-switch') === 0, n + ': the App look, whatever was stored, and no switch');
       log(await count(m, '.a2qa > *') === 3 && /Text/.test(await text(m, '.a2qa')) && /Call/.test(await text(m, '.a2qa')) && /Report/.test(await text(m, '.a2qa')), n + ' player: Text · Call · Report');
       log(await m.locator('.a2qa a[href^="https://app.justcall.io/dialer?numbers=%2B1"]').count() === 1 && await count(m, 'a[href^="tel:"]') === 0, n + ' player: Call opens the JustCall dialer, never tel:');
       const fam = await text(m, '.a2k-p .a2card');
@@ -54,7 +54,6 @@ if (require.main === module) (async () => {
       log(/Reminders/i.test(await text(m, 'h1.title')) && await count(m, '.groups .group') === 0 && /Log of activity/i.test(await text(m, 'main')), n + ' home: Reminders — what is waiting and the log, no groups');
       log(await m.evaluate(() => Array.from(document.querySelectorAll('#vtabs button, #vtabs a')).map((b) => b.textContent.replace(/\d+$/, '').trim()).join('·')) === 'Reminders·Players·Contact·Privates', n + ': the row is Reminders · Players · Contact · Privates');
       if (n === 'phone') log(await m.evaluate(() => Array.from(document.querySelectorAll('.cp-appbar button')).map((b) => b.textContent.replace(/\d+/g, '').replace(/[^A-Za-z]/g, '')).join('·')) === 'Reminders·Players·Contact·Privates' && await m.evaluate(() => getComputedStyle(document.querySelector('.pwd-burger')).display !== 'none'), 'phone: the bottom bar is the four, the ☰ is at the top');
-      if (n === 'computer') log(await m.evaluate(() => Array.from(document.querySelectorAll('.cp-switch button')).map((b) => b.textContent).join('·')) === 'App·In between', 'computer: the switch says App · In between');
       log(!(await overflow(m)).length, n + ' home: nothing wider than the screen ' + JSON.stringify(await overflow(m)));
       await shot(m, 'app-' + n + '-home');
       await m.goto('http://localhost:4173/portal/#/players'); await m.waitForSelector('.groups .group', { timeout: 15000 }); await m.waitForTimeout(400);
