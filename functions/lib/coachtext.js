@@ -34,6 +34,7 @@
 'use strict';
 const S = require('./stripe');
 const NOTIFY = require('./notify');
+const PUSH = require('./push');
 const SMS = require('./sms');
 const CONTACTS = require('./contacts');
 const CAL = require('./calendar');
@@ -364,6 +365,8 @@ async function onReply(db, ev) {
       const whoWrote = conv.members.length > 1 ? (conv.members.find((m) => m.phone === phone) || {}) : {};
       const line = `${short}'s family wrote back${whoWrote.slot ? ' (' + SLOT_WORD[whoWrote.slot].toLowerCase().replace('the ', '') + ')' : ''}: "${body.slice(0, 160)}${body.length > 160 ? '…' : ''}" Answer from the portal: ${SITE}/portal#/messages/${encodeURIComponent(pid)}${conv.key ? '/' + conv.key : ''}`;
       if (s.slackId && !ev.dry && await NOTIFY.slackDm(db, s.slackId, line)) out.dms++;
+      /* and the coach's phone, when it has notifications on (Nov 13): who wrote, the first words, a tap opens the chat */
+      if (!ev.dry) { try { const r = await PUSH.send(db, [s.email], { title: `${short}'s family`, body: body.slice(0, 140), url: `/portal#/messages/${encodeURIComponent(pid)}${conv.key ? '/' + conv.key : ''}`, tag: 'chat-' + pid }); out.pushes = (out.pushes || 0) + r.sent; } catch (e) { /* a nicety */ } }
     }
   }
   return out;

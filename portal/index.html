@@ -2660,13 +2660,50 @@ const PW_CONFIG = {
   };
   const a2i = (k, cls) => `<i class="a2i${cls ? ' ' + cls : ''}" aria-hidden="true">${A2_ICON[k] || ''}</i>`;
   const a2chev = () => a2i('chev', 'chev');
-  /* Call goes through JustCall (Antonio, Nov 6: every coach gets a JustCall number): the academy number shows to the family, the call
-     is logged in JustCall and the contact sync ticks the week. The dialer opens with the number filled in; the player rides along
-     as metadata. Never tel: — that would ring from the coach's own phone. */
+  /* Call goes through JustCall (Antonio, Nov 6: every coach gets a JustCall number): the family sees the coach's JustCall number, the
+     call is logged in JustCall and the contact sync ticks the week. Never tel: — that would ring from the coach's own phone.
+     Nov 13 (Antonio, Lorenzo): the call stays in the app. The Call button opens JustCall's own dialer inside the portal (the same
+     embed JustCall's Dialer SDK makes: an iframe of app.justcall.io/dialer, told the number with a message) instead of sending the
+     coach to another tab. The coach signs in to JustCall once inside it. The link stays on the button as the way out: the sheet
+     offers "JustCall app" (the phone app, straight on the call) for a phone where the embed does not hold the sign-in. */
+  const JC_ORIGIN = 'https://app.justcall.io';
+  const jcE164 = (phone) => { const d = String(phone || '').replace(/[^\d+]/g, ''); if (!d) return ''; return d.startsWith('+') ? d : d.length === 10 ? '+1' + d : d.length === 11 && d[0] === '1' ? '+' + d : '+' + d; };
   function jcCall(phone, pid) {
-    const d = String(phone || '').replace(/[^\d+]/g, ''); if (!d) return '';
-    const e164 = d.startsWith('+') ? d : d.length === 10 ? '+1' + d : d.length === 11 && d[0] === '1' ? '+' + d : '+' + d;
-    return `href="https://app.justcall.io/dialer?numbers=${encodeURIComponent(e164)}&medium=custom&metadata=${encodeURIComponent(pid || '')}&metadata_type=string" target="_blank" rel="noopener"`;
+    const e164 = jcE164(phone); if (!e164) return '';
+    return `href="${JC_ORIGIN}/dialer?numbers=${encodeURIComponent(e164)}&medium=custom&metadata=${encodeURIComponent(pid || '')}&metadata_type=string" target="_blank" rel="noopener" data-jc="${esc(e164)}" data-jcpid="${esc(pid || '')}"`;
+  }
+  const JC = { el: null, frame: null, ready: false, logged: null, pending: '', num: '', state: '' };
+  function jcPost(num) { try { JC.frame.contentWindow.postMessage({ type: 'dial-number', phoneNumber: num }, JC_ORIGIN); } catch (e) { /* not ready */ } }
+  function jcPaint() {
+    if (!JC.el) return; const p = JC.pid && player(JC.pid);
+    $('.jcs-t', JC.el).textContent = (JC.state ? JC.state + ' · ' : 'Call · ') + (p ? p.name : JC.num);
+    $('.jcs-n', JC.el).hidden = JC.logged === true;
+    const app = $('.jcs-app', JC.el); if (JC.num) app.setAttribute('href', 'justcall://app/call?number=' + encodeURIComponent(JC.num));
+  }
+  function jcOpen(num, pid) {
+    JC.num = num; JC.pid = pid || ''; JC.state = '';
+    if (!JC.el) {
+      const el = document.createElement('section'); el.className = 'jcs'; el.id = 'jcs'; el.setAttribute('aria-label', 'Call through JustCall');
+      el.innerHTML = `<div class="jcs-h"><b class="jcs-t"></b><span><a class="jcs-app" href="#" title="Open this call in the JustCall phone app">JustCall app</a><button type="button" class="jcs-x" aria-label="Hide the dialer">Hide</button></span></div><p class="jcs-n">First time on this device: sign in to JustCall below, once. Then the number dials by itself.</p><div class="jcs-f"></div>`;
+      document.body.appendChild(el); JC.el = el;
+      const pill = document.createElement('button'); pill.type = 'button'; pill.className = 'jcs-pill'; pill.id = 'jcs-pill'; pill.hidden = true; pill.textContent = '✆ Dialer'; document.body.appendChild(pill); JC.pill = pill;
+      pill.addEventListener('click', () => { JC.el.hidden = false; pill.hidden = true; });
+      $('.jcs-x', el).addEventListener('click', () => { el.hidden = true; pill.hidden = false; });
+      const f = document.createElement('iframe'); f.src = JC_ORIGIN + '/dialer'; f.allow = 'microphone; autoplay; clipboard-read; clipboard-write'; f.title = 'JustCall dialer'; JC.frame = f;
+      f.addEventListener('load', () => { JC.ready = true; if (JC.pending) { const n = JC.pending; setTimeout(() => jcPost(n), 1200); } });
+      $('.jcs-f', el).appendChild(f);
+      window.addEventListener('message', (ev) => {
+        if (ev.origin !== JC_ORIGIN || !ev.data) return; const name = ev.data.name, data = ev.data.data;
+        if (name === 'logged-in-status') { JC.logged = !!(data && data.logged_in); if (JC.logged && JC.pending) jcPost(JC.pending); }
+        else if (name === 'call-ringing') { JC.state = 'Ringing'; JC.pending = ''; }
+        else if (name === 'call-answered') { JC.state = 'On the call'; JC.pending = ''; }
+        else if (name === 'call-ended') { JC.state = 'Call ended'; JC.pending = ''; }
+        else return;
+        jcPaint();
+      });
+    }
+    JC.el.hidden = false; JC.pill.hidden = true; JC.pending = num; jcPaint();
+    if (JC.ready) jcPost(num);
   }
   // the day: Thursday, Nov 5
   const a2day = (d) => d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -2935,11 +2972,38 @@ const PW_CONFIG = {
     /* Reminders (the home): what is waiting for this person, then the log of what was done. Nothing else. */
     const strips = `${msgStrip}${wkStrip}${repStrip}${remind}`;
     const head = `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
-    return `${notice()}${head}${strips || (S.loaded.contacts ? `<div class="notice remind calm"><span class="ttl">All clear</span><ul class="lines"><li><b class="n on">✓</b> nothing is waiting for you</li></ul></div>` : '')}${today}
+    return `${notice()}${head}${strips || (S.loaded.contacts ? `<div class="notice remind calm"><span class="ttl">All clear</span><ul class="lines"><li><b class="n on">✓</b> nothing is waiting for you</li></ul></div>` : '')}${today}${pushCard()}
       <div class="sect"><h2>Log of activity</h2></div>
       ${log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`}`;
   }
   const viewPlayers = () => viewHome();
+  /* Notifications on this phone (Nov 13): one button on Reminders. Android Chrome and a computer ask right away; an iPhone only
+     offers it once the app is on the Home Screen (iOS 16.4+), so the card says that first. The engine sends when a family writes back. */
+  const PUSHS = { on: null, busy: false };
+  const pushCan = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  function pushCheck() { if (!pushCan() || PUSHS.on !== null || PUSHS.checking) return; PUSHS.checking = true; navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription()).then((sub) => { PUSHS.on = !!sub && Notification.permission === 'granted'; PUSHS.checking = false; if (S.route.view === 'home') softRender(); }, () => { PUSHS.on = false; PUSHS.checking = false; }); }
+  function pushCard() {
+    if (EDITION !== 'web') return '';
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    const box = (ttl, line, btn) => `<div class="notice remind calm push"><span class="ttl">Notifications</span><ul class="lines"><li>${line}</li></ul>${btn || ''}</div>`;
+    if (!pushCan()) return ios && !standalone ? box('', 'On an iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>, open PROWORLD from there, and turn notifications on here.') : '';
+    pushCheck();
+    if (Notification.permission === 'denied') return box('', 'Notifications are blocked for PROWORLD on this device. Allow them in the device’s settings, then come back.');
+    if (PUSHS.on) return box('', '<b class="n on">✓</b> on for this device: a new text from a family shows like any other app', `<button type="button" class="linkb" data-act="push-test">Send me a test</button>`);
+    if (PUSHS.on === null) return '';
+    return box('', 'Get a notification when a family writes back.', `<button type="button" class="btn pri sm" data-act="push-on"${PUSHS.busy ? ' disabled' : ''}>Turn on notifications</button>`);
+  }
+  async function pushOn() {
+    if (PUSHS.busy) return; PUSHS.busy = true; render();
+    try {
+      const perm = await Notification.requestPermission(); if (perm !== 'granted') { toast(perm === 'denied' ? 'Notifications are blocked on this device.' : 'Not turned on.'); return; }
+      const { key } = await api('push/key'); const pad = '='.repeat((4 - key.length % 4) % 4); const raw = atob((key + pad).replace(/-/g, '+').replace(/_/g, '/')); const bytes = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      const reg = await navigator.serviceWorker.ready; const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
+      await api('push/subscribe', { subscription: sub.toJSON(), ua: navigator.userAgent.slice(0, 200) });
+      PUSHS.on = true; toast('Notifications are on for this device.');
+    } catch (e) { toast('Could not turn notifications on: ' + (e && e.message ? e.message : e)); }
+    finally { PUSHS.busy = false; render(); }
+  }
   function viewFollowUp() {
     const fu = followUps(); const meetRow = (a) => { const p = player(a.playerId); const def = defOf(a) || { short: a.type }; const m = meetingOf(a);
       return `<button class="rowb" ${goAttr({ view: 'report', id: a.id })}><div class="who"><span class="ava" style="width:auto;padding:0 10px;border-radius:8px">${esc(dayLabel(m.date))}</span><div style="min-width:0"><div class="nm">${esc(p ? p.name : a.playerName || 'Player')}</div><small>${esc(def.short)} · ${esc(a.period || '')}${m.by ? ' · set by ' + esc(m.by) : ''}</small></div></div><div class="mid muted" style="font-size:12px">${esc(a.coach ? 'Coach: ' + a.coach : '')}</div><div class="chips">${meetChip(a)}</div></button>`; };
@@ -3961,6 +4025,7 @@ const PW_CONFIG = {
   }
 
   document.addEventListener('click', async (ev) => {
+    const jcEl = ev.target.closest('a[data-jc]'); if (jcEl && EDITION === 'web' && !ev.metaKey && !ev.ctrlKey) { ev.preventDefault(); jcOpen(jcEl.getAttribute('data-jc'), jcEl.getAttribute('data-jcpid')); return; }
     const hrefEl = ev.target.closest('[data-href]'); if (hrefEl) { ev.preventDefault(); location.href = hrefEl.getAttribute('data-href'); return; }
     const goEl = ev.target.closest('[data-go]'); if (goEl) { ev.preventDefault(); let r; try { r = JSON.parse(goEl.getAttribute('data-go')); } catch (e) { return; } S.ui.adding = false; S.ui.editing = false; S.ui.parentOpen = null; S.ui.parentData = null; if (r.view !== 'edit') { S.ui.back = null; saveUi(); } closeResults(); go(r); return; }
     const b = ev.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT' || b.disabled) return; const act = b.getAttribute('data-act');
@@ -4007,6 +4072,8 @@ const PW_CONFIG = {
     else if (act === 'a2ctab') { S.ui.a2ctab = b.getAttribute('data-v'); render(); }
     else if (act === 'a2numbers') { S.ui.a2numbers = S.ui.a2numbers === S.route.pid ? null : S.route.pid; render(); }
     else if (act === 'a2reports') { go({ view: 'players' }); }
+    else if (act === 'push-on') { pushOn(); }
+    else if (act === 'push-test') { api('push/test', {}).then((r) => toast(r && r.sent ? 'Sent. It should show in a moment.' : 'Nothing went out: turn notifications on again on this device.'), (e) => toast('Could not send: ' + (e && e.message ? e.message : e))); }
     else if (act === 'fam-chat') { const pid = b.getAttribute('data-pid'), tail = b.getAttribute('data-tail') || ''; if (tail) { S.ui.msgConv[pid] = tail; S.ui.msgPick = null; } S.ui.msgFocus = pid; render(); if (tail) markReadLocal(pid, tail); }
     else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week

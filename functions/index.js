@@ -32,6 +32,7 @@ const SMS = require('./lib/sms');
 const MONDAY = require('./lib/mondayimport');
 const CONTACTS = require('./lib/contacts');
 const COACHTEXT = require('./lib/coachtext');
+const PUSH = require('./lib/push');
 const USERS = require('./lib/users');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
@@ -129,6 +130,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       const who = await ADMIN.requireCoach(req); const b = req.body || {};
       if (route === 'POST /coach/text') { const out = await COACHTEXT.text(ctx.db, who, b); logger.info('coach text', { by: who.email, player: S.clean(b.player, 60), conv: out.conv, sent: out.sent, failed: out.failed, tick: out.tick }); return send(res, 200, out); }
       if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: String(req.query.peek || '') !== '1' }));
+      // notifications on the phone (Nov 13): the public key, this phone's subscription, a test to yourself
+      if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
+      if (route === 'POST /coach/push/subscribe') { const out = await PUSH.subscribe(ctx.db, who, b); logger.info('push on', { by: who.email }); return send(res, 200, out); }
+      if (route === 'POST /coach/push/unsubscribe') return send(res, 200, await PUSH.unsubscribe(ctx.db, who, b));
+      if (route === 'POST /coach/push/test') return send(res, 200, await PUSH.send(ctx.db, [who.email], { title: 'PROWORLD', body: 'Notifications are on for this phone.', url: '/portal', tag: 'test' }));
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
       if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
       throw S.err(404, 'route', 'No such coach route.');
