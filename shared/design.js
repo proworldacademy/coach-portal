@@ -74,9 +74,11 @@
     const cs = coachSide();
     const director = !!(ctx.owner || ctx.admin || ctx.director || role === "director");
     const directorOnly = (it) => it.href === "/backend#messages" || it.href === "/backend#courts";
-    if (cs) return DOORS.filter((d) => d.id === "coaches").map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id || now === null, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).concat(director ? [{ name: "Staff & access", href: "/portal#/staff" }] : []) }));
+    // a coach's menu is the portal's own four (Nov 13): Reminders, Players, Contact, Privates. The Board, Try-outs, Attendance and Courts are for directors and owners.
+    const coachItem = (it) => ["/portal", "/portal#/players", "/portal#/messages", "/backend#privates"].includes(it.href);
+    if (cs) return DOORS.filter((d) => d.id === "coaches").map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id || now === null, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => director || coachItem(it)).concat(director ? [{ name: "Staff & access", href: "/portal#/staff" }] : []) }));
     return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))
-      .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(d.id === "coaches" && !director && directorOnly(it))) }));
+      .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(d.id === "coaches" && !director && (directorOnly(it) || !coachItem(it)))) }));
   }
   let ddEl = null, ddT = null;
   function ddHide() { if (ddEl) ddEl.classList.remove("on"); }

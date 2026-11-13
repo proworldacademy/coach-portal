@@ -220,7 +220,7 @@ if (require.main === module) (async () => {
     log((await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'no sideways scroll on the player page');
     const card = await m.locator('#msgcard').boundingBox(); await m.evaluate((y) => window.scrollTo(0, y - 10), card.y);
     await m.screenshot({ path: path.join(SHOTS, 'phone-player-card.png'), fullPage: false });
-    log((await m.locator('.cp-appbar button', { hasText: 'Messages' }).count()) === 1, 'the bottom bar still has Messages');
+    log((await m.locator('.cp-appbar button', { hasText: 'Contact' }).count()) === 1, 'the bottom bar has Contact (the chats)');
     await m.context().close();
 
     /* ── the "In between" look (the other skin): the same screens must hold ── */

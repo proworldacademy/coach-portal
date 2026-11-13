@@ -2127,7 +2127,7 @@ const PW_CONFIG = {
       const body = !t ? '<p class="hint">Loading the chat…</p>' : t.error && !(t.lines && t.lines.length) ? `<p class="hint">${esc(t.error)}</p>` : chatPane(p, t, openKey, true);
       pane = `<section class="panel mpane" id="mpane" aria-label="The open chat"><div class="mhead"><button class="btn sm ghost mback" type="button" ${goAttr({ view: 'messages' })} aria-label="Back to the chats">‹ Chats</button><div class="mwho"><b>${esc(p.name)}</b><small>${c ? esc(convTitle(c)) : esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</small></div><div class="rowx">${(() => { if (!t) return ''; const tail0 = c && c.members && c.members[0] && c.members[0].tail; const nn = (t.numbers || []).find((x) => tail0 && x.tail === tail0) || (t.numbers || [])[0]; return nn && nn.phone ? `<a class="fchip sm call" ${jcCall(nn.phone, p.id)} aria-label="Call through JustCall" title="Call through JustCall">${a2i('phone')}<span class="long">Call</span></a>` : ''; })()}<button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻</button><button class="fchip sm ppage" ${goAttr({ view: 'player', pid: p.id })}><span class="long">Player's page ›</span><span class="short">Player ›</span></button></div></div>${body}</section>`;
     }
-    return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Messages' }])}
+    return `${notice()}${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Messages' }])}
       <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
         <div class="sub">Every family of yours, like your phone: one chat per number and group chats for the parents together. Open a family and write; the text goes out from the academy number, signed with your name, and the family answers here.</div>
         <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'chat has' : 'chats have'} a new reply</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${families}</b> ${families === 1 ? 'family' : 'families'}</li></ul></div></div>
@@ -2141,6 +2141,7 @@ const PW_CONFIG = {
     if (p[0] === 'g' && p[1]) return { view: 'group', gid: p[1] };
     if (p[0] === 'p' && p[1]) return { view: 'player', pid: p[1], tab: ['videos', 'journal'].includes(p[2]) ? p[2] : 'assessments' };
     if (p[0] === 'a' && p[1]) return p[2] === 'edit' ? { view: 'edit', id: p[1], part: p[3] || undefined } : { view: 'report', id: p[1] };
+    if (p[0] === 'players') return { view: 'players' };
     if (p[0] === 'staff') return { view: 'staff' };
     if (p[0] === 'followup' || p[0] === 'unsent') return { view: 'followup' };
     if (p[0] === 'tryouts') return p[1] === 'new' ? { view: 'tryouts', add: true } : { view: 'tryouts' };
@@ -2154,7 +2155,7 @@ const PW_CONFIG = {
   }
   const sameRoute = (a, b) => JSON.stringify([a.view, a.gid, a.pid, a.tab, a.id, a.part, a.conv]) === JSON.stringify([b.view, b.gid, b.pid, b.tab, b.id, b.part, b.conv]);
   const enc = encodeURIComponent;
-  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : r.view === 'contact' ? '#/contact' : r.view === 'parked' ? '#/parked' : r.view === 'messages' ? ('#/messages' + (r.pid ? '/' + enc(r.pid) + (r.conv ? '/' + r.conv : '') : '')) : '#/');
+  const toHash = (r) => (r.view === 'group' ? `#/g/${enc(r.gid)}` : r.view === 'player' ? `#/p/${enc(r.pid)}${r.tab && r.tab !== 'assessments' ? '/' + r.tab : ''}` : r.view === 'report' ? `#/a/${enc(r.id)}` : r.view === 'edit' ? `#/a/${enc(r.id)}/edit${r.part ? '/' + enc(r.part) : ''}` : r.view === 'staff' ? '#/staff' : r.view === 'players' ? '#/players' : r.view === 'followup' ? '#/followup' : r.view === 'tryouts' ? (r.add ? '#/tryouts/new' : '#/tryouts') : r.view === 'tryout' ? `#/t/${enc(r.id)}` : r.view === 'board' ? '#/board' : r.view === 'commit' ? '#/commit' : r.view === 'contact' ? '#/contact' : r.view === 'parked' ? '#/parked' : r.view === 'messages' ? ('#/messages' + (r.pid ? '/' + enc(r.pid) + (r.conv ? '/' + r.conv : '') : '')) : '#/');
   async function go(r, fromHistory) {
     if (E) { try { await flushEd(E, true); } catch (e) { /* keep navigating */ } }
     if (EDITION === 'web' && typeof WEB !== 'undefined' && WEB.tryoutsOnly && r.view !== 'tryouts' && r.view !== 'tryout') r = { view: 'tryouts' };   // try-outs-only access (front desk)
@@ -2501,16 +2502,16 @@ const PW_CONFIG = {
   function paintViewTabs() {
     const el = $('#vtabs'); if (!el) return;
     const on = EDITION === 'web' ? WEB.stage === 'in' : !!S.db; el.hidden = !on; if (!on) { el.innerHTML = ''; const f = $('#fupill'); if (f) f.hidden = true; return; }
-    const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'contact' ? 'contact' : v === 'messages' ? 'messages' : v === 'followup' ? 'followup' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : 'home';
+    const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'contact' || v === 'messages' ? 'contact' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : v === 'players' || v === 'group' || v === 'player' || v === 'report' || v === 'edit' ? 'players' : 'home';
     const nOpen = S.db ? openCount() : 0;
     const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
-      : [['home', 'Players Portal', { view: 'home' }], ['tryouts', 'Try-outs', { view: 'tryouts' }], ['board', 'Coach Board', { view: 'board' }], ['contact', 'Weekly contact', { view: 'contact' }]]
-        // the eight things a coach sees (Antonio, Oct 24): Players Portal · Try-outs · Coach Board · Attendance · Messages · Courts · Privates (Start here dropped Oct 26: a PDF guide instead); Staff & access is directors only
-        .concat(EDITION === 'web' ? [['messages', 'Messages', { view: 'messages' }], ['attendance', 'Attendance', '/backend#attendance'], ['courts', 'Courts', '/backend#courts'], ['privates', 'Privates', '/backend#privates']] : [])
-        .concat(EDITION === 'web' && WEB.isDirector ? [['staff', 'Staff & access', { view: 'staff' }]] : []);
+      : [['home', 'Reminders', { view: 'home' }], ['players', 'Players', { view: 'players' }]]
+        // the four a coach has (Antonio and Lorenzo, Nov 13, the whiteboard): Reminders · Players · Contact (texts and calls) · Privates (the booking page).
+        // Try-outs, the Coach Board, Attendance, Courts and Staff & access left this row: they open from the Dashboard menu (Coaches), for directors and owners.
+        .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['privates', 'Privates', '/backend#privates']] : []);
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
-    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'contact' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}${k === 'messages' && msgUnread() ? `<small class="red">${msgUnread()}</small>` : ''}</button>`).join('');
+    el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}">${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'home' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}${k === 'contact' && msgUnread() ? `<small class="red">${msgUnread()}</small>` : ''}</button>`).join('');
     if (EDITION === 'web' && WEB.stage === 'in' && !S.msg.at && !S.msg.busy.inbox) loadInbox(true);
     { const on = el.querySelector('.on'); if (on && el.scrollWidth > el.clientWidth + 2) { const x = on.offsetLeft - 16; if (x > 0) el.scrollLeft = x; } }
     if (window.PWDesign) {
@@ -2534,7 +2535,7 @@ const PW_CONFIG = {
 
   /* ───────────── administrators: staff list, requests, import, backup ───────────── */
   function viewStaff() {
-    if (!WEB.isDirector) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">Staff &amp; access is for the tennis directors and the owners.</div>`;
+    if (!WEB.isDirector) return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }])}<div class="empty">Staff &amp; access is for the tennis directors and the owners.</div>`;
     const manage = WEB.isDirector;   // directors only (Antonio, Oct 24)
     const ROLE_WORD = { admin: 'Administrator', director: 'Tennis director', desk: 'Front desk' };
     const reqs = WEB.requests.filter((r) => !WEB.staffList.some((s) => s.id === r.email && s.active === true)).sort((a, b) => (a.at || 0) - (b.at || 0));
@@ -2545,7 +2546,7 @@ const PW_CONFIG = {
       + staff.filter((s) => s.owner !== true).map((s) => `<div class="rowb srow"><div class="who"><span class="ava">${esc(initials(s.name || s.id))}</span><div style="min-width:0"><div class="nm">${esc(s.name || s.id)}${s.active === true ? '' : ' <span class="muted">(access off)</span>'}</div><small>${esc(s.id)}</small></div></div>
       <div class="chips">${manage ? `<input aria-label="Shows on players as" data-wchange="coachAs" data-id="${esc(s.id)}" value="${esc(s.coachAs || '')}" placeholder="on players as…" title="The name on player records that means this person (their first name if empty)" style="width:120px;height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 10px;font-size:12.5px"><input aria-label="Mobile" data-wchange="phone" data-id="${esc(s.id)}" value="${esc(s.phone || '')}" placeholder="mobile for texts" title="Their mobile: a text when a private is booked for them, and the reminders" type="tel" style="width:140px;height:32px;border-radius:999px;border:1px solid var(--line-2);padding:0 10px;font-size:12.5px"><select aria-label="Role for ${esc(s.id)}" data-wchange="role" data-id="${esc(s.id)}" style="width:auto"><option value="coach" ${['admin', 'director', 'desk'].includes(s.role) ? '' : 'selected'}>Coach</option><option value="desk" ${s.role === 'desk' ? 'selected' : ''}>Front desk</option><option value="director" ${s.role === 'director' ? 'selected' : ''}>Tennis director</option>${WEB.isAdmin ? `<option value="admin" ${s.role === 'admin' ? 'selected' : ''}>Administrator</option>` : ''}</select>
       <button class="btn sm ghost" data-wact="toggle-staff" data-id="${esc(s.id)}">${s.active === true ? 'Turn access off' : 'Turn access on'}</button><button class="btn sm ghost danger" data-wact="remove-staff" data-id="${esc(s.id)}">Remove</button>` : `<span class="chip">${esc(ROLE_WORD[s.role] || 'Coach')}</span>`}</div></div>`).join('');
-    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Staff & access' }])}
+    return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Staff & access' }])}
       <div class="head"><div><div class="lbl">${manage ? 'Directors manage access' : 'The team'}</div><h1 class="title">Staff &amp; <em>access.</em></h1><div class="sub">Coaches sign in with their e-mail and a password; an owner sets the sign-in up from the Dashboard (People &amp; access). Nobody sees a single record until they’re approved here, and turning access off locks them out straight away.</div></div></div>
       ${manage ? `<div class="sect"><h2>Waiting for approval</h2><span class="muted" style="font-size:12px">${reqs.length}</span></div>
       ${reqRows ? `<div class="list" style="margin-bottom:26px">${reqRows}</div>` : '<div class="empty" style="margin-bottom:26px">Nobody is waiting. When a coach signs in for the first time they appear here.</div>'}
@@ -2824,7 +2825,7 @@ const PW_CONFIG = {
     const fi0 = $('#mfind'); const findFocus = fi0 && document.activeElement === fi0 ? { s: fi0.selectionStart, e: fi0.selectionEnd } : null;
     let focused = null; document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (ta.value) S.ui.msgDraft[k] = ta.value; else delete S.ui.msgDraft[k]; if (document.activeElement === ta) focused = { k, s: ta.selectionStart, e: ta.selectionEnd }; });
     const a2html = APP2 ? render2(r) : null;
-    m.innerHTML = a2html ? `<div class="wrap">${a2html}</div>` : `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : viewHome()}</div>`;
+    m.innerHTML = a2html ? `<div class="wrap">${a2html}</div>` : `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : r.view === 'players' ? viewPlayers() : viewHome()}</div>`;
     const d = $('#dock'); if (d) d.hidden = true;
     if (r.view === 'board') bindBoardDrag(m);
     document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (!ta.value && S.ui.msgDraft[k]) ta.value = S.ui.msgDraft[k]; if (focused && focused.k === k) { try { ta.setSelectionRange(focused.s, focused.e); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } });
@@ -2907,31 +2908,44 @@ const PW_CONFIG = {
     const remind = bits.length || fu.upcoming.length ? `<button class="notice remind${bits.length ? '' : ' calm'}" ${goAttr({ view: 'followup' })}><span class="ttl">Follow-up</span><ul class="lines">${bits.length ? bits.join('') : line(fu.upcoming.length, 'parent meeting coming up', 'parent meetings coming up')}</ul><span>Open the list</span></button>` : '';
     const nOpen = new Set(fu.unsent.concat(fu.noMeeting, fu.late).map((a) => a.id)).size;
     const msgStrip = EDITION === 'web' && msgUnread() ? `<button class="notice remind msg" ${goAttr({ view: 'messages' })}><span class="ttl">Messages</span><ul class="lines"><li><b class="n off">${msgUnread()}</b> ${msgUnread() === 1 ? 'chat has a new reply' : 'chats have new replies'} — not read yet</li></ul><span>Open the chats</span></button>` : '';
-    const head = `<div class="head"><div><div class="lbl">Players · reports · ${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div><h1 class="title">Coach <em>Portal.</em></h1>
-      <ul class="sub lines"><li><b class="n">${act.length}</b> active ${act.length === 1 ? 'player' : 'players'}</li><li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>${nOpen ? `<li><b class="n">${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up</li>` : ''}</ul></div></div>`;
+    const day = esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
     a2loadToday(); const mineP = myPlayers(); const nRep = mineP.filter((p) => dueNow(p).overall !== 'done').length, nStarted = mineP.filter((p) => dueNow(p).overall === 'working').length;
-    const repStrip = S.loaded.assess && nRep && !WEB.isDirector ? `<button class="notice remind" data-act="a2reports"><span class="ttl">3-month reports · ${esc(q)}</span><ul class="lines"><li><b class="n">${nRep}</b> ${nRep === 1 ? 'report' : 'reports'} to write</li>${nStarted ? `<li><b class="n">${nStarted}</b> started</li>` : ''}</ul><span>Open the group</span></button>` : '';
+    const repStrip = S.loaded.assess && nRep ? `<button class="notice remind" data-act="a2reports"><span class="ttl">3-month reports · ${esc(q)}</span><ul class="lines"><li><b class="n">${nRep}</b> ${nRep === 1 ? 'report' : 'reports'} to write</li>${nStarted ? `<li><b class="n">${nStarted}</b> started</li>` : ''}</ul><span>Open the players</span></button>` : '';
     const today = a2today() ? `<div class="a2k-today">${a2today()}</div>` : '';
-    return `${notice()}${head}${empty}${msgStrip}${wkStrip}${repStrip}${remind}${today}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
-      ${homeTryouts()}
-      <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
-      <div class="groups">${cards}</div>
-      <div class="sect" style="margin-top:28px"><h2>The numbers</h2></div>
-      <div class="stats">
-        <div class="stat lead"><div class="lbl">${esc(q)} 3-month reports</div><b>${qd}<span class="of">of ${qt} players</span></b></div>
-        <div class="stat"><div class="lbl">Active players</div><b>${act.length}</b></div>
-        <div class="stat"><div class="lbl">In touch this week</div><b>${ct.done}<span class="of">of ${ct.total}</span></b></div>
-        <div class="stat"><div class="lbl">Finished this month</div><b>${thisMonth}</b></div>
-      </div>
-      <div class="sect"><h2>Latest activity</h2></div>
-      ${recent ? `<div class="list">${recent}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'No assessments yet. Open a group, choose a player and start the first one.' : 'Loading…'}</div>`}`;
+    const mineIds = new Set(mineP.map((p) => p.id)); const log = S.assess.filter((a) => WEB.isDirector || mineIds.has(a.playerId)).slice(0, 8).map((a) => rowAssess(a, true, false)).join('');
+    if (S.route.view === 'players') {
+      /* Players (the whiteboard, Nov 13): the list of players. A coach sees their own, one line each; a director the groups. */
+      const head = `<div class="head"><div><div class="lbl">${WEB.isDirector ? 'Every group' : 'Your players'} · ${day}</div><h1 class="title">Play<em>ers.</em></h1>
+        <ul class="sub lines"><li><b class="n">${WEB.isDirector ? act.length : mineP.length}</b> active ${(WEB.isDirector ? act.length : mineP.length) === 1 ? 'player' : 'players'}</li>${WEB.isDirector ? `<li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>` : ''}</ul></div></div>`;
+      if (EDITION === 'web' && !WEB.isDirector) {
+        const rows = mineP.slice().sort((a, b) => a.name.localeCompare(b.name)).map((p) => `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}</div><small>${esc(group(p.group).label)}${p.tier ? ' · Tier ' + esc(p.tier) : ''}</small></div></div><div class="chips">${contactChip(p)}${statusBubble(p)}</div></button>`).join('');
+        return `${notice()}${head}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
+      }
+      return `${notice()}${head}${empty}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
+        <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
+        <div class="groups">${cards}</div>
+        <div class="sect" style="margin-top:28px"><h2>The numbers</h2></div>
+        <div class="stats">
+          <div class="stat lead"><div class="lbl">${esc(q)} 3-month reports</div><b>${qd}<span class="of">of ${qt} players</span></b></div>
+          <div class="stat"><div class="lbl">Active players</div><b>${act.length}</b></div>
+          <div class="stat"><div class="lbl">In touch this week</div><b>${ct.done}<span class="of">of ${ct.total}</span></b></div>
+          <div class="stat"><div class="lbl">Finished this month</div><b>${thisMonth}</b></div>
+        </div>`;
+    }
+    /* Reminders (the home): what is waiting for this person, then the log of what was done. Nothing else. */
+    const strips = `${msgStrip}${wkStrip}${repStrip}${remind}`;
+    const head = `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
+    return `${notice()}${head}${strips || (S.loaded.contacts ? `<div class="notice remind calm"><span class="ttl">All clear</span><ul class="lines"><li><b class="n on">✓</b> nothing is waiting for you</li></ul></div>` : '')}${today}
+      <div class="sect"><h2>Log of activity</h2></div>
+      ${log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`}`;
   }
+  const viewPlayers = () => viewHome();
   function viewFollowUp() {
     const fu = followUps(); const meetRow = (a) => { const p = player(a.playerId); const def = defOf(a) || { short: a.type }; const m = meetingOf(a);
       return `<button class="rowb" ${goAttr({ view: 'report', id: a.id })}><div class="who"><span class="ava" style="width:auto;padding:0 10px;border-radius:8px">${esc(dayLabel(m.date))}</span><div style="min-width:0"><div class="nm">${esc(p ? p.name : a.playerName || 'Player')}</div><small>${esc(def.short)} · ${esc(a.period || '')}${m.by ? ' · set by ' + esc(m.by) : ''}</small></div></div><div class="mid muted" style="font-size:12px">${esc(a.coach ? 'Coach: ' + a.coach : '')}</div><div class="chips">${meetChip(a)}</div></button>`; };
     const block = (title, hint, list, row) => (list.length ? `<div class="sect"><h2>${esc(title)}</h2><span class="muted" style="font-size:12px">${list.length}</span></div><p class="hint" style="margin:-6px 0 10px">${esc(hint)}</p><div class="list" style="margin-bottom:26px">${list.map(row).join('')}</div>` : '');
     const any = fu.unsent.length + fu.noMeeting.length + fu.late.length + fu.upcoming.length;
-    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Follow-up' }])}
+    return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Follow-up' }])}
       <div class="head"><div><div class="lbl">After the report is final</div><h1 class="title">Follow-<em>up.</em></h1>
       <div class="sub">Every finished report gets sent to the family and gets a parent meeting. This is what is still open, oldest first. Open a report to tick things off.</div></div></div>
       ${block('Not sent to the parents', 'Send the PDF, then press “Mark as sent to parents” on the report.', fu.unsent, (a) => rowAssess(a, true, false))}
@@ -2954,7 +2968,7 @@ const PW_CONFIG = {
         <div class="mid">${weekStrip(p.id, 6)}</div>
         <div class="chips">${checkChip(p)}${contactChip(p)}${can && EDITION === 'web' ? `<button class="btn sm ghost" data-act="msg-go" data-pid="${esc(p.id)}" title="Text the family from here">✉ Text</button>` : ''}${can ? `<button class="btn sm ${on ? 'ghost' : 'pri'}" data-act="contact-row" data-pid="${esc(p.id)}" data-v="${on ? 'off' : 'on'}">${on ? 'Undo' : '✓ In touch'}</button>` : ''}</div></div>`; };
     const rows = list.map(row).join('');
-    return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Weekly contact' }])}
+    return `${notice()}${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Weekly contact' }])}
       <div class="head"><div><div class="lbl">Week of ${esc(weekLabel(wk))} · Monday to Sunday</div><h1 class="title">Weekly <em>contact.</em></h1>
         <div class="sub">One text or one call with every family, every week, through JustCall. JustCall ticks it by itself; tick it here if you spoke in person. <b>Red</b> means nobody has been in touch yet this week.</div>
         <ul class="sub lines">${t.left ? `<li><b class="n off">${t.left}</b> still to reach</li>` : '<li><b class="n on">✓</b> everyone reached</li>'}<li><b class="n${t.done ? ' on' : ''}">${t.done}</b> of ${t.total} in touch</li>${S.loaded.checks && all.filter((p) => !checkDone(p.id)).length ? `<li><b class="n off">${all.filter((p) => !checkDone(p.id)).length}</b> with contacts to confirm</li>` : ''}</ul></div></div>
@@ -2967,7 +2981,7 @@ const PW_CONFIG = {
     const own = EDITION === 'web' && WEB.isOwner;
     const onFile = (t) => S.assess.filter((a) => a.type === t).length;
     const cards = PARKED_TYPES.map((t) => { const d = FORMS[t]; return `<div class="start" style="--pc:${PILLAR[d.pillar]}"><div class="sbtn" style="cursor:default"><b>${esc(d.title)}</b><small>${esc(d.sub)} · ${esc(d.time)}${S.loaded.assess ? ` · ${onFile(t)} loaded on file` : ''}</small></div></div>`; }).join('');
-    return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Parked reports' }])}
+    return `${notice()}${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Parked reports' }])}
       <div class="head"><div><div class="lbl">Kept, not in use · since Nov 1, 2026</div><h1 class="title">Parked <em>reports.</em></h1>
         <div class="sub">The full quarterly assessment (High Performance, Under 12, the Under 10 progress update), the monthly report and the two camp reports are parked: coaches do not see them and write the <b>3-month report</b> instead. Nothing is lost — every report already on file still opens and prints from the player's page${own ? ', and as an owner you can still start one of these from a player’s page under “Parked reports”' : ''}.</div></div></div>
       <div class="starts">${cards}</div>
@@ -3011,7 +3025,7 @@ const PW_CONFIG = {
     const todo = list.length ? `<div class="due-list"><p class="hint due-line"><b>Due now: the ${esc(q)} 3-month report</b></p><ul class="lines">${nMiss ? `<li><b class="n off">${nMiss}</b> missing</li>` : ''}${nWork ? `<li><b class="n">${nWork}</b> working on it</li>` : ''}<li><b class="n${nDone ? ' on' : ''}">${nDone}</b> up to date</li></ul>
       <p class="hint due-line"><b>This week: <button class="linkb" ${goAttr({ view: 'contact' })}>weekly contact</button></b></p><ul class="lines">${wk.left ? `<li><b class="n off">${wk.left}</b> still to reach</li>` : '<li><b class="n on">✓</b> everyone reached</li>'}<li><b class="n${wk.done ? ' on' : ''}">${wk.done}</b> of ${wk.total} in touch</li></ul></div>` : '';
     const empty = S.loaded.players || S.dbState === 'none' ? 'No players in this group yet.' : 'Loading roster…';
-    return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label }])}
+    return `${notice()}${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: g.label }])}
       <div class="head"><div><div class="lbl">${esc(g.director || '')}</div><h1 class="title">${emT(g.label)}</h1></div>
         <div class="rowx">${gid !== 'camp' ? `<label class="qsel" for="g_q">Quarter <select id="g_q" data-act="setq">${quarterOptions().map((o) => `<option ${o === q ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>` : ''}${writable() ? `<button class="btn pri" data-act="toggle-add">Add player</button>` : ''}</div></div>
       <div id="addp" ${S.ui.adding ? '' : 'hidden'}>${S.ui.adding ? addPlayerPanel(gid) : ''}</div>
@@ -3042,12 +3056,12 @@ const PW_CONFIG = {
   /* ───────────── view: player ───────────── */
   function viewPlayer(pid, tab) {
     const p = player(pid);
-    if (p && !mine(p)) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: group(p.group).label, r: { view: 'group', gid: p.group } }, { t: p.name }])}<div class="head"><div><h1 class="title">${esc(p.name)}</h1><div class="sub">${esc(p.coach ? 'This player is with Coach ' + p.coach + (p.coach2 ? ' and ' + p.coach2 : '') + '.' : 'This player has no coach yet.')} A director can put your name on the record.</div></div></div>`;
-    if (!p) return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">${S.loaded.players || S.dbState === 'none' ? 'This player isn’t on the roster.' : 'Loading player…'}</div>`;
+    if (p && !mine(p)) return `${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: group(p.group).label, r: { view: 'group', gid: p.group } }, { t: p.name }])}<div class="head"><div><h1 class="title">${esc(p.name)}</h1><div class="sub">${esc(p.coach ? 'This player is with Coach ' + p.coach + (p.coach2 ? ' and ' + p.coach2 : '') + '.' : 'This player has no coach yet.')} A director can put your name on the record.</div></div></div>`;
+    if (!p) return `${notice()}${crumbs([{ t: 'Players', r: { view: 'players' } }])}<div class="empty">${S.loaded.players || S.dbState === 'none' ? 'This player isn’t on the roster.' : 'Loading player…'}</div>`;
     const g = group(p.group);
     const tabs = [['assessments', 'Assessments'], ['videos', 'Videos'], ['journal', 'Journal']].map(([k, t]) => `<button class="tab" role="tab" aria-selected="${tab === k}" ${goAttr({ view: 'player', pid, tab: k })}>${t}</button>`).join('');
     const web = EDITION === 'web'; const pOpen = web && S.ui.parentOpen === p.id;
-    return `${notice()}${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.id ? g.label : 'Not placed', r: g.id ? { view: 'group', gid: g.id } : { view: 'home' } }, { t: p.name }])}
+    return `${notice()}${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: g.id ? g.label : 'Not placed', r: g.id ? { view: 'group', gid: g.id } : { view: 'home' } }, { t: p.name }])}
       <div class="head phead"><div><div class="lbl">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${active(p) ? '' : ' · ' + esc(statusWord(p)) + ' · not active'}</div><h1 class="title">${emT(p.name)}</h1>
         <div class="sub">${p.coach ? 'Primary coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · Secondary ' + esc(p.coach2) : ''}${p.fitness ? ' · Fitness ' + esc(p.fitness) : ''}</div>
         ${web ? mondayLine(p) : ''}</div>
@@ -3175,7 +3189,7 @@ const PW_CONFIG = {
     if (!S.db) { m.innerHTML = `<div class="wrap">${notice()}</div>`; return; }
     try {
       const hs = await S.db.doc('assessments/' + id).get();
-      if (!hs.exists) { m.innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">This assessment no longer exists.</div></div>`; return; }
+      if (!hs.exists) { m.innerHTML = `<div class="wrap">${crumbs([{ t: 'Players', r: { view: 'players' } }])}<div class="empty">This assessment no longer exists.</div></div>`; return; }
       const head = Object.assign({ id }, clone(hs.data())); head.parts = head.parts || {}; const def = defOf(head);
       if (!def) { m.innerHTML = '<div class="wrap"><div class="empty">Unknown assessment type.</div></div>'; return; }
       if (head.status === 'final' || !writable()) { S.route = { view: 'report', id }; saveRoute(); onRoute(); return; }
@@ -3210,7 +3224,7 @@ const PW_CONFIG = {
   }
   function renderEditor() {
     const { head, def } = E; const p = player(head.playerId) || { name: head.playerName, group: head.group }; const g = group(p.group || head.group);
-    $('main').innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label, r: { view: 'group', gid: g.id } }, { t: p.name, r: { view: 'player', pid: head.playerId } }, { t: def.short }])}
+    $('main').innerHTML = `<div class="wrap">${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: g.label, r: { view: 'group', gid: g.id } }, { t: p.name, r: { view: 'player', pid: head.playerId } }, { t: def.short }])}
       <div class="ed-head"><div><div class="lbl">${esc(def.tag)} · about ${esc(def.time)}${multi(def) ? ' · one report, each coach fills in their part' : ''}</div><h1 class="title">${emT(def.title)}</h1><div class="sub" style="margin-top:8px;color:var(--muted)">${esc(p.name)} · ${esc(g.label)}</div></div></div>
       ${multi(def) ? '<div class="ptabs" role="tablist" aria-label="Parts of this assessment" id="ptabs"></div>' : ''}
       <div class="panel" id="edpanel"></div>
@@ -3828,7 +3842,7 @@ const PW_CONFIG = {
     if (!S.db) { m.innerHTML = `<div class="wrap">${notice()}</div>`; return; }
     try {
       const hs = await S.db.doc('assessments/' + id).get();
-      if (!hs.exists) { m.innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }])}<div class="empty">This assessment no longer exists.</div></div>`; return; }
+      if (!hs.exists) { m.innerHTML = `<div class="wrap">${crumbs([{ t: 'Players', r: { view: 'players' } }])}<div class="empty">This assessment no longer exists.</div></div>`; return; }
       const head = Object.assign({ id }, clone(hs.data())); const bs = await S.db.doc(`assessments/${id}/body/values`).get();
       if (S.route.view !== 'report' || S.route.id !== id) return;
       RPT = { id, head, def: defOf(head), values: (bs.exists && bs.data().v) || {}, prev: null, ready: true };
@@ -3874,7 +3888,7 @@ const PW_CONFIG = {
         ? `<div class="furow${meetingLate(head) ? '' : ' calm'}"><div><b>Parent meeting ${meetingLate(head) ? 'was set for' : 'set for'} ${esc(dayLabel(mt.date))}</b><div class="hint">${meetingLate(head) ? 'That date has passed. Did it happen? Mark it as held, or set a new date.' : 'Mark it as held once it has happened.'}${mt.by ? ' Set by ' + esc(mt.by) + '.' : ''}</div></div>${w ? '<div class="rowx"><button class="btn" data-act="meet-held">Mark as held</button><button class="btn ghost" data-act="meet-change">Change date</button></div>' : ''}</div>`
         : `<div class="furow${tracked(head) ? '' : ' calm'}"><div><b>${mt.state === 'set' ? 'Change the parent meeting date' : 'No parent meeting set yet'}</b><div class="hint">Agree a day with the family to talk this report through, then record it here. It stays on the follow-up list until it is marked as held.</div></div>${w ? dateBox : ''}</div>`;
     const sentBar = draft ? '' : `<div class="follow" role="group" aria-label="Follow-up">${sentRow}${meetRow}</div>`;
-    $('main').innerHTML = `<div class="wrap">${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: g.label, r: { view: 'group', gid: g.id } }, { t: p.name, r: { view: 'player', pid: head.playerId } }, { t: def.short }])}
+    $('main').innerHTML = `<div class="wrap">${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: g.label, r: { view: 'group', gid: g.id } }, { t: p.name, r: { view: 'player', pid: head.playerId } }, { t: def.short }])}
       <div class="head"><div><div class="lbl">${esc(def.tag)} · ${esc(state)}</div><h1 class="title">${emT(def.title)}</h1><div class="sub">${esc(def.sub)}</div></div>
         <div class="rowx"><button class="btn pri" data-act="pdf">${PDF_SHARE ? 'Share PDF' : 'Download PDF'}</button>${w ? (draft ? '<button class="btn" data-act="edit">Continue editing</button>' : '<button class="btn" data-act="reopen">Reopen to edit</button>') : ''}${w && canDelete() ? '<button class="btn ghost danger" data-act="del-assess">Delete</button>' : ''}</div></div>
       ${draft && w && multi(def) ? `<div class="list" style="margin-bottom:20px"><div class="arow" style="padding-top:12px">${partStrip(head, def)}</div></div>` : ''}
@@ -3992,7 +4006,7 @@ const PW_CONFIG = {
     else if (act === 'a2filter') { S.ui.a2filter = b.getAttribute('data-v'); S.ui.a2filterGroup = b.getAttribute('data-gid'); render(); }
     else if (act === 'a2ctab') { S.ui.a2ctab = b.getAttribute('data-v'); render(); }
     else if (act === 'a2numbers') { S.ui.a2numbers = S.ui.a2numbers === S.route.pid ? null : S.route.pid; render(); }
-    else if (act === 'a2reports') { const g = groups().find((x) => myPlayers().some((p) => p.group === x.id && dueNow(p).overall !== 'done')); if (!g) return; S.ui.a2filter = 'report'; S.ui.a2filterGroup = g.id; go({ view: 'group', gid: g.id }); }
+    else if (act === 'a2reports') { go({ view: 'players' }); }
     else if (act === 'fam-chat') { const pid = b.getAttribute('data-pid'), tail = b.getAttribute('data-tail') || ''; if (tail) { S.ui.msgConv[pid] = tail; S.ui.msgPick = null; } S.ui.msgFocus = pid; render(); if (tail) markReadLocal(pid, tail); }
     else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
     // the weekly contact tick: from the player's page or straight from the list; who/how are optional details on a ticked week
@@ -4275,7 +4289,7 @@ const PW_CONFIG = {
     if (S.route.add && writable()) { S.ui.addingTry = true; S.route.add = false; }
     const ty = tryouts(); const block = (title, hint, list) => (list.length ? `<div class="sect"><h2>${esc(title)}</h2><span class="muted" style="font-size:12px">${list.length}</span></div>${hint ? `<p class="hint" style="margin:-6px 0 10px">${esc(hint)}</p>` : ''}<div class="list" style="margin-bottom:26px">${list.map(rowTry).join('')}</div>` : '');
     const any = S.tryouts.length;
-    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Try-outs' }])}
+    return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs' }])}
       <div class="head"><div><div class="lbl">Prospective players</div><h1 class="title">Try-<em>outs.</em></h1>
       <div class="sub">Every family that books a session, from the first call to the decision. Open one to tick off the steps; the home screen shows what is coming up and what is still missing.</div></div>
         <div class="rowx">${writable() ? '<button class="btn pri" data-act="toggle-addtry">Add a try-out</button>' : ''}</div></div>
@@ -4290,7 +4304,7 @@ const PW_CONFIG = {
   }
   function viewTryout(id) {
     const t = S.tryouts.find((x) => x.id === id);
-    if (!t) return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }])}<div class="empty">${S.loaded.tryouts ? 'This try-out is no longer here.' : 'Loading…'}</div>`;
+    if (!t) return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }])}<div class="empty">${S.loaded.tryouts ? 'This try-out is no longer here.' : 'Loading…'}</div>`;
     const w = writable(); const st = tryStatus(t); const miss = tryMissing(t); const late = st === 'planned' && !!t.date && t.date < todayISO();
     // required details say "missing" in the warning colour; optional ones just show a dash
     const kv = (label, val, opts) => { const o = opts || {}; return `<div><span class="lbl">${esc(label)}</span><b${has(val) ? '' : o.opt ? ' class="muted"' : ' class="miss"'}>${has(val) ? (o.href ? `<a href="${esc(o.href)}">${esc(val)}</a>` : esc(val)) : o.opt ? '—' : 'missing'}</b></div>`; };
@@ -4309,7 +4323,7 @@ const PW_CONFIG = {
         <div class="field"><label for="tr_grp">Group offered</label><select id="tr_grp" name="joinGroup"><option value="">—</option>${groups().map((g) => `<option value="${esc(g.id)}" ${t.joinGroup === g.id ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div></div>
         <div class="field"><label for="tr_seen">What we saw</label><textarea id="tr_seen" name="seen" rows="3" placeholder="Level, attitude, what stood out, what we recommend.">${esc(t.seen || '')}</textarea></div>
         <div class="rowx"><button class="btn pri" type="submit">Save result</button></div></form>` : '';
-    return `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }, { t: t.name || 'Try-out' }])}
+    return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }, { t: t.name || 'Try-out' }])}
       <div class="head"><div><div class="lbl">Try-out · ${esc(tryGroupLabel(t) || 'group to decide')} · ${esc(tryWhen(t))}</div><h1 class="title">${emT(t.name || 'Unnamed')}</h1>
         <div class="sub">${miss.length ? `<span class="chip warn">Missing: ${esc(miss.join(', '))}</span>` : tryOpen(t).length && st === 'planned' ? `${tryOpen(t).length} step${tryOpen(t).length === 1 ? '' : 's'} still to do before the session.` : st === 'planned' ? 'Everything is ready for the session.' : ''}</div></div>
         <div class="rowx">${w ? `<button class="btn" data-act="try-edit">${S.ui.editingTry === id ? 'Close' : 'Edit details'}</button>` : ''}${w && canDelete() ? '<button class="btn ghost danger" data-act="del-try">Delete</button>' : ''}</div></div>
@@ -4479,7 +4493,7 @@ const PW_CONFIG = {
   }
   function viewBoard() {
     const own = EDITION === 'web' && WEB.isOwner;
-    const top = `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Coach Board' }])}
+    const top = `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Coach Board' }])}
       <div class="head"><div><div class="lbl">From the roster · Play by Point is the list</div><h1 class="title">Coach <em>Board.</em></h1>
         <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. ${EDITION === 'web' && WEB.isDirector ? 'Hold a player and drop them on a coach to move them (or on No coach to clear it); their page updates with it.' : 'Set a player’s coach on their page; this board follows.'}</div></div></div>`;
     if (!S.loaded.players) return `${top}<div class="empty" style="margin-bottom:30px">Loading…</div>`;
@@ -4513,7 +4527,7 @@ const PW_CONFIG = {
   /* owners: the standard we hold ourselves to and the quarter commit (moved off the Coach Board, Oct 23) */
   function viewCommit() {
     const own = EDITION === 'web' && WEB.isOwner;
-    const top = `${crumbs([{ t: 'All groups', r: { view: 'home' } }, { t: 'Standard & commit' }])}
+    const top = `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Standard & commit' }])}
       <div class="head"><div><div class="lbl">Owners</div><h1 class="title">Standard <em>&amp; commit.</em></h1>
         <div class="sub">How fast families hear from us, and the numbers we committed to this quarter. Counted from Monday every morning.</div></div></div>`;
     if (!own) return `${top}<div class="empty" style="margin-bottom:30px">This page is for the owners.</div>`;

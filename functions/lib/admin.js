@@ -7,7 +7,7 @@ const CAL = require('./calendar');
 const CAT = require('./catalog');
 const S = require('./stripe');
 
-const OWNERS = ['PDKJkouns6g6zA1jrABJijEr3oq2', 'OLWbZu29WVUWUbN8W9HdPpOZgmj2'];   // the same owner ids as firestore.rules
+const OWNERS = ['PDKJkouns6g6zA1jrABJijEr3oq2'];   // Nov 13: Lorenzo's sign-in (OLWbZu29WVUWUbN8W9HdPpOZgmj2) is a coach for now, see firestore.rules;   // the same owner ids as firestore.rules
 if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app').initializeApp();
 
 async function requireStaff(req) {

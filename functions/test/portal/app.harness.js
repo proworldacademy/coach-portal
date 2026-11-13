@@ -43,10 +43,20 @@ if (require.main === module) (async () => {
       log(await m.locator('#mpane .mhead a.call[href*="justcall.io/dialer?numbers=%2B1561555"]').count() === 1, n + ' chat: Call in the header, through JustCall');
       log(!(await overflow(m)).length, n + ' chat: nothing wider than the screen ' + JSON.stringify(await overflow(m)));
       await shot(m, 'app-' + n + '-chat');
-      await m.goto('http://localhost:4173/portal/#/'); await m.waitForSelector('.groups .group', { timeout: 15000 }); await m.waitForTimeout(500);
+      // the four: Reminders · Players · Contact · Privates (Nov 13)
+      await m.goto('http://localhost:4173/portal/#/'); await m.waitForSelector('h1.title', { timeout: 15000 }); await m.waitForTimeout(900);
+      log(/Reminders/i.test(await text(m, 'h1.title')) && await count(m, '.groups .group') === 0 && /Log of activity/i.test(await text(m, 'main')), n + ' home: Reminders — what is waiting and the log, no groups');
+      log(await m.evaluate(() => Array.from(document.querySelectorAll('#vtabs button, #vtabs a')).map((b) => b.textContent.replace(/\d+$/, '').trim()).join('·')) === 'Reminders·Players·Contact·Privates', n + ': the row is Reminders · Players · Contact · Privates');
+      if (n === 'phone') log(await m.evaluate(() => Array.from(document.querySelectorAll('.cp-appbar button')).map((b) => b.textContent.replace(/\d+/g, '').replace(/[^A-Za-z]/g, '')).join('·')) === 'Reminders·Players·Contact·Privates' && await m.evaluate(() => getComputedStyle(document.querySelector('.pwd-burger')).display !== 'none'), 'phone: the bottom bar is the four, the ☰ is at the top');
       if (n === 'computer') log(await m.evaluate(() => Array.from(document.querySelectorAll('.cp-switch button')).map((b) => b.textContent).join('·')) === 'App·In between', 'computer: the switch says App · In between');
       log(!(await overflow(m)).length, n + ' home: nothing wider than the screen ' + JSON.stringify(await overflow(m)));
       await shot(m, 'app-' + n + '-home');
+      await m.goto('http://localhost:4173/portal/#/players'); await m.waitForSelector('.groups .group', { timeout: 15000 }); await m.waitForTimeout(400);
+      log(/Players/i.test(await text(m, 'h1.title')) && await count(m, '.groups .group') >= 3, n + ' players: the groups');
+      log(await m.locator('#vtabs .on', { hasText: 'Players' }).count() === 1, n + ' players: the Players tab is lit');
+      await shot(m, 'app-' + n + '-players');
+      await m.goto('http://localhost:4173/portal/#/messages'); await m.waitForSelector('#mlist', { timeout: 15000 }); await m.waitForTimeout(300);
+      log(await m.locator('#vtabs .on', { hasText: 'Contact' }).count() === 1, n + ' contact: the Contact tab is lit on the chats');
       await m.context().close();
     }
   } finally { await browser.close(); server.close(); }

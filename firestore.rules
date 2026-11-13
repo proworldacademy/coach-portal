@@ -41,7 +41,9 @@ service cloud.firestore {
     // Owners: always everything, even before any staff list exists, and the only ones who can unlock any page for anyone.
     // Listed by User UID (Authentication → Users): PDKJkouns6g6zA1jrABJijEr3oq2 = the operations account (Antonio),
     // OLWbZu29WVUWUbN8W9HdPpOZgmj2 = Lorenzo. Changing this list means deploying these rules — nothing on a page can.
-    function owner() { return verified() && request.auth.uid in ['PDKJkouns6g6zA1jrABJijEr3oq2', 'OLWbZu29WVUWUbN8W9HdPpOZgmj2']; }
+    // Nov 13, 2026 (Antonio, with Lorenzo): Lorenzo's own sign-in is a coach for now, to test the coach portal; both use the operations account as the owner.
+    // To make him an owner again, put 'OLWbZu29WVUWUbN8W9HdPpOZgmj2' back in this list and in functions/lib/admin.js.
+    function owner() { return verified() && request.auth.uid in ['PDKJkouns6g6zA1jrABJijEr3oq2']; }
 
     function staffRec() { return get(/databases/$(database)/documents/staff/$(me())).data; }
     function onStaff() {
