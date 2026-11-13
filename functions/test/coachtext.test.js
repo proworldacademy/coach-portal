@@ -272,3 +272,17 @@ test('a reply to a coach\'s own number tells only that coach, not the other coac
   const r = await COACHTEXT.onReply(db, { players: ['ft-cy-l'], text: 'For Lee', phone: '+15615550101', line: '+15615556666' });   // Cy: coach Kim, second coach Lee
   assert.deepEqual(r.coaches, ['Lee']); assert.equal(net.filter((c) => /chat\.postMessage/.test(c.url)).length, 1);
 });
+
+test('the coach\'s name goes on the first text to a number only; a group text is signed when it is the first for any of them', async () => {
+  const db = fakeDb(SEED); const net = wire(db);
+  await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'father', body: 'First one' });
+  await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'father', body: 'Second one' });
+  let t = texts(net);
+  assert.equal(t[0].body, 'First one\n- Coach Kim, ProWorld Academy');
+  assert.equal(t[1].body, 'Second one');                                   // no signature the second time
+  // the mother has not heard from Kim yet: the text to both parents is signed for both, so it stays one message
+  await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', to: ['+15615550100', '+15615550109'], body: 'To you both' });
+  t = texts(net).slice(2); assert.ok(t.length >= 1 && t.every((b) => b.body === 'To you both\n- Coach Kim, ProWorld Academy'));
+  await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', to: ['+15615550100', '+15615550109'], body: 'Again' });
+  t = texts(net).slice(-1); assert.equal(t[0].body, 'Again');
+});

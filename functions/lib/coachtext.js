@@ -1,6 +1,7 @@
 /* Messages from the coach to the family, from the Coach Portal, through the academy's JustCall line (Antonio, Nov 4, 2026):
    "they don't have to open two apps." A coach never opens JustCall. The academy has one number; every text a coach sends from
-   the portal goes out from it, signed with the coach's name ("- Coach Casey, ProWorld Academy") so the family knows who writes.
+   the portal goes out from it; the first text to a number is signed with the coach's name ("- Coach Casey, ProWorld Academy") so the
+   family knows who writes, the ones after it are not (Nov 13).
    A reply from the family comes back through the JustCall webhook (sms.js keeps it as a smsLog line, kind 'reply'), shows on the
    player's page and in the portal's Messages view, and the coach hears on Slack. A text sent here ticks the week by itself
    (contacts/{playerId}_{Monday}, source 'portal') — no JustCall read needed.
@@ -176,7 +177,12 @@ async function text(db, who, body) {
   const mineLine = await ownLine(db, who); const fromNum = mineLine || ln.from;
   if (!fromNum) throw S.err(409, 'from', 'The academy\'s JustCall number is not set (Players & billing → Notifications).');
   const s = await NOTIFY.settings(db, true);
-  const full = (msg + '\n' + signature(who)).slice(0, 1600);
+  /* The coach's name goes on the first text only (Antonio, Nov 13: signing every message "is kind of stupid"): the first time this
+     person writes to a number, the text ends with "- Coach Kim, ProWorld Academy" so the family knows who it is; after that, nothing.
+     A group text is signed for everyone when it is the first for any of them, so it stays one message. */
+  const firstTo = async (phone) => { try { const snap = await db.collection('smsLog').where('phone', '==', phone).get(); return !snap.docs.some((d) => { const x = d.data() || {}; return x.from === 'portal' && x.by === who.email && x.status === 'sent'; }); } catch (e) { return true; } };
+  let intro = false; for (const t of tos) { if (await firstTo(t.phone)) { intro = true; break; } }
+  const full = (intro ? msg + '\n' + signature(who) : msg).slice(0, 1600);
   const at = Date.now(); const batchRef = db.collection('smsBatches').doc();
   const seg = SMS.segments(full);
   const lines = []; let sent = 0, failed = 0, lastErr = '';
