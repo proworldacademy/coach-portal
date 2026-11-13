@@ -3101,7 +3101,7 @@ const PW_CONFIG = {
       </div>
       ${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${empty}</div>`}`;
   }
-  function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2)).filter(Boolean))).sort(); }
+  function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2), S.players.map((p) => p.coach3)).filter(Boolean))).sort(); }
   function addPlayerPanel(gid) {
     const web = EDITION === 'web';
     return `<form class="panel stack" data-form="add-player" data-gid="${esc(gid)}" style="margin-bottom:18px"><div class="grid2">
@@ -3127,7 +3127,7 @@ const PW_CONFIG = {
     const web = EDITION === 'web'; const pOpen = web && S.ui.parentOpen === p.id;
     return `${notice()}${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: g.id ? g.label : 'Not placed', r: g.id ? { view: 'group', gid: g.id } : { view: 'home' } }, { t: p.name }])}
       <div class="head phead"><div><div class="lbl">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${active(p) ? '' : ' · ' + esc(statusWord(p)) + ' · not active'}</div><h1 class="title">${emT(p.name)}</h1>
-        <div class="sub">${p.coach ? 'Primary coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · Secondary ' + esc(p.coach2) : ''}${p.fitness ? ' · Fitness ' + esc(p.fitness) : ''}</div>
+        <div class="sub">${p.coach ? 'Primary coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · Secondary ' + esc(p.coach2) : ''}${p.coach3 ? ' · Third ' + esc(p.coach3) : ''}${p.fitness ? ' · Fitness ' + esc(p.fitness) : ''}</div>
         ${web ? mondayLine(p) : ''}</div>
         ${writable() ? `<button type="button" class="a2cb" data-act="toggle-edit" aria-label="Edit player" title="Edit player" aria-expanded="${!!S.ui.editing}">···</button>` : ''}</div>
       <div id="editp" ${S.ui.editing ? '' : 'hidden'}>${S.ui.editing ? editPlayerPanel(p) : ''}</div>
@@ -3158,6 +3158,7 @@ const PW_CONFIG = {
       <div class="field"><label for="ep_tier">Tier</label><select id="ep_tier" name="tier"><option value="">—</option>${['A', 'B', 'C'].map((t) => sel(p.tier, t)).join('')}</select></div>
       <div class="field"><label for="ep_coach">Primary coach</label><input id="ep_coach" name="coach" type="text" list="coachlist2" value="${esc(p.coach || '')}"></div>
       <div class="field"><label for="ep_coach2">Secondary coach</label><input id="ep_coach2" name="coach2" type="text" list="coachlist2" value="${esc(p.coach2 || '')}"></div>
+      <div class="field"><label for="ep_coach3">Third coach <span class="muted">(optional)</span></label><input id="ep_coach3" name="coach3" type="text" list="coachlist2" value="${esc(p.coach3 || '')}"></div>
       <div class="field"><label for="ep_status">Status</label><select id="ep_status" name="status">${[['active', 'Active'], ['away', 'Away — not active'], ['finished', 'Finished — not active']].concat(p.status === 'inactive' ? [['inactive', 'Not active (older entry)']] : []).map(([v, t]) => `<option value="${v}" ${(p.status || 'active') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div></div>
       <datalist id="coachlist2">${coachList().map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
       ${EDITION === 'web' ? `<p class="hint">Monday sets the coaches and the status every morning. Away, Finished or Active changed here goes to Monday with the next morning sync${p.mondayId ? '' : ' (once this player is on Monday)'}.</p>` : ''}
@@ -4199,7 +4200,7 @@ const PW_CONFIG = {
         } else { await S.db.doc('players/' + id).set(doc); S.ui.adding = false; toast(`${name} added.`); render(); }
       } else if (kind === 'edit-player') {
         const pid = f.getAttribute('data-pid'); const before = player(pid) || {}; const status = val('status') || 'active';
-        const patch = { name: val('name'), group: val('group'), tier: val('tier'), coach: val('coach'), coach2: val('coach2'), status, updatedAt: t };
+        const patch = { name: val('name'), group: val('group'), tier: val('tier'), coach: val('coach'), coach2: val('coach2'), coach3: val('coach3'), status, updatedAt: t };
         const was = before.status || 'active';
         if (EDITION === 'web' && status !== was && ['active', 'away', 'finished'].includes(status)) {
           // a status change also goes to Monday (the next morning sync) — saved together with the player
@@ -4549,7 +4550,7 @@ const PW_CONFIG = {
   function mine(p) {
     if (EDITION !== 'web' || WEB.isDirector) return true;
     const keys = myCoachKeys(); if (!keys || !keys.length) return false;
-    return [p.coach, p.coach2].some((c) => c && keys.includes(nameKey(c)));
+    return [p.coach, p.coach2, p.coach3].some((c) => c && keys.includes(nameKey(c)));   // a third coach since Nov 13 (Antonio)
   }
   const RETIRED = ['Paolo'];   // no longer with the academy (Antonio, Oct 23): their players show with no coach until Monday is fixed
   const retired = (n) => { const x = String(n || '').trim().toLowerCase(); return !!x && RETIRED.some((r) => x === r.toLowerCase() || x.startsWith(r.toLowerCase() + ' ')); };

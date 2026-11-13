@@ -112,12 +112,12 @@ service cloud.firestore {
       // (the runs account is checked first everywhere, so its sign-in never has to pass the staff checks)
       allow read: if runs() || portal() || backend();
       allow create: if (runs()
-        && request.resource.data.keys().hasOnly(['name', 'shortName', 'group', 'tier', 'coach', 'coach2', 'fitness', 'status', 'source',
+        && request.resource.data.keys().hasOnly(['name', 'shortName', 'group', 'tier', 'coach', 'coach2', 'coach3', 'fitness', 'status', 'source',
                                                  'mondayId', 'monday', 'createdAt', 'updatedAt', 'createdBy'])) || (!runs() && ((portal() && director()) || backend()));
       allow update: if (runs()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'mondayId', 'monday', 'updatedAt']))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shortName', 'status', 'coach', 'coach2', 'coach3', 'mondayId', 'monday', 'updatedAt']))
         || (!runs() && portal() && director())   // a player's coach, group, tier, status: directors (Oct 24); coaches write assessments, not the record
-        || (!runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['group', 'coach', 'coach2', 'status', 'sport', 'updatedAt']));
+        || (!runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['group', 'coach', 'coach2', 'coach3', 'status', 'sport', 'updatedAt']));
       allow delete: if portal() && admin();
       // Parent name, email and phone: from Monday (the sync), from the enrollment page (the engine) or typed at the front desk.
       // Opened behind a button on the player's page, never shown in lists.

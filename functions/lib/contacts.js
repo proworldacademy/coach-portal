@@ -120,7 +120,7 @@ async function sync(db, opts) {
   // the week is the PLAYER'S COACH's contact with the family (Antonio, Nov 2): a text or a call counts for the players whose
   // record carries that person's name (coach or second coach). The front desk, the office or another coach texting the same
   // family — payments, schedules, a tournament entry — does not tick it, whatever their role.
-  const own = (who, p) => [p.coach, p.coach2].some((c) => c && who.keys.includes(fold(first(c))));
+  const own = (who, p) => [p.coach, p.coach2, p.coach3].some((c) => c && who.keys.includes(fold(first(c))));
   const take = (ev) => {
     if (!ev || !ev.phone) return; const who = staff.byEmail.get(ev.email); if (!who) { offStaff++; return; }
     const all = book.get(ev.phone); if (!all || !all.length) { noFamily++; return; }
