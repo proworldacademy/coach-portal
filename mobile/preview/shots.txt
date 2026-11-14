@@ -1,23 +1,51 @@
-# name | who | path | scroll
-portal-reminders|coach|/portal/|0
-portal-reminders-down|coach|/portal/|700
-portal-players|coach|/portal/#/players|0
-portal-player|coach|/portal/#/p/as-di-m|0
-portal-player-down|coach|/portal/#/p/as-di-m|700
-portal-contact|coach|/portal/#/messages|0
-portal-chat|coach|/portal/#/messages/as-ren-o|0
-portal-weekly|coach|/portal/#/contact|0
-privates-coach|coach|/backend/#privates|0
-attendance-coach|coach|/backend/#attendance|0
-portal-director-players|director|/portal/#/players|0
-portal-director-board|director|/portal/#/board|0
-dashboard-owner|owner|/|0
-dashboard-owner-down|owner|/|900
-dashboard-owner-down2|owner|/|1900
-admin-owner|owner|/backend/|0
-admin-owner-players|owner|/backend/#players|0
-clients-owner|owner|/clients/|0
-marketing-owner|owner|/marketing/|0
-marketing-owner-down|owner|/marketing/|900
-start-coach|coach|/start/|0
-desk-attendance|desk|/backend/#attendance|0
+# name | who | path | scroll        (the order is the order of the book)
+# ── the team side: a coach ──
+t01-reminders|coach|/portal/|0
+t02-reminders-down|coach|/portal/|600
+t03-players|coach|/portal/#/players|0
+t04-players-down|coach|/portal/#/players|900
+t05-player|coach|/portal/#/p/as-di-m|0
+t06-player-down|coach|/portal/#/p/as-di-m|650
+t07-player-videos|coach|/portal/#/p/as-di-m/videos|0
+t08-player-journal|coach|/portal/#/p/as-di-m/journal|0
+t09-contact|coach|/portal/#/messages|0
+t10-chat|coach|/portal/#/messages/as-ren-o|0
+t11-weekly-contact|coach|/portal/#/contact|0
+t12-followup|coach|/portal/#/followup|0
+t13-privates|coach|/backend/#privates|0
+t14-privates-down|coach|/backend/#privates|800
+t15-attendance|coach|/backend/#attendance|0
+t16-start-here|coach|/start/|0
+t17-not-yours|coach|/marketing/|0
+# ── the team side: a director ──
+d01-players|director|/portal/#/players|0
+d02-group|director|/portal/#/g/ft|0
+d03-board|director|/portal/#/board|0
+d04-tryouts|director|/portal/#/tryouts|0
+d05-staff|director|/portal/#/staff|0
+# ── the team side: the front desk ──
+f01-attendance|desk|/backend/#attendance|0
+f02-front-desk|desk|/backend/#desk|0
+f03-players-billing|desk|/backend/#players|0
+f04-messages|desk|/backend/#messages|0
+f05-courts|desk|/backend/#courts|0
+f06-clients|desk|/clients/|0
+# ── the team side: an owner ──
+o01-dashboard|owner|/|0
+o02-dashboard-down|owner|/|900
+o03-dashboard-down2|owner|/|1900
+o04-dashboard-down3|owner|/|2900
+o05-admin|owner|/backend/|0
+o06-books|owner|/backend/#books|0
+o07-marketing|owner|/marketing/|0
+o08-marketing-down|owner|/marketing/|900
+o09-clients|owner|/clients/|0
+o10-clients-down|owner|/clients/|900
+o11-ai-check|owner|/checks/|0
+# ── the member side: a parent ──
+m01-account|parent|/family/|0
+m02-account-down|parent|/family/|700
+m03-account-down2|parent|/family/|1500
+m04-enroll|parent|/enroll/|0
+m05-enroll-down|parent|/enroll/|800
+m06-enroll-down2|parent|/enroll/|1700

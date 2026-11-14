@@ -135,3 +135,6 @@ body.a2k .a2tick.on{animation:pw-pop .28s ease-out 1}
 
 /* Nov 13: no empty bar under a sign-in or a refusal screen */
 body.app-skin .cp-appbar:empty{display:none!important}
+
+/* Nov 14: in the App Store app the page runs to the edges of the screen, so the bottom bar sits above the home line */
+body.app-skin .cp-appbar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}

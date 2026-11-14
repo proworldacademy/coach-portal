@@ -17,6 +17,7 @@
 <script src="/shared/pages.js"></script>
 <script src="/shared/pwauth.js"></script>
 <script src="/shared/design.js"></script>
+<script src="/shared/coachbar.js"></script>
 <style>
 /* The ProWorld backend in the redesign (C4 · Round 2, skin "desk"): the look lives in /shared/design.css; the rules below map
    this page's own vocabulary (stats, steps, options, the courts grid, the attendance board, lists, sheets) onto it.
@@ -1491,7 +1492,7 @@ async function connect(ctx){
   render();
 }
 if(window.PWAuth&&PWAuth.start){
-  PWAuth.start({need:'backend'}).then(ctx=>{window.PWCTX=ctx;pickRole(ctx);save();render();if(PWAuth.paintUser)PWAuth.paintUser();connect(ctx)});
+  PWAuth.start({need:'backend'}).then(ctx=>{window.PWCTX=ctx;pickRole(ctx);save();render();if(window.PWCoachBar)PWCoachBar(ctx,'privates');if(PWAuth.paintUser)PWAuth.paintUser();connect(ctx)});
 }else render();
 
 /* ---- Billing rules panel: the rules, the break calendar, and a proration calculator for the front desk ---- */

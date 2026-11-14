@@ -6,5 +6,5 @@
     "url": "https://proworld-coach-portal.web.app",
     "allowNavigation": ["proworld-coach-portal.web.app", "app.justcall.io", "*.justcall.io"]
   },
-  "ios": { "contentInset": "always", "backgroundColor": "#F1F1ED" }
+  "ios": { "contentInset": "never", "backgroundColor": "#F1F1ED" }
 }

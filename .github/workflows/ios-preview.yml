@@ -49,7 +49,7 @@ jobs:
             curl -sf -G "http://localhost:4173/__set" --data-urlencode "u=$p" --data-urlencode "who=$who" --data-urlencode "y=$y" >/dev/null
             xcrun simctl terminate "$UDID" com.proworldacademy.app >/dev/null 2>&1 || true
             xcrun simctl launch "$UDID" com.proworldacademy.app >/dev/null
-            sleep 8
+            sleep 7
             xcrun simctl io "$UDID" screenshot --type=jpeg "$OUT/$name.jpg" >/dev/null 2>&1 && echo "shot $name"
           done
           tail -n 5 "$RUNNER_TEMP/server.log" || true

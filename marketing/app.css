@@ -159,3 +159,6 @@ body.app-skin #plan-ai{margin-bottom:16px}
 #pa-mic.on{background:#E2FE78;border-color:#E2FE78;color:#111;animation:pa-pulse 1.2s ease-in-out infinite}
 @keyframes pa-pulse{0%,100%{box-shadow:0 0 0 0 rgba(226,254,120,.7)}50%{box-shadow:0 0 0 8px rgba(226,254,120,0)}}
 @media(max-width:640px){.pa-row{flex-wrap:wrap;align-items:stretch}.pa-row textarea{flex:1 0 100%}.pa-row #pa-mic{flex:0 0 56px}.pa-row #pa-go{flex:1}.pa-msg{max-width:100%}}
+
+/* Nov 14: above the phone's home line in the App Store app */
+@media(max-width:760px){body.app-skin .appbar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}}
