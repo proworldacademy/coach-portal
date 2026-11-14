@@ -3013,7 +3013,8 @@ const PW_CONFIG = {
     if (EDITION !== 'web') return '';
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
     const box = (ttl, line, btn) => `<div class="notice remind calm push"><span class="ttl">Notifications</span><ul class="lines"><li>${line}</li></ul>${btn || ''}</div>`;
-    if (!pushCan()) return ios && !standalone ? box('', 'On an iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>, open PROWORLD from there, and turn notifications on here.') : '';
+    if (window.Capacitor) return '';   // inside the App Store app: its notifications are the phone's own, not the web kind (next build); no hint to add a Home Screen icon
+    if (!pushCan()) return ios && !standalone ? box('', '<span>On an iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>, open PROWORLD from there, and turn notifications on here.</span>') : '';
     pushCheck();
     if (Notification.permission === 'denied') return box('', 'Notifications are blocked for PROWORLD on this device. Allow them in the device’s settings, then come back.');
     if (PUSHS.on) return box('', '<b class="n on">✓</b> on for this device: a new text from a family shows like any other app', `<button type="button" class="linkb" data-act="push-test">Send me a test</button>`);
