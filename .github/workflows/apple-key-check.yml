@@ -1,0 +1,23 @@
+# Checks that the App Store Connect upload key works (the secret ASC_KEY_P8; the key id and issuer id are not secret).
+# Runs by hand, and when this file or the check script changes.
+name: Apple key check
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/apple-key-check.yml', 'mobile/asc-check.js']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ask Apple with the key
+        env:
+          ASC_KEY_ID: GR9Z5894J4
+          ASC_ISSUER_ID: 7f88b520-1014-416e-86bc-3bc5c5ffa195
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: node mobile/asc-check.js
