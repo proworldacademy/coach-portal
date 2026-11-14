@@ -2,7 +2,8 @@
    the switch with them) — and on the phone the bottom bar built from the view tabs: Reminders · Players · Contact · Privates. Loaded last. */
 (function () {
   try { localStorage.removeItem("cp-view"); } catch (e) { /* no storage */ }
-  document.body.classList.add("app-skin", "a2k");   // a2k: the shared pieces (three buttons, family card, rows) in portal/app2.css
+  document.body.classList.add("app-skin", "a2k");
+  document.body.classList.add("fresh");   // the fresh look (Nov 14): portal/fresh.css; dark is html.dark (shared/design.js)
   const vt = document.getElementById("vtabs"); if (!vt) return;
 
   // the bottom bar is the tab row: Reminders · Players · Contact · Privates (Antonio and Lorenzo, Nov 13). No "More": the ☰ at the top opens the Dashboard menu.
