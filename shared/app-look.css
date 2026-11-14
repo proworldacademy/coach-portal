@@ -63,3 +63,10 @@ body.pwd .rv small{grid-column:1/2;color:var(--muted);font-size:12.5px;line-heig
 body.pwd .rv .t{grid-row:1/3;grid-column:2;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:var(--muted)}
 body.pwd .rv em{grid-row:1/3;grid-column:3;font-style:normal}
 @media(hover:hover){body.pwd .rv:hover{background:rgba(226,254,120,.22)}}
+
+/* Nov 14 (seen in the iPhone app's simulator): the slim bar that slides in on scroll waits just above the screen, and in the app that is
+   where the clock and the battery are, so it showed through them. Hidden for real until it is called. */
+.pwd-bar{visibility:hidden;transition:transform .5s var(--ease),visibility 0s linear .5s}
+.pwd-bar.on{visibility:visible;transition:transform .5s var(--ease),visibility 0s}
+/* the Coach Portal on a phone has its own search (players); the menu's page search beside it was a second magnifier */
+@media (max-width:760px){body.app-skin #pwd-top .pwd-jump{display:none!important}}

@@ -1,0 +1,67 @@
+# Opens the app shell in an iPhone simulator on a GitHub Mac, against the test copy of the site (invented people, mobile/preview/server.js),
+# and keeps a screenshot of every page in mobile/preview/shots.txt. This is how the layout is checked inside the real app without a phone.
+# No signing, nothing sent to Apple. Runs by hand, and when the pages' look or the preview changes on the preview branch.
+name: iOS preview shots
+on:
+  workflow_dispatch:
+  push:
+    branches: [app-preview]
+permissions:
+  contents: write   # only to put the screenshots on the branch preview-shots (one commit, replaced each run)
+concurrency:
+  group: ios-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  shots:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The test copy of the site
+        run: |
+          (cd functions && npm ci --omit=dev --no-audit --no-fund >/dev/null 2>&1 || npm install --omit=dev --no-audit --no-fund >/dev/null)
+          nohup node mobile/preview/server.js > "$RUNNER_TEMP/server.log" 2>&1 &
+          sleep 3; curl -sf "http://localhost:4173/__set?u=/portal/&who=coach" && echo " server up"
+      - name: The app for the simulator
+        working-directory: mobile
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund >/dev/null
+          node -e "const f='capacitor.config.json';const c=JSON.parse(require('fs').readFileSync(f));c.server={url:'http://localhost:4173/__shot',cleartext:true,allowNavigation:['localhost']};require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+          npx cap add ios >/dev/null
+          ./prepare-ios.sh
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" ios/App/App/Info.plist
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+ Pro \(" | tail -1 | grep -oE "[0-9A-F-]{36}")
+          xcrun simctl list devices available | grep -E "iPhone" | tail -4; echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator \
+            -destination "id=$UDID" -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO TARGETED_DEVICE_FAMILY=1 | tail -n 5
+      - name: Screenshots
+        run: |
+          APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/App.app"; OUT="$RUNNER_TEMP/shots"; mkdir -p "$OUT"
+          xcrun simctl boot "$UDID" || true; xcrun simctl bootstatus "$UDID" -b >/dev/null
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 || true
+          xcrun simctl install "$UDID" "$APP"
+          grep -v '^#' mobile/preview/shots.txt | while IFS='|' read -r name who p y; do
+            [ -z "$name" ] && continue
+            curl -sf -G "http://localhost:4173/__set" --data-urlencode "u=$p" --data-urlencode "who=$who" --data-urlencode "y=$y" >/dev/null
+            xcrun simctl terminate "$UDID" com.proworldacademy.app >/dev/null 2>&1 || true
+            xcrun simctl launch "$UDID" com.proworldacademy.app >/dev/null
+            sleep 8
+            xcrun simctl io "$UDID" screenshot --type=jpeg "$OUT/$name.jpg" >/dev/null 2>&1 && echo "shot $name"
+          done
+          tail -n 5 "$RUNNER_TEMP/server.log" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iphone-shots
+          path: ${{ runner.temp }}/shots
+          retention-days: 7
+      - name: Keep the screenshots on the branch preview-shots
+        run: |
+          cd "$RUNNER_TEMP/shots"; for f in *.jpg; do sips -Z 1300 -s formatOptions 70 "$f" >/dev/null 2>&1 || true; done
+          echo "Screenshots of the app shell in an iPhone simulator, test copy of the site, invented people. Run ${{ github.run_number }} of ${{ github.sha }}." > README.md
+          git init -q -b preview-shots; git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "iPhone preview shots, run ${{ github.run_number }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" preview-shots
