@@ -20,6 +20,9 @@
     add("meta", { name: "apple-mobile-web-app-capable", content: "yes" }); add("meta", { name: "mobile-web-app-capable", content: "yes" });
     add("meta", { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }); add("meta", { name: "apple-mobile-web-app-title", content: "PROWORLD" });
     add("link", { rel: "apple-touch-icon", href: "/app/apple-touch-icon.png" });
+    // the App look on every page (Nov 13): one layer, loaded last so it sits on top of each page's own styles
+    const look = () => { if (!document.querySelector('link[data-look]')) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/shared/app-look.css"; l.setAttribute("data-look", "1"); document.head.appendChild(l); } };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", look); else look();
     if ("serviceWorker" in navigator && location.protocol === "https:") window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
   } catch (e) { /* the page works without the app bits */ }
   "use strict";
