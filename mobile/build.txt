@@ -1,1 +1,1 @@
-2 · Nov 13, 2026 · build and sign first, send when the app exists
+3 · Nov 13, 2026 · the app exists in App Store Connect: send to TestFlight
