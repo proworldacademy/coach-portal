@@ -25,6 +25,7 @@
       ".git/**",
       "**/node_modules/**",
       "functions/**",
+      "mobile/**",
       "README.md",
       "firestore.rules",
       "firestore.indexes.json",
