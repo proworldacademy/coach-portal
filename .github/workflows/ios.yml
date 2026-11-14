@@ -5,7 +5,7 @@ name: iOS app
 on:
   workflow_dispatch:
   push:
-    branches: [main, apple-app]
+    branches: [main, apple-app, app-safe-area]
     paths: ['mobile/**', '.github/workflows/ios.yml']
 permissions:
   contents: read
