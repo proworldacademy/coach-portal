@@ -1,1 +1,1 @@
-1 · Nov 13, 2026 · first TestFlight build
+2 · Nov 13, 2026 · build and sign first, send when the app exists

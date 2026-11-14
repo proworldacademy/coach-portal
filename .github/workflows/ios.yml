@@ -34,11 +34,6 @@ jobs:
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: node asc.js builds
-      - name: Stop here if the app is not created yet
-        if: steps.asc.outputs.app != 'yes'
-        run: |
-          echo "::warning::The app does not exist yet in App Store Connect. Create it (My Apps, +, New App, bundle id $BUNDLE_ID), then run this again."
-          exit 1
       - name: The Xcode project
         run: |
           xcodebuild -version
@@ -57,11 +52,17 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic TARGETED_DEVICE_FAMILY=1 \
             MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 60
       - name: Send to TestFlight
+        if: steps.asc.outputs.app == 'yes'
         run: |
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" -exportOptionsPlist export.plist \
             -exportPath "$RUNNER_TEMP/out" -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
             -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+      - name: Not sent — the app is not created yet
+        if: steps.asc.outputs.app != 'yes'
+        run: |
+          echo "::warning::Built and signed, not sent: the app does not exist yet in App Store Connect. Create it (Apps, +, New App, bundle id $BUNDLE_ID), then run this again."
+          exit 1
       - name: Remove the key file
         if: always()
         run: rm -rf "$RUNNER_TEMP/keys"
