@@ -7,7 +7,7 @@
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const { chromium } = require('playwright');
+let chromium = null; try { ({ chromium } = require('playwright')); } catch (e) { chromium = null; }   // mobile/preview/server.js borrows the setup without a Chrome
 const REPO = process.env.REPO || path.resolve(__dirname, '../../..');
 const SHOTS = process.env.SHOTS || path.join(require('os').tmpdir(), 'portal-chat-shots');
 fs.mkdirSync(SHOTS, { recursive: true });
@@ -110,7 +110,7 @@ const shot = (pg, name) => pg.screenshot({ path: path.join(SHOTS, name + '.png')
 const text = async (pg, sel) => (await pg.locator(sel).first().innerText()).replace(/\s+/g, ' ').trim();
 const count = (pg, sel) => pg.locator(sel).count();
 
-module.exports = { server, page, shot, text, count, log, fails: () => fails, db, net, reply, chromium, CLIENT_SEED, PLAYERS };   // app2.harness.js borrows the setup
+module.exports = { server, page, shot, text, count, log, fails: () => fails, db, net, reply, chromium, CLIENT_SEED, PLAYERS, engine };   // app2.harness.js borrows the setup
 if (require.main === module) (async () => {
   await new Promise((r) => server.listen(4173, r));
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });

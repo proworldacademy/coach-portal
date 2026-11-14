@@ -1,0 +1,23 @@
+# name | who | path | scroll
+portal-reminders|coach|/portal/|0
+portal-reminders-down|coach|/portal/|700
+portal-players|coach|/portal/#/players|0
+portal-player|coach|/portal/#/p/as-di-m|0
+portal-player-down|coach|/portal/#/p/as-di-m|700
+portal-contact|coach|/portal/#/messages|0
+portal-chat|coach|/portal/#/messages/as-ren-o|0
+portal-weekly|coach|/portal/#/contact|0
+privates-coach|coach|/backend/#privates|0
+attendance-coach|coach|/backend/#attendance|0
+portal-director-players|director|/portal/#/players|0
+portal-director-board|director|/portal/#/board|0
+dashboard-owner|owner|/|0
+dashboard-owner-down|owner|/|900
+dashboard-owner-down2|owner|/|1900
+admin-owner|owner|/backend/|0
+admin-owner-players|owner|/backend/#players|0
+clients-owner|owner|/clients/|0
+marketing-owner|owner|/marketing/|0
+marketing-owner-down|owner|/marketing/|900
+start-coach|coach|/start/|0
+desk-attendance|desk|/backend/#attendance|0
