@@ -6,8 +6,7 @@ t03-players|coach|/portal/#/players|0
 t04-players-down|coach|/portal/#/players|900
 t05-player|coach|/portal/#/p/as-di-m|0
 t06-player-down|coach|/portal/#/p/as-di-m|650
-t07-player-videos|coach|/portal/#/p/as-di-m/videos|0
-t08-player-journal|coach|/portal/#/p/as-di-m/journal|0
+t07-player-reports|coach|/portal/#/p/as-di-m|1300
 t09-contact|coach|/portal/#/messages|0
 t10-chat|coach|/portal/#/messages/as-ren-o|0
 t11-weekly-contact|coach|/portal/#/contact|0
@@ -22,7 +21,6 @@ d01-players|director|/portal/#/players|0
 d02-group|director|/portal/#/g/ft|0
 d03-board|director|/portal/#/board|0
 d04-tryouts|director|/portal/#/tryouts|0
-d05-staff|director|/portal/#/staff|0
 # ── the team side: the front desk ──
 f01-attendance|desk|/backend/#attendance|0
 f02-front-desk|desk|/backend/#desk|0
@@ -33,8 +31,6 @@ f06-clients|desk|/clients/|0
 # ── the team side: an owner ──
 o01-dashboard|owner|/|0
 o02-dashboard-down|owner|/|900
-o03-dashboard-down2|owner|/|1900
-o04-dashboard-down3|owner|/|2900
 o05-admin|owner|/backend/|0
 o06-books|owner|/backend/#books|0
 o07-marketing|owner|/marketing/|0
