@@ -5,18 +5,11 @@
    away until Manu signs off. Loaded after app.js / live.js / engine.js. */
 (function () {
   const $ = (id) => document.getElementById(id);
-  let mode = "app";
-  try { mode = localStorage.getItem("mk-view") || "app"; if (mode === "steps" && !localStorage.getItem("mk-v3")) { mode = "app"; localStorage.setItem("mk-view", "app"); } localStorage.setItem("mk-v3", "1"); } catch (e) { /* no storage */ }   // Nov 3: everyone lands on App once; their own choice after that
+  try { localStorage.removeItem("mk-view"); } catch (e) { /* no storage */ }   // one view: App (Antonio, Nov 13: "keep only the app version"); Three steps and Classic are gone, the switch with them
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const cardOf = (id) => { const el = $(id); return el ? el.closest(".card") || el : null; };
   const nav = $("nav"); if (!nav) return;
 
-  // ── the switch (both modes) ──
-  const sw = document.createElement("div"); sw.className = "view-switch"; sw.id = "view-switch";
-  sw.innerHTML = '<span class="small muted">View</span>' + [["app", "App"], ["steps", "Three steps"], ["classic", "Classic"]].map(([v, n]) => '<button type="button" class="vs' + (mode === v ? " on" : "") + '" data-view="' + v + '">' + n + "</button>").join("");
-  nav.parentNode.insertBefore(sw, nav);
-  sw.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("mk-view", b.dataset.view); } catch (e) { /* noop */ } location.hash = ""; location.reload(); }));
-  if (mode !== "app") return;
   document.body.classList.add("app-skin");
 
   // ── the tab bar: a segmented pill on desktop, the bottom bar on the phone ──
