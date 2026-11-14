@@ -21,6 +21,29 @@ async function api(method, path, body) {
   if (process.argv[2] === 'writekey') {   // the key file xcodebuild reads, outside the repository folder
     const dir = process.argv[3]; fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(dir + '/AuthKey_' + KEY_ID + '.p8', pem(), { mode: 0o600 }); console.log('KEY: written for xcodebuild'); return;
   }
+  if (process.argv[2] === 'sign') {
+    // A distribution certificate and an App Store profile for this one build (the key cannot use Apple's cloud signing). Both are removed by `unsign`.
+    const dir = process.argv[3]; fs.mkdirSync(dir, { recursive: true }); const { execFileSync } = require('child_process');
+    execFileSync('/usr/bin/openssl', ['genrsa', '-out', dir + '/dist.key', '2048'], { stdio: 'ignore' });
+    execFileSync('/usr/bin/openssl', ['req', '-new', '-key', dir + '/dist.key', '-out', dir + '/dist.csr', '-subj', '/CN=ProWorld CI/O=Proworld Tennis Academy LLC/C=US'], { stdio: 'ignore' });
+    const c = await api('POST', '/v1/certificates', { data: { type: 'certificates', attributes: { certificateType: 'DISTRIBUTION', csrContent: fs.readFileSync(dir + '/dist.csr', 'utf8') } } });
+    if (!c.ok) { console.log('CERT: could not create (HTTP ' + c.status + ') ' + c.err); process.exit(1); }
+    fs.writeFileSync(dir + '/cert.id', c.j.data.id); fs.writeFileSync(dir + '/dist.cer', Buffer.from(c.j.data.attributes.certificateContent, 'base64'));
+    console.log('CERT: created for this build · ' + c.j.data.attributes.name + ' · expires ' + c.j.data.attributes.expirationDate);
+    const bid = await api('GET', '/v1/bundleIds?filter[identifier]=' + encodeURIComponent(BUNDLE) + '&limit=5'); const bundle = (bid.j.data || []).find((x) => x.attributes.identifier === BUNDLE);
+    const name = 'ProWorld CI ' + (process.env.GITHUB_RUN_NUMBER || Date.now());
+    const p = await api('POST', '/v1/profiles', { data: { type: 'profiles', attributes: { name, profileType: 'IOS_APP_STORE' }, relationships: { bundleId: { data: { type: 'bundleIds', id: bundle.id } }, certificates: { data: [{ type: 'certificates', id: c.j.data.id }] } } } });
+    if (!p.ok) { console.log('PROFILE: could not create (HTTP ' + p.status + ') ' + p.err); process.exit(1); }
+    fs.writeFileSync(dir + '/profile.id', p.j.data.id); fs.writeFileSync(dir + '/profile.mobileprovision', Buffer.from(p.j.data.attributes.profileContent, 'base64'));
+    fs.writeFileSync(dir + '/profile.uuid', p.j.data.attributes.uuid); fs.writeFileSync(dir + '/profile.name', name);
+    console.log('PROFILE: created · ' + name); return;
+  }
+  if (process.argv[2] === 'unsign') {
+    const dir = process.argv[3]; const rd = (n) => { try { return fs.readFileSync(dir + '/' + n, 'utf8').trim(); } catch (e) { return ''; } };
+    if (rd('profile.id')) { const r = await api('DELETE', '/v1/profiles/' + rd('profile.id')); console.log('PROFILE: removed (HTTP ' + r.status + ')'); }
+    if (rd('cert.id')) { const r = await api('DELETE', '/v1/certificates/' + rd('cert.id')); console.log('CERT: removed (HTTP ' + r.status + ')'); }
+    return;
+  }
   let b = await api('GET', '/v1/bundleIds?filter[identifier]=' + encodeURIComponent(BUNDLE) + '&limit=5');
   if (!b.ok) { console.log('APPLE: HTTP ' + b.status + ' ' + b.err); process.exit(1); }
   let found = (b.j.data || []).find((x) => x.attributes.identifier === BUNDLE);
