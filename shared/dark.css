@@ -31,3 +31,5 @@ html.dark:root,html.dark body{--white:#141414;--black:#F4F4F0;--surface:rgba(255
 html.dark .pwd-pal{background:rgba(0,0,0,.62)!important}
 html.dark #pwd-top button,html.dark #pwd-top .pwd-jump,html.dark .search button,html.dark .a2cb{background-color:#1E1E1E!important;color:var(--ink)!important;border-color:var(--line)!important}
 html.dark .search button svg,html.dark #pwd-top button svg{stroke:currentColor}
+html.dark .pwd-burger span{background:var(--ink)!important}
+html.dark body.fresh .fx-hero small,html.dark body.fresh .fx-hero .fx-k{color:rgba(0,0,0,.66)!important}

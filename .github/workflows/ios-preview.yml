@@ -5,7 +5,7 @@ name: iOS preview shots
 on:
   workflow_dispatch:
   push:
-    branches: [app-preview, fresh-look]
+    branches: [app-preview]
 permissions:
   contents: write   # only to put the screenshots on the branch preview-shots (one commit, replaced each run)
 concurrency:
