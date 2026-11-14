@@ -54,7 +54,7 @@ http.createServer(async (req, res) => {
   if (path.extname(f) === '.html') {
     let h = fs.readFileSync(f, 'utf8');
     h = h.replace(/https:\/\/www\.gstatic\.com\/firebasejs\/[^"']*firebase-app-compat\.js/g, '/__stub/firebase.js').replace(/https:\/\/www\.gstatic\.com\/firebasejs\/[^"']*\.js/g, '/__stub/empty.js');
-    const boot = '<script>window.__seed=' + JSON.stringify(seedFor(next.who)).replace(/</g, '\\u003c') + ';window.__previewY=' + next.y + ';try{localStorage.' + (/fresh/.test(next.look) ? 'setItem("cp-fresh","1")' : 'removeItem("cp-fresh")') + ';localStorage.' + (/dark/.test(next.look) ? 'setItem("cp-dark","1")' : 'removeItem("cp-dark")') + '}catch(e){}' +
+    const boot = '<script>window.__seed=' + JSON.stringify(seedFor(next.who)).replace(/</g, '\\u003c') + ';window.__previewY=' + next.y + ';try{localStorage.' + (/dark/.test(next.look) ? 'setItem("pw-theme","dark")' : /light/.test(next.look) ? 'setItem("pw-theme","light")' : 'removeItem("pw-theme")') + '}catch(e){}' +
       'addEventListener("load",function(){setTimeout(function(){if(window.__previewY){window.scrollTo(0,window.__previewY);}},2500);});</script>';
     h = /<head[^>]*>/i.test(h) ? h.replace(/<head[^>]*>/i, (m) => m + boot) : boot + h;
     res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-store' }); res.end(h); return;

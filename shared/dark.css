@@ -1,0 +1,33 @@
+/* Dark, for the whole site (Nov 14, 2026). html.dark is set by shared/design.js: Auto follows the phone or computer, or the person pins it.
+   The pages paint with variables; here they flip. Surfaces: --pw-sf (was white), --pw-sf2 (was the light greys), --pw-inkbg (was black
+   fills: buttons, bars). Anything on a brand colour keeps black text. Loaded last. */
+html.dark{color-scheme:dark}
+html.dark body{--ink:#F4F4F0!important;--ink-2:#C9C9C4!important;--ink2:#C9C9C4!important;--muted:#9A9A95!important;--line:#262626!important;--line-2:#303030!important;--page:#050505!important;
+  --pw-sf:#141414;--pw-sf2:#1E1E1E;--pw-inkbg:#2B2B2B;--card:rgba(20,20,20,.92)!important;--card-2:#181818!important;--paper:#050505;--shadow:0 1px 2px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.45)!important;
+  /* the pastel chips keep their colours and their own dark ink: they read well on black */
+  color:var(--ink)}
+html.dark.dark:has(body),html.dark body,html.dark body.pwd,html.dark body.app-skin{background:#050505!important}
+html.dark body.pwd,html.dark body.app-skin{background:radial-gradient(760px 460px at 104% -8%,rgba(226,254,120,.13),transparent 62%),radial-gradient(680px 460px at -12% 106%,rgba(226,134,228,.11),transparent 62%),#050505!important;background-attachment:fixed!important}
+html.dark body::before{background:#050505!important}
+/* the logo and anything drawn in black */
+html.dark .pwd-mark,html.dark .pwd-foot .pwd-mark,html.dark img[src*="wordmark-black"],html.dark .brand img,html.dark .logo img{filter:invert(1)}
+/* cards and panels that carried their own white */
+html.dark .card,html.dark .stat,html.dark .g,html.dark .need,html.dark .lib,html.dark .notice,html.dark .panel,html.dark .tile,html.dark .op,html.dark .a2card,html.dark .foldbox,html.dark .list,html.dark .rowb,html.dark .group,html.dark .sec.pfold,html.dark dialog,html.dark .modal,html.dark .sheet,html.dark .pwd-drawer,html.dark .pwd-menu,html.dark .pwd-pop,html.dark .summary{background-color:var(--pw-sf)!important;border-color:var(--line)!important;color:var(--ink);box-shadow:none}
+html.dark input,html.dark textarea,html.dark select{background-color:#1A1A1A!important;color:var(--ink)!important;border-color:var(--line-2)!important}
+html.dark input::placeholder,html.dark textarea::placeholder{color:#77777A}
+html.dark hr{border-color:var(--line)}
+html.dark a{color:inherit}
+/* the frame */
+html.dark #pwd-top .pwd-av{background:#1E1E1E;color:var(--lime)}
+html.dark .pwd-bar{background:rgba(10,10,10,.82)!important;color:var(--ink)}
+html.dark .pwd-foot,html.dark .pwd-foot *{color:var(--muted)!important}
+html.dark .pwd-doors a.on,html.dark .pwd-doors button.on,html.dark .pwd-tab.on{background:var(--lime)!important;color:#0A0A0A!important}
+/* text set in fixed dark greys */
+html.dark .muted,html.dark small,html.dark .lbl,html.dark .eyebrow{color:var(--muted)}
+/* the bottom bars: glass over black */
+html.dark .cp-appbar,html.dark .appbar,html.dark .pw-coachbar{background:rgba(38,38,38,.6)!important;border-color:rgba(255,255,255,.1)!important}
+/* pages with their own vocabulary */
+html.dark:root,html.dark body{--white:#141414;--black:#F4F4F0;--surface:rgba(255,255,255,.06);--surface-2:rgba(255,255,255,.12);--panel:#141414!important;--bg:#050505!important;}
+html.dark .pwd-pal{background:rgba(0,0,0,.62)!important}
+html.dark #pwd-top button,html.dark #pwd-top .pwd-jump,html.dark .search button,html.dark .a2cb{background-color:#1E1E1E!important;color:var(--ink)!important;border-color:var(--line)!important}
+html.dark .search button svg,html.dark #pwd-top button svg{stroke:currentColor}

@@ -49,6 +49,7 @@ jobs:
             [ -z "$name" ] && continue
             curl -sf -G "http://localhost:4173/__set" --data-urlencode "u=$p" --data-urlencode "who=$who" --data-urlencode "y=$y" --data-urlencode "look=$look" >/dev/null
             xcrun simctl terminate "$UDID" com.proworldacademy.app >/dev/null 2>&1 || true
+            case "$look" in *dark*) xcrun simctl ui "$UDID" appearance dark;; *) xcrun simctl ui "$UDID" appearance light;; esac   # the phone itself in light or dark
             case "$name" in v-*)   # a short film of the screen opening (the motion)
               xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$OUT/$name.mov" >/dev/null 2>&1 & REC=$!
               sleep 2; xcrun simctl launch "$UDID" com.proworldacademy.app >/dev/null; sleep 9
