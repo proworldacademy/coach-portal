@@ -627,7 +627,7 @@ body.app-skin .mfind input{border:0;background:#F1F1ED}
 .tflag .btn{height:28px;padding:0 10px;font-size:12px}
 </style>
 <link rel="stylesheet" href="/portal/calm.css">
-<link rel="stylesheet" href="/portal/app.css"><link rel="stylesheet" href="/portal/app2.css"><!-- the app skin (Nov 3): tiles, rows, chips, the pill tab bar, the phone bottom bar; portal/app.js switches it --><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, one pale colour per group — loaded last so it wins -->
+<link rel="stylesheet" href="/portal/app.css"><link rel="stylesheet" href="/portal/app2.css"><link rel="stylesheet" href="/portal/fresh.css"><!-- the app skin (Nov 3): tiles, rows, chips, the pill tab bar, the phone bottom bar; portal/app.js switches it --><!-- the "In between" look (Oct 23, 2026): grey page, white cards, bubbles, one pale colour per group — loaded last so it wins -->
 </head><body class="skin-coach">
 <script src="/shared/pages.js"></script>
 <script>
@@ -2875,6 +2875,7 @@ const PW_CONFIG = {
     let focused = null; document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (ta.value) S.ui.msgDraft[k] = ta.value; else delete S.ui.msgDraft[k]; if (document.activeElement === ta) focused = { k, s: ta.selectionStart, e: ta.selectionEnd }; });
     const a2html = APP2 ? render2(r) : null;
     m.innerHTML = a2html ? `<div class="wrap">${a2html}</div>` : `<div class="wrap">${r.view === 'group' ? viewGroup(r.gid) : r.view === 'player' ? viewPlayer(r.pid, r.tab) : r.view === 'staff' ? viewStaff() : r.view === 'followup' ? viewFollowUp() : r.view === 'tryouts' ? viewTryouts() : r.view === 'tryout' ? viewTryout(r.id) : r.view === 'board' ? viewBoard() : r.view === 'commit' ? viewCommit() : r.view === 'contact' ? viewContact() : r.view === 'parked' ? viewParked() : r.view === 'messages' ? viewMessages() : r.view === 'players' ? viewPlayers() : viewHome()}</div>`;
+    if (FRESH) { const k = r.view + '/' + (r.pid || ''); const w0 = m.querySelector('.wrap'); if (w0 && S.ui.fxKey !== k && S.loaded.players) { S.ui.fxKey = k; w0.classList.add('fx-go'); fxRun(); } else document.querySelectorAll('.fx-num[data-count]').forEach((el) => { el.dataset.ran = '1'; }); }
     const d = $('#dock'); if (d) d.hidden = true;
     if (r.view === 'board') bindBoardDrag(m);
     document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (!ta.value && S.ui.msgDraft[k]) ta.value = S.ui.msgDraft[k]; if (focused && focused.k === k) { try { ta.setSelectionRange(focused.s, focused.e); ta.focus({ preventScroll: true }); } catch (e) { /* noop */ } } });
@@ -2989,11 +2990,40 @@ const PW_CONFIG = {
     if (S.loaded.assess && nRep) needs.push(a2row(a2n(nRep), `3-month ${nRep === 1 ? 'report' : 'reports'} to write`, `${esc(q)}${nStarted ? ' · ' + nStarted + ' started' : ''}`, a2chev(), `data-act="a2reports"`));
     if (nOpen) needs.push(a2row(a2n(nOpen), nOpen === 1 ? 'Report to follow up' : 'Reports to follow up', 'Send to the parents, set the parent meeting', a2chev(), goAttr({ view: 'followup' })));
     const needsCard = `<div class="a2k-today">${a2sec('Needs you', needs.length ? String(needs.length) : '')}<div class="a2card">${needs.length ? needs.join('') : `<div class="a2row quiet"><span class="a2ico mint">${a2i('check')}</span><span class="a2t"><b>Nothing waiting for you</b><small>${S.loaded.contacts ? 'Every family heard from you this week' : 'Loading…'}</small></span></div>`}</div></div>`;
-    const head = `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
+    const head = FRESH && web && !WEB.isDirector ? '' : `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
+    const freshTop = FRESH && web && !WEB.isDirector ? freshHome({ day, chats: msgUnread(), wk: wkList, ck: S.loaded.checks ? ckList : 0, nRep: S.loaded.assess ? nRep : 0, nStarted, nOpen, q, total: mineP.length }) : '';
     const logN = S.assess.filter((a) => WEB.isDirector || mineIds.has(a.playerId)).length;
-    return `${notice()}${head}${needsCard}${today}${pushCard()}
+    return `${notice()}${head}${freshTop || needsCard}${today}${pushCard()}
       ${foldBox('log', 'Log of activity', logN ? logN + ' on file' : '', log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`)}`;
   }
+  /* The fresh look (Nov 14, 2026 — Antonio: "incredible, new, modern, fresh"): a trial on two screens, Reminders and a player's page, behind a
+     switch (localStorage cp-fresh = 1; cp-dark = 1 for the dark version) so the live portal does not change until management says so.
+     Styles in portal/fresh.css. A hero card with the week as a ring, tiles of different sizes, numbers that count up, cards that rise in. */
+  const FRESH = (() => { try { return localStorage.getItem('cp-fresh') === '1'; } catch (e) { return false; } })();
+  const fxRing = (done, total, size) => { const p = total ? Math.max(0, Math.min(1, done / total)) : 0; const r = 44, c = 2 * Math.PI * r; return `<svg class="fx-ring" viewBox="0 0 100 100" width="${size || 112}" height="${size || 112}" style="--c:${c.toFixed(1)};--off:${(c * (1 - p)).toFixed(1)}" aria-hidden="true"><circle class="t" cx="50" cy="50" r="${r}"/><circle class="v" cx="50" cy="50" r="${r}" transform="rotate(-90 50 50)"/></svg>`; };
+  const fxCount = (n) => `<b class="fx-num" data-count="${Number(n) || 0}">${Number(n) || 0}</b>`;
+  const FX_TINT = ['var(--lime)', 'var(--cyan)', 'var(--orchid,#E286E4)', 'var(--mint)'];
+  const fxAva = (name, i, cls) => `<span class="fx-ava${cls ? ' ' + cls : ''}" style="--gc:${FX_TINT[i % 4]}">${esc(initials(name))}</span>`;
+  function freshHome(x) {
+    const h = new Date().getHours(); const hello = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    const first = esc(String((WEB.staff && WEB.staff.name) || (WEB.user && WEB.user.displayName) || '').trim().split(/\s+/)[0] || 'Coach');
+    const wk = x.wk || { done: 0, total: 0, left: 0 }; const clear = !wk.left && wk.total;
+    const hero = `<div class="fx-hero${clear ? ' clear' : ''}">
+        <div class="fx-ringbox">${fxRing(wk.done, wk.total)}<span class="fx-ringn">${fxCount(wk.done)}<small>of ${wk.total}</small></span></div>
+        <div class="fx-herot"><span class="fx-k">This week · in touch</span>
+          <strong>${clear ? 'Every family heard from you.' : `${wk.left} ${wk.left === 1 ? 'family' : 'families'} to reach.`}</strong>
+          <small>${clear ? 'Nothing left this week' : 'Ends Sunday'}${x.ck ? ` · ${x.ck} with numbers to confirm` : ''}</small>
+          ${clear ? '' : `<button type="button" class="fx-cta" ${goAttr({ view: 'contact' })}>Start reaching out ${a2i('chev')}</button>`}</div></div>`;
+    const tiles = [];
+    if (x.chats) tiles.push(`<button type="button" class="fx-tile hot" ${goAttr({ view: 'messages' })}><span class="fx-k">Chats</span>${fxCount(x.chats)}<small>${x.chats === 1 ? 'new reply' : 'new replies'}, not read yet</small><i class="fx-pulse" aria-hidden="true"></i></button>`);
+    if (x.nRep) tiles.push(`<button type="button" class="fx-tile" data-act="a2reports"><span class="fx-k">Reports · ${esc(x.q)}</span>${fxCount(x.nRep)}<small>to write${x.nStarted ? ' · ' + x.nStarted + ' started' : ''}</small><span class="fx-bar"><i style="--w:${x.total ? Math.round((x.total - x.nRep) / x.total * 100) : 0}%"></i></span></button>`);
+    if (x.nOpen) tiles.push(`<button type="button" class="fx-tile" ${goAttr({ view: 'followup' })}><span class="fx-k">Follow-up</span>${fxCount(x.nOpen)}<small>${x.nOpen === 1 ? 'report' : 'reports'} to send or meet about</small></button>`);
+    const mineP = myPlayers().slice().sort((a, b) => a.name.localeCompare(b.name));
+    tiles.push(`<button type="button" class="fx-tile wide" ${goAttr({ view: 'players' })}><span class="fx-k">Your players</span><span class="fx-row">${fxCount(mineP.length)}<span class="fx-avas">${mineP.slice(0, 6).map((p, i) => fxAva(p.name, i)).join('')}${mineP.length > 6 ? `<span class="fx-ava more">+${mineP.length - 6}</span>` : ''}</span></span></button>`);
+    return `<div class="fx-home"><div class="fx-hello"><span class="fx-k">${x.day}</span><h1>${hello},<br><em>${first}.</em></h1></div>${hero}<div class="fx-bento">${tiles.join('')}</div></div>`;
+  }
+  /* numbers count up once when a fresh screen is drawn */
+  function fxRun() { if (!FRESH) return; const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; document.querySelectorAll('.fx-num[data-count]:not([data-ran])').forEach((el) => { el.dataset.ran = '1'; const to = Number(el.dataset.count) || 0; if (reduce || to < 2) return; const t0 = performance.now(); const step = (t) => { const k = Math.min(1, (t - t0) / 700); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); }; el.textContent = '0'; requestAnimationFrame(step); }); }
   /* an accordion: what is not needed every day folds under one line (the design pass, Nov 13); open ones are remembered while the page is open */
   S.ui.fold = S.ui.fold || {};
   const foldBox = (k, title, note, inner) => { const open = !!S.ui.fold[k]; return `<div class="foldbox${open ? ' open' : ''}"><button type="button" class="foldsum" data-act="fold" data-k="${esc(k)}" aria-expanded="${open}"><b>${esc(title)}</b>${note ? `<small>${esc(note)}</small>` : ''}${a2chev()}</button>${open ? `<div class="foldin">${inner}</div>` : ''}</div>`; };
@@ -3154,7 +3184,7 @@ const PW_CONFIG = {
     const tabs = [['assessments', 'Assessments'], ['videos', 'Videos'], ['journal', 'Journal']].map(([k, t]) => `<button class="tab" role="tab" aria-selected="${tab === k}" ${goAttr({ view: 'player', pid, tab: k })}>${t}</button>`).join('');
     const web = EDITION === 'web'; const pOpen = web && S.ui.parentOpen === p.id;
     return `${notice()}${crumbs([{ t: 'Players', r: { view: 'players' } }, { t: g.id ? g.label : 'Not placed', r: g.id ? { view: 'group', gid: g.id } : { view: 'home' } }, { t: p.name }])}
-      <div class="head phead"><div><div class="lbl">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${active(p) ? '' : ' · ' + esc(statusWord(p)) + ' · not active'}</div><h1 class="title">${emT(p.name)}</h1>
+      <div class="head phead">${FRESH ? `<span class="fx-ava big" style="--gc:${GCOLOR[g.color] || 'var(--lime)'}">${esc(initials(p.name))}</span>` : ''}<div><div class="lbl">${esc(g.id ? g.label : 'Not placed yet')}${p.tier ? ' · Tier ' + esc(p.tier) : ''}${active(p) ? '' : ' · ' + esc(statusWord(p)) + ' · not active'}</div><h1 class="title">${emT(p.name)}</h1>
         <div class="sub">${p.coach ? 'Primary coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · Secondary ' + esc(p.coach2) : ''}${p.coach3 ? ' · Third ' + esc(p.coach3) : ''}${p.fitness ? ' · Fitness ' + esc(p.fitness) : ''}</div>
         ${web ? mondayLine(p) : ''}</div>
         ${writable() ? `<button type="button" class="a2cb" data-act="toggle-edit" aria-label="Edit player" title="Edit player" aria-expanded="${!!S.ui.editing}">···</button>` : ''}</div>

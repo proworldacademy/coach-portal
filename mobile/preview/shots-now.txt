@@ -1,0 +1,8 @@
+a1-reminders-now|coach|/portal/|0|
+a2-reminders-fresh|coach|/portal/|0|fresh
+a3-reminders-dark|coach|/portal/|0|fresh-dark
+b1-player-now|coach|/portal/#/p/as-di-m|0|
+b2-player-fresh|coach|/portal/#/p/as-di-m|0|fresh
+b3-player-dark|coach|/portal/#/p/as-di-m|0|fresh-dark
+v-reminders-fresh|coach|/portal/|0|fresh
+v-reminders-dark|coach|/portal/|0|fresh-dark
