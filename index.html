@@ -114,6 +114,12 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     <div class="lib" id="lib"></div>
   </section>
 
+  <section class="sec" id="review-sec" hidden>
+    <div class="sec-h"><h2>To review</h2><small id="review-small"></small></div>
+    <p class="hint" style="margin:0 0 12px">Pages and views that look unused or out of date. Nothing is deleted: each one still opens. Go one by one and say keep, move or delete.</p>
+    <div class="lib" id="review" style="display:block"></div>
+  </section>
+
   <section class="sec" id="own-sec" hidden>
     <div class="sec-h"><h2>You own it</h2><small>owners and administrators</small></div>
     <div class="own" id="own"></div>
@@ -162,7 +168,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   "use strict";
   const $ = (id) => document.getElementById(id);
   const D = window.PWDesign, esc = D.esc, toast = D.toast;
-  const P = window.PW_PAGES, PAGES = P.PAGES;
+  const P = window.PW_PAGES, PAGES = P.PAGES, REVIEW = P.REVIEW || {};
   const GROUP = { ft: "Full Time", as: "Afterschool", u10: "10 & Under", tour: "Tour Team", camp: "Campers" };
   const DAY = 864e5;
   const fmt = (n) => (n == null || isNaN(n) ? "—" : Number(n).toLocaleString("en-US"));
@@ -195,7 +201,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (has("mkt") && S.weeks && S.weeks.missing > 0) out.push({ id: "mkt-miss", n: S.weeks.missing, what: plural(S.weeks.missing, "planned post that didn't go out", "planned posts that didn't go out"), where: "Marketing", href: "/marketing" });
     if (has("mkt") && S.weeks && S.weeks.waiting > 0) out.push({ id: "mkt", n: S.weeks.waiting, what: plural(S.weeks.waiting, "post waiting for your approval", "posts waiting for your approval"), where: "Marketing", href: "/marketing" });
     if (has("coach-portal") && S.sync && S.sync.toCheck > 0) out.push({ id: "board", n: S.sync.toCheck, what: plural(S.sync.toCheck, "roster row to check after the sync", "roster rows to check after the sync"), where: "Coach Board", href: "/portal#/board" });
-    if (has("ai-check") && S.checks && (S.checks.due + S.checks.bad) > 0) out.push({ id: "checks", n: S.checks.due + S.checks.bad, what: S.checks.bad ? plural(S.checks.due + S.checks.bad, "AI check due", "AI checks due") + " · " + S.checks.bad + " with a problem" : plural(S.checks.due, "AI check due today", "AI checks due today"), where: "AI check", href: "/checks" });
+    if (has("ai-check") && !REVIEW["ai-check"] && S.checks && (S.checks.due + S.checks.bad) > 0) out.push({ id: "checks", n: S.checks.due + S.checks.bad, what: S.checks.bad ? plural(S.checks.due + S.checks.bad, "AI check due", "AI checks due") + " · " + S.checks.bad + " with a problem" : plural(S.checks.due, "AI check due today", "AI checks due today"), where: "AI check", href: "/checks" });
     if (ctx && ctx.admin && requests.length) { const n = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length; if (n) out.push({ id: "requests", n, what: plural(n, "person asked to get in", "people asked to get in"), where: "Access", href: "#people-sec" }); }
     if (has("coach-portal") && S.players && S.players.toAssign > 0) out.push({ id: "assign", n: S.players.toAssign, what: plural(S.players.toAssign, "new player needs a coach", "new players need a coach"), where: "Coaches", href: "/portal" });
     if (has("coach-portal") && S.contact && S.contact.left > 0) out.push({ id: "contact", n: S.contact.left, what: plural(S.contact.left, "family nobody has been in touch with this week", "families nobody has been in touch with this week"), where: "Weekly contact", href: "/portal#/contact" });
@@ -234,7 +240,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     if (has("mkt") && S.weeks && S.weeks.missing) out.push({ cls: "bad", html: "<b>" + S.weeks.missing + " " + plural(S.weeks.missing, "post", "posts") + "</b> missing from the plan", href: "/marketing" });
     if (has("mkt") && S.weeks && S.weeks.waiting) out.push({ cls: "due", html: "<b>" + S.weeks.waiting + " " + plural(S.weeks.waiting, "post", "posts") + "</b> waiting for approval", href: "/marketing" });
     if (has("mkt") && S.numbers && S.numbers.change != null) out.push({ cls: "ok", html: "Instagram <b>" + (S.numbers.change >= 0 ? "+" : "") + fmt(S.numbers.change) + "</b> this week", href: "/marketing" });
-    if (has("ai-check") && S.checks) out.push({ cls: S.checks.bad ? "due" : S.checks.due ? "due" : "ok", html: S.checks.bad ? "<b>" + S.checks.bad + "</b> AI " + plural(S.checks.bad, "check has", "checks have") + " a problem" : S.checks.due ? "<b>" + S.checks.due + "</b> AI " + plural(S.checks.due, "check", "checks") + " due" : "AI checks <b>all good</b>", href: "/checks" });
+    if (has("ai-check") && !REVIEW["ai-check"] && S.checks) out.push({ cls: S.checks.bad ? "due" : S.checks.due ? "due" : "ok", html: S.checks.bad ? "<b>" + S.checks.bad + "</b> AI " + plural(S.checks.bad, "check has", "checks have") + " a problem" : S.checks.due ? "<b>" + S.checks.due + "</b> AI " + plural(S.checks.due, "check", "checks") + " due" : "AI checks <b>all good</b>", href: "/checks" });
     if (ctx && ctx.admin) { const n = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length; if (n) out.push({ cls: "new", html: "<b>" + n + "</b> " + plural(n, "person", "people") + " asked to get in", href: "#people-sec" }); }
     if ((has("tryouts") || has("coach-portal")) && S.tryouts) out.push({ cls: S.tryouts.waiting ? "due" : "ok", html: S.tryouts.waiting ? "<b>" + S.tryouts.waiting + "</b> " + plural(S.tryouts.waiting, "try-out", "try-outs") + " waiting" : "<b>" + S.tryouts.week + "</b> " + plural(S.tryouts.week, "try-out", "try-outs") + " this week", href: "/portal#/tryouts" });
     if (has("backend")) { const d = daysToFirst(); out.push({ cls: "info", html: "bills go out on the <b>1st</b> · " + d + " " + plural(d, "day", "days"), href: "/backend#players" }); }
@@ -249,7 +255,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   // ── today: the tiles — the four doors first (Admin, Coaches, Clients, Marketing), then the rest ──
   const ORDER = ["backend", "coach-portal", "clients", "mkt", "ai-check"];
   function tiles() {
-    const mine = PAGES.filter((p) => p.section === "tools" && !p.hide && ctx.has(p.id));
+    const mine = PAGES.filter((p) => p.section === "tools" && !p.hide && ctx.has(p.id) && !REVIEW[p.id]);   // what is under "To review" is out of Today
     mine.sort((a, b) => { const ia = ORDER.indexOf(a.id), ib = ORDER.indexOf(b.id); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib); });
     $("today-small").textContent = mine.length ? mine.length + (mine.length === 1 ? " tool" : " tools") + " in daily use · live numbers" : "";
     $("rail").innerHTML = mine.length ? mine.map(tile).join("") : '<div class="empty" style="grid-column:1/-1">No pages are ticked for you yet. Ask an administrator.</div>';
@@ -353,7 +359,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   const kindOf = (p) => ({ plan: "plan", proto: "prototype", report: "report", page: "page", archive: "archive", parked: "parked" }[p.status] || p.section);
   let libF = "";
   function library() {
-    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id) && (!p.owners || ctx.owner));   // owners: true = the owners' shelf (the parked reports)
+    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id) && (!p.owners || ctx.owner) && !REVIEW[p.id]);   // owners: true = the owners' shelf; what is under "To review" is listed there
     $("lib-sec").hidden = !mine.length; if (!mine.length) return;
     $("lib-small").textContent = mine.length + " pages";
     const groups = [["", "All · " + mine.length], ["plan", "Plans"], ["report", "Reports"], ["page", "Pages"]];
@@ -367,6 +373,26 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   let libScrolled = false;
   function libJump() { if (libScrolled || location.hash !== "#library" || $("lib-sec").hidden) return; libScrolled = true; setTimeout(() => $("lib-sec").scrollIntoView({ behavior: "smooth", block: "start" }), 120); }
   window.addEventListener("hashchange", () => { libScrolled = false; libJump(); });
+
+  // ── to review (owners): what looks unused, one folder, each with its reason (Nov 13) ──
+  function review() {
+    const sec = $("review-sec"); if (!ctx.owner) { sec.hidden = true; return; }
+    const pages = PAGES.filter((p) => REVIEW[p.id] && p.url).map((p) => ({ name: p.name, href: p.url, why: REVIEW[p.id], kind: kindOf(p) }));
+    const views = (P.REVIEW_VIEWS || []).map((v) => ({ name: v.name, href: v.href, why: v.why, kind: "view" }));
+    const rows = views.concat(pages); sec.hidden = !rows.length; if (!rows.length) return;
+    $("review-small").textContent = rows.length + " to go through";
+    $("review").innerHTML = rows.map((r) => '<a class="rv" href="' + esc(r.href) + '"><b>' + esc(r.name) + '</b><span class="t">' + esc(r.kind) + '</span><em>→</em><small>' + esc(r.why) + "</small></a>").join("");
+  }
+  // ── accordions: the sections that are not the day's work fold under their title; an address like /#people-sec opens its section ──
+  const FOLD = { "review-sec": false, "people-sec": false, "outside-sec": false, "runs-sec": false, "own-sec": false, "lib-sec": true };
+  let foldMem = {}; try { foldMem = JSON.parse(localStorage.getItem("hq-fold") || "{}") || {}; } catch (e) { foldMem = {}; }
+  function folds() {
+    const hash = (location.hash || "").slice(1);
+    Object.keys(FOLD).forEach((id) => { const sec = $(id); if (!sec) return; if (hash && (hash === id || (hash === "library" && id === "lib-sec"))) foldMem[id] = true; const open = id in foldMem ? !!foldMem[id] : FOLD[id]; sec.classList.add("pfold"); sec.classList.toggle("open", open); const h = sec.querySelector(":scope > .sec-h"); if (h) { h.setAttribute("role", "button"); h.tabIndex = 0; h.setAttribute("aria-expanded", String(open)); } });
+  }
+  document.addEventListener("click", (e) => { const h = e.target.closest(".sec.pfold > .sec-h"); if (!h || e.target.closest("button, a, input, select")) return; const id = h.parentElement.id; foldMem[id] = !h.parentElement.classList.contains("open"); try { localStorage.setItem("hq-fold", JSON.stringify(foldMem)); } catch (err) { /* no storage */ } folds(); });
+  document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches(".sec.pfold > .sec-h")) { e.preventDefault(); e.target.click(); } });
+  window.addEventListener("hashchange", folds);
 
   // ── you own it (owners and administrators) ──
   function own() {
@@ -567,7 +593,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   window.PWAuth.start({}).then((c) => {
     ctx = c; fs = window.PWAuth.fs();
-    greeting(); tiles(); library(); libJump(); paintNeed(); signals(); loadAll();
+    greeting(); tiles(); library(); review(); folds(); libJump(); paintNeed(); signals(); loadAll();
     if (ctx.admin) {
       $("nu-preset").innerHTML = presetOptions("marketing");
       own();
@@ -575,7 +601,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       fs.collection("requests").onSnapshot((s) => { requests = s.docs.map((d) => Object.assign({ id: d.id }, d.data())); renderPeople(); }, () => {});
     }
   });
-  window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; greeting(); tiles(); library(); paintNeed(); signals(); });
+  window.addEventListener("pw:auth-change", (e) => { ctx = e.detail; greeting(); tiles(); library(); review(); folds(); paintNeed(); signals(); });
 })();
 </script>
 </body></html>

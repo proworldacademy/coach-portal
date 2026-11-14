@@ -1,0 +1,90 @@
+# Builds the ProWorld Academy iPhone app (a native shell around the live site, see mobile/README.md) on a GitHub Mac and sends it to
+# TestFlight. Signs with the App Store Connect key in the secret ASC_KEY_P8 (key id and issuer id are not secret).
+# Runs by hand (Actions → iOS app → Run workflow), and when mobile/ or this file changes on the app's branch or on main.
+name: iOS app
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, apple-app]
+    paths: ['mobile/**', '.github/workflows/ios.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ios-app
+  cancel-in-progress: true
+env:
+  ASC_KEY_ID: GR9Z5894J4
+  ASC_ISSUER_ID: 7f88b520-1014-416e-86bc-3bc5c5ffa195
+  TEAM_ID: PDHM2GBBB6
+  BUNDLE_ID: com.proworldacademy.app
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apple — the bundle id and the app
+        id: asc
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: node asc.js builds
+      - name: The Xcode project
+        run: |
+          xcodebuild -version
+          npm install --no-audit --no-fund
+          npx cap add ios
+          ./prepare-ios.sh
+      - name: Archive
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -o pipefail
+          node asc.js writekey "$RUNNER_TEMP/keys"
+          xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" \
+            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic TARGETED_DEVICE_FAMILY=1 \
+            MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 60
+      - name: Send to TestFlight
+        if: steps.asc.outputs.app == 'yes'
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -o pipefail
+          S="$RUNNER_TEMP/sign"; KC="$RUNNER_TEMP/build.keychain-db"; PW="$(uuidgen)"
+          node asc.js sign "$S"
+          /usr/bin/openssl x509 -inform DER -in "$S/dist.cer" -out "$S/dist.pem"
+          /usr/bin/openssl pkcs12 -export -inkey "$S/dist.key" -in "$S/dist.pem" -out "$S/dist.p12" -passout "pass:$PW"
+          security create-keychain -p "$PW" "$KC"; security set-keychain-settings -lut 3600 "$KC"; security unlock-keychain -p "$PW" "$KC"
+          security import "$S/dist.p12" -k "$KC" -P "$PW" -T /usr/bin/codesign -T /usr/bin/security >/dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$PW" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do mkdir -p "$d"; cp "$S/profile.mobileprovision" "$d/$(cat "$S/profile.uuid").mobileprovision"; done
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:$BUNDLE_ID string $(cat "$S/profile.name")" export.plist
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" -exportOptionsPlist export.plist \
+            -exportPath "$RUNNER_TEMP/out" \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+      - name: Remove the build's certificate and profile
+        if: always() && steps.asc.outputs.app == 'yes'
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          node asc.js unsign "$RUNNER_TEMP/sign" || true
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+          rm -rf "$RUNNER_TEMP/sign"
+      - name: Not sent — the app is not created yet
+        if: steps.asc.outputs.app != 'yes'
+        run: |
+          echo "::warning::Built and signed, not sent: the app does not exist yet in App Store Connect. Create it (Apps, +, New App, bundle id $BUNDLE_ID), then run this again."
+          exit 1
+      - name: Remove the key file
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

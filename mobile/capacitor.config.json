@@ -1,0 +1,10 @@
+{
+  "appId": "com.proworldacademy.app",
+  "appName": "ProWorld",
+  "webDir": "www",
+  "server": {
+    "url": "https://proworld-coach-portal.web.app",
+    "allowNavigation": ["proworld-coach-portal.web.app", "app.justcall.io", "*.justcall.io"]
+  },
+  "ios": { "contentInset": "never", "backgroundColor": "#000000" }
+}

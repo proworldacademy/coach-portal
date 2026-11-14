@@ -66,6 +66,12 @@ service cloud.firestore {
     // The backend (/backend): front desk, attendance, players & billing. The old be-* ids count as the same page.
     function backend() { return hasPage('backend') || hasPage('be-owner') || hasPage('be-desk') || hasPage('be-coach') || hasPage('be-parent'); }
 
+    // The clients' side of the backend — the ledger of who enrolled and paid, what families asked for (Nov 13, 2026): owners, administrators,
+    // the front desk (role 'desk') and whoever holds Billing. A coach holds the backend page for Attendance and Privates; that does not open this.
+    function deskSide() {
+      return owner() || (backend() && (staffRec().get('role', '') in ['admin', 'desk'] || 'billing' in myPages()));
+    }
+
     // The scheduled runs (Sunday engine, Monday review, morning numbers, morning Monday sync): one email/password account,
     // runs@proworldacademy.com — its User UID from Authentication → Users.
     function runs() { return request.auth != null && request.auth.uid == '6Gg4rULeUnZa7wT6ueO5KLgwvcZ2'; }
@@ -174,7 +180,7 @@ service cloud.firestore {
     // ── The backend (/backend) ──
     // enrollments/<checkout session>: the billing engine's ledger of every paid checkout (what was bought, who was told). Read only.
     match /enrollments/{id} {
-      allow read: if backend() || portal();
+      allow read: if deskSide();
     }
     // backend/state: what the front desk, attendance and courts share — court blocks, bookings, privates, charges, the "Sent" log,
     // per-player notes. One document, written by whoever holds the backend page.
@@ -195,8 +201,8 @@ service cloud.firestore {
     // familyRequests: what a parent asked the front desk for from the family portal. The engine files them (admin SDK);
     // the front desk reads them and closes them with a short reply the family sees. Nobody creates or deletes one from here.
     match /familyRequests/{id} {
-      allow read: if backend();
-      allow update: if !runs() && backend() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'reply', 'repliedAt', 'repliedBy'])
+      allow read: if deskSide();
+      allow update: if !runs() && deskSide() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'reply', 'repliedAt', 'repliedBy'])
                     && request.resource.data.state in ['open', 'done'];
     }
     // Messages (texts to families from the backend): the engine writes the batches and one line per recipient (admin SDK);

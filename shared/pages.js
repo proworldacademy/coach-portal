@@ -4,6 +4,8 @@
 //
 // status:  here = part of this site · live = in daily use · proto = clickable prototype · plan = written plan
 //          page = reference page · report = a dated report · archive = kept for the record
+// desk:    with Admin, and only for the front desk, administrators, owners and whoever holds Billing (Nov 13: coaches hold Admin for Attendance and
+//          Privates, and that must not open the clients' side)
 // opens:   site = on this site, with your PROWORLD sign-in · claude = a page hosted on claude.ai (needs a Claude account)
 //          link = a page that lives elsewhere (its own address and key); an owner saves its link once on the Dashboard and it is
 //          kept in the database (pageLinks/<id>), never in this public file
@@ -32,9 +34,9 @@
       desc: "On top of the Admin page: hold or release a player, cancel a plan at month end, charge the card on file, send a family its account link. Without this tick Admin shows billing read-only." },
     { id: "enroll", section: "tools", door: "clients", name: "Public enrollment page", short: "Enroll", color: "mint", status: "live", opens: "site", url: "/enroll", with: "backend", owner: "Clients · Front desk",
       desc: "Where families enroll and pay: program, days, parent, Stripe. Open it to see what a family sees, or send the prefilled link from Admin's Enroll tab. No sign-in needed — it is public. Comes with Admin." },
-    { id: "clients", section: "tools", door: "clients", name: "Clients", short: "Clients", color: "cyan", status: "here", opens: "site", url: "/clients", with: "backend", owner: "Front desk · Owners",
+    { id: "clients", section: "tools", door: "clients", name: "Clients", short: "Clients", color: "cyan", status: "here", opens: "site", url: "/clients", with: "backend", desk: true, owner: "Front desk · Owners",
       desc: "The client side in one place: the links to send (enroll, courts, privates, the client account), who enrolled online, what families asked for, and a client's account as they see it. Comes with Admin." },
-    { id: "family", section: "tools", door: "clients", hide: true, name: "The client account", short: "Client account", color: "cyan", status: "live", opens: "site", url: "/family", with: "backend", owner: "Clients · Front desk",
+    { id: "family", section: "tools", door: "clients", hide: true, name: "The client account", short: "Client account", color: "cyan", status: "live", opens: "site", url: "/family", with: "backend", desk: true, owner: "Clients · Front desk",
       desc: "Where a parent signs in with the e-mail on file (Google, or an e-mailed link) and sees their own players, coach and schedule, this month's attendance, the reports the coaches marked as sent, their bills and card — and asks the front desk for a court, a private or a plan change. Requests land in the front-desk channel and on Admin's Front desk tab. Comes with Admin." },
     { id: "ai-check", section: "tools", name: "AI & Comms Check", short: "AI check", color: "orchid", status: "here", opens: "site", menu: false, url: "/checks", owner: "Owners · Front desk",
       desc: "Is everything answering? The 2-minute morning glance at the automatic reports, the weekly test messages on every channel (text, WhatsApp, website, Instagram, Messenger), the monthly accounts that switch it all off, and what’s still missing. Every tick is saved with who and when." },
@@ -96,7 +98,7 @@
       { name: "Weekly contact", href: "/portal#/contact", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
       { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Attendance", href: "/backend#attendance", page: "backend" },
       { name: "Courts", href: "/backend#courts", page: "backend" } ] },   // Messages: the coach texts the family from the portal (Nov 4); the desk's Messages stays under Admin
-    { id: "clients", name: "Clients", href: "/clients", page: ["backend"], items: [
+    { id: "clients", name: "Clients", href: "/clients", page: ["clients"], items: [
       { name: "The client account", href: "/family" }, { name: "Enroll · public link", href: "/enroll" }, { name: "Courts", href: "/backend#courts" },
       { name: "Privates", href: "/backend#privates" }, { name: "Look up an account", href: "/backend#account" } ] },
     { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [
@@ -143,5 +145,38 @@
   const ALIAS = { "be-owner": "backend", "be-desk": "backend", "be-coach": "backend", "be-parent": "backend" };
   const STATUS_LABEL = { here: "Live", live: "Live", proto: "Prototype", plan: "Plan", page: "Page", report: "Report", archive: "Archive", parked: "Parked" };
   const OPENS_LABEL = { site: "", claude: "Opens in Claude", link: "Its own page" };
-  window.PW_PAGES = { PAGES, DOORS, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL };
+  /* To review (Antonio, Nov 13, 2026: "put everything I think is useless in one folder, and let me go one by one"). Nothing here is
+     deleted or switched off: each page still opens and keeps its access. The Dashboard takes these out of Today and the Library and
+     lists them under "To review" with the reason, for the owners to keep (delete the line here) or remove for good. */
+  const REVIEW = {
+    "ai-check": "A daily tick list of 17 checks; none were ticked. Keep only if someone will do it every day.",
+    "desk-live": "The old Monday attendance view. Admin → Attendance replaced it.",
+    "directors-live": "The old Monday directors view. Monday is retired.",
+    "comms-plan": "A plan from before the Coach Portal had Contact. Built since.",
+    "inbox-brief": "A plan for one inbox. The portal's chats and the concierge cover it.",
+    "pipeline": "A playbook draft. Not linked to anything live.",
+    "player-system": "A team briefing from the first build. Out of date.",
+    "ops": "The automation plan from August. Most of it is built or dropped.",
+    "sunday-preview": "A one-off preview of the Sunday run.",
+    "attendance": "A report from the Monday-era attendance cross-check.",
+    "ads-audit": "A one-time audit from the fall. Marketing → Report carries the live numbers.",
+    "inbox-audit": "A one-time audit of the Instagram inbox.",
+    "alo": "A reference deck. Read once.",
+    "cult": "A reference deck. Read once.",
+    "launch": "The launch file from the first week.",
+    "leads": "An explainer page. Check whether it still matches how leads arrive.",
+    "soccer": "An explainer page for soccer. Check whether it is still right.",
+    "tennis-tryout": "An archived try-out experiment.",
+    "parked-reports": "The old quarterly, monthly and camp reports, parked since Nov 1."
+  };
+  /* Views that left the coaches' row on Nov 13 and now open only from the menu: keep, move or delete, one by one. */
+  const REVIEW_VIEWS = [
+    { name: "Coach Board", href: "/portal#/board", why: "Left the coaches' row on Nov 13. Directors moved players between coaches here." },
+    { name: "Try-outs", href: "/portal#/tryouts", why: "Left the coaches' row on Nov 13. The front desk books try-outs here." },
+    { name: "Weekly contact (the full list)", href: "/portal#/contact", why: "Reminders links to it. The list with the eight-week history per family." },
+    { name: "Follow-up", href: "/portal#/followup", why: "Reports sent to parents and parent meetings. Reminders links to it." },
+    { name: "Standard & commit", href: "/portal#/commit", why: "The owners' targets page. Not opened from anywhere else." },
+    { name: "Marketing · More", href: "/marketing#database", why: "The classic Marketing screens: banks, archive, history, the season." }
+  ];
+  window.PW_PAGES = { PAGES, DOORS, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL, REVIEW, REVIEW_VIEWS };
 })();

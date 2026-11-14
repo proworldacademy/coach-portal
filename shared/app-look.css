@@ -1,0 +1,65 @@
+/* The App look on every page (Antonio, Nov 13, 2026: "apply the principles to the entire site" — glass, smooth transitions, glowing
+   accents, clean and minimal). One layer for all of HQ, loaded last by shared/design.js on every page that mounts the design:
+   the grey page with two soft brand tints, frosted white cards, one lime accent that glows, titles in one weight, quiet motion.
+   The Coach Portal and Marketing already carry it (portal/app.css, marketing/app.css + polish.css); this brings the Dashboard,
+   Admin, Clients, Start here, the Library pages, the client account and Enroll into the same look. Look only. */
+body.pwd{--bg:#F1F1ED;--card:rgba(255,255,255,.80);--card-2:rgba(255,255,255,.94);--line:#E6E6E1;--line-2:#DCDCD6;--muted:#7A7A76;--t2:226,134,228;--soft:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05);--glowring:0 0 0 4px rgba(226,254,120,.32),0 10px 28px rgba(190,230,60,.38)}
+body.pwd.skin-home{--t2:148,252,177}body.pwd.skin-desk{--t2:226,134,228}body.pwd.skin-family{--t2:169,243,247}body.pwd.skin-studio{--t2:169,243,247}body.pwd.skin-coach{--t2:226,134,228}
+html:has(body.pwd){background:#F1F1ED!important}
+body.pwd{background:radial-gradient(900px 520px at 105% -8%,rgba(226,254,120,.34),transparent 62%),radial-gradient(820px 520px at -8% 108%,rgba(var(--t2),.18),transparent 62%),#F1F1ED!important;background-attachment:fixed!important}
+body.pwd::before{background:#F1F1ED}
+body.pwd .pwd-sky,body.pwd .pwd-lights{display:none!important}
+/* titles: one weight, no outlined word */
+body.pwd h1 em,body.pwd h2 em,body.pwd .title em,body.pwd .hero em{color:var(--ink)!important;-webkit-text-stroke:0!important;-webkit-text-fill-color:currentColor}
+body.pwd .hero h1,body.pwd .hero .title{font-size:clamp(44px,6.4vw,92px);line-height:.9}
+/* glass: the cards that sit on the page */
+body.pwd .card,body.pwd .stat,body.pwd .g,body.pwd .need,body.pwd .lib,body.pwd .notice,body.pwd .panel,body.pwd .tile,body.pwd .op{background:var(--card);border:0;box-shadow:var(--soft);-webkit-backdrop-filter:blur(18px) saturate(1.2);backdrop-filter:blur(18px) saturate(1.2)}
+body.pwd .card,body.pwd .g,body.pwd .need,body.pwd .lib,body.pwd .panel{border-radius:22px}
+body.pwd .stat,body.pwd .tile{border-radius:20px}
+body.pwd .card.lime{background:var(--lime)}
+body.pwd .pwd-top .pwd-bar,body.pwd .pwd-jump,body.pwd .pwd-me{background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);border-color:transparent;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+body.pwd .pwd-pal,body.pwd .pwd-dd,body.pwd .pwd-menu,body.pwd .toast{-webkit-backdrop-filter:blur(22px) saturate(1.3);backdrop-filter:blur(22px) saturate(1.3)}
+/* smooth: everything that reacts eases; a page arrives softly */
+body.pwd a,body.pwd button,body.pwd .card,body.pwd .g,body.pwd .stat,body.pwd .chip,body.pwd .pill,body.pwd .row,body.pwd .nr,body.pwd .lr,body.pwd .op{transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease,background-color .18s ease,color .18s ease,border-color .18s ease,opacity .18s ease}
+@keyframes pw-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* only the static sections: a list that redraws itself (the portal, Admin) must not blink each time */
+body.pwd .hero,body.pwd .sec{animation:pw-arrive .42s cubic-bezier(.2,.7,.2,1) both}
+body.pwd .sec:nth-of-type(2){animation-delay:.05s}body.pwd .sec:nth-of-type(3){animation-delay:.1s}body.pwd .sec:nth-of-type(n+4){animation-delay:.14s}
+/* interactive: a card you can open lifts and gets a lime ring; rows answer the pointer */
+@media(hover:hover){
+  body.pwd a.g:hover,body.pwd button.g:hover,body.pwd .g[onclick]:hover,body.pwd a.card:hover,body.pwd .op:hover{transform:translateY(-3px);box-shadow:var(--glowring)}
+  body.pwd .nr:hover,body.pwd .lr:hover{background:rgba(226,254,120,.22)}
+  body.pwd .btn:hover{transform:translateY(-1px)}
+}
+/* glowing accents: the main button, the live dot, the place you are */
+body.pwd .btn.lime,body.pwd .btn.pri{box-shadow:0 0 0 0 rgba(226,254,120,0),0 6px 18px rgba(190,230,60,.32)}
+@media(hover:hover){body.pwd .btn.lime:hover,body.pwd .btn.pri:hover{box-shadow:var(--glowring)}}
+body.pwd .pwd-strip a.on,body.pwd .pwd-bar a.on,body.pwd .pwd-bar button.on{box-shadow:0 6px 18px rgba(0,0,0,.18),0 0 22px rgba(226,254,120,.35)}
+@keyframes pw-pulse{0%,100%{box-shadow:0 0 0 0 rgba(120,230,150,.55)}60%{box-shadow:0 0 0 7px rgba(120,230,150,0)}}
+body.pwd .pill.lime,body.pwd .chip.on{box-shadow:0 0 16px rgba(226,254,120,.45)}
+body.pwd .live::before,body.pwd .dot.live,body.pwd .pwd-live i{animation:pw-pulse 2.2s ease-out infinite}
+body.pwd :focus-visible{outline:2px solid var(--ink);outline-offset:3px;box-shadow:0 0 0 6px rgba(226,254,120,.45)}
+/* minimal: quieter labels and lines */
+body.pwd .sec-h h2,body.pwd .sec-h .title{letter-spacing:-.2px}
+body.pwd .sec-note,body.pwd .eyebrow,body.pwd .ey{color:var(--muted)}
+body.pwd .tbl-wrap{background:var(--card);border-radius:18px;box-shadow:var(--soft)}
+/* phones: no blur (it made the site lag in October), solid cards, the same tints */
+@media(max-width:720px),(pointer:coarse){
+  body.pwd .card,body.pwd .stat,body.pwd .g,body.pwd .need,body.pwd .lib,body.pwd .notice,body.pwd .panel,body.pwd .tile,body.pwd .op,body.pwd .pwd-strip,body.pwd .list,body.pwd .a2card,body.pwd .foldbox,body.pwd .notice.remind,body.pwd .pwd-top .pwd-bar,body.pwd .pwd-jump,body.pwd .pwd-me,body.pwd #vtabs,body.pwd .seg{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  body.pwd{--card:rgba(255,255,255,.96);background-attachment:scroll!important}
+  body.pwd .hero h1,body.pwd .hero .title{font-size:clamp(40px,13vw,64px)}
+}
+@media(prefers-reduced-motion:reduce){body.pwd *,body.pwd *::before,body.pwd *::after{animation:none!important;transition:none!important}}
+/* accordions on the Dashboard: a section folds under its title; "To review" is the folder of what may go */
+body.pwd .sec.pfold>.sec-h{cursor:pointer;user-select:none;position:relative;padding-right:30px}
+body.pwd .sec.pfold>.sec-h::after{content:"";position:absolute;right:6px;top:50%;width:9px;height:9px;border-right:2.4px solid #B5B5B0;border-bottom:2.4px solid #B5B5B0;transform:translateY(-70%) rotate(-45deg);transition:transform .2s ease}
+body.pwd .sec.pfold.open>.sec-h::after{transform:translateY(-70%) rotate(45deg)}
+body.pwd .sec.pfold:not(.open)>*:not(.sec-h){display:none!important}
+body.pwd .sec.pfold:not(.open){margin-bottom:0;padding-bottom:6px}
+body.pwd .rv{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);text-decoration:none;color:var(--ink)}
+body.pwd .rv:first-child{border-top:0}
+body.pwd .rv b{font-weight:700;font-size:14px}
+body.pwd .rv small{grid-column:1/2;color:var(--muted);font-size:12.5px;line-height:1.35}
+body.pwd .rv .t{grid-row:1/3;grid-column:2;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:var(--muted)}
+body.pwd .rv em{grid-row:1/3;grid-column:3;font-style:normal}
+@media(hover:hover){body.pwd .rv:hover{background:rgba(226,254,120,.22)}}

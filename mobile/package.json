@@ -1,0 +1,8 @@
+{
+  "name": "proworld-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The ProWorld Academy app for the App Store: a native shell (Capacitor) around the live site.",
+  "dependencies": { "@capacitor/core": "^8.6.2", "@capacitor/ios": "^8.6.2" },
+  "devDependencies": { "@capacitor/cli": "^8.6.2" }
+}

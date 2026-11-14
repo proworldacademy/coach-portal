@@ -143,7 +143,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
     if (path.startsWith('/api/admin/')) {
       const who = await ADMIN.requireStaff(req);
       const stripe = S.stripeFor(key); const b = req.body || {};
-      if (route === 'GET /admin/overview') return send(res, 200, Object.assign({ mode: mode(key), who: who.email, billing: who.billing, owner: who.owner }, await ADMIN.overview(stripe)));
+      // Every family's plan, balance and contact is for the owners, administrators, the front desk and whoever holds Billing (Nov 13). A coach or a
+      // director holds the backend page for Attendance and Privates: they get an empty answer here, and a refusal on the lists below.
+      const seesBilling = !!(who.owner || who.admin || who.billing || who.role === 'desk');
+      if (route === 'GET /admin/overview') { if (!seesBilling) return send(res, 200, { mode: mode(key), who: who.email, billing: false, owner: false, at: new Date().toISOString(), today: CAL.todayET(), pending: [], counts: {}, subscriptions: [], openInvoices: [] }); return send(res, 200, Object.assign({ mode: mode(key), who: who.email, billing: who.billing, owner: who.owner }, await ADMIN.overview(stripe))); }
+      if (!seesBilling && ['GET /admin/notices', 'GET /admin/switch', 'POST /admin/switch/update', 'GET /admin/catalog'].includes(route)) throw S.err(403, 'desk', 'That list is for the front desk and the owners.');
       if (route === 'GET /admin/notices') {
         const ov = await ADMIN.overview(stripe); const out = [];
         // a plan on its own cycle (the staff test) has no break months, so it is skipped here

@@ -2862,6 +2862,14 @@ const PW_CONFIG = {
   function render() {
     const m = $('main'); if (!m) return; const r = S.route; paintFollow();
     if (EDITION === 'web' && WEB.stage !== 'in') { renderGate(); return; }
+    // Nov 13 (Antonio: a coach reaches the four — Reminders, Players, Contact, Privates — and nothing else, even by typing an address):
+    // the Board, Try-outs and Staff are the directors'; the parked reports and the targets are the owners'; a report opens for its player's coach.
+    if (EDITION === 'web' && !WEB.isDirector) {
+      const v = r.view; const a = (v === 'report' || v === 'edit') ? (S.assess || []).find((x) => x.id === r.id) : null; const ap = a ? player(a.playerId) : null;
+      const deskRole = String((WEB.staff && WEB.staff.role) || '').toLowerCase() === 'desk';   // the front desk books the try-outs here
+      const closed = (v === 'board' || v === 'staff' || ((v === 'tryouts' || v === 'tryout') && !deskRole)) ? 'the tennis directors and the owners' : (v === 'parked' || v === 'commit') ? 'the owners' : (a && ap && !mine(ap)) ? 'that player’s coach' : '';
+      if (closed) { document.body.classList.remove('a2-chat'); m.innerHTML = `<div class="wrap">${crumbs([{ t: 'Reminders', r: { view: 'home' } }])}<div class="empty">This page is for ${closed}.</div></div>`; const d0 = $('#dock'); if (d0) d0.hidden = true; return; }
+    }
     // a redraw must not eat what the coach is typing to a family (Nov 4): every chat's draft and the caret come back after it
     const fi0 = $('#mfind'); const findFocus = fi0 && document.activeElement === fi0 ? { s: fi0.selectionStart, e: fi0.selectionEnd } : null;
     let focused = null; document.querySelectorAll('textarea[data-draft]').forEach((ta) => { const k = ta.getAttribute('data-draft'); if (ta.value) S.ui.msgDraft[k] = ta.value; else delete S.ui.msgDraft[k]; if (document.activeElement === ta) focused = { k, s: ta.selectionStart, e: ta.selectionEnd }; });
@@ -3088,7 +3096,7 @@ const PW_CONFIG = {
   /* ───────────── view: group ───────────── */
   function viewGroup(gid) {
     const g = group(gid); const def = FORMS[g.form] || FORMS.quarterly_hp; const q = curQ();
-    const all = S.players.filter((p) => p.group === gid); const list = all.filter((p) => S.ui.showInactive || active(p));
+    const all = S.players.filter((p) => p.group === gid && mine(p))   /* a coach: their own players in the group (Nov 13) */; const list = all.filter((p) => S.ui.showInactive || active(p));
     const coaches = Array.from(new Set(list.map((p) => p.coach || ''))).sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
     const fc = S.ui.coachFilter !== undefined && S.ui.coachFilter !== null && S.ui.coachFilterGroup === gid ? S.ui.coachFilter : null;
     const pf = multi(def) && S.ui.partFilter && S.ui.partFilterGroup === gid ? def.parts.find((x) => x.id === S.ui.partFilter) : null;
