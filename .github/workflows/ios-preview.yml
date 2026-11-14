@@ -7,7 +7,7 @@ on:
   push:
     branches: [app-preview]
 permissions:
-  contents: read
+  contents: write   # only to put the screenshots on the branch preview-shots (one commit, replaced each run)
 concurrency:
   group: ios-preview-${{ github.ref }}
   cancel-in-progress: true
@@ -58,3 +58,10 @@ jobs:
           name: iphone-shots
           path: ${{ runner.temp }}/shots
           retention-days: 7
+      - name: Keep the screenshots on the branch preview-shots
+        run: |
+          cd "$RUNNER_TEMP/shots"; for f in *.jpg; do sips -Z 1300 -s formatOptions 70 "$f" >/dev/null 2>&1 || true; done
+          echo "Screenshots of the app shell in an iPhone simulator, test copy of the site, invented people. Run ${{ github.run_number }} of ${{ github.sha }}." > README.md
+          git init -q -b preview-shots; git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "iPhone preview shots, run ${{ github.run_number }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" preview-shots
