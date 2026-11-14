@@ -1,0 +1,67 @@
+# Builds the ProWorld Academy iPhone app (a native shell around the live site, see mobile/README.md) on a GitHub Mac and sends it to
+# TestFlight. Signs with the App Store Connect key in the secret ASC_KEY_P8 (key id and issuer id are not secret).
+# Runs by hand (Actions → iOS app → Run workflow), and when mobile/ or this file changes on the app's branch or on main.
+name: iOS app
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, apple-app]
+    paths: ['mobile/**', '.github/workflows/ios.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ios-app
+  cancel-in-progress: true
+env:
+  ASC_KEY_ID: GR9Z5894J4
+  ASC_ISSUER_ID: 7f88b520-1014-416e-86bc-3bc5c5ffa195
+  TEAM_ID: PDHM2GBBB6
+  BUNDLE_ID: com.proworldacademy.app
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apple — the bundle id and the app
+        id: asc
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: node asc.js builds
+      - name: Stop here if the app is not created yet
+        if: steps.asc.outputs.app != 'yes'
+        run: |
+          echo "::warning::The app does not exist yet in App Store Connect. Create it (My Apps, +, New App, bundle id $BUNDLE_ID), then run this again."
+          exit 1
+      - name: The Xcode project
+        run: |
+          xcodebuild -version
+          npm install --no-audit --no-fund
+          npx cap add ios
+          ./prepare-ios.sh
+      - name: Archive
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          node asc.js writekey "$RUNNER_TEMP/keys"
+          xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" \
+            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic TARGETED_DEVICE_FAMILY=1 \
+            MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 60
+      - name: Send to TestFlight
+        run: |
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" -exportOptionsPlist export.plist \
+            -exportPath "$RUNNER_TEMP/out" -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+      - name: Remove the key file
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
