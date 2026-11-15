@@ -21,7 +21,16 @@
     add("meta", { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }); add("meta", { name: "apple-mobile-web-app-title", content: "PROWORLD" });
     add("link", { rel: "apple-touch-icon", href: "/app/apple-touch-icon.png" });
     // the App look on every page (Nov 13): one layer, loaded last so it sits on top of each page's own styles
-    const look = () => { if (!document.querySelector('link[data-look]')) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/shared/app-look.css"; l.setAttribute("data-look", "1"); document.head.appendChild(l); } };
+    /* Light and dark (Nov 14, 2026 — Antonio: "dark and light depending on the time of the day, like everything else"): Auto follows the phone or
+       computer (which switches at sunset when set to Automatic); the person can pin Light or Dark from their account menu. html.dark carries it,
+       shared/dark.css paints it. */
+    const TKEY = "pw-theme"; const tmq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const tGet = () => { try { const v = localStorage.getItem(TKEY); return v === "light" || v === "dark" ? v : "auto"; } catch (e) { return "auto"; } };
+    const tApply = () => { const m = tGet(); const dark = m === "dark" || (m === "auto" && !!(tmq && tmq.matches)); document.documentElement.classList.toggle("dark", dark); let meta = document.querySelector('meta[name="theme-color"]'); if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.appendChild(meta); } meta.content = dark ? "#050505" : "#F1F1ED"; document.querySelectorAll("[data-theme-btn]").forEach((b) => { b.textContent = "Appearance: " + (m === "auto" ? "Auto" : m === "dark" ? "Dark" : "Light"); }); };
+    window.PWTheme = { apply: tApply, get: tGet, set: (m) => { try { if (m === "auto") localStorage.removeItem(TKEY); else localStorage.setItem(TKEY, m); } catch (e) { /* no storage */ } tApply(); }, next: () => { const m = tGet(); window.PWTheme.set(m === "auto" ? "light" : m === "light" ? "dark" : "auto"); } };
+    tApply(); if (tmq) { if (tmq.addEventListener) tmq.addEventListener("change", tApply); else if (tmq.addListener) tmq.addListener(tApply); }
+    document.addEventListener("click", (e) => { const b = e.target && e.target.closest ? e.target.closest("[data-theme-btn]") : null; if (b) { e.preventDefault(); e.stopPropagation(); window.PWTheme.next(); } });
+    const look = () => { if (!document.querySelector('link[data-look]')) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/shared/app-look.css"; l.setAttribute("data-look", "1"); document.head.appendChild(l); } if (!document.querySelector('link[data-dark]')) { const d = document.createElement("link"); d.rel = "stylesheet"; d.href = "/shared/dark.css"; d.setAttribute("data-dark", "1"); document.head.appendChild(d); } };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", look); else look();
     if ("serviceWorker" in navigator && location.protocol === "https:") window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
   } catch (e) { /* the page works without the app bits */ }
@@ -109,7 +118,7 @@
     const door = (d) => '<span class="door' + (d.on ? " on" : "") + '" data-door="' + esc(d.id) + '"><a class="' + (d.on ? "on" : "") + '" href="' + esc(d.href) + '"' + (d.on ? ' aria-current="page"' : "") + (d.items.length ? ' aria-haspopup="menu"' : "") + ">" + esc(d.name) + "</a></span>";
     const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? (oneDoor() ? "" : '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>') + ds.map(door).join("") : "") + "</nav>";
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
-    const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
+    const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span><button class="out" type="button" data-theme-btn>Appearance: Auto</button><button class="out" type="button" data-out>Sign out</button></span></div>' : "";
     const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
     // on a phone the strip is hidden; a menu button opens the same doors and their views as a sheet (Lorenzo, Oct 24)
     const burger = ctx && opts.strip !== false ? '<button class="pwd-burger" type="button" data-burger aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>' : "";
@@ -125,6 +134,7 @@
       document.addEventListener("click", (e) => { if (sheet.classList.contains("on") && !sheet.contains(e.target) && !bb.contains(e.target)) setOpen(false); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
     }
+    if (window.PWTheme) window.PWTheme.apply();
     const out = top.querySelector("[data-out]"); if (out) out.addEventListener("click", () => window.PWAuth && window.PWAuth.signOut());
     const me = top.querySelector("[data-me]"); if (me) me.addEventListener("click", (e) => { e.stopPropagation(); me.parentNode.classList.toggle("open"); });
     // the strip fades on the right only while more pages hide there, and the page you are on is always in view

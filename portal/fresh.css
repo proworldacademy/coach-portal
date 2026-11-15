@@ -1,0 +1,93 @@
+/* The fresh look — a trial on Reminders and a player's page (Nov 14, 2026). Only under body.fresh (localStorage cp-fresh = 1), dark under
+   html.dark body.fresh (cp-dark = 1). A hero card with the week as a ring, tiles of different sizes, group colours, motion that plays once
+   when a screen opens (.fx-go) and never for people who ask their phone for less motion. */
+body.fresh{--fx-card:#fff;--fx-ink:#0A0A0A;--fx-soft:#6F6F6B;--fx-line:#E6E6E1;--fx-hero:#0A0A0A;--fx-heroink:#fff;--orchid:#E286E4}
+html.dark body.fresh{--fx-card:#141414;--fx-ink:#F4F4F0;--fx-soft:#9A9A95;--fx-line:#242424;--fx-hero:#E2FE78;--fx-heroink:#0A0A0A}
+
+/* ── Reminders ── */
+body.fresh .fx-home{display:grid;gap:14px;margin:4px 0 18px}
+body.fresh .fx-k{font:700 10.5px/1.2 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--fx-soft)}
+body.fresh .fx-hello h1{font:900 italic clamp(44px,13vw,64px)/.86 "Review Condensed",var(--head,sans-serif);text-transform:uppercase;letter-spacing:-.01em;margin:8px 0 2px;color:var(--fx-ink)}
+body.fresh .fx-hello h1 em{font-style:italic;background:linear-gradient(transparent 58%,var(--lime) 58%,var(--lime) 92%,transparent 92%);padding:0 4px;margin-left:-4px}
+html.dark body.fresh .fx-hello h1 em{background:none;color:var(--lime)}
+body.fresh .fx-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding:20px 18px;border-radius:28px;background:var(--fx-hero);color:var(--fx-heroink);box-shadow:0 18px 40px -18px rgba(0,0,0,.55)}
+body.fresh .fx-hero::after{content:"";position:absolute;right:-70px;top:-90px;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle,rgba(226,254,120,.34),transparent 66%);pointer-events:none}
+html.dark body.fresh .fx-hero::after{background:radial-gradient(circle,rgba(255,255,255,.5),transparent 66%)}
+body.fresh .fx-hero .fx-k{color:rgba(255,255,255,.56)}
+html.dark body.fresh .fx-hero .fx-k{color:rgba(0,0,0,.55)}
+body.fresh .fx-ringbox{position:relative;width:112px;height:112px;display:grid;place-items:center}
+body.fresh .fx-ring{position:absolute;inset:0}
+body.fresh .fx-ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+body.fresh .fx-ring .t{stroke:rgba(255,255,255,.14)}
+body.fresh .fx-ring .v{stroke:var(--lime);stroke-dasharray:var(--c);stroke-dashoffset:var(--off);filter:drop-shadow(0 0 6px rgba(226,254,120,.55))}
+html.dark body.fresh .fx-ring .t{stroke:rgba(0,0,0,.14)}
+html.dark body.fresh .fx-ring .v{stroke:#0A0A0A;filter:none}
+body.fresh .fx-ringn{position:relative;display:grid;justify-items:center;line-height:1}
+body.fresh .fx-ringn .fx-num{font:900 italic 40px/1 "Review Condensed",sans-serif}
+body.fresh .fx-ringn small{font:600 11px var(--body);opacity:.6;margin-top:2px}
+body.fresh .fx-herot{position:relative;display:grid;gap:5px;min-width:0}
+body.fresh .fx-herot strong{font:900 italic 27px/.95 "Review Condensed",sans-serif;text-transform:uppercase}
+body.fresh .fx-herot small{font:500 12.5px var(--body);opacity:.66}
+body.fresh .fx-cta{justify-self:start;margin-top:8px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:11px 16px;background:var(--lime);color:#0A0A0A;font:700 13px var(--body);box-shadow:0 0 0 0 rgba(226,254,120,.5),0 8px 22px rgba(190,230,60,.35);cursor:pointer}
+html.dark body.fresh .fx-cta{background:#0A0A0A;color:var(--lime);box-shadow:0 8px 22px rgba(0,0,0,.3)}
+body.fresh .fx-cta .a2i{width:15px;height:15px}
+body.fresh .fx-cta:active{transform:scale(.96)}
+body.fresh .fx-bento{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+body.fresh .fx-tile{position:relative;overflow:hidden;display:grid;align-content:start;gap:4px;text-align:left;border:1px solid var(--fx-line);border-radius:24px;padding:16px;background:var(--fx-card);color:var(--fx-ink);min-height:128px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -14px rgba(0,0,0,.18);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+body.fresh .fx-tile:active{transform:scale(.97)}
+body.fresh .fx-tile .fx-num{font:900 italic 54px/.9 "Review Condensed",sans-serif;margin-top:6px}
+body.fresh .fx-tile small{font:500 12.5px/1.3 var(--body);color:var(--fx-soft)}
+body.fresh .fx-tile.wide{grid-column:1/-1;min-height:0}
+body.fresh .fx-tile.hot{background:linear-gradient(150deg,#FCEEFC,#fff 62%);border-color:#F3D3F4}
+html.dark body.fresh .fx-tile.hot{background:linear-gradient(150deg,#2A1730,#141414 62%);border-color:#3A2340}
+body.fresh .fx-pulse{position:absolute;right:16px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--orchid)}
+body.fresh .fx-pulse::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--orchid);opacity:0;animation:fx-pulse 2.2s ease-out infinite}
+body.fresh .fx-bar{display:block;height:6px;border-radius:99px;background:var(--fx-line);margin-top:10px;overflow:hidden}
+body.fresh .fx-bar i{display:block;height:100%;width:max(var(--w),4%);border-radius:99px;background:var(--fx-ink)}
+html.dark body.fresh .fx-bar i{background:var(--lime)}
+body.fresh .fx-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+body.fresh .fx-avas{display:flex}
+body.fresh .fx-ava{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--gc,var(--lime));color:#0A0A0A;font:800 12.5px var(--body);border:2.5px solid var(--fx-card);margin-left:-9px}
+body.fresh .fx-avas .fx-ava:first-child{margin-left:0}
+body.fresh .fx-ava.more{background:var(--fx-ink);color:var(--fx-card);font-size:11px}
+/* the old cards under the hero, in the same skin */
+html.dark body.fresh .a2card,html.dark body.fresh .foldbox,html.dark body.fresh .notice,html.dark body.fresh .list,html.dark body.fresh .panel{background:var(--fx-card)!important;border-color:var(--fx-line)!important;color:var(--fx-ink)!important;box-shadow:none!important}
+html.dark body.fresh .a2row b,html.dark body.fresh .foldsum b,html.dark body.fresh h1.title,html.dark body.fresh .title,html.dark body.fresh .title em,html.dark body.fresh h2{color:var(--fx-ink)!important}
+html.dark body.fresh .a2row small,html.dark body.fresh .a2sec,html.dark body.fresh .crumbs,html.dark body.fresh .crumbs a,html.dark body.fresh .head .lbl,html.dark body.fresh .head .sub{color:var(--fx-soft)!important}
+html.dark body.fresh .a2row{border-color:var(--fx-line)!important}
+html.dark body.fresh .a2ico,html.dark body.fresh .a2qa>*>span{background:#1F1F1F!important;color:var(--fx-ink)!important}
+html.dark body.fresh .a2qa>.on>span{background:var(--lime)!important;color:#0A0A0A!important}
+html.dark body.fresh .a2qa>*{color:var(--fx-soft)}
+
+/* ── a player's page ── */
+body.fresh .head.phead{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:18px;border-radius:28px;background:var(--fx-card);border:1px solid var(--fx-line);box-shadow:0 10px 26px -14px rgba(0,0,0,.18);position:relative;overflow:hidden}
+body.fresh .head.phead::before{content:"";position:absolute;inset:0 0 auto 0;height:6px;background:linear-gradient(90deg,var(--lime),var(--cyan),var(--orchid))}
+body.fresh .fx-ava.big{width:66px;height:66px;font:900 italic 26px "Review Condensed",sans-serif;border:0;margin:0;box-shadow:0 0 0 5px color-mix(in srgb,var(--gc) 28%,transparent)}
+body.fresh .head.phead h1.title{font-size:clamp(30px,8.6vw,40px)!important;line-height:.9}
+body.fresh .a2qa{max-width:none;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 6px}
+body.fresh .a2qa>*{grid-auto-flow:column;justify-content:center;align-items:center;gap:8px;padding:8px 10px 8px 8px;border-radius:999px;background:var(--fx-card);border:1px solid var(--fx-line);font-size:13px;color:var(--fx-ink)}
+body.fresh .a2qa>*>span{width:38px;height:38px;border-radius:50%;background:#F1F1ED;box-shadow:none}
+body.fresh .a2qa>.on{background:#0A0A0A;border-color:#0A0A0A;color:#fff}
+html.dark body.fresh .a2qa>.on{background:var(--lime);border-color:var(--lime);color:#0A0A0A}
+html.dark body.fresh .a2qa>.on>span{background:#0A0A0A!important;color:var(--lime)!important}
+body.fresh .a2card{border-radius:24px}
+
+/* ── the bars: real glass in the app ── */
+body.fresh .cp-appbar{background:rgba(12,12,12,.62)!important;-webkit-backdrop-filter:blur(22px) saturate(1.6)!important;backdrop-filter:blur(22px) saturate(1.6)!important;border:1px solid rgba(255,255,255,.14)!important}
+html.dark body.fresh .cp-appbar{background:rgba(40,40,40,.55)!important}
+body.fresh .cp-appbar .on i{box-shadow:0 0 18px rgba(226,254,120,.6)}
+
+/* ── motion: once, when the screen opens ── */
+@media (prefers-reduced-motion:no-preference){
+  body.fresh .fx-go .fx-hello,body.fresh .fx-go .fx-hero,body.fresh .fx-go .fx-tile,body.fresh .fx-go .head.phead,body.fresh .fx-go .a2qa>*,body.fresh .fx-go .a2card{animation:fx-rise .6s cubic-bezier(.2,.8,.2,1) both}
+  body.fresh .fx-go .fx-hero{animation-delay:.06s}
+  body.fresh .fx-go .fx-tile:nth-child(1){animation-delay:.14s}body.fresh .fx-go .fx-tile:nth-child(2){animation-delay:.2s}body.fresh .fx-go .fx-tile:nth-child(3){animation-delay:.26s}body.fresh .fx-go .fx-tile:nth-child(4){animation-delay:.32s}
+  body.fresh .fx-go .a2qa>*:nth-child(1){animation-delay:.08s}body.fresh .fx-go .a2qa>*:nth-child(2){animation-delay:.14s}body.fresh .fx-go .a2qa>*:nth-child(3){animation-delay:.2s}
+  body.fresh .fx-go .a2card{animation-delay:.24s}
+  body.fresh .fx-go .fx-ring .v{animation:fx-draw 1.1s cubic-bezier(.3,.7,.2,1) .25s both}
+  body.fresh .fx-go .fx-bar i{animation:fx-grow .9s cubic-bezier(.3,.7,.2,1) .4s both;transform-origin:left}
+}
+@keyframes fx-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes fx-draw{from{stroke-dashoffset:var(--c)}to{stroke-dashoffset:var(--off)}}
+@keyframes fx-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes fx-pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.5);opacity:0}}

@@ -1,7 +1,7 @@
 /* The design pass on Marketing (Nov 13, 2026) — the look that goes with polish.js. Scoped to body.app-skin (the App view). */
 /* the page: two soft brand tints, so the frosted cards have something to show */
 body.app-skin{background:radial-gradient(900px 520px at 105% -8%,rgba(226,254,120,.34),transparent 62%),radial-gradient(820px 520px at -8% 108%,rgba(169,243,247,.20),transparent 62%),#F1F1ED!important;background-attachment:fixed!important}
-body.app-skin .card,body.app-skin .tile,body.app-skin .stat{background:rgba(255,255,255,.80);-webkit-backdrop-filter:blur(18px) saturate(1.2);backdrop-filter:blur(18px) saturate(1.2)}
+body.app-skin .card,body.app-skin .tile,body.app-skin .stat{background:var(--pw-sf,rgba(255,255,255,.80));-webkit-backdrop-filter:blur(18px) saturate(1.2);backdrop-filter:blur(18px) saturate(1.2)}
 body.app-skin .seg{background:rgba(233,233,228,.62);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3)}
 /* accordions: a card folds under its title */
 body.app-skin .card.pfold>.card-label{cursor:pointer;margin-bottom:0;user-select:none;position:relative;padding-right:28px}
@@ -19,8 +19,8 @@ body.app-skin .fhead.pwk:not(.open)::after{content:attr(data-n) " posts";font:40
 body.app-skin .pwk-hide{display:none!important}
 /* Needs you: the same notice several times is one line */
 body.app-skin .rw.pgrp{cursor:pointer}
-body.app-skin .rw.pgrp::after{content:attr(data-n);order:2;min-width:24px;height:24px;border-radius:999px;background:var(--ink);color:var(--lime);font:700 11.5px/24px var(--body);text-align:center;padding:0 7px;flex:none}
-body.app-skin .rw.pgrp.open::after{background:#EFEFEA;color:#6B6B68}
+body.app-skin .rw.pgrp::after{content:attr(data-n);order:2;min-width:24px;height:24px;border-radius:999px;background:var(--pw-inkbg,var(--ink));color:var(--lime);font:700 11.5px/24px var(--body);text-align:center;padding:0 7px;flex:none}
+body.app-skin .rw.pgrp.open::after{background:var(--pw-sf2,#EFEFEA);color:#6B6B68}
 body.app-skin .rw.pgrp:not(.open) .t span{display:none}
 body.app-skin .rw.pgrp-kid{padding-left:18px}
 /* a little delight on the main button */
