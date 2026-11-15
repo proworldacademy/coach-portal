@@ -46,5 +46,5 @@ m04-enroll|parent|/enroll/|0
 m05-enroll-down|parent|/enroll/|800
 m06-enroll-down2|parent|/enroll/|1700
 # ── signing in ──
-s01-team-sign-in|guest|/|0
+s01-team-sign-in|guest|/?side=team|0
 s02-family-sign-in|guest|/family/|0
