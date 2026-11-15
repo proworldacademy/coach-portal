@@ -5,7 +5,7 @@ name: iOS app
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, ios-signing]
     paths: ['mobile/**', '.github/workflows/ios.yml']
 permissions:
   contents: read
@@ -40,25 +40,18 @@ jobs:
           npm install --no-audit --no-fund
           npx cap add ios
           ./prepare-ios.sh
-      - name: Archive
-        env:
-          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-        run: |
-          set -o pipefail
-          node asc.js writekey "$RUNNER_TEMP/keys"
-          xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" \
-            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic TARGETED_DEVICE_FAMILY=1 \
-            MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 60
-      - name: Send to TestFlight
+      - name: Sign, archive and send to TestFlight
         if: steps.asc.outputs.app == 'yes'
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           set -o pipefail
+          # One distribution certificate and one App Store profile, made for this build and removed after it (asc.js sign / unsign).
+          # The archive is signed with them directly: letting Xcode sign "automatically" made a development certificate on every run
+          # and never removed it, until Apple's limit stopped the build (Nov 15).
           S="$RUNNER_TEMP/sign"; KC="$RUNNER_TEMP/build.keychain-db"; PW="$(uuidgen)"
+          node asc.js writekey "$RUNNER_TEMP/keys"
+          node asc.js clean
           node asc.js sign "$S"
           /usr/bin/openssl x509 -inform DER -in "$S/dist.cer" -out "$S/dist.pem"
           /usr/bin/openssl pkcs12 -export -inkey "$S/dist.key" -in "$S/dist.pem" -out "$S/dist.p12" -passout "pass:$PW"
@@ -67,11 +60,17 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "$PW" "$KC" >/dev/null
           security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
           for d in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do mkdir -p "$d"; cp "$S/profile.mobileprovision" "$d/$(cat "$S/profile.uuid").mobileprovision"; done
-          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:$BUNDLE_ID string $(cat "$S/profile.name")" export.plist
+          PROFILE="$(cat "$S/profile.name")"; PBX=ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' "s#CODE_SIGN_STYLE = Automatic;#CODE_SIGN_STYLE = Manual; DEVELOPMENT_TEAM = $TEAM_ID; CODE_SIGN_IDENTITY = \"Apple Distribution\"; PROVISIONING_PROFILE_SPECIFIER = \"$PROFILE\";#" "$PBX"
+          grep -c "PROVISIONING_PROFILE_SPECIFIER" "$PBX"
+          xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" \
+            TARGETED_DEVICE_FAMILY=1 MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:$BUNDLE_ID string $PROFILE" export.plist
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/ProWorld.xcarchive" -exportOptionsPlist export.plist \
             -exportPath "$RUNNER_TEMP/out" \
             -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 40
       - name: Remove the build's certificate and profile
         if: always() && steps.asc.outputs.app == 'yes'
         env:
