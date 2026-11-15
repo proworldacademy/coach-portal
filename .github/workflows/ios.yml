@@ -5,7 +5,7 @@ name: iOS app
 on:
   workflow_dispatch:
   push:
-    branches: [main, native-push]
+    branches: [main]
     paths: ['mobile/**', '.github/workflows/ios.yml']
 permissions:
   contents: read
