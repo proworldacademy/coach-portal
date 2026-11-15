@@ -1,0 +1,50 @@
+/* The fresh look, site-wide (Nov 14, 2026 — "roll it across all the pages"). What Reminders and the player page got first (portal/fresh.css),
+   as rules every page of the frame shares: one hero per page, rounder cards, glass bars, quiet chips, short intros on a phone, and motion that
+   plays once when a page opens (body.fx-in, set by shared/design.js for the first moments) and never for people who ask for less motion. */
+
+/* ── cards ── */
+body.pwd .card,body.pwd .stat,body.pwd .tile,body.pwd .lib,body.pwd .panel,body.pwd .op,body.pwd .g,body.pwd .a2card,body.pwd .foldbox,body.pwd .pv-ticket{border-radius:24px}
+body.pwd .tile,body.pwd .stat,body.pwd .op{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+body.pwd .tile:active,body.pwd .op:active,body.pwd .rowb:active{transform:scale(.985)}
+
+/* ── the hero of each page: one dark card that says what needs you ── */
+body.pwd .need{--ink:#fff;--ink-2:#DEDED9;--ink2:#DEDED9;--muted:#A9A9A4;--line:rgba(255,255,255,.14);--card:rgba(255,255,255,.07);--card-2:rgba(255,255,255,.1);--pw-sf:#1A1A1A;--pw-sf2:#222;--pw-inkbg:#E2FE78;
+  position:relative;overflow:hidden;background:#0A0A0A!important;color:#fff;border:0!important;border-radius:28px;box-shadow:0 22px 46px -22px rgba(0,0,0,.6)!important}
+body.pwd .need::after{content:"";position:absolute;right:-80px;top:-100px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(226,254,120,.3),transparent 66%);pointer-events:none}
+body.pwd .need>*{position:relative}
+body.pwd .need .ey b,body.pwd .need #needN{color:var(--lime)}
+body.pwd .need .clear b{color:var(--lime)}
+html.dark body.pwd .need{--ink:#0A0A0A;--ink-2:#1F1F1F;--ink2:#1F1F1F;--muted:rgba(0,0,0,.62);--line:rgba(0,0,0,.16);--card:rgba(0,0,0,.06);--card-2:rgba(0,0,0,.1);--pw-sf:rgba(0,0,0,.08);--pw-sf2:rgba(0,0,0,.12);--pw-inkbg:#0A0A0A;background:var(--lime)!important;color:#0A0A0A}
+html.dark body.pwd .need::after{background:radial-gradient(circle,rgba(255,255,255,.55),transparent 66%)}
+html.dark body.pwd .need .ey b,html.dark body.pwd .need #needN,html.dark body.pwd .need .clear b{color:#0A0A0A}
+html.dark body.pwd .need *{border-color:rgba(0,0,0,.16)}
+
+/* big numbers in the brand's italic, everywhere a tile shows one */
+body.pwd .tile .big,body.pwd .stat b,body.pwd .stat .n{font-family:"Review Condensed",var(--display,sans-serif);font-style:italic;font-weight:900;letter-spacing:-.01em}
+
+/* ── quiet chips: what is missing is said softly, what is done keeps its colour ── */
+body.app-skin .rowb .chip.wk-off,body.app-skin .rowb .chip.st-missing{background:transparent!important;border:1px solid var(--line)!important;color:var(--muted)!important;font-weight:600}
+html.dark body.app-skin .rowb .chip.wk-off,html.dark body.app-skin .rowb .chip.st-missing{border-color:#333!important;color:#8E8E89!important}
+
+/* ── the bars: glass ── */
+body.pwd .pw-coachbar,body.app-skin .appbar{background:rgba(12,12,12,.8)!important;-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);border:1px solid rgba(255,255,255,.14)!important}
+html.dark body.pwd .pw-coachbar,html.dark body.app-skin .appbar{background:rgba(40,40,40,.55)!important}
+body.pwd .pw-coachbar a.on i{box-shadow:0 0 18px rgba(226,254,120,.6)}
+
+/* ── a phone: the page's explanation is two lines until tapped ── */
+@media (max-width:640px){
+  body.pwd .fx-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;position:relative}
+  body.pwd .fx-clamp.open{display:block;-webkit-line-clamp:unset}
+  body.pwd .fx-clamp:not(.open)::after{content:"more";position:absolute;right:0;bottom:0;padding-left:26px;font-weight:700;color:var(--ink);background:linear-gradient(90deg,transparent,var(--fx-fade,#F1F1ED) 34%)}
+  html.dark body.pwd .fx-clamp:not(.open)::after{--fx-fade:#050505}
+}
+
+/* ── motion: once, as the page opens ── */
+@media (prefers-reduced-motion:no-preference){
+  body.pwd.fx-in .hero>*,body.pwd.fx-in .sec,body.pwd.fx-in .pwd-stage>section,body.pwd.fx-in main>.card,body.pwd.fx-in .gate>*{animation:fx-rise .6s cubic-bezier(.2,.8,.2,1) both}
+  body.pwd.fx-in .hero>*:nth-child(2){animation-delay:.08s}
+  body.pwd.fx-in .sec:nth-of-type(2){animation-delay:.12s}body.pwd.fx-in .sec:nth-of-type(3){animation-delay:.18s}body.pwd.fx-in .sec:nth-of-type(4){animation-delay:.24s}body.pwd.fx-in .sec:nth-of-type(n+5){animation-delay:.3s}
+  body.pwd.fx-in .tile,body.pwd.fx-in .stat{animation:fx-rise .6s cubic-bezier(.2,.8,.2,1) both}
+  body.pwd.fx-in .tile:nth-child(2),body.pwd.fx-in .stat:nth-child(2){animation-delay:.07s}body.pwd.fx-in .tile:nth-child(3),body.pwd.fx-in .stat:nth-child(3){animation-delay:.14s}body.pwd.fx-in .tile:nth-child(n+4),body.pwd.fx-in .stat:nth-child(n+4){animation-delay:.2s}
+}
+@keyframes fx-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}

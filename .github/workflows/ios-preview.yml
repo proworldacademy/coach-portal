@@ -5,7 +5,7 @@ name: iOS preview shots
 on:
   workflow_dispatch:
   push:
-    branches: [app-preview]
+    branches: [app-preview, fresh-all]
 permissions:
   contents: write   # only to put the screenshots on the branch preview-shots (one commit, replaced each run)
 concurrency:
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   shots:
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,7 +45,9 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 || true
           xcrun simctl install "$UDID" "$APP"
           LIST=mobile/preview/shots.txt; [ -f mobile/preview/shots-now.txt ] && LIST=mobile/preview/shots-now.txt   # a short list for one question
-          grep -v '^#' "$LIST" | while IFS='|' read -r name who p y look; do
+          mkdir -p "$OUT/dark"; grep -v '^#' "$LIST" | grep . > "$RUNNER_TEMP/list.txt"
+          if [ "$LIST" = mobile/preview/shots.txt ]; then grep -v '^#' "$LIST" | grep . | awk -F'|' '{print "dark/"$1"|"$2"|"$3"|"$4"|dark"}' >> "$RUNNER_TEMP/list.txt"; fi   # the whole book again with the phone in dark
+          cat "$RUNNER_TEMP/list.txt" | while IFS='|' read -r name who p y look; do
             [ -z "$name" ] && continue
             curl -sf -G "http://localhost:4173/__set" --data-urlencode "u=$p" --data-urlencode "who=$who" --data-urlencode "y=$y" --data-urlencode "look=$look" >/dev/null
             xcrun simctl terminate "$UDID" com.proworldacademy.app >/dev/null 2>&1 || true
@@ -67,7 +69,7 @@ jobs:
           retention-days: 7
       - name: Keep the screenshots on the branch preview-shots
         run: |
-          cd "$RUNNER_TEMP/shots"; for f in *.jpg; do sips -Z 1300 -s formatOptions 70 "$f" >/dev/null 2>&1 || true; done
+          cd "$RUNNER_TEMP/shots"; for f in *.jpg dark/*.jpg; do [ -f "$f" ] && sips -Z 1300 -s formatOptions 70 "$f" >/dev/null 2>&1 || true; done
           for f in *.mov; do [ -f "$f" ] && avconvert --source "$f" --preset Preset960x540 --output "${f%.mov}.mp4" >/dev/null 2>&1 && rm "$f" || true; done
           echo "Screenshots of the app shell in an iPhone simulator, test copy of the site, invented people. Run ${{ github.run_number }} of ${{ github.sha }}." > README.md
           git init -q -b preview-shots; git add -A

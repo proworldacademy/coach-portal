@@ -73,7 +73,7 @@ html.dark body.fresh .a2qa>.on>span{background:#0A0A0A!important;color:var(--lim
 body.fresh .a2card{border-radius:24px}
 
 /* ── the bars: real glass in the app ── */
-body.fresh .cp-appbar{background:rgba(12,12,12,.62)!important;-webkit-backdrop-filter:blur(22px) saturate(1.6)!important;backdrop-filter:blur(22px) saturate(1.6)!important;border:1px solid rgba(255,255,255,.14)!important}
+body.fresh .cp-appbar{background:rgba(12,12,12,.8)!important;-webkit-backdrop-filter:blur(22px) saturate(1.6)!important;backdrop-filter:blur(22px) saturate(1.6)!important;border:1px solid rgba(255,255,255,.14)!important}
 html.dark body.fresh .cp-appbar{background:rgba(40,40,40,.55)!important}
 body.fresh .cp-appbar .on i{box-shadow:0 0 18px rgba(226,254,120,.6)}
 
