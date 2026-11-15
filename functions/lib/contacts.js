@@ -192,6 +192,7 @@ async function nudge(db, opts) {
     if (!coach) continue; const s = staffFor(staff, coach); const names = list.map(short).sort((a, b) => a.localeCompare(b));
     out.coaches[coach] = names.length;
     const text = `Weekly contact, week of ${label(week)}: ${names.length} of your ${names.length + players.filter((p) => p.coach === coach && done.has(p.id)).length} families still have not heard from you this week: ${names.join(', ')}. One text or one call through JustCall and it ticks itself; the list is on the portal: ${SITE}/portal#/contact`;
+    if (s && s.email && !opts.dry) await require('./team').direct(db, s.email, text);   // the same reminder as a direct message from ProWorld in Team (Nov 15, 2026)
     if (s && s.slackId && !opts.dry) { if (await NOTIFY.slackDm(db, s.slackId, text)) out.dms++; else out.noSlack.push(coach); }
     else out.noSlack.push(coach);
   }

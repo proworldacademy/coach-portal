@@ -93,6 +93,21 @@
       fs.collection('teamChats').where('members', 'array-contains', me).onSnapshot((s) => { chats = {}; s.docs.forEach((d) => { chats[d.id] = d.data(); }); count(); }, () => {});
       fs.doc('teamReads/' + me).onSnapshot((d) => { const x = (d.exists && d.data()) || {}; reads = { r: x.r || {}, mute: x.mute || {} }; count(); }, () => {});
       [400, 1500, 4000].forEach((ms) => setTimeout(teamFab, ms));
+      /* a call (Nov 15): while someone is calling a chat you are in, a bar across the top of whatever page you are on, with a ring, for 45 seconds */
+      let ringT = 0, ringCtx = null; const quiet = {};
+      const stopRing = () => { clearInterval(ringT); ringT = 0; const b = document.getElementById('pw-ring'); if (b) b.remove(); };
+      const beep = () => { try { ringCtx = ringCtx || new (window.AudioContext || window.webkitAudioContext)(); const t = ringCtx.currentTime; [0, 0.28].forEach((d) => { const o = ringCtx.createOscillator(), g = ringCtx.createGain(); o.frequency.value = 660; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.12, t + d + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.22); o.connect(g); g.connect(ringCtx.destination); o.start(t + d); o.stop(t + d + 0.24); }); } catch (e) { /* silent */ } };
+      fs.collection('teamCalls').where('members', 'array-contains', me).where('state', '==', 'live').onSnapshot((s) => {
+        const now = Date.now(); let pick = null; s.docs.forEach((d) => { const c = d.data() || {}; if (c.by !== me && now - (c.at || 0) < 45000 && !quiet[d.id]) pick = pick || Object.assign({ id: d.id }, c); });
+        if (window.PWCall && window.PWCall.active()) pick = null;
+        if (!pick) { stopRing(); return; } if (document.getElementById('pw-ring') && document.getElementById('pw-ring').dataset.id === pick.id) return; stopRing();
+        const b = document.createElement('div'); b.id = 'pw-ring'; b.dataset.id = pick.id; b.setAttribute('role', 'alertdialog');
+        b.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:95;background:#0A0A0A;color:#fff;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.7);font:400 14.5px system-ui;max-width:520px;margin:0 auto';
+        const who = String(pick.byName || 'Someone').replace(/[<>&]/g, ''); const where = String(pick.title || '').replace(/[<>&]/g, '');
+        b.innerHTML = '<span style="font-size:22px">' + (pick.kind === 'video' ? '📹' : '📞') + '</span><span style="flex:1;min-width:0"><b style="display:block;font-weight:700">' + who + ' is calling</b><small style="color:rgba(255,255,255,.65)">' + (where && where !== who ? where : 'Team') + '</small></span><button type="button" data-x style="border:1px solid rgba(255,255,255,.3);background:none;color:#fff;border-radius:999px;padding:9px 12px;font:700 12.5px system-ui;cursor:pointer">Not now</button><a href="/team#/call/' + pick.id + '" style="background:#E2FE78;color:#0A0A0A;border-radius:999px;padding:10px 16px;font:700 13px system-ui;text-decoration:none">Join</a>';
+        b.querySelector('[data-x]').onclick = () => { quiet[pick.id] = 1; stopRing(); }; b.querySelector('a').addEventListener('click', () => { quiet[pick.id] = 1; setTimeout(stopRing, 50); });
+        document.body.appendChild(b); beep(); ringT = setInterval(() => { if (Date.now() - (pick.at || 0) > 45000) { stopRing(); return; } beep(); }, 2500);
+      }, () => {});
       const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications; const here = location.pathname;
       if (P && !/^\/(portal|team)(\/|$)/.test(here)) P.addListener('pushNotificationActionPerformed', (a) => { try { const u = a && a.notification && a.notification.data && a.notification.data.url; if (u && /^\/[^/]/.test(u)) location.href = u; } catch (e) { /* stay */ } });
     } catch (e) { /* the pages work without it */ }

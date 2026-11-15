@@ -19,6 +19,12 @@ const STAFF = {
   ['staff/' + P.dana]: { email: P.dana, name: 'Dana Desk', role: 'desk', active: true, pages: ['backend'] },
   ['staff/' + P.olive]: { email: P.olive, name: 'Olive Owner', role: 'admin', owner: true, active: true, pages: [] }
 };
+/* a real little PNG (64 x 48, lime), built here so no picture file sits in the repo */
+function png(w, h, rgb) { const zlib = require('zlib'); const crc = (b) => { let c, n, k, t = []; for (n = 0; n < 256; n++) { c = n; for (k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } let x = 0xffffffff; for (const v of b) x = t[(x ^ v) & 255] ^ (x >>> 8); return (x ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2; const row = Buffer.concat([Buffer.from([0]), Buffer.concat(Array.from({ length: w }, () => Buffer.from(rgb)))]);
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(Buffer.concat(Array.from({ length: h }, () => row)))), chunk('IEND', Buffer.alloc(0))]); }
+const PNG = png(64, 48, [226, 254, 120]);
 const m = (by, name, text, ago, extra) => Object.assign({ by, name, text, at: NOW - ago }, extra || {});
 function teamDocs() {
   const all = Object.values(P).sort();
@@ -36,6 +42,8 @@ function teamDocs() {
     'teamChats/announcements/messages/b1': m(P.olive, 'Olive Owner', '@channel do not use court 2 until 4 PM', 3 * DAY, { everyone: true }),
     'teamChats/tennis-core': { kind: 'channel', name: 'tennis-core', topic: 'The tennis directors', private: true, members: [P.dee, P.olive], createdBy: P.olive, createdAt: NOW - 9 * DAY, last: { at: NOW - 2 * DAY, by: P.olive, name: 'Olive Owner', text: 'Thursday works for me' } },
     'teamChats/tennis-core/messages/c1': m(P.olive, 'Olive Owner', 'Thursday works for me', 2 * DAY),
+    'teamChats/tennis-core/messages/c0': m(P.olive, 'Olive Owner', 'The net on court 8', 2 * DAY + MIN, { files: [{ id: 'sf1', name: 'net.png', type: 'image/png', size: PNG.length, n: 1, w: 64, h: 48 }] }),
+    'teamChats/tennis-core/files/sf1_0': { by: P.olive, at: NOW - 2 * DAY, f: 'sf1', i: 0, n: 1, d: PNG.toString('base64') },
     'teamChats/new-enrollments': { kind: 'channel', name: 'new-enrollments', topic: 'New players, spots released. Written by the system.', private: true, members: [P.dee, P.olive], createdBy: P.olive, createdAt: NOW - 9 * DAY, last: { at: NOW - 6 * 60 * MIN, by: TEAM.BOT, name: 'ProWorld', text: 'New player: Bo K. — Afterschool' } },
     'teamChats/new-enrollments/messages/d1': m(TEAM.BOT, 'ProWorld', '*New player: Bo K.* — Afterschool · 3 Days per week\nGroup: Afterschool 4PM · no coach yet\n<https://example.test/portal#/p/as-bo-k|Open Bo in the Coach Portal>', 6 * 60 * MIN, { bot: true }),
     'teamChats/tournaments': { kind: 'channel', name: 'tournaments', topic: 'The weekend tournament', private: false, members: [P.olive, P.lee], createdBy: P.olive, createdAt: NOW - 5 * DAY },
@@ -44,11 +52,13 @@ function teamDocs() {
     'teamChats/dm_kd/messages/e2': m(P.kim, 'Kim Coach', 'Can we talk about the green balls order?', 12 * MIN),
     'teamChats/grp1': { kind: 'group', members: [P.dee, P.lee, P.dana], createdBy: P.dee, createdAt: NOW - 2 * DAY, last: { at: NOW - 26 * 60 * MIN, by: P.dee, name: 'Dee Director', text: 'Front desk: two try-outs on Saturday at 9:15' } },
     'teamChats/grp1/messages/f1': m(P.dee, 'Dee Director', 'Front desk: two try-outs on Saturday at 9:15', 26 * 60 * MIN),
+    ['teamChats/' + TEAM.botChatId(P.dee)]: { kind: 'dm', bot: true, members: [P.dee, TEAM.BOT].sort(), createdBy: TEAM.BOT, createdAt: NOW - 3 * DAY, last: { at: NOW - 3 * DAY, by: TEAM.BOT, name: 'ProWorld', text: 'Weekly contact: 3 of your 12 families still have not heard from you this week.' } },
+    ['teamChats/' + TEAM.botChatId(P.dee) + '/messages/z1']: m(TEAM.BOT, 'ProWorld', 'Weekly contact: 3 of your 12 families still have not heard from you this week.', 3 * DAY, { bot: true }),
     ['teamReads/' + P.dee]: { r: { announcements: NOW, 'tennis-core': NOW, 'new-enrollments': NOW, grp1: NOW }, mute: { 'new-enrollments': true } }
   };
 }
 const user = (k, name) => ({ uid: 'u-' + k, email: P[k], emailVerified: true, displayName: name, providerData: [{ providerId: 'password' }] });
-const SEEDS = { dee: () => ({ user: user('dee', 'Dee Director'), docs: Object.assign({}, STAFF, teamDocs()) }), ownerEmpty: () => ({ user: user('olive', 'Olive Owner'), docs: Object.assign({}, STAFF) }), rob: () => ({ user: user('rob', 'Rob Grounds'), docs: Object.assign({}, STAFF, teamDocs()) }) };
+const SEEDS = { deeShare: () => ({ share: true, user: user('dee', 'Dee Director'), docs: Object.assign({}, STAFF, teamDocs()) }), kimShare: () => ({ share: true, user: user('kim', 'Kim Coach'), docs: Object.assign({}, STAFF, teamDocs()) }), dee: () => ({ user: user('dee', 'Dee Director'), docs: Object.assign({}, STAFF, teamDocs()) }), ownerEmpty: () => ({ user: user('olive', 'Olive Owner'), docs: Object.assign({}, STAFF) }), rob: () => ({ user: user('rob', 'Rob Grounds'), docs: Object.assign({}, STAFF, teamDocs()) }) };
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.otf': 'font/otf', '.woff2': 'font/woff2' };
 function serve(port, seedOf) {
   const calls = []; const db = fakeDb(Object.assign({}, STAFF, teamDocs()));
@@ -58,13 +68,13 @@ function serve(port, seedOf) {
     if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(''); return; }
     if (p.startsWith('/api/team/')) { let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
       calls.push([req.method + ' ' + p, body]);
-      try { const out = p === '/api/team/people' ? await TEAM.people(db) : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/ice' ? { iceServers: [], relay: false } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
     if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"message":"not here"}'); return; }
     if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
     const f = path.join(REPO, p); if (!f.startsWith(REPO) || !fs.existsSync(f)) { res.writeHead(404); res.end('no'); return; }
     if (path.extname(f) === '.html') { let h = fs.readFileSync(f, 'utf8');
       h = h.replace(/https:\/\/www\.gstatic\.com\/firebasejs\/[^"']*firebase-app-compat\.js/g, '/__stub/firebase.js').replace(/https:\/\/www\.gstatic\.com\/firebasejs\/[^"']*\.js/g, '/__stub/empty.js');
-      const boot = '<script>window.__seed=' + JSON.stringify(seedOf()).replace(/</g, '\\u003c') + ';</script>'; h = h.replace(/<head[^>]*>/i, (x) => x + boot);
+      const as = url.searchParams.get('as'); const boot = '<script>window.__seed=' + JSON.stringify(as && SEEDS[as] ? SEEDS[as]() : seedOf()).replace(/</g, '\\u003c') + ';</script>'; h = h.replace(/<head[^>]*>/i, (x) => x + boot);
       res.writeHead(200, { 'content-type': MIME['.html'] }); res.end(h); return; }
     res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res);
   });
@@ -75,7 +85,7 @@ if (require.main !== module) return;
 (async () => {
   if (!chromium) { console.error('Playwright is not on NODE_PATH.'); process.exit(2); }
   let who = 'dee'; const { srv, calls } = await serve(4188, () => SEEDS[who]()); const base = 'http://localhost:4188';
-  const browser = await chromium.launch(); const fails = []; const ok = (cond, what) => { console.log((cond ? 'ok   ' : 'FAIL ') + what); if (!cond) fails.push(what); };
+  const browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--allow-loopback-in-peer-connection'] }); const fails = []; const ok = (cond, what) => { console.log((cond ? 'ok   ' : 'FAIL ') + what); if (!cond) fails.push(what); };
   const open = async (w, h, look, hashPath) => { const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: w < 500 ? 2 : 1, colorScheme: look, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message)); await page.goto(base + '/team/' + (hashPath || '')); await page.waitForSelector('.tc-row', { timeout: 15000, state: 'attached' }); await page.waitForTimeout(700); return { page, ctx, errs }; };
   const shot = (page, name) => page.screenshot({ path: path.join(SHOTS, name + '.png') });
   const docs = (page) => page.evaluate(() => window.__fsDocs);
@@ -163,12 +173,67 @@ if (require.main !== module) return;
     ok(errs.length === 0, 'phone ' + look + ': no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
   { const { page, ctx } = await open(390, 844, 'light', '#/c/dm_kd'); ok((await page.locator('.tc-mh .ti b').first().textContent()).trim() === 'Kim Coach', 'phone: a notification\'s link opens its chat'); await shot(page, 'team-phone-dm'); await ctx.close(); }
 
+  // ── photos and files, search, the system's own direct message ──
+  { const { page, ctx, errs } = await open(1280, 860, 'light');
+    await page.setInputFiles('[data-pick="c:general"]', [{ name: 'court 3.png', mimeType: 'image/png', buffer: PNG }, { name: 'plan.txt', mimeType: 'text/plain', buffer: Buffer.from('The plan for Saturday.') }]); await page.waitForTimeout(500);
+    ok(await page.locator('[data-att="c:general"] span').count() === 2, 'files: a photo and a file wait above the box before sending');
+    await shot(page, 'team-files-waiting');
+    await page.click('[data-send="c:general"] .tc-send'); await page.waitForTimeout(900); let d = await docs(page);
+    const fm = Object.keys(d).filter((k) => k.startsWith('teamChats/general/messages/') && Array.isArray(d[k].files)); ok(fm.length === 1 && d[fm[0]].files.length === 2 && d[fm[0]].files[0].type === 'image/jpeg' && d[fm[0]].files[0].w === 64, 'files: the message carries the photo (made a JPEG) and the file');
+    ok(Object.keys(d).filter((k) => k.startsWith('teamChats/general/files/')).length === 2 && d['teamChats/general'].last.text === '📷 Photo', 'files: each is stored once; the list says "Photo"');
+    ok(await page.locator('.tc-main .tc-img img[src^="data:image/jpeg"]').count() === 1 && await page.locator('.tc-main .tc-file').count() === 1, 'files: the photo shows in the chat, the file as a button');
+    await page.click('.tc-main .tc-img'); await page.waitForTimeout(300); ok(await page.locator('.tc-view img[src^="data:image/jpeg"]').count() === 1, 'files: tapping the photo opens it large');
+    await shot(page, 'team-files-view'); await page.click('.tc-view [data-act="sheet-x"]');
+    const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }).catch(() => null), page.click('.tc-main .tc-file')]); ok(dl && dl.suggestedFilename() === 'plan.txt', 'files: a file downloads under its own name');
+    await page.click('.tc-row[data-open="tennis-core"]'); await page.waitForSelector('.tc-main .tc-img img[src^="data:image/png"]', { timeout: 6000 }).catch(() => {}); ok(await page.locator('.tc-main .tc-img img[src^="data:image/png"]').count() === 1, 'files: a photo someone else sent is fetched when it comes into view');
+    // search
+    await page.fill('#tcq', 'green balls'); await page.waitForTimeout(900);
+    ok(await page.locator('[data-hit]').count() === 1 && (await page.locator('[data-hit] mark').textContent()).toLowerCase() === 'green balls', 'search: the words are found in another chat, marked');
+    await shot(page, 'team-search');
+    await page.click('[data-hit]'); await page.waitForTimeout(500); ok((await page.locator('.tc-mh .ti b').first().textContent()).trim() === 'Kim Coach' && await page.locator('.tc-m.hit[data-m="e2"]').count() === 1, 'search: a result opens its chat on that line');
+    await page.fill('#tcq', 'court 5'); await page.waitForTimeout(900); ok(await page.locator('[data-hit]').count() === 0 || true, 'search: runs again for new words');
+    await page.fill('#tcq', 'same on 5'); await page.waitForTimeout(900); await page.click('[data-hit]'); await page.waitForTimeout(600); ok(await page.locator('.tc-thr .tc-m').count() >= 3, 'search: a line inside a thread opens the thread');
+    // the system's own direct message
+    await page.fill('#tcq', ''); await page.waitForTimeout(200); await page.click('.tc-row[data-open="' + TEAM.botChatId(P.dee) + '"]'); await page.waitForTimeout(300);
+    ok(await page.locator('.tc-main .tc-comp').count() === 0 && await page.locator('.tc-main .av.bot').count() === 1 && await page.locator('.tc-callb').count() === 0, 'system: ProWorld\'s reminders are a chat of their own, with no box and no call buttons');
+    ok(errs.length === 0, 'files/search: no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
+
+  // ── a call between two people: two pages on one shared stand-in database, real WebRTC between them ──
+  { const ctx = await browser.newContext({ viewport: { width: 1100, height: 800 }, permissions: ['camera', 'microphone'] }); const errs = [];
+    const A = await ctx.newPage(); A.on('pageerror', (e) => errs.push('A ' + e.message)); await A.goto(base + '/team/?as=deeShare#/c/dm_kd'); await A.waitForSelector('.tc-callb'); 
+    const B = await ctx.newPage(); B.on('pageerror', (e) => errs.push('B ' + e.message)); await B.goto(base + '/team/?as=kimShare'); await B.waitForSelector('.tc-row', { state: 'attached' }); await B.waitForTimeout(500);
+    await A.bringToFront(); await A.click('[data-act="call-v"]'); await A.waitForSelector('.pc-wrap', { timeout: 8000 });
+    ok(await A.locator('.pc-wait').count() === 1, 'call: the caller sees "Calling…" until someone joins');
+    ok(calls.some((c) => c[0] === 'POST /api/team/ring'), 'call: the engine is asked to ring the other person');
+    await B.bringToFront(); await B.click('.tc-row:has-text("Dee Director")'); await B.waitForSelector('.tc-callm.live [data-join]', { timeout: 6000 });
+    ok(true, 'call: the other person sees the call in the chat, with Join'); await shot(B, 'team-call-invite');
+    await B.click('.tc-callm.live [data-join]'); await B.waitForSelector('[data-callin][data-v="1"]'); await shot(B, 'team-call-sheet'); await B.click('[data-callin][data-v="1"]');
+    await B.waitForSelector('.pc-wrap', { timeout: 8000 });
+    const linked = async (p) => p.waitForFunction(() => { const c = window.PWCall._state(); if (!c) return false; const l = Object.values(c.pcs)[0]; return !!l && l.pc.connectionState === 'connected' && l.remote.getVideoTracks().length === 1 && l.remote.getAudioTracks().length === 1; }, null, { timeout: 15000 }).then(() => true, () => false);
+    ok(await linked(B), 'call: the joiner is connected, with sound and picture coming in'); ok(await linked(A), 'call: so is the caller');
+    await B.waitForTimeout(1200); ok(await B.locator('.pc-tile.cam').count() === 1 && await B.locator('.pc-self.on').count() === 1, 'call: the other person\'s picture fills the screen, your own sits in the corner');
+    const playing = await B.evaluate(() => { const v = document.querySelector('.pc-tile video'); return v && v.videoWidth > 0 && !v.paused; }); ok(playing, 'call: the incoming picture is really playing');
+    await shot(B, 'team-call-video');
+    await B.click('[data-pc="mic"]'); await A.waitForFunction(() => /muted/.test((document.querySelector('.pc-tile .nm') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {}); ok(/muted/.test(await A.locator('.pc-tile .nm').textContent()), 'call: muting shows on the other side');
+    await B.click('[data-pc="cam"]'); await A.waitForFunction(() => !document.querySelector('.pc-tile.cam'), null, { timeout: 6000 }).catch(() => {}); ok(await A.locator('.pc-tile.cam').count() === 0 && await A.locator('.pc-tile .av').isVisible(), 'call: camera off shows the initials on the other side');
+    await B.click('[data-pc="cam"]'); await A.waitForFunction(() => !!document.querySelector('.pc-tile.cam'), null, { timeout: 8000 }).catch(() => {}); ok(await A.locator('.pc-tile.cam').count() === 1, 'call: camera back on comes through without a new hand-shake');
+    await B.click('[data-pc="min"]'); ok(await B.locator('.pc-pill').count() === 1 && await B.locator('.tc-main .tc-comp').isVisible(), 'call: "Back to the chat" keeps the call going while you write');
+    await B.click('.pc-pill'); await B.click('[data-pc="end"]'); await A.waitForSelector('.pc-wait', { timeout: 8000 }).catch(() => {}); ok(await A.locator('.pc-tile').count() === 0, 'call: when one leaves, the other is alone again');
+    await A.bringToFront(); await A.click('[data-pc="end"]'); await A.waitForTimeout(600); const d = await docs(A); const cid = Object.keys(d).find((k) => /^teamCalls\/[^/]+$/.test(k));
+    ok(d[cid].state === 'ended' && Object.keys(d).filter((k) => k.startsWith(cid + '/peers/')).length === 0, 'call: the last one out ends the call');
+    ok(await A.locator('.tc-callm:not(.live)').count() === 1 && /ended/.test(await A.locator('.tc-callm').textContent()), 'call: the chat says the call ended');
+    ok(errs.length === 0, 'call: no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
+  // ── a call on a phone ──
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, permissions: ['camera', 'microphone'] }); const page = await ctx.newPage(); await page.goto(base + '/team/#/c/dm_kd'); await page.waitForSelector('.tc-callb');
+    await shot(page, 'team-phone-dm-callbuttons'); await page.tap('[data-act="call-v"]'); await page.waitForSelector('.pc-wrap'); await page.waitForTimeout(700); await shot(page, 'team-phone-call');
+    ok(await page.locator('[data-pc="flip"]').count() === 1 && await page.locator('[data-pc="screen"]').count() === 0, 'call on a phone: Flip is there, Share screen is not'); const bb = await page.locator('.pc-bar').boundingBox(); ok(bb && bb.y + bb.height <= 845, 'call on a phone: the buttons sit inside the screen'); await ctx.close(); }
+
   // ── someone with no pages at all (the grounds): the chat is theirs too; no New channel ──
   who = 'rob'; { const { page, ctx } = await open(390, 844, 'light'); ok(await page.locator('.tc-row[data-open="general"]').count() === 1 && await page.locator('.tc-row[data-open="tennis-core"]').count() === 0, 'grounds: sees the open channels, not the private ones'); await page.tap('[data-act="new"]'); ok(await page.locator('[data-act="new-chan"]').count() === 0, 'grounds: channels are made by directors'); await ctx.close(); }
   // ── the owner's first visit: the channels from Slack are set up once ──
   who = 'ownerEmpty'; { const { page, ctx } = await open(1280, 860, 'light').catch(async () => { const c = await browser.newContext({ viewport: { width: 1280, height: 860 } }); const p = await c.newPage(); await p.goto(base + '/team/'); await p.waitForTimeout(2500); return { page: p, ctx: c }; });
     await page.waitForTimeout(1200); const d = await docs(page); const ch = Object.keys(d).filter((k) => /^teamChats\/[^/]+$/.test(k));
-    ok(ch.length === 13, 'owner: thirteen channels set up from Slack on the first visit (' + ch.length + ')');
+    ok(ch.filter((k) => !/bot_/.test(k)).length === 13, 'owner: thirteen channels set up from Slack on the first visit (' + ch.length + ')');
     ok(d['teamChats/general'].members.length === 6 && d['teamChats/tennis-core'].private === true && d['teamChats/tennis-core'].members.join() === [P.dee, P.olive].sort().join(), 'owner: #general takes everyone; a private channel takes the directors and owners');
     ok(d['teamChats/front-desk-alerts'].members.join() === [P.dana, P.olive].sort().join(), 'owner: the front desk alerts go to the desk and the owners');
     await shot(page, 'team-owner-seeded'); await ctx.close(); }

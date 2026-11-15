@@ -7,9 +7,12 @@ for f in "$APP"/Assets.xcassets/Splash.imageset/*.png; do cp art/splash-2732.png
 put() { $PB -c "Delete :$1" "$PLIST" 2>/dev/null || true; $PB -c "Add :$1 $2 $3" "$PLIST"; }
 put CFBundleDisplayName string "ProWorld"
 put ITSAppUsesNonExemptEncryption bool false
-put NSMicrophoneUsageDescription string "ProWorld uses the microphone when you call a family from the app."
-put NSCameraUsageDescription string "ProWorld uses the camera when you add a photo or a video to a player's page."
+put NSMicrophoneUsageDescription string "ProWorld uses the microphone when you call a family or someone on the team from the app."
+put NSCameraUsageDescription string "ProWorld uses the camera for a video call with the team, and when you add a photo to a message or a player's page."
 put NSPhotoLibraryUsageDescription string "ProWorld opens your photos when you add a photo or a video to a player's page."
+# A call with the team (Nov 15, 2026) keeps its sound when the screen locks or another app is opened.
+$PB -c "Delete :UIBackgroundModes" "$PLIST" 2>/dev/null || true
+$PB -c "Add :UIBackgroundModes array" "$PLIST"; $PB -c "Add :UIBackgroundModes:0 string audio" "$PLIST"
 $PB -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
 $PB -c "Add :UISupportedInterfaceOrientations array" "$PLIST"; $PB -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
 # Notifications (Nov 15, 2026): the push entitlement, and the two calls that hand Apple's device token to Capacitor's PushNotifications.

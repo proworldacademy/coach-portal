@@ -35,9 +35,10 @@ async function staffFor(db, coachName) {
 /* The coach hears it on their personal Slack (Antonio, Oct 24); a text only when there is no Slack link yet but a mobile is on file. */
 async function tellCoach(db, coachName, text) {
   const c = await staffFor(db, coachName); if (!c) return { how: 'none' };
+  const inTeam = c.email ? await require('./team').direct(db, c.email, text) : false;   // a direct message from ProWorld in Team (Nov 15, 2026)
   if (c.slackId && await NOTIFY.slackDm(db, c.slackId, text)) return { how: 'slack' };
   if (c.phone && await NOTIFY.text(db, c.phone, text)) return { how: 'text' };
-  return { how: 'none' };
+  return { how: inTeam ? 'team' : 'none' };
 }
 const staffPhoneFor = staffFor;
 function courtName(courtId) { const n = String(courtId || ''); return /^\d+$/.test(n) ? 'Court ' + n : (n === 'f1' || n === 'f2' ? 'Field ' + n.slice(1) : n); }

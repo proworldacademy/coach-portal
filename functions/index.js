@@ -159,11 +159,24 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       throw S.err(404, 'route', 'No such coach route.');
     }
 
+    if (route.startsWith('POST /team/hook/')) {
+      // the same door with the secret in the address, the way Slack's own "incoming webhook" works: a system that can only be given a
+      // webhook address (the concierge's SLACK_WEBHOOK) is pointed here and its lines land in Team. settings/teamHook { key }, made by an owner.
+      const given = route.slice('POST /team/hook/'.length); const snap = await ctx.db.doc('settings/teamHook').get(); const key = snap.exists ? String((snap.data() || {}).key || '') : '';
+      if (key.length < 32 || !FEED.sameKey(given, key)) throw S.err(401, 'key', 'That address is not right.');
+      const out = await TEAM.hook(ctx.db, Object.assign({}, req.body || {}, { channel: String(req.query && req.query.channel || (req.body || {}).channel || '') })); logger.info('team hook (address)', { ok: out.ok }); return send(res, 200, out);
+    }
+    if (route === 'POST /team/hook') {
+      // another system of ours speaking to the team (the concierge): the roster feed key it already holds, in the X-Roster-Key header
+      await FEED.requireKey(ctx.db, req); const out = await TEAM.hook(ctx.db, req.body || {}); logger.info('team hook', { channel: S.clean((req.body || {}).channel, 40), ok: out.ok }); return send(res, 200, out);
+    }
     if (path.startsWith('/api/team/')) {
       // the team's own messaging (Nov 15): the names of the team, the notification after a message, and this phone's notifications for people
       // who hold no Coach Portal (the same engine as /api/coach/push/*). Anyone active on the staff list.
       const who = await ADMIN.requireTeam(req); const b = req.body || {};
       if (route === 'GET /team/people') return send(res, 200, await TEAM.people(ctx.db));
+      if (route === 'GET /team/ice') return send(res, 200, await TEAM.ice(ctx.db));
+      if (route === 'POST /team/ring') { const out = await TEAM.ring(ctx.db, who, b); logger.info('team call', { by: who.email, to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }
       if (route === 'POST /team/notify') { const out = await TEAM.notify(ctx.db, who, b); logger.info('team message', { by: who.email, chat: S.clean(b.chat, 80), to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }
       if (route === 'GET /team/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
       if (route === 'POST /team/push/subscribe') return send(res, 200, await PUSH.subscribe(ctx.db, who, b));
@@ -180,6 +193,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // director holds the backend page for Attendance and Privates: they get an empty answer here, and a refusal on the lists below.
       const seesBilling = !!(who.owner || who.admin || who.billing || who.role === 'desk');
       // the mailbox the sign-in codes go out from: is it set, and a test to the owner's own address (settings/mail is typed on the Dashboard)
+      if (route === 'GET /admin/turn') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await TEAM.turnReady(ctx.db)); }
       if (route === 'GET /admin/apns') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await PUSH.apnsReady(ctx.db) }); }
       if (route === 'GET /admin/mail') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await MAIL.ready(ctx.db) }); }
       if (route === 'POST /admin/mail/test') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); await MAIL.send(ctx.db, Object.assign({ to: who.email }, SIGNIN.letter('123456'), { subject: 'ProWorld: the sign-in e-mail works' })); return send(res, 200, { sent: true, to: who.email }); }
@@ -195,7 +209,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         // a line from the backend page to the team's Slack (attendance posted, a court released, a player added at the front desk)
         const which = b.which === 'coaches' ? 'coaches' : 'desk';
         const lines = Array.isArray(b.lines) ? b.lines.slice(0, 8).map((l) => String(l == null ? '' : l).replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').trim().slice(0, 1500)).filter(Boolean) : null;   // newlines stay (the attendance list)
-        return send(res, 200, { ok: await NOTIFY.slack(ctx.db, which, S.clean(b.text, 600) + ' — ' + (who.name || who.email), lines) });
+        const isAttendance = which === 'coaches' && /^\*?(Attendance|[A-Z]{3} \d{1,2} \|)/.test(String(b.text || ''));   // the attendance of a session goes to #full-time-attendance in Team (Nov 15)
+        return send(res, 200, { ok: await NOTIFY.slack(ctx.db, which, S.clean(b.text, 600) + ' — ' + (who.name || who.email), lines, isAttendance ? { team: 'attendance' } : null) });
       }
       if (route === 'POST /admin/text') {
         // a text to a family from the backend page (a private booked, a court reserved, a pack running low) — only when texts are switched on.

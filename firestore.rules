@@ -332,6 +332,42 @@ service cloud.firestore {
           && request.resource.data.text is string && request.resource.data.text.size() <= 4000;
         allow delete: if false;
       }
+      // Photos and files of a message (Nov 15): kept in pieces small enough for one record each, written once by someone in the chat,
+      // read by whoever can read the chat, never changed or removed.
+      match /files/{fid} {
+        function chat() { return get(/databases/$(database)/documents/teamChats/$(id)).data; }
+        allow read: if teamOk() && (me() in chat().members || (chat().kind == 'channel' && chat().private == false));
+        allow create: if teamOk() && me() in chat().members
+          && request.resource.data.by == me()
+          && request.resource.data.d is string && request.resource.data.d.size() <= 1000000
+          && request.resource.data.at is number;
+        allow update, delete: if false;
+      }
+    }
+    // Calls (Nov 15): a call belongs to the people of the chat it was started in. The phones talk to each other directly; these records
+    // only carry who is in the call (peers) and the hand-shake between two phones (sig: readable only by the one it is addressed to).
+    match /teamCalls/{cid} {
+      function call() { return get(/databases/$(database)/documents/teamCalls/$(cid)).data; }
+      allow read: if teamOk() && me() in resource.data.members;
+      allow create: if teamOk()
+        && request.resource.data.by == me()
+        && request.resource.data.members is list && me() in request.resource.data.members && request.resource.data.members.size() <= 80
+        && request.resource.data.state == 'live'
+        && request.resource.data.kind in ['audio', 'video']
+        && request.resource.data.at is number
+        && !('rang' in request.resource.data)
+        && me() in get(/databases/$(database)/documents/teamChats/$(request.resource.data.chat)).data.members;
+      allow update: if teamOk() && me() in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'endedAt', 'endedBy']);
+      allow delete: if false;
+      match /peers/{email} {
+        allow read: if teamOk() && me() in call().members;
+        allow write: if teamOk() && me() == email && me() in call().members;
+      }
+      match /sig/{sid} {
+        allow read, delete: if teamOk() && resource.data.to == me();
+        allow create: if teamOk() && request.resource.data.from == me() && me() in call().members && request.resource.data.to in call().members;
+      }
     }
     // What each person has read, muted and left: their own, nobody else's.
     match /teamReads/{email} {

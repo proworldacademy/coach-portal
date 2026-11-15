@@ -14,6 +14,7 @@
 <script src="/shared/pages.js"></script>
 <script src="/shared/pwauth.js"></script>
 <script src="/shared/design.js"></script>
+<script src="/team/calls.js"></script>
 <style>
 /* PROWORLD — Team (Nov 15, 2026): the team's own messaging, in place of Slack. Channels, direct messages and groups; threads, reactions,
    mentions, mute; the phone gets a notification for every new message in a chat you are in. The chats live in the database
@@ -100,6 +101,26 @@ body.tc{overflow:hidden}
 .tc-edit textarea{width:100%;box-sizing:border-box;min-height:60px;border-radius:12px;border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:var(--ink);padding:9px 11px;font:400 15px/1.4 var(--body)}
 .tc-edit div{display:flex;gap:8px}
 .tc-thr .tc-mh b{font:700 15px var(--body)}
+/* photos and files (Nov 15) */
+.tc-clip{height:44px;width:44px;flex:0 0 auto;border-radius:14px;border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:var(--ink);display:grid;place-items:center;font:400 22px/1 var(--body);cursor:pointer}
+.tc-att{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}.tc-att:empty{display:none}
+.tc-att span{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:12px;padding:5px 6px 5px 5px;font:400 12.5px var(--body);color:var(--ink);background:var(--pw-sf,#fff);max-width:100%}
+.tc-att img{width:40px;height:40px;border-radius:8px;object-fit:cover}.tc-att b{font-weight:400;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tc-att button{border:0;background:var(--line);border-radius:50%;width:24px;height:24px;cursor:pointer;color:var(--ink);font:700 12px var(--body)}
+.tc-files{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.tc-img{display:block;border:0;padding:0;background:var(--line);border-radius:14px;overflow:hidden;cursor:zoom-in;width:min(340px,100%);max-height:420px}
+.tc-img img{display:block;width:100%;height:100%;object-fit:cover}.tc-img img:not([src]){visibility:hidden}
+.tc-file{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:var(--ink);border-radius:14px;padding:10px 14px;font:700 13.5px var(--body);cursor:pointer;max-width:100%;text-align:left}
+.tc-file small{font-weight:400;color:var(--muted);white-space:nowrap}.tc-file b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tc-view img{display:block;max-width:100%;max-height:70dvh;margin:0 auto 12px;border-radius:14px}
+/* calls */
+.tc-callb{border:1px solid var(--line-2);background:none;color:var(--ink);border-radius:999px;width:40px;height:36px;font-size:16px;cursor:pointer;flex:0 0 auto}
+.tc-callb:hover{border-color:var(--ink)}
+.tc-callm{display:inline-flex;align-items:center;gap:12px;margin-top:4px;border:1px solid var(--line-2);border-radius:14px;padding:9px 12px;font:400 14px var(--body);color:var(--ink);background:var(--pw-sf,#fff)}
+.tc-callm.live{border-color:#0A0A0A;background:var(--lime);color:#0A0A0A}.tc-callm button{border:0;border-radius:999px;background:#0A0A0A;color:#E2FE78;font:700 12.5px var(--body);padding:8px 14px;cursor:pointer}
+.tc-m.hit{animation:tchit 2.4s ease}@keyframes tchit{0%,45%{background:rgba(226,254,120,.9)}100%{background:transparent}}
+.tc-row .tx small mark{background:rgba(226,254,120,.9);color:#0A0A0A;border-radius:3px;padding:0 2px}
+@media(max-width:760px){.tc-mh .tc-ib{display:none}}
 /* the sheets: new message, new channel, the chat's details, the reaction picker */
 .tc-veil{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:grid;place-items:center;padding:16px}
 .tc-sheet{width:100%;max-width:460px;max-height:86dvh;overflow:auto;background:var(--pw-sf,#fff);color:var(--ink);border:1px solid var(--line-2);border-radius:22px;padding:20px;box-shadow:0 40px 90px -40px rgba(0,0,0,.7)}
@@ -157,12 +178,14 @@ body.tc{overflow:hidden}
 
   /* ── what the page knows ── */
   const S = { me: "", name: "", ctx: null, fs: null, people: {}, peopleList: [], mine: {}, open: {}, gotMine: false, gotOpen: false, openFromServer: false,
-    reads: { r: {}, mute: {}, left: {} }, gotReads: false, cur: "", msgs: [], msgsFor: "", thread: "", tmsgs: [], q: "", act: "", edit: "", sheet: null, sug: null, drafts: {}, push: { can: false, on: null, busy: false }, seeded: false };
+    reads: { r: {}, mute: {}, left: {} }, gotReads: false, cur: "", msgs: [], msgsFor: "", thread: "", tmsgs: [], q: "", act: "", edit: "", sheet: null, sug: null, drafts: {}, push: { can: false, on: null, busy: false }, seeded: false,
+    att: {}, fcache: {}, fmeta: {}, idx: {}, results: null, jump: null, calls: {}, gotCalls: false, wantCall: "" };
+  const BOT = "proworld@bot"; const WINDOW = 400;
   let unMsgs = null, unThread = null;
   const EMO = ["👍", "❤️", "😂", "🎉", "✅", "👀", "🙏", "🔥"];
   const wide = () => window.innerWidth > 760;
   const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
-  const nameOf = (email) => (S.people[email] && S.people[email].name) || String(email || "").split("@")[0];
+  const nameOf = (email) => (email === BOT ? "ProWorld" : (S.people[email] && S.people[email].name) || String(email || "").split("@")[0]);
   const firstOf = (email) => nameOf(email).split(/\s+/)[0];
   const chats = () => Object.assign({}, S.open, S.mine);
   const chat = (id) => S.mine[id] || S.open[id] || null;
@@ -174,7 +197,10 @@ body.tc{overflow:hidden}
     if (c.kind === "dm") { const o = others(c)[0]; return o ? nameOf(o) : "You"; }
     return c.name || others(c).map(firstOf).join(", ") || "Group";
   }
-  const subOf = (c) => (c.kind === "channel" ? (c.topic || ((c.members || []).length + " in it" + (c.private ? " · private" : ""))) : c.kind === "group" ? (c.members || []).length + " people" : (S.people[others(c)[0]] || {}).role || "");
+  const subOf = (c) => (c.kind === "channel" ? (c.topic || ((c.members || []).length + " in it" + (c.private ? " · private" : ""))) : c.kind === "group" ? (c.members || []).length + " people" : others(c)[0] === BOT ? "Reminders and notices from the system" : (S.people[others(c)[0]] || {}).role || "");
+  const kb = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
+  const isImg = (f) => /^image\/(jpeg|png|gif|webp)$/.test(f.type || "") && f.n === 1;
+  const callLive = (id) => { const c = S.calls[id]; return !!(c && c.state === "live" && Date.now() - (c.at || 0) < 4 * 3600 * 1000); };
   const unread = (id) => { const c = S.mine[id]; if (!c || !c.last || !c.last.at || c.last.by === S.me) return false; return c.last.at > (S.reads.r[id] || 0); };
   const hash = (s) => { let a = 5381, b = 52711; for (let i = 0; i < s.length; i++) { const ch = s.charCodeAt(i); a = (a * 33) ^ ch; b = (b * 33) ^ ch; } return (a >>> 0).toString(36) + (b >>> 0).toString(36); };
   const dmId = (a, b) => "dm_" + hash([a, b].sort().join("|"));
@@ -227,6 +253,9 @@ body.tc{overflow:hidden}
       '<div class="tc-sec"><span>Channels</span></div>' + (chans.map((id) => row(id, S.mine[id])).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : q ? "No channel matches" : "No channels yet") + "</small></span></div>") +
       '<div class="tc-sec"><span>Direct messages</span></div>' + (dms.map((id) => row(id, S.mine[id])).join("") || (ppl.length ? "" : '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : "Tap + to write to someone") + "</small></span></div>")) +
       ppl.map((p) => '<button type="button" class="tc-row" data-dm="' + esc(p.email) + '"><span class="ic">' + esc(initials(p.name)) + '</span><span class="tx"><b>' + esc(p.name) + "</b><small>Write to " + esc(p.name.split(" ")[0]) + "</small></span></button>").join("") +
+      (q.length >= 2 ? '<div class="tc-sec"><span>Messages</span></div>' + (S.results && S.results.q === q ? (S.results.hits.map((h) => { const c = chat(h.chat); const t = h.m.text || ((h.m.files || [])[0] || {}).name || ""; const i = t.toLowerCase().indexOf(q); const from = Math.max(0, i - 30); const snip = (from ? "…" : "") + t.slice(from, from + 110);
+          const j = snip.toLowerCase().indexOf(q); const marked = j < 0 ? esc(snip) : esc(snip.slice(0, j)) + "<mark>" + esc(snip.slice(j, j + q.length)) + "</mark>" + esc(snip.slice(j + q.length));
+          return '<button type="button" class="tc-row" data-hit="' + esc(h.chat) + "|" + esc(h.m.id) + "|" + esc(h.m.th || "") + '"><span class="ic">' + esc(c && c.kind === "channel" ? (c.private ? "🔒" : "#") : initials(h.m.name)) + '</span><span class="tx"><b>' + esc((h.m.name || nameOf(h.m.by)).split(" ")[0] + " in " + (c ? (c.kind === "channel" ? "#" : "") + titleOf(c) : "a chat")) + "</b><small>" + marked + '</small></span><span class="mu">' + esc(whenShort(h.m.at)) + "</span></button>"; }).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>No message has those words</small></span></div>') : '<div class="tc-row" style="cursor:default"><span class="tx"><small>Searching every chat you are in…</small></span></div>') : "") +
       (more.length ? '<div class="tc-sec"><span>More channels</span></div>' + more.map((id) => '<button type="button" class="tc-row" data-open="' + esc(id) + '"><span class="ic">#</span><span class="tx"><b>' + esc(titleOf(S.open[id])) + "</b><small>" + esc(subOf(S.open[id])) + '</small></span><span class="join">Join</span></button>').join("") : "") +
       "</div>";
   }
@@ -239,23 +268,29 @@ body.tc{overflow:hidden}
     let body;
     if (S.edit === m.id && mine) body = '<form class="tc-edit" data-edit="' + esc(m.id) + '"><textarea name="t" maxlength="4000" aria-label="Edit your message">' + esc(m.text) + '</textarea><div><button class="tc-pri" type="submit">Save</button><button class="tc-ib" type="button" data-act="edit-x">Cancel</button></div></form>';
     else body = m.deleted ? '<div class="bd gone">This message was deleted.</div>' : '<div class="bd">' + fmt(m.text) + (m.edited ? '<span class="ed">(edited)</span>' : "") + "</div>";
+    if (!m.deleted && S.edit !== m.id && m.call) { const live = callLive(m.call); const mineCall = window.PWCall && window.PWCall.active() === m.call;
+      body = '<div class="tc-callm' + (live ? " live" : "") + '"><span>' + (m.callKind === "video" ? "📹 " : "📞 ") + esc(m.callKind === "video" ? "Video call" : "Call") + (live ? "" : " · ended") + "</span>" + (live ? '<button type="button" data-join="' + esc(m.call) + '">' + (mineCall ? "Back to the call" : "Join") + "</button>" : "") + "</div>"; }
+    if (!m.deleted && S.edit !== m.id && Array.isArray(m.files) && m.files.length) { if (!m.text) body = ""; body += '<div class="tc-files">' + m.files.map((f) => { S.fmeta[f.id] = f;
+      return isImg(f) ? '<button type="button" class="tc-img" data-view="' + esc(f.id) + '" style="aspect-ratio:' + (f.w && f.h ? f.w + "/" + f.h : "4/3") + '" aria-label="Open the photo ' + esc(f.name) + '"><img data-file="' + esc(f.id) + '" alt="' + esc(f.name) + '"' + (S.fcache[f.id] ? ' src="' + S.fcache[f.id] + '"' : "") + "></button>"
+        : '<button type="button" class="tc-file" data-get="' + esc(f.id) + '"><span>📎</span><b>' + esc(f.name) + "</b><small>" + esc(kb(f.size || 0)) + "</small></button>"; }).join("") + "</div>"; }
     const rx = m.reactions && !m.deleted ? Object.keys(m.reactions).filter((e) => (m.reactions[e] || []).length).map((e) => '<button type="button" class="' + (m.reactions[e].includes(S.me) ? "me" : "") + '" data-rx="' + esc(m.id) + '" data-e="' + esc(e) + '" title="' + esc(m.reactions[e].map(nameOf).join(", ")) + '">' + esc(e) + " " + m.reactions[e].length + "</button>").join("") : "";
     const rp = !inThread && m.replies ? '<button type="button" class="tc-rp" data-thread="' + esc(m.id) + '">' + m.replies + (m.replies === 1 ? " reply" : " replies") + "</button>" : "";
     const acts = m.deleted || S.edit === m.id ? "" : '<div class="tc-acts">' + EMO.slice(0, 3).map((e) => '<button type="button" data-rx="' + esc(m.id) + '" data-e="' + e + '" aria-label="React ' + e + '">' + e + "</button>").join("") + '<button type="button" data-act="rx-more" data-id="' + esc(m.id) + '" aria-label="More reactions">＋</button>' + (inThread ? "" : '<button type="button" class="t" data-thread="' + esc(m.id) + '">Reply</button>') + (mine && !m.bot ? '<button type="button" class="t" data-act="edit" data-id="' + esc(m.id) + '">Edit</button><button type="button" class="t" data-act="del" data-id="' + esc(m.id) + '">Delete</button>' : "") + "</div>";
-    return day + '<div class="tc-m' + (same && !day ? " more" : "") + (S.act === m.id ? " act" : "") + '" data-m="' + esc(m.id) + '"><span class="av' + (m.bot ? " bot" : "") + '">' + esc(m.bot ? "PW" : initials(name)) + "</span><div>" + (same && !day ? "" : '<div class="hd"><b>' + esc(name) + "</b><time>" + esc(timeOf(m.at)) + "</time></div>") + body + (rx ? '<div class="tc-rx">' + rx + "</div>" : "") + rp + "</div>" + acts + "</div>";
+    return day + '<div class="tc-m' + (same && !day ? " more" : "") + (S.act === m.id ? " act" : "") + (S.hit && S.hit.id === m.id && Date.now() < S.hit.until ? " hit" : "") + '" data-m="' + esc(m.id) + '"><span class="av' + (m.bot ? " bot" : "") + '">' + esc(m.bot ? "PW" : initials(name)) + "</span><div>" + (same && !day ? "" : '<div class="hd"><b>' + esc(name) + "</b><time>" + esc(timeOf(m.at)) + "</time></div>") + body + (rx ? '<div class="tc-rx">' + rx + "</div>" : "") + rp + "</div>" + acts + "</div>";
   }
   function composer(key, placeholder) {
-    return '<div class="tc-comp" data-comp="' + esc(key) + '"><div class="tc-sug" id="sug-' + esc(key) + '" hidden></div><form data-send="' + esc(key) + '"><textarea name="t" rows="1" maxlength="4000" placeholder="' + esc(placeholder) + '" aria-label="' + esc(placeholder) + '" enterkeyhint="send">' + esc(S.drafts[key] || "") + '</textarea><button class="tc-send" type="submit" aria-label="Send">Send</button></form></div>';
+    return '<div class="tc-comp" data-comp="' + esc(key) + '"><div class="tc-sug" id="sug-' + esc(key) + '" hidden></div><div class="tc-att" data-att="' + esc(key) + '">' + attHtml(key) + '</div><form data-send="' + esc(key) + '"><label class="tc-clip" title="Add a photo or a file" aria-label="Add a photo or a file">＋<input type="file" multiple hidden data-pick="' + esc(key) + '"></label><textarea name="t" rows="1" maxlength="4000" placeholder="' + esc(placeholder) + '" aria-label="' + esc(placeholder) + '" enterkeyhint="send">' + esc(S.drafts[key] || "") + '</textarea><button class="tc-send" type="submit" aria-label="Send">Send</button></form></div>';
   }
+  function attHtml(key) { return (S.att[key] || []).map((a, i) => "<span>" + (a.thumb ? '<img src="' + esc(a.thumb) + '" alt="">' : "📎") + "<b>" + esc(a.name) + "</b><small>" + esc(kb(a.size)) + '</small><button type="button" data-att-x="' + esc(key) + "|" + i + '" aria-label="Remove ' + esc(a.name) + '">✕</button></span>').join(""); }
   function mainHtml() {
     const c = chat(S.cur);
     if (!c) return '<div class="tc-empty"><b>' + (S.gotMine ? "Pick a chat" : "One moment") + "</b>" + (S.gotMine ? "Channels are for a subject, direct messages for one person or a small group. Tap + to start one." : "Loading the team's chats…") + "</div>";
     const inIt = isIn(c); const list = S.msgsFor === S.cur ? S.msgs.filter((m) => !m.th) : [];
-    const head = '<div class="tc-mh"><button type="button" class="bk" data-act="back" aria-label="Back to the chats">‹ Chats</button><button type="button" class="ti" data-act="info"><b>' + (c.kind === "channel" ? (c.private ? "🔒 " : "# ") : "") + esc(titleOf(c)) + "</b><small>" + esc(subOf(c)) + '</small></button><button type="button" class="tc-ib" data-act="info">Details</button></div>';
+    const head = '<div class="tc-mh"><button type="button" class="bk" data-act="back" aria-label="Back to the chats">‹ Chats</button><button type="button" class="ti" data-act="info"><b>' + (c.kind === "channel" ? (c.private ? "🔒 " : "# ") : "") + esc(titleOf(c)) + "</b><small>" + esc(subOf(c)) + '</small></button>' + (inIt && others(c).some((e) => e !== BOT) ? '<button type="button" class="tc-callb" data-act="call-a" aria-label="Start a call" title="Call">📞</button><button type="button" class="tc-callb" data-act="call-v" aria-label="Start a video call" title="Video call">📹</button>' : "") + '<button type="button" class="tc-ib" data-act="info">Details</button></div>';
     let body = ""; let prev = null;
     list.forEach((m) => { body += msgHtml(m, prev, false); prev = m; });
     if (!list.length) body = '<div class="tc-empty"><b>' + (S.msgsFor === S.cur ? "Nothing here yet" : "Loading") + "</b>" + (S.msgsFor === S.cur ? (c.kind === "channel" ? "Be the first to write in #" + esc(titleOf(c)) + "." : "Say hello to " + esc(titleOf(c)) + ".") : "") + "</div>";
-    const foot = inIt ? composer("c:" + S.cur, "Message " + (c.kind === "channel" ? "#" : "") + titleOf(c)) : '<div class="tc-joinbar"><span>You are looking at <b>#' + esc(titleOf(c)) + '</b>.</span><button type="button" class="tc-pri" data-act="join">Join the channel</button></div>';
+    const foot = c.kind === "dm" && others(c)[0] === BOT ? '<div class="tc-joinbar"><span>ProWorld writes here: reminders and notices from the system. Nobody reads replies.</span></div>' : inIt ? composer("c:" + S.cur, "Message " + (c.kind === "channel" ? "#" : "") + titleOf(c)) : '<div class="tc-joinbar"><span>You are looking at <b>#' + esc(titleOf(c)) + '</b>.</span><button type="button" class="tc-pri" data-act="join">Join the channel</button></div>';
     return head + '<div class="tc-msgs" id="msgs">' + body + "</div>" + foot;
   }
   function threadHtml() {
@@ -286,7 +321,7 @@ body.tc{overflow:hidden}
     else if (focus && focus.comp) { const t = app.querySelector('[data-comp="' + focus.comp.replace(/"/g, "") + '"] textarea'); if (t) { t.value = focus.v; t.focus(); try { t.setSelectionRange(focus.s, focus.e); } catch (e) { /* fine */ } grow(t); } }
     else if (focus && focus.edit) { const t = app.querySelector("[data-edit] textarea"); if (t) { t.value = focus.v; t.focus(); } }
     app.querySelectorAll("[data-comp] textarea").forEach(grow);
-    title();
+    title(); lazy(); jump();
   }
   const grow = (t) => { t.style.height = "auto"; t.style.height = Math.min(160, Math.max(44, t.scrollHeight + 2)) + "px"; };
   function title() { const n = Object.keys(S.mine).filter((id) => unread(id) && !S.reads.mute[id]).length; document.title = (n ? "(" + n + ") " : "") + "Team · PROWORLD"; }
@@ -296,7 +331,7 @@ body.tc{overflow:hidden}
     if (unMsgs) { unMsgs(); unMsgs = null; } if (unThread) { unThread(); unThread = null; }
     S.msgs = []; S.msgsFor = ""; S.thread = ""; S.tmsgs = []; S.act = ""; S.edit = "";
     if (!id) return;
-    unMsgs = S.fs.collection("teamChats/" + id + "/messages").orderBy("at").limitToLast(300).onSnapshot((snap) => {
+    unMsgs = S.fs.collection("teamChats/" + id + "/messages").orderBy("at").limitToLast(WINDOW).onSnapshot((snap) => {
       if (S.cur !== id) return; const first = S.msgsFor !== id;
       S.msgs = snap.docs.map((d) => Object.assign({ id: d.id }, d.data())); S.msgsFor = id; render(!first); markRead();
     }, (e) => { if (S.cur === id) { S.msgsFor = id; S.msgs = []; render(); toast("Could not open this chat (" + (e.code || e.message) + ").", true); } });
@@ -318,6 +353,7 @@ body.tc{overflow:hidden}
     S.cur = id || ""; listen(S.cur); render(); markRead();
   }
   function route() {
+    const cm = /^#\/call\/([A-Za-z0-9_-]{1,80})/.exec(location.hash || ""); if (cm) { S.wantCall = cm[1]; try { history.replaceState(null, "", S.cur ? "#/c/" + S.cur : "#/"); } catch (e) { /* fine */ } if (S.gotCalls) callSheet(S.wantCall); }
     const m = /^#\/c\/([A-Za-z0-9_-]{1,80})/.exec(location.hash || ""); let id = m ? m[1] : "";
     if (id && S.gotMine && S.gotOpen && !chat(id)) id = "";
     if (!id && wide() && S.gotMine) { const ids = Object.keys(S.mine); id = ids.find((x) => unread(x)) || (S.mine.general ? "general" : ids[0]) || ""; }
@@ -331,18 +367,90 @@ body.tc{overflow:hidden}
     return out;
   }
   async function send(key, text) {
-    text = String(text || "").replace(/\s+$/g, ""); if (!text.trim()) return;
+    text = String(text || "").replace(/\s+$/g, ""); const atts = (S.att[key] || []).slice(); if (!text.trim() && !atts.length) return;
+    if (send.busy) return;
     const id = S.cur; const c = chat(id); if (!c || !isIn(c)) return; const th = key.startsWith("t:") ? key.slice(2) : "";
     const ref = S.fs.collection("teamChats/" + id + "/messages").doc(); const at = Date.now(); const mm = mentionsOf(text, c);
     const msg = { by: S.me, name: S.name, text: text.slice(0, 4000), at }; if (th) msg.th = th; if (mm.mentions.length) msg.mentions = mm.mentions; if (mm.everyone) msg.everyone = true;
     S.drafts[key] = ""; const t = document.querySelector('[data-comp="' + key + '"] textarea'); if (t) { t.value = ""; grow(t); }
     try {
+      if (atts.length) { send.busy = true; toast(atts.length === 1 ? "Sending " + atts[0].name + "…" : "Sending " + atts.length + " files…"); msg.files = [];
+        for (let k = 0; k < atts.length; k++) { const a = atts[k]; const fid = ref.id + "f" + k;
+          for (let i = 0; i < a.parts.length; i++) await S.fs.doc("teamChats/" + id + "/files/" + fid + "_" + i).set({ by: S.me, at, f: fid, i, n: a.parts.length, d: a.parts[i] });
+          const meta = { id: fid, name: a.name.slice(0, 120), type: a.type, size: a.size, n: a.parts.length }; if (a.w) { meta.w = a.w; meta.h = a.h; } msg.files.push(meta); if (a.url) S.fcache[fid] = a.url; }
+        S.att[key] = []; const box = document.querySelector('[data-att="' + key + '"]'); if (box) box.innerHTML = ""; }
       await ref.set(msg);
-      S.fs.doc("teamChats/" + id).update({ last: { at, by: S.me, name: S.name, text: text.replace(/\s+/g, " ").slice(0, 140) } }).catch(() => {});
+      S.fs.doc("teamChats/" + id).update({ last: { at, by: S.me, name: S.name, text: (text.replace(/\s+/g, " ") || (msg.files && msg.files.length ? (/^image\//.test(msg.files[0].type) ? "📷 Photo" : "📎 " + msg.files[0].name) : "")).slice(0, 140) } }).catch(() => {});
       if (th) { const p = S.msgs.find((m) => m.id === th); S.fs.doc("teamChats/" + id + "/messages/" + th).update({ replies: ((p && p.replies) || 0) + 1, lastReply: at }).catch(() => {}); }
       S.reads.r[id] = at + 1; S.fs.doc("teamReads/" + S.me).set({ r: { [id]: at + 1 } }, { merge: true }).catch(() => {});
       api("notify", { chat: id, id: ref.id }).catch(() => {});
     } catch (e) { S.drafts[key] = text; render(true); toast("Not sent (" + (e.code || e.message) + "). Your text is still in the box.", true); }
+    finally { send.busy = false; }
+  }
+
+  /* ── photos and files: a photo is made smaller on this device (1600 px, JPEG) so it fits one record; any other file up to 8 MB travels in pieces ── */
+  const PART = 524288; const MAX_FILE = 8 * 1048576; const MAX_B64 = 900000;
+  const b64 = (buf) => { const u = new Uint8Array(buf); let out = ""; for (let i = 0; i < u.length; i += 32768) out += String.fromCharCode.apply(null, u.subarray(i, i + 32768)); return btoa(out); };
+  function shrink(file) { return new Promise((ok) => { const url = URL.createObjectURL(file); const im = new Image();
+    im.onload = () => { try { let side = 1600, q = 0.82, data = "", w = 0, h = 0; for (let tries = 0; tries < 7; tries++) { const k = Math.min(1, side / Math.max(im.naturalWidth, im.naturalHeight)); w = Math.max(1, Math.round(im.naturalWidth * k)); h = Math.max(1, Math.round(im.naturalHeight * k)); const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); data = cv.toDataURL("image/jpeg", q); if (data.length - 23 <= MAX_B64) break; if (q > 0.6) q -= 0.12; else side = Math.round(side * 0.8); }
+        URL.revokeObjectURL(url); const part = data.slice(data.indexOf(",") + 1); if (part.length > MAX_B64) return ok(null); ok({ name: file.name.replace(/\.(heic|heif|png|webp|bmp|tiff?)$/i, ".jpg") || "photo.jpg", type: "image/jpeg", size: Math.round(part.length * 0.75), parts: [part], w, h, thumb: data, url: data }); } catch (e) { URL.revokeObjectURL(url); ok(null); } };
+    im.onerror = () => { URL.revokeObjectURL(url); ok(null); }; im.src = url; }); }
+  async function addFiles(key, list) {
+    const files = Array.from(list || []); if (!files.length) return; S.att[key] = S.att[key] || [];
+    for (const file of files) { if (S.att[key].length >= 6) { toast("Six files at a time."); break; }
+      let a = null; if (/^image\//.test(file.type) && !/gif|svg/.test(file.type)) a = await shrink(file);
+      if (!a) { if (file.size > MAX_FILE) { toast(file.name + " is over 8 MB. Videos and big files do not fit yet.", true); continue; }
+        const buf = await file.arrayBuffer(); const parts = []; for (let i = 0; i < buf.byteLength; i += PART) parts.push(b64(buf.slice(i, i + PART))); if (!parts.length) continue;
+        a = { name: file.name || "file", type: file.type || "application/octet-stream", size: file.size, parts }; if (file.type === "image/gif" && parts.length === 1) { a.url = "data:image/gif;base64," + parts[0]; a.thumb = a.url; } }
+      S.att[key].push(a); }
+    const box = document.querySelector('[data-att="' + key + '"]'); if (box) box.innerHTML = attHtml(key);
+  }
+  const loading = {};
+  function fileData(fid) {
+    if (S.fcache[fid]) return Promise.resolve(S.fcache[fid]); if (loading[fid]) return loading[fid]; const meta = S.fmeta[fid]; const chatId = S.cur; if (!meta || !chatId) return Promise.reject(new Error("no file"));
+    loading[fid] = Promise.all(Array.from({ length: meta.n || 1 }, (x, i) => S.fs.doc("teamChats/" + chatId + "/files/" + fid + "_" + i).get())).then((docs) => { const d = docs.map((x) => (x.exists ? (x.data() || {}).d || "" : "")); if (d.some((p) => !p)) throw new Error("missing"); const parts = d; delete loading[fid];
+      if (parts.length === 1) { const url = "data:" + meta.type + ";base64," + parts[0]; if (isImg(meta)) S.fcache[fid] = url; return url; } return parts; }, (e) => { delete loading[fid]; throw e; });
+    return loading[fid];
+  }
+  let io = null;
+  function lazy() {
+    const imgs = document.querySelectorAll("img[data-file]:not([src])"); if (!imgs.length) return;
+    const load = (im) => { const fid = im.dataset.file; fileData(fid).then((url) => { if (typeof url === "string") document.querySelectorAll('img[data-file="' + fid + '"]').forEach((x) => { if (!x.getAttribute("src")) x.src = url; }); }).catch(() => {}); };
+    if (!("IntersectionObserver" in window)) { imgs.forEach(load); return; }
+    if (io) io.disconnect(); io = new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); load(e.target); } }); }, { rootMargin: "500px" }); imgs.forEach((im) => io.observe(im));
+  }
+  async function fileBlob(fid) { const meta = S.fmeta[fid]; const got = await fileData(fid); const parts = typeof got === "string" ? [got.slice(got.indexOf(",") + 1)] : got; const bytes = parts.map((p) => { const bin = atob(p); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }); return new Blob(bytes, { type: meta.type || "application/octet-stream" }); }
+  async function saveFile(fid) {
+    const meta = S.fmeta[fid]; if (!meta) return; toast("Getting " + meta.name + "…");
+    try { const blob = await fileBlob(fid); const file = new File([blob], meta.name, { type: meta.type });
+      if (!wide() && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) { /* they closed the sheet */ } return; }
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = meta.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (e) { toast("Could not get the file.", true); }
+  }
+
+  /* ── search across every chat you are in: the last 400 lines of each, read once and kept while the page is open ── */
+  let searchT = 0, searchN = 0;
+  function searchAll(q) {
+    clearTimeout(searchT); q = q.trim().toLowerCase(); if (q.length < 2) { S.results = null; return; }
+    searchT = setTimeout(async () => { const n = ++searchN; const ids = Object.keys(S.mine);
+      await Promise.all(ids.map(async (id) => { const c = S.mine[id]; const lastAt = (c.last && c.last.at) || 0; const have = S.idx[id]; if (have && have.lastAt >= lastAt) return;
+        try { const snap = await S.fs.collection("teamChats/" + id + "/messages").orderBy("at").limitToLast(WINDOW).get(); S.idx[id] = { lastAt, msgs: snap.docs.map((d) => Object.assign({ id: d.id }, d.data())) }; } catch (e) { S.idx[id] = { lastAt, msgs: [] }; } }));
+      if (n !== searchN || S.q.trim().toLowerCase() !== q) return; const hits = [];
+      ids.forEach((id) => { ((S.idx[id] || {}).msgs || []).forEach((m) => { if (m.deleted || m.call) return; const hay = ((m.text || "") + " " + (m.files || []).map((f) => f.name).join(" ")).toLowerCase(); if (hay.includes(q)) hits.push({ chat: id, m }); }); });
+      hits.sort((a, b) => b.m.at - a.m.at); S.results = { q, hits: hits.slice(0, 40) }; render(true); }, 320);
+  }
+  function jump() {
+    if (!S.jump || S.jump.chat !== S.cur || S.msgsFor !== S.cur) return; const j = S.jump; const target = j.th || j.id; const el = document.querySelector('.tc-main .tc-m[data-m="' + target + '"]');
+    S.jump = null; if (!el) { toast("That message is further back than this page keeps."); return; }
+    el.scrollIntoView({ block: "center" }); el.classList.add("hit"); S.hit = { id: target, until: Date.now() + 2600 }; if (j.th) setTimeout(() => openThread(j.th), 50);
+  }
+
+  /* ── calls ── */
+  function callSheet(id) {
+    const c = S.calls[id]; if (!c) { if (S.gotCalls) { toast("That call has ended."); S.wantCall = ""; } return; } S.wantCall = "";
+    if (window.PWCall.active()) { window.PWCall.join(id); return; }
+    const ch = chat(c.chat); const where = ch ? (ch.kind === "channel" ? "#" : "") + titleOf(ch) : c.title || "";
+    S.sheet = "call"; $("sheet").innerHTML = '<div class="tc-veil" data-veil><div class="tc-sheet" role="dialog" aria-modal="true"><h2>' + esc((c.byName || nameOf(c.by)).split(" ")[0]) + " is calling</h2><p>" + esc((c.kind === "video" ? "A video call" : "A call") + (ch && ch.kind !== "dm" ? " in " + where : "") + ".") + '</p><div class="tc-btns"><button type="button" class="tc-ib" data-act="sheet-x">Not now</button><button type="button" class="tc-ib" data-callin="' + esc(id) + '" data-v="0">Join with sound</button><button type="button" class="tc-pri" data-callin="' + esc(id) + '" data-v="1">Join with video</button></div></div></div>';
   }
   async function react(mid, emo) {
     const m = S.msgs.concat(S.tmsgs).find((x) => x.id === mid); if (!m || !isIn(chat(S.cur))) return;
@@ -472,12 +580,19 @@ body.tc{overflow:hidden}
     if ((b = el("[data-sug]"))) { pickSug(+b.dataset.sug); return; }
     if ((b = el("[data-rx]"))) { react(b.dataset.rx, b.dataset.e); if (S.sheet === "rx") closeSheet(); S.act = ""; return; }
     if ((b = el("[data-thread]"))) { S.act = ""; openThread(b.dataset.thread); return; }
-    if ((b = el("[data-open]"))) { S.q = ""; go(b.dataset.open); return; }
+    if ((b = el("[data-hit]"))) { const p = b.dataset.hit.split("|"); S.jump = { chat: p[0], id: p[1], th: p[2] || "" }; S.q = ""; S.results = null; if (S.cur === p[0]) { render(true); } else go(p[0]); return; }
+    if ((b = el("[data-att-x]"))) { const p = b.dataset.attX.split("|"); (S.att[p[0]] || []).splice(+p[1], 1); const box = document.querySelector('[data-att="' + p[0] + '"]'); if (box) box.innerHTML = attHtml(p[0]); return; }
+    if ((b = el("[data-view]"))) { const fid = b.dataset.view; const meta = S.fmeta[fid] || {}; S.sheet = "view"; $("sheet").innerHTML = '<div class="tc-veil" data-veil><div class="tc-sheet tc-view" role="dialog" aria-modal="true" style="max-width:860px"><img alt="' + esc(meta.name || "") + '"' + (S.fcache[fid] ? ' src="' + S.fcache[fid] + '"' : "") + ' data-file="' + esc(fid) + '"><div class="tc-btns"><button type="button" class="tc-ib" data-get="' + esc(fid) + '">' + (wide() ? "Download" : "Save or share") + '</button><button type="button" class="tc-pri" data-act="sheet-x">Done</button></div></div></div>'; lazy(); return; }
+    if ((b = el("[data-get]"))) { saveFile(b.dataset.get); return; }
+    if ((b = el("[data-join]"))) { const id = b.dataset.join; if (window.PWCall.active() === id) window.PWCall.join(id); else callSheet(id); return; }
+    if ((b = el("[data-callin]"))) { const id = b.dataset.callin; const v = b.dataset.v === "1"; const c = S.calls[id]; closeSheet(); if (c && S.cur !== c.chat) go(c.chat); window.PWCall.join(id, v); return; }
+    if ((b = el("[data-open]"))) { S.q = ""; S.results = null; go(b.dataset.open); return; }
     if ((b = el("[data-dm]"))) { openDm(b.dataset.dm); return; }
     if ((b = el("[data-act]"))) { const a = b.dataset.act;
       if (a === "new") sheet("new"); else if (a === "new-chan") sheet("chan"); else if (a === "sheet-x") closeSheet(); else if (a === "info") sheet("info");
       else if (a === "back") go(""); else if (a === "thread-x") { if (unThread) { unThread(); unThread = null; } S.thread = ""; render(true); }
       else if (a === "push-on") pushOn();
+      else if (a === "call-a" || a === "call-v") window.PWCall.start(S.cur, a === "call-v" ? "video" : "audio");
       else if (a === "join") S.fs.doc("teamChats/" + S.cur).update({ members: FV().arrayUnion(S.me) }).then(() => { delete S.reads.left[S.cur]; S.fs.doc("teamReads/" + S.me).set({ left: { [S.cur]: false } }, { merge: true }).catch(() => {}); }, (er) => toast("Could not join (" + (er.code || er.message) + ").", true));
       else if (a === "leave") { const id = S.cur; S.fs.doc("teamReads/" + S.me).set({ left: { [id]: true } }, { merge: true }).catch(() => {}); S.reads.left[id] = true; S.fs.doc("teamChats/" + id).update({ members: FV().arrayRemove(S.me) }).then(() => { closeSheet(); go(""); }, (er) => toast("Could not leave (" + (er.code || er.message) + ").", true)); }
       else if (a === "mute") { const id = S.cur; const on = !S.reads.mute[id]; S.reads.mute[id] = on; S.fs.doc("teamReads/" + S.me).set({ mute: { [id]: on } }, { merge: true }).catch(() => {}); sheet("info"); render(true); }
@@ -502,11 +617,16 @@ body.tc{overflow:hidden}
   });
   document.addEventListener("input", (e) => {
     const t = e.target;
-    if (t.id === "tcq") { S.q = t.value; render(true); return; }
+    if (t.id === "tcq") { S.q = t.value; searchAll(S.q); render(true); return; }
     if (t.tagName === "TEXTAREA" && t.closest("[data-comp]")) { grow(t); S.drafts[t.closest("[data-comp]").dataset.comp] = t.value; suggest(t); }
     if (t.name === "priv" && t.form) { const ev = t.form.querySelector('input[name="everyone"]'); if (ev && t.checked) ev.checked = false; }
     if (t.name === "everyone" && t.form) { const pv = t.form.querySelector('input[name="priv"]'); if (pv && t.checked) pv.checked = false; }
   });
+  document.addEventListener("change", (e) => { const t = e.target; if (t.dataset && t.dataset.pick) { addFiles(t.dataset.pick, t.files).then(() => { t.value = ""; }); } });
+  document.addEventListener("paste", (e) => { const t = e.target; const comp = t.closest && t.closest("[data-comp]"); if (!comp || !e.clipboardData) return; const fl = Array.from(e.clipboardData.files || []); if (fl.length) { e.preventDefault(); addFiles(comp.dataset.comp, fl); } });
+  document.addEventListener("dragover", (e) => { if (S.cur && e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files")) e.preventDefault(); });
+  document.addEventListener("drop", (e) => { if (!S.cur || !e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return; e.preventDefault(); const c = chat(S.cur); if (c && isIn(c)) addFiles((S.thread ? "t:" + S.thread : "c:" + S.cur), e.dataTransfer.files); });
+  document.addEventListener("pw-call", () => render(true));
   document.addEventListener("keydown", (e) => {
     const t = e.target;
     if (e.key === "Escape") { if (S.sheet) closeSheet(); else if (S.sug) { const box = $("sug-" + S.sug.key); if (box) box.hidden = true; S.sug = null; } else if (S.edit) { S.edit = ""; render(true); } return; }
@@ -536,6 +656,8 @@ body.tc{overflow:hidden}
       (e) => { S.gotMine = true; render(); toast("Could not read the chats (" + (e.code || e.message) + ").", true); });
     S.fs.collection("teamChats").where("kind", "==", "channel").where("private", "==", false).onSnapshot((snap) => { S.open = {}; snap.docs.forEach((d) => { S.open[d.id] = d.data(); }); S.gotOpen = true; if (!snap.metadata || !snap.metadata.fromCache) S.openFromServer = true; autoJoin(); seed(); render(true); }, () => { S.gotOpen = true; });
     S.fs.doc("teamReads/" + S.me).onSnapshot((d) => { const x = (d.exists && d.data()) || {}; const local = S.reads.r; S.reads = { r: Object.assign({}, x.r || {}), mute: x.mute || {}, left: x.left || {} }; Object.keys(local).forEach((k) => { if (local[k] > (S.reads.r[k] || 0)) S.reads.r[k] = local[k]; }); S.gotReads = true; autoJoin(); render(true); markRead(); }, () => { S.gotReads = true; });
+    window.PWCall.init({ fs: S.fs, me: S.me, name: S.name, api, toast, chatOf: chat, titleOf });
+    S.fs.collection("teamCalls").where("members", "array-contains", S.me).where("state", "==", "live").onSnapshot((snap) => { S.calls = {}; snap.docs.forEach((d) => { S.calls[d.id] = d.data(); }); S.gotCalls = true; if (S.wantCall) callSheet(S.wantCall); render(true); }, () => { S.gotCalls = true; });
     pushCheck(); render();
   });
 })();
