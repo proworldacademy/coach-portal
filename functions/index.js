@@ -36,6 +36,7 @@ const PUSH = require('./lib/push');
 const SIGNIN = require('./lib/signin');
 const MAIL = require('./lib/mail');
 const USERS = require('./lib/users');
+const TEAM = require('./lib/team');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -156,6 +157,20 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
       if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
       throw S.err(404, 'route', 'No such coach route.');
+    }
+
+    if (path.startsWith('/api/team/')) {
+      // the team's own messaging (Nov 15): the names of the team, the notification after a message, and this phone's notifications for people
+      // who hold no Coach Portal (the same engine as /api/coach/push/*). Anyone active on the staff list.
+      const who = await ADMIN.requireTeam(req); const b = req.body || {};
+      if (route === 'GET /team/people') return send(res, 200, await TEAM.people(ctx.db));
+      if (route === 'POST /team/notify') { const out = await TEAM.notify(ctx.db, who, b); logger.info('team message', { by: who.email, chat: S.clean(b.chat, 80), to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }
+      if (route === 'GET /team/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
+      if (route === 'POST /team/push/subscribe') return send(res, 200, await PUSH.subscribe(ctx.db, who, b));
+      if (route === 'POST /team/push/unsubscribe') return send(res, 200, await PUSH.unsubscribe(ctx.db, who, b));
+      if (route === 'POST /team/push/apns') return send(res, 200, await PUSH.registerApns(ctx.db, who, b));
+      if (route === 'POST /team/push/apns/off') return send(res, 200, await PUSH.unregisterApns(ctx.db, who, b));
+      throw S.err(404, 'route', 'No such team route.');
     }
 
     if (path.startsWith('/api/admin/')) {
