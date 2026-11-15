@@ -38,6 +38,15 @@ async function api(method, path, body) {
     fs.writeFileSync(dir + '/profile.uuid', p.j.data.attributes.uuid); fs.writeFileSync(dir + '/profile.name', name);
     console.log('PROFILE: created · ' + name); return;
   }
+  if (process.argv[2] === 'clean') {
+    // Earlier builds let Xcode make a development certificate per run and never removed it; Apple caps them. Remove only the ones made
+    // through the API since this app's first build (they expire a year after they were made: after Nov 13, 2027), never anyone else's.
+    const c = await api('GET', '/v1/certificates?limit=200&fields[certificates]=name,certificateType,expirationDate,displayName');
+    if (!c.ok) { console.log('CERTS: could not list (HTTP ' + c.status + ') ' + c.err); return; }
+    let n = 0; for (const x of c.j.data || []) { const a = x.attributes || {}; const mine = /Created via API/i.test(String(a.name || '') + ' ' + String(a.displayName || '')) && /DEVELOPMENT/.test(String(a.certificateType || '')) && new Date(a.expirationDate).getTime() >= Date.parse('2027-11-13T00:00:00Z');
+      if (mine) { const r = await api('DELETE', '/v1/certificates/' + x.id); if (r.status === 204) n++; } }
+    console.log('CERTS: ' + (c.j.data || []).length + ' on the account, ' + n + ' leftover development certificate(s) from earlier builds removed'); return;
+  }
   if (process.argv[2] === 'unsign') {
     const dir = process.argv[3]; const rd = (n) => { try { return fs.readFileSync(dir + '/' + n, 'utf8').trim(); } catch (e) { return ''; } };
     if (rd('profile.id')) { const r = await api('DELETE', '/v1/profiles/' + rd('profile.id')); console.log('PROFILE: removed (HTTP ' + r.status + ')'); }

@@ -1,1 +1,1 @@
-9 · Nov 15, 2026 · the phone's own notifications
+10 · Nov 15, 2026 · sign the archive with the build's own certificate
