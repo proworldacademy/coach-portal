@@ -26,6 +26,9 @@ const WHO = {
   owner: { name: 'Olive Owner', role: 'admin', owner: true, pages: [] }
 };
 const BASE = JSON.parse(JSON.stringify(H.CLIENT_SEED.docs));
+/* the team's own messaging (/team, Nov 15): the invented team and chats of functions/test/portal/team.harness.js; whoever is signed in stands where its director stands */
+const TH = require(REPO + '/functions/test/portal/team.harness.js');
+const teamFor = (email) => JSON.parse(JSON.stringify(TH.teamDocs()).split(TH.P.dee).join(email));
 let next = { u: '/portal/', who: 'coach', y: 0 };
 function seedFor(k) {
   if (k === 'guest') return { user: null, docs: {} };          // nobody signed in: the sign-in screens
@@ -33,6 +36,7 @@ function seedFor(k) {
   const w = WHO[k] || WHO.coach; const email = k + '@example.test'; const docs = JSON.parse(JSON.stringify(BASE));
   Object.keys(docs).filter((d) => d.startsWith('staff/')).forEach((d) => delete docs[d]);
   docs['staff/' + email] = Object.assign({ email, active: true }, w);
+  Object.assign(docs, teamFor(email));
   return { user: { uid: 'u-' + k, email, emailVerified: true, displayName: w.name, providerData: [{ providerId: 'password' }] }, docs };
 }
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -42,6 +46,8 @@ http.createServer(async (req, res) => {
   if (p === '/__shot') { res.writeHead(302, { location: next.u, 'cache-control': 'no-store' }); res.end(); return; }
   if (p === '/__stub/firebase.js') { res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }); res.end(STUB); return; }
   if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }); res.end(''); return; }
+  if (p === '/api/team/people') { const me = (next.who || 'coach') + '@example.test'; const w = WHO[next.who] || WHO.coach; const people = Object.keys(TH.STAFF).map((k) => TH.STAFF[k]).filter((r) => r.email !== TH.P.dee).map((r) => ({ email: r.email, name: r.name, role: r.owner ? 'owner' : r.role })).concat([{ email: me, name: w.name || 'You', role: w.role || 'team' }]); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ people })); return; }
+  if (p.startsWith('/api/team/')) { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); return; }
   if (p.startsWith('/api/coach/')) {
     let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
     const [st, j] = await H.engine(req.method, p, url.searchParams, body); res.writeHead(st, { 'content-type': 'application/json' }); res.end(JSON.stringify(j)); return;

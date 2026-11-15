@@ -41,6 +41,7 @@ function net() { return override || fetcher(); }
 
 /* A Slack message. `which` is 'coaches' or 'desk'; with only one webhook set, everything goes there. Returns true when posted. */
 async function slack(db, which, text, lines) {
+  try { await require('./team').post(db, which === 'coaches' ? 'coaches' : 'desk', text, lines); } catch (e) { /* the team channel is extra */ }   // the same line in the team's own channel (Nov 15, 2026)
   try {
     const s = await settings(db);
     const hook = (which === 'coaches' ? s.slackCoaches : s.slackDesk) || s.slackDesk || s.slackCoaches;

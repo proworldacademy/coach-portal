@@ -277,6 +277,67 @@ service cloud.firestore {
 
     // ── Marketing — the Marketing Command Center and its scheduled runs ──
     // apps/marketing/<collection>/<id>: state, ideaBank, weeks, archive, reports, numbers. Each holds { json, at, by }.
+    // ── The team's own messaging (Nov 15, 2026 — Antonio: "replicate Slack inside our app") ──
+    // Anyone active on the staff list, whatever pages they hold. A chat is a channel, a direct message (two people) or a group.
+    // An open channel can be read and joined by the whole team; a private channel, a group or a direct message only by the people in it —
+    // owners included: nobody reads a conversation they are not in. Only directors, administrators and owners make channels or change
+    // whether one is private. Messages are written by people in the chat, under their own address; a message is never deleted, its
+    // author can edit it or mark it deleted; anyone in the chat can react or answer in its thread. The engine's own lines (new players,
+    // front desk alerts) arrive through the server and need no rule.
+    function teamOk() { return owner() || onStaff(); }
+    match /teamChats/{id} {
+      function mine() { return me() in resource.data.members; }
+      function open() { return resource.data.kind == 'channel' && resource.data.private == false; }
+      allow read: if teamOk() && (mine() || open());
+      allow create: if teamOk()
+        && request.resource.data.kind in ['channel', 'dm', 'group']
+        && request.resource.data.createdBy == me()
+        && request.resource.data.members is list
+        && me() in request.resource.data.members
+        && request.resource.data.members.size() <= 80
+        && (request.resource.data.kind != 'channel' || director())
+        && (request.resource.data.kind != 'dm' || request.resource.data.members.size() == 2);
+      allow update: if teamOk()
+        && request.resource.data.kind == resource.data.kind
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.members is list
+        && request.resource.data.members.size() <= 80
+        && (
+          // someone in the chat: the name, the topic, who is in it, the last line. A direct message keeps its two people.
+          (mine()
+            && (resource.data.kind != 'dm' || request.resource.data.members == resource.data.members)
+            && (director() || request.resource.data.get('private', false) == resource.data.get('private', false))
+            && (director() || request.resource.data.get('everyone', false) == resource.data.get('everyone', false)))
+          // someone not in an open channel yet: joining it, and nothing else
+          || (open()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+            && request.resource.data.members.toSet().difference(resource.data.members.toSet()) == [me()].toSet()
+            && resource.data.members.toSet().difference(request.resource.data.members.toSet()).size() == 0)
+        );
+      allow delete: if false;
+      match /messages/{mid} {
+        function chat() { return get(/databases/$(database)/documents/teamChats/$(id)).data; }
+        allow read: if teamOk() && (me() in chat().members || (chat().kind == 'channel' && chat().private == false));
+        allow create: if teamOk() && me() in chat().members
+          && request.resource.data.by == me()
+          && request.resource.data.text is string && request.resource.data.text.size() <= 4000
+          && request.resource.data.at is number
+          && !('bot' in request.resource.data) && !('pushed' in request.resource.data);
+        allow update: if teamOk() && me() in chat().members
+          && request.resource.data.by == resource.data.by
+          && request.resource.data.at == resource.data.at
+          && (resource.data.by == me()
+            ? request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'deleted', 'reactions', 'replies', 'lastReply', 'mentions'])
+            : request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'replies', 'lastReply']))
+          && request.resource.data.text is string && request.resource.data.text.size() <= 4000;
+        allow delete: if false;
+      }
+    }
+    // What each person has read, muted and left: their own, nobody else's.
+    match /teamReads/{email} {
+      allow read, write: if teamOk() && me() == email;
+    }
+
     match /apps/marketing/{col}/{id} {
       allow read: if runs() || hasPage('mkt');
       allow create, update: if (runs() || hasPage('mkt'))

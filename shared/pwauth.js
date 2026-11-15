@@ -169,7 +169,7 @@
   function start(opts) {
     need = (opts && opts.need) || null;
     return new Promise((resolve) => {
-      if (ctx && stage === "in") { try { localStorage.setItem("pw-side", "team"); } catch (e) { /* no storage */ } try { if (window.PWSideAuto) window.PWSideAuto(ctx); } catch (e) { /* the bar is extra */ }
+      if (ctx && stage === "in") { try { localStorage.setItem("pw-side", "team"); } catch (e) { /* no storage */ } try { if (window.PWSideAuto) window.PWSideAuto(ctx); if (window.PWTeamWatch) window.PWTeamWatch(ctx); } catch (e) { /* the bar is extra */ }
         if (!need || ctx.has(need)) { resolve(ctx); return; } stage = "noaccess"; paint(); return; }
       waiters.push(resolve);
       if (stage !== "boot") return;

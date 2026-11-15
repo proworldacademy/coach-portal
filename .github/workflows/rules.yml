@@ -1,0 +1,25 @@
+name: Database rules check
+# Runs the rules of the team's messaging on the Firestore emulator (functions/test/rules/team.rules.js) whenever firestore.rules changes,
+# on any branch, before it is merged. Invented people only; nothing touches the live database.
+on:
+  push:
+    paths: ['firestore.rules', 'functions/test/rules/**', '.github/workflows/rules.yml']
+  workflow_dispatch:
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Run the rules on the emulator
+        run: |
+          mkdir -p "$RUNNER_TEMP/r" && cd "$RUNNER_TEMP/r"
+          npm init -y >/dev/null
+          npm i --no-audit --no-fund firebase-tools @firebase/rules-unit-testing firebase >/dev/null
+          cp "$GITHUB_WORKSPACE/firestore.rules" "$GITHUB_WORKSPACE/functions/test/rules/team.rules.js" .
+          echo '{ "firestore": { "rules": "firestore.rules" }, "emulators": { "firestore": { "port": 8787, "host": "127.0.0.1" }, "ui": { "enabled": false } } }' > firebase.json
+          npx firebase emulators:exec --only firestore --project demo-pw "node team.rules.js"

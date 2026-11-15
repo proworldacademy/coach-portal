@@ -58,6 +58,22 @@ async function requireCoach(req) {
   const name = rec.name || decoded.name || email;
   return { uid: decoded.uid, email, name, firstName: first(name), coachAs: String(rec.coachAs || ''), justcallNumber: String(rec.justcallNumber || ''), keys: [rec.coachAs, first(name)].map(fold).filter(Boolean), role, owner: rec.owner === true, admin: isAdmin, director: isAdmin || role === 'director' };
 }
+/* The team's messaging (Nov 15, 2026): anyone active on the staff list, whatever pages they hold, and the owners. */
+async function requireTeam(req) {
+  const h = String(req.headers.authorization || '');
+  const token = h.startsWith('Bearer ') ? h.slice(7) : '';
+  if (!token) throw S.err(401, 'signin', 'Sign in first.');
+  let decoded;
+  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  const email = String(decoded.email || '').toLowerCase();
+  const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);
+  if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
+  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, role: 'owner', owner: true };
+  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
+  const rec = doc.exists ? doc.data() : null;
+  if (!rec || rec.active !== true) throw S.err(403, 'access', 'The team chat is for the people on the team list.');
+  return { uid: decoded.uid, email, name: rec.name || decoded.name || email, role: String(rec.role || '').toLowerCase(), owner: rec.owner === true };
+}
 function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
 
 function planOf(sub) {
@@ -134,4 +150,4 @@ async function requireMarketing(req) {
   return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: rec.owner === true || rec.role === 'admin', marketing: true };
 }
 
-module.exports = { requireStaff, requireCoach, requireMarketing, requireBilling, overview, chargeOnFile, planOf };
+module.exports = { requireStaff, requireCoach, requireTeam, requireMarketing, requireBilling, overview, chargeOnFile, planOf };

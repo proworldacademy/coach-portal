@@ -48,3 +48,8 @@ m06-enroll-down2|parent|/enroll/|1700
 # ── signing in ──
 s01-team-sign-in|guest|/?side=team|0
 s02-family-sign-in|guest|/family/|0
+# ── the team's own messaging (Nov 15) ──
+t40-team-list|director|/team/|0
+t41-team-channel|director|/team/#/c/general|0
+t42-team-direct|director|/team/#/c/dm_kd|0
+t43-team-coach|coach|/team/|0
