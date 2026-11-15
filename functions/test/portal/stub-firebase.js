@@ -33,7 +33,7 @@
       doc: (id) => docRef(path + '/' + (id || ('auto' + Math.random().toString(36).slice(2, 8))))
     };
   }
-  const user = Object.assign({ uid: 'u-dee', email: 'dee@example.test', emailVerified: true, displayName: 'Dee Director' }, seed.user || {}, { getIdToken: async () => 'tok' });
+  const user = seed.user === null ? null : Object.assign({ uid: 'u-dee', email: 'dee@example.test', emailVerified: true, displayName: 'Dee Director' }, seed.user || {}, { getIdToken: async () => 'tok' });   // user: null = nobody signed in (the sign-in screens)
   const auth = { currentUser: user, onAuthStateChanged: (cb) => { setTimeout(() => cb(user), 0); return () => {}; }, getRedirectResult: async () => null, signOut: async () => { auth.currentUser = null; }, isSignInWithEmailLink: () => false, signInWithEmailAndPassword: async () => { throw { code: 'auth/wrong-password' }; }, sendPasswordResetEmail: async () => {} };
   const fs = { settings: () => {}, enablePersistence: async () => { throw new Error('no'); }, doc: docRef, collection: (p) => colRef(p), waitForPendingWrites: async () => {}, terminate: async () => {}, clearPersistence: async () => {} };
   window.firebase = { initializeApp: () => ({}), auth: () => auth, firestore: () => fs, apps: [] };

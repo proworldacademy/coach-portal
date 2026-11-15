@@ -25,6 +25,7 @@
 .lead{margin-top:18px;font-size:17px;color:var(--ink-2);max-width:54ch;animation:pwd-up .9s .25s var(--ease) both}
 .lead b{color:var(--ink);background:linear-gradient(var(--lime),var(--lime)) no-repeat 0 62%/100% 48%;padding:0 3px}
 .rowx{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+@media(max-width:640px){body.has-coachbar nav.tabs{display:none}}
 .rowx.between{justify-content:space-between}
 .who{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-2);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 14px;backdrop-filter:blur(10px);flex:none;max-width:48vw}
 .who span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -102,24 +103,37 @@ function touch(){return matchMedia('(pointer:coarse)').matches}
 /* the outlined word of a title: "Hi, Maria." → the name white with the black stroke */
 const title=(before,em)=>`<section class="hero one greet"><h1><span>${before}</span> <span><em>${em}</em></span></h1></section>`;
 
-/* ── sign-in ── */
+/* ── sign-in: six digits by e-mail (Nov 14, 2026) — the one that works inside the App Store app; Google stays on the web ── */
+const INAPP=!!window.Capacitor;
+async function pub(path,body){const r=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.message||'Something went wrong. Try again.');e.status=r.status;throw e}return j}
 function gate(state,extra){
-  topline.innerHTML='';
+  topline.innerHTML='';{const b=document.querySelector('.pw-coachbar');if(b){b.remove();document.body.classList.remove('has-coachbar')}}
   const err=extra&&extra.err?`<p class="fine bad">${esc(extra.err)}</p>`:'';
+  if(state==='code'){app.innerHTML=`<div class="gate">${title('Check your','e-mail.')}<p class="lead">If <b>${esc(extra.email)}</b> is on file, six digits are on their way. Type them here.</p><div class="card"><form id="codef"><input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" placeholder="000 000" required style="font:800 28px/1.2 inherit;letter-spacing:.18em;text-align:center"><button class="btn lime" type="submit" id="codego">Sign in <span class="ar">→</span></button></form>${err}<p class="fine">The code works once, for ten minutes. Nothing in your inbox? Look in spam, or check the address.</p><div class="rowx"><button class="btn ghost" id="resend">Send a new code</button><button class="btn ghost" id="again">Use a different e-mail</button></div></div></div>${footer()}`;
+    const inp=document.getElementById('code');inp.focus();
+    document.getElementById('codef').onsubmit=async(e)=>{e.preventDefault();const code=inp.value.replace(/\D/g,'');if(code.length!==6){gate('code',{email:extra.email,err:'Type the six digits from the e-mail.'});return}const go=document.getElementById('codego');go.disabled=true;go.textContent='Signing in…';
+      try{const r=await pub('family/code/verify',{email:extra.email,code});await auth.signInWithEmailAndPassword(extra.email,r.pass);localStorage.removeItem(EMAIL_KEY)}catch(x){gate('code',{email:extra.email,err:x.message||cleanErr(x)})}};
+    document.getElementById('resend').onclick=async()=>{try{await pub('family/code',{email:extra.email});gate('code',{email:extra.email,err:'A new code is on its way.'})}catch(x){gate('code',{email:extra.email,err:x.message})}};
+    document.getElementById('again').onclick=()=>{localStorage.removeItem(EMAIL_KEY);gate('in')};return}
   if(state==='sent'){app.innerHTML=`<div class="gate">${title('Check your','e-mail.')}<p class="lead">We sent a sign-in link to <b>${esc(extra.email)}</b>. Open it on this device and you're in. Nothing to remember — no password.</p><div class="card"><button class="btn ghost" id="again">Use a different e-mail</button></div></div>${footer()}`;document.getElementById('again').onclick=()=>{localStorage.removeItem(EMAIL_KEY);gate('in')};return}
   if(state==='ask'){app.innerHTML=`<div class="gate">${title('Almost','there.')}<p class="lead">Confirm the e-mail the link was sent to.</p><div class="card"><form id="confirm"><input type="email" id="em" placeholder="you@example.com" required autocomplete="email"><button class="btn lime" type="submit">Sign in</button></form>${err}</div></div>${footer()}`;document.getElementById('confirm').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('em').value.trim().toLowerCase();try{await auth.signInWithEmailLink(email,location.href);localStorage.removeItem(EMAIL_KEY);history.replaceState(null,'',location.pathname)}catch(x){gate('ask',{err:cleanErr(x)})}};return}
   app.innerHTML=`<div class="gate">
     ${title('Your family at','ProWorld.')}
     <p class="lead">Your players, their coaches and schedule, this month's attendance, the reports the coaches send, your bills — and a direct line to the front desk. Sign in with the e-mail you gave us when you enrolled.</p>
     <div class="card">
-      <button class="btn" id="google">${G} Continue with Google</button>
-      <div class="or">or</div>
-      <form id="link"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email" value="${esc((extra&&extra.email)||localStorage.getItem(EMAIL_KEY)||'')}"><button class="btn lime" type="submit">E-mail me a sign-in link <span class="ar">→</span></button></form>
+      <form id="link"><input type="email" id="email" placeholder="you@example.com" required autocomplete="email" inputmode="email" value="${esc((extra&&extra.email)||localStorage.getItem(EMAIL_KEY)||'')}"><button class="btn lime" type="submit" id="codebtn">E-mail me a code <span class="ar">→</span></button></form>
+      ${INAPP?'':`<div class="or">or</div><button class="btn" id="google">${G} Continue with Google</button>`}
       ${err}
-      <p class="fine">No password. The link works once, on the device you open it on. If your e-mail isn't on file yet, text the front desk at (561) 403-0008 and we'll add it.</p>
+      <p class="fine"><a href="/?side=team" id="toteam" style="text-decoration:underline">On the ProWorld team? Sign in here →</a></p>
+      <p class="fine">No password. We send six digits to your e-mail; type them here and you're in. If your e-mail isn't on file yet, text the front desk at (561) 403-0008 and we'll add it.</p>
     </div></div>${footer()}`;
-  document.getElementById('google').onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});try{if(touch()){await auth.signInWithRedirect(prov);return}await auth.signInWithPopup(prov)}catch(x){gate('in',{err:cleanErr(x)})}};
-  document.getElementById('link').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();if(!email)return;try{await auth.sendSignInLinkToEmail(email,{url:location.origin+'/family',handleCodeInApp:true});localStorage.setItem(EMAIL_KEY,email);gate('sent',{email})}catch(x){gate('in',{email,err:cleanErr(x)})}};
+  if(!INAPP)document.getElementById('google').onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});try{if(touch()){await auth.signInWithRedirect(prov);return}await auth.signInWithPopup(prov)}catch(x){gate('in',{err:cleanErr(x)})}};
+  document.getElementById('link').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();if(!email)return;const btn=document.getElementById('codebtn');btn.disabled=true;btn.textContent='Sending…';
+    try{await pub('family/code',{email});localStorage.setItem(EMAIL_KEY,email);gate('code',{email})}
+    catch(x){
+      // the mailbox for codes is not set up yet: on the web the old e-mailed link still works; inside the app it cannot
+      if(x.status===503&&!INAPP){try{await auth.sendSignInLinkToEmail(email,{url:location.origin+'/family',handleCodeInApp:true});localStorage.setItem(EMAIL_KEY,email);gate('sent',{email})}catch(y){gate('in',{email,err:cleanErr(y)})}return}
+      gate('in',{email,err:x.status===503?'Sign-in codes are being set up. Text the front desk at (561) 403-0008 and we will get you in.':x.message})}};
 }
 function cleanErr(x){const c=x&&x.code||'';if(c==='auth/operation-not-allowed')return 'E-mail links are not switched on yet — use Google for now, or text the front desk.';if(c==='auth/invalid-email')return 'That e-mail does not look right.';if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return '';if(c==='auth/invalid-action-code'||c==='auth/expired-action-code')return 'That link has expired or was already used — ask for a new one.';return (x&&x.message)||'Something went wrong. Try again.'}
 
@@ -134,6 +148,7 @@ async function api(path,body){
 }
 async function load(){
   app.innerHTML=`<div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; Loading your family…</p></div></div>`;
+  try{localStorage.setItem('pw-side','family')}catch(e){}
   try{me=await api('me');render()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
 }
 
@@ -202,6 +217,7 @@ function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
   topline.innerHTML=`<span class="who"><span>${esc(me.email)}</span><button id="signout" type="button">Sign out</button></span>`;
   document.getElementById('signout').onclick=()=>auth.signOut();
+  (function mb(n){if(window.PWMemberBar)window.PWMemberBar();else if(n<25)setTimeout(()=>mb(n+1),200)})(0);   // the member side's bottom bar on a phone (shared/coachbar.js)
   if(!me.known){
     app.innerHTML=`<div class="gate">${title("We don't see you",'yet.')}<p class="lead">Nothing is on file under <b>${esc(me.email)}</b>. If you enrolled with a different e-mail, sign out and use that one. If your player came to us before the new system, text the front desk and we'll link your e-mail in a minute.</p>
       <div class="rowx"><a class="btn lime" href="sms:+15614030008?&body=${encodeURIComponent('Hi — please link my family portal to '+me.email)}">Text the front desk</a><a class="btn ghost" href="/enroll">Enroll a player</a><button class="btn ghost" id="out2">Sign out</button></div></div>${footer()}`;
