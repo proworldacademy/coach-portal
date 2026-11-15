@@ -36,3 +36,25 @@ test('a notification goes to that person\'s phones only; a phone that is gone is
   const r4 = await PUSH.send(db, ['kim@example.test'], { title: 'x', body: 'y' }); assert.equal(r4.sent, 0);
   PUSH._useSender(null);
 });
+
+// ── the App Store app: Apple's notifications (Nov 15, 2026) ──
+test('a phone with the app registers a token; a send goes to it through Apple when the key is set', async () => {
+  PUSH._reset(); const calls = []; PUSH._useApns(async (token, payload, cfg) => { calls.push({ token, payload, cfg }); });
+  const { fakeDb } = require('./fake-db'); const tok = 'a'.repeat(64);
+  const db = fakeDb({ 'settings/apns': { keyId: 'ABC1234567', p8: 'MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg' } });
+  await PUSH.registerApns(db, { email: 'lee@example.test' }, { token: tok.toUpperCase(), ua: 'iPhone' });
+  const out = await PUSH.send(db, ['lee@example.test'], { title: "Di's family", body: 'Yes, we will be there', url: '/portal#/messages/as-di-m', tag: 'chat-as-di-m' });
+  assert.equal(out.sent, 1); assert.equal(calls[0].token, tok); assert.equal(calls[0].payload.aps.alert.title, "Di's family"); assert.equal(calls[0].payload.url, '/portal#/messages/as-di-m'); assert.equal(calls[0].cfg.bundle, 'com.proworldacademy.app');
+  PUSH._useApns(null);
+});
+test('without the Apple key the app phones are skipped, not failed; a token Apple forgot is removed; a bad token is refused', async () => {
+  PUSH._reset(); const { fakeDb } = require('./fake-db'); const tok = 'b'.repeat(64);
+  const db = fakeDb({}); await PUSH.registerApns(db, { email: 'lee@example.test' }, { token: tok });
+  const a = await PUSH.send(db, ['lee@example.test'], { title: 't', body: 'b' }); assert.equal(a.sent, 0); assert.equal(a.skipped, 1); assert.equal(a.failed, 0);
+  PUSH._reset(); await db.doc('settings/apns').set({ keyId: 'ABC1234567', p8: 'MIGT' });
+  PUSH._useApns(async () => { const e = new Error('gone'); e.statusCode = 410; throw e; });
+  const b = await PUSH.send(db, ['lee@example.test'], { title: 't', body: 'b' }); assert.equal(b.gone, 1);
+  const c = await PUSH.send(db, ['lee@example.test'], { title: 't', body: 'b' }); assert.equal(c.sent + c.gone + c.failed, 0);
+  await assert.rejects(PUSH.registerApns(db, { email: 'lee@example.test' }, { token: 'nope' }), (e) => e.status === 400);
+  PUSH._useApns(null); PUSH._reset();
+});

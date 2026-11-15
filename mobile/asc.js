@@ -52,6 +52,9 @@ async function api(method, path, body) {
     console.log(c.ok ? 'BUNDLE: registered ' + BUNDLE : 'BUNDLE: could not register (HTTP ' + c.status + ') ' + c.err);
     if (!c.ok) process.exit(1); found = c.j.data;
   } else console.log('BUNDLE: ' + BUNDLE + ' is registered (' + found.attributes.name + ')');
+  // notifications: the app's bundle id needs Apple's push capability (once; Apple answers 409 when it is already on)
+  const cap = await api('POST', '/v1/bundleIdCapabilities', { data: { type: 'bundleIdCapabilities', attributes: { capabilityType: 'PUSH_NOTIFICATIONS' }, relationships: { bundleId: { data: { type: 'bundleIds', id: found.id } } } } });
+  console.log(cap.ok ? 'PUSH: capability turned on' : cap.status === 409 ? 'PUSH: capability already on' : 'PUSH: could not turn the capability on (HTTP ' + cap.status + ') ' + cap.err);
   const a = await api('GET', '/v1/apps?filter[bundleId]=' + encodeURIComponent(BUNDLE) + '&fields[apps]=name,bundleId,sku');
   if (!a.ok) { console.log('APPLE: HTTP ' + a.status + ' ' + a.err); process.exit(1); }
   const app = (a.j.data || [])[0];

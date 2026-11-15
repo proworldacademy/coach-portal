@@ -12,4 +12,32 @@ put NSCameraUsageDescription string "ProWorld uses the camera when you add a pho
 put NSPhotoLibraryUsageDescription string "ProWorld opens your photos when you add a photo or a video to a player's page."
 $PB -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
 $PB -c "Add :UISupportedInterfaceOrientations array" "$PLIST"; $PB -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
-echo "prepared: icon, launch screen, name, permissions"
+# Notifications (Nov 15, 2026): the push entitlement, and the two calls that hand Apple's device token to Capacitor's PushNotifications.
+cat > "$APP/App.entitlements" <<'ENT'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>aps-environment</key><string>development</string>
+</dict></plist>
+ENT
+PBX=ios/App/App.xcodeproj/project.pbxproj
+grep -q "CODE_SIGN_ENTITLEMENTS" "$PBX" || sed -i '' 's#\(PRODUCT_BUNDLE_IDENTIFIER = [^;]*;\)#\1 CODE_SIGN_ENTITLEMENTS = App/App.entitlements;#' "$PBX"
+python3 - "$APP/AppDelegate.swift" <<'PY'
+import sys
+f = sys.argv[1]; s = open(f).read()
+if "capacitorDidRegisterForRemoteNotifications" not in s:
+    add = """
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+"""
+    i = s.rstrip().rfind("}")
+    s = s[:i] + add + "}\n"
+    open(f, "w").write(s)
+PY
+grep -c "CODE_SIGN_ENTITLEMENTS" "$PBX"
+echo "prepared: icon, launch screen, name, permissions, notifications"

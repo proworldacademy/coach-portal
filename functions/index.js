@@ -150,6 +150,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
       if (route === 'POST /coach/push/subscribe') { const out = await PUSH.subscribe(ctx.db, who, b); logger.info('push on', { by: who.email }); return send(res, 200, out); }
       if (route === 'POST /coach/push/unsubscribe') return send(res, 200, await PUSH.unsubscribe(ctx.db, who, b));
+      if (route === 'POST /coach/push/apns') { const out = await PUSH.registerApns(ctx.db, who, b); logger.info('push on (app)', { by: who.email }); return send(res, 200, out); }
+      if (route === 'POST /coach/push/apns/off') return send(res, 200, await PUSH.unregisterApns(ctx.db, who, b));
       if (route === 'POST /coach/push/test') return send(res, 200, await PUSH.send(ctx.db, [who.email], { title: 'PROWORLD', body: 'Notifications are on for this phone.', url: '/portal', tag: 'test' }));
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
       if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
@@ -163,6 +165,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // director holds the backend page for Attendance and Privates: they get an empty answer here, and a refusal on the lists below.
       const seesBilling = !!(who.owner || who.admin || who.billing || who.role === 'desk');
       // the mailbox the sign-in codes go out from: is it set, and a test to the owner's own address (settings/mail is typed on the Dashboard)
+      if (route === 'GET /admin/apns') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await PUSH.apnsReady(ctx.db) }); }
       if (route === 'GET /admin/mail') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await MAIL.ready(ctx.db) }); }
       if (route === 'POST /admin/mail/test') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); await MAIL.send(ctx.db, Object.assign({ to: who.email }, SIGNIN.letter('123456'), { subject: 'ProWorld: the sign-in e-mail works' })); return send(res, 200, { sent: true, to: who.email }); }
       if (route === 'GET /admin/overview') { if (!seesBilling) return send(res, 200, { mode: mode(key), who: who.email, billing: false, owner: false, at: new Date().toISOString(), today: CAL.todayET(), pending: [], counts: {}, subscriptions: [], openInvoices: [] }); return send(res, 200, Object.assign({ mode: mode(key), who: who.email, billing: who.billing, owner: who.owner }, await ADMIN.overview(stripe))); }

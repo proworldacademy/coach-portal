@@ -129,6 +129,14 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   <section class="sec" id="people-sec" hidden>
     <div class="sec-h"><h2>People &amp; access</h2><small id="people-small"></small></div>
+    <div class="card" id="apns-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>The key for the app's notifications.</b> Apple delivers a notification only when we sign it with the academy's push key. Make it once on developer.apple.com → Certificates, IDs &amp; Profiles → Keys → + → tick <b>Apple Push Notifications service (APNs)</b> → Register → Download. Type its <b>Key ID</b> (10 characters, shown on that page) and paste the whole downloaded file. Kept for owners only. <span id="apns-state"></span></div>
+      <form class="addf" id="apns-form" autocomplete="off">
+        <div class="field"><label for="apns-id">Key ID</label><input id="apns-id" placeholder="e.g., A1B2C3D4E5" autocomplete="off" maxlength="12"></div>
+        <div class="field" style="flex:2 1 320px"><label for="apns-p8">The key file's text</label><textarea id="apns-p8" rows="3" placeholder="-----BEGIN PRIVATE KEY----- …" autocomplete="off" spellcheck="false" style="width:100%;font:12px ui-monospace,monospace"></textarea></div>
+        <button class="btn" type="submit">Save</button>
+      </form>
+    </div>
     <div class="card" id="mail-card" hidden style="margin-bottom:14px">
       <div class="notice"><b>The mailbox for parents' sign-in codes.</b> A parent opens the family account by typing six digits we e-mail them. The e-mail goes out from an academy Google mailbox. Type its address and an <b>app password</b> for it (Google Account → Security → 2-Step Verification → App passwords; 16 letters). Kept for owners only. <span id="mail-state"></span></div>
       <form class="addf" id="mail-form" autocomplete="off">
@@ -415,9 +423,19 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       try { await window.PWAuth.fs().doc("settings/mail").set({ user, pass, at: Date.now(), by: ctx.email }); $("mail-pass").value = ""; state("Saved. Send yourself a test."); } catch (x) { state("Could not save: " + (x.message || x), true); } });
     $("mail-test").addEventListener("click", async () => { state("Sending…"); try { const j = await api("mail/test", {}); state("Sent to " + j.to + ". Check the inbox."); } catch (x) { state(x.message || "Could not send.", true); } });
   }
+  /* the key Apple wants on every notification to the App Store app (Nov 15): owners paste it once; the engine reads settings/apns */
+  function apnsCard() {
+    if (!ctx.owner) return; const box = $("apns-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
+    const state = (t, bad) => { $("apns-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    const read = () => api("apns").then((j) => state(j && j.ready ? "Set. The app's phones get notifications." : "Not set yet: the app's phones get no notifications.", !(j && j.ready))).catch(() => state(""));
+    read();
+    $("apns-form").addEventListener("submit", async (e) => { e.preventDefault(); const keyId = $("apns-id").value.trim().toUpperCase(), p8 = $("apns-p8").value.trim();
+      if (!/^[A-Z0-9]{10}$/.test(keyId) || p8.length < 100) { state("Type the 10-character Key ID and paste the whole key file.", true); return; }
+      try { await window.PWAuth.fs().doc("settings/apns").set({ keyId, p8, at: Date.now(), by: ctx.email }); $("apns-p8").value = ""; state("Saved. Checking…"); setTimeout(read, 600); } catch (x) { state("Could not save: " + (x.message || x), true); } });
+  }
   function own() {
     if (!ctx.admin) return;
-    mailCard();
+    mailCard(); apnsCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';
