@@ -1,0 +1,5 @@
+t40-team-list|director|/team/|0
+t41-team-channel|director|/team/#/c/general|0
+t42-team-direct|director|/team/#/c/dm_kd|0
+t45-team-photo|director|/team/#/c/tennis-core|0
+o01-dashboard|owner|/|0
