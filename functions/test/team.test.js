@@ -74,3 +74,42 @@ test('what the engine said on Slack also lands in the channel, when the channel 
   assert.equal([...db._docs.keys()].filter((k) => k.startsWith('teamChats/front-desk-alerts')).length, 0);
   NOTIFY._useFetch(null); PUSH._useSender(null);
 });
+
+test('a line from the system to one person: a direct message from ProWorld, with a notification', async () => {
+  const { db, got } = await world();
+  assert.equal(await TEAM.direct(db, 'Kim@example.test', 'Weekly contact: 3 families still to reach.'), true);
+  const id = TEAM.botChatId('kim@example.test'); const chat = db._docs.get('teamChats/' + id);
+  assert.deepEqual(chat.members, ['kim@example.test', TEAM.BOT].sort()); assert.equal(chat.kind, 'dm'); assert.equal(chat.last.text, 'Weekly contact: 3 families still to reach.');
+  assert.deepEqual(got.map((g) => g[0]), ['1']); assert.equal(got[0][1].title, 'ProWorld');
+  await TEAM.direct(db, 'kim@example.test', 'Second line.'); assert.equal([...db._docs.keys()].filter((k) => k.startsWith('teamChats/' + id + '/messages/')).length, 2);
+  assert.equal(await TEAM.direct(db, '', 'x'), false);
+  PUSH._useSender(null);
+});
+test('the hook for our other systems: the concierge channel by default, only known channels', async () => {
+  const { db } = await world();
+  await db.doc('teamChats/concierge').set({ kind: 'channel', name: 'concierge', private: true, members: ['dee@example.test'], createdBy: 'dee@example.test' });
+  assert.deepEqual(await TEAM.hook(db, { text: '*A family* is ready for you' }), { ok: true });
+  assert.deepEqual(await TEAM.hook(db, { channel: 'staff', text: 'x' }), { ok: true });                    // an unknown channel falls back to concierge
+  assert.equal([...db._docs.keys()].filter((k) => k.startsWith('teamChats/concierge/messages/')).length, 2);
+  await assert.rejects(() => TEAM.hook(db, { text: '  ' }), /Nothing to post/);
+  PUSH._useSender(null);
+});
+test('calls: the relay list comes from Cloudflare when a key is set, the public finders otherwise', async () => {
+  const { db } = await world();
+  let r = await TEAM.ice(db); assert.equal(r.relay, false); assert.match(r.iceServers[0].urls[0], /^stun:/);
+  await db.doc('settings/turn').set({ keyId: 'a'.repeat(32), token: 't'.repeat(40) });
+  let asked = null; TEAM._useFetch(async (url, o) => { asked = [url, o.headers.authorization, o.body]; return { ok: true, status: 201, json: async () => ({ iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.cloudflare.com:53'] }, { urls: ['turn:turn.cloudflare.com:3478?transport=udp', 'turns:turn.cloudflare.com:5349?transport=tcp', 'turn:turn.cloudflare.com:53?transport=udp'], username: 'u', credential: 'c' }] }) }; });
+  r = await TEAM.ice(db); assert.equal(r.relay, true); assert.match(asked[0], /keys\/a{32}\/credentials\/generate-ice-servers$/); assert.equal(asked[1], 'Bearer ' + 't'.repeat(40));
+  assert.equal(r.iceServers[1].urls.length, 2);                                                           // port 53 is dropped (browsers refuse it)
+  assert.deepEqual(await TEAM.turnReady(db), { set: true, ready: true });
+  TEAM._useFetch(async () => ({ ok: false, status: 403, json: async () => ({}) })); r = await TEAM.ice(db); assert.equal(r.relay, false);   // a bad key never breaks a call
+  TEAM._useFetch(null); PUSH._useSender(null);
+});
+test('calls: the others are rung once, by the caller only', async () => {
+  const { db, got } = await world();
+  await db.doc('teamCalls/c1').set({ chat: 'general', kind: 'video', by: 'kim@example.test', byName: 'Kim Coach', title: '#general', members: ['kim@example.test', 'lee@example.test', 'dee@example.test'], at: 1, state: 'live' });
+  const r = await TEAM.ring(db, KIM, { call: 'c1' }); assert.equal(r.sent, 2); assert.equal(got[0][1].title, '📹 Kim Coach is calling'); assert.equal(got[0][1].url, '/team#/call/c1');
+  assert.equal((await TEAM.ring(db, KIM, { call: 'c1' })).again, true);
+  await assert.rejects(() => TEAM.ring(db, { email: 'lee@example.test' }, { call: 'c1' }), /Not your call/);
+  PUSH._useSender(null);
+});

@@ -4,7 +4,7 @@
   const seed = window.__seed || { docs: {} };
   const docs = seed.docs;
   const clone = (x) => JSON.parse(JSON.stringify(x));
-  const snapOf = (path) => ({ id: path.split('/').pop(), exists: !!docs[path], data: () => (docs[path] ? clone(docs[path]) : undefined), metadata: { fromCache: false } });
+  const snapOf = (path) => ({ id: path.split('/').pop(), get ref() { return docRef(path); }, exists: !!docs[path], data: () => (docs[path] ? clone(docs[path]) : undefined), metadata: { fromCache: false } });
   const getPath = (o, k) => k.split('.').reduce((a, b) => (a == null ? undefined : a[b]), o);
   const OPS = { '==': (a, b) => a === b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b, '>': (a, b) => a > b, '<': (a, b) => a < b, '!=': (a, b) => a !== b, 'in': (a, b) => Array.isArray(b) && b.includes(a), 'array-contains': (a, b) => Array.isArray(a) && a.includes(b) };
   /* the team chat (Nov 15, 2026) writes with arrayUnion / arrayRemove and dotted paths: both are resolved here */
@@ -12,7 +12,11 @@
   const fvApply = (cur, val) => { if (!val || typeof val !== 'object' || !val.__fv) return { v: val }; if (val.__fv === 'union') return { v: (Array.isArray(cur) ? cur : []).concat(val.v.filter((x) => !(Array.isArray(cur) ? cur : []).includes(x))) }; if (val.__fv === 'remove') return { v: (Array.isArray(cur) ? cur : []).filter((x) => !val.v.includes(x)) }; if (val.__fv === 'now') return { v: Date.now() }; return { del: true }; };
   const setPath = (obj, dotted, val) => { const ks = dotted.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) { if (!o[ks[i]] || typeof o[ks[i]] !== 'object') o[ks[i]] = {}; o = o[ks[i]]; } const r = fvApply(o[ks[ks.length - 1]], val); if (r.del) delete o[ks[ks.length - 1]]; else o[ks[ks.length - 1]] = r.v; };
   const listeners = [];
-  const notify = () => listeners.forEach((f) => { try { f(); } catch (e) { /* noop */ } });
+  /* two pages of one test can share the stand-in database (seed.share: the calls between two people, Nov 15): every write is passed on */
+  const bc = seed.share && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('pw-stub-fs') : null; const lastJson = {};
+  if (bc) { Object.keys(docs).forEach((k) => { lastJson[k] = JSON.stringify(docs[k]); }); bc.onmessage = (e) => { const m = e.data || {}; if (!m.path) return; if (m.json == null) { delete docs[m.path]; delete lastJson[m.path]; } else { docs[m.path] = JSON.parse(m.json); lastJson[m.path] = m.json; } notify(true); }; }
+  const notify = (remote) => { if (bc && !remote) { const keys = new Set(Object.keys(docs).concat(Object.keys(lastJson))); keys.forEach((k) => { const j = docs[k] === undefined ? null : JSON.stringify(docs[k]); if (j !== (lastJson[k] === undefined ? null : lastJson[k])) { if (j == null) delete lastJson[k]; else lastJson[k] = j; bc.postMessage({ path: k, json: j }); } }); }
+    listeners.slice().forEach((f) => { try { f(); } catch (e) { /* noop */ } }); };
   function docRef(path) {
     return {
       id: path.split('/').pop(), path,
@@ -34,6 +38,7 @@
       orderBy: (f) => colRef(path, filters, typeof f === 'string' ? f : order), limit: () => colRef(path, filters, order), limitToLast: () => colRef(path, filters, order),
       get: async () => qs(),
       onSnapshot: (next) => { const fire = () => next(qs()); fire(); listeners.push(fire); return () => { const i = listeners.indexOf(fire); if (i >= 0) listeners.splice(i, 1); }; },
+      add: async (d) => { const r = docRef(path + '/auto' + Math.random().toString(36).slice(2, 10)); await r.set(d); return r; },
       doc: (id) => docRef(path + '/' + (id || ('auto' + Math.random().toString(36).slice(2, 8))))
     };
   }

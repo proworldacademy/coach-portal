@@ -137,6 +137,22 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
         <button class="btn" type="submit">Save</button>
       </form>
     </div>
+    <div class="card" id="turn-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>The relay for Team calls.</b> Calls between the team go straight from phone to phone. On some mobile networks two phones cannot reach each other directly; a relay carries the call then. Cloudflare's is free up to 1,000 GB a month: dash.cloudflare.com → <b>Realtime</b> → <b>TURN Server</b> → Create. It shows a <b>Turn Token ID</b> and an <b>API Token</b> once: paste both here. Without it, calls still work on most Wi-Fi. Kept for owners only. <span id="turn-state"></span></div>
+      <form class="addf" id="turn-form" autocomplete="off">
+        <div class="field"><label for="turn-id">Turn Token ID</label><input id="turn-id" placeholder="32 characters" autocomplete="off" maxlength="64"></div>
+        <div class="field" style="flex:2 1 320px"><label for="turn-token">API Token</label><input id="turn-token" type="password" placeholder="shown once by Cloudflare" autocomplete="off" maxlength="200"></div>
+        <button class="btn" type="submit">Save</button>
+      </form>
+    </div>
+    <div class="card" id="hook-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>The address our other systems write to Team with.</b> The concierge tells the team about a family through a "Slack webhook" address. Give it this address instead and its lines land in the <b>#concierge</b> channel of Team. The address is a secret: it is shown once, when you make it. Making a new one cuts the old one off. <span id="hook-state"></span></div>
+      <form class="addf" id="hook-form" autocomplete="off">
+        <div class="field" style="flex:2 1 420px"><label for="hook-url">The address</label><input id="hook-url" readonly placeholder="Press the button to make it" autocomplete="off" style="font:12px ui-monospace,monospace"></div>
+        <button class="btn" type="submit" id="hook-make">Make the address</button>
+        <button class="btn ghost" type="button" id="hook-copy" hidden>Copy</button>
+      </form>
+    </div>
     <div class="card" id="mail-card" hidden style="margin-bottom:14px">
       <div class="notice"><b>The mailbox for parents' sign-in codes.</b> A parent opens the family account by typing six digits we e-mail them. The e-mail goes out from an academy Google mailbox. Type its address and an <b>app password</b> for it (Google Account → Security → 2-Step Verification → App passwords; 16 letters). Kept for owners only. <span id="mail-state"></span></div>
       <form class="addf" id="mail-form" autocomplete="off">
@@ -433,9 +449,28 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       if (!/^[A-Z0-9]{10}$/.test(keyId) || p8.length < 100) { state("Type the 10-character Key ID and paste the whole key file.", true); return; }
       try { await window.PWAuth.fs().doc("settings/apns").set({ keyId, p8, at: Date.now(), by: ctx.email }); $("apns-p8").value = ""; state("Saved. Checking…"); setTimeout(read, 600); } catch (x) { state("Could not save: " + (x.message || x), true); } });
   }
+  /* the relay a Team call may need between two phones (Nov 15): a Cloudflare Realtime TURN key, owners only; the engine reads settings/turn */
+  function turnCard() {
+    if (!ctx.owner) return; const box = $("turn-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
+    const state = (t, bad) => { $("turn-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    const read = () => api("turn").then((j) => state(j && j.ready ? "Set. Calls use the relay when they need it." : j && j.set ? "Saved, but Cloudflare did not accept it: check the two values." : "Not set yet: calls work on most Wi-Fi, not on every mobile network.", !(j && j.ready))).catch(() => state(""));
+    read();
+    $("turn-form").addEventListener("submit", async (e) => { e.preventDefault(); const keyId = $("turn-id").value.trim(), token = $("turn-token").value.trim();
+      if (!/^[A-Za-z0-9]{16,64}$/.test(keyId) || token.length < 20) { state("Paste the Turn Token ID and the API Token as Cloudflare shows them.", true); return; }
+      try { await window.PWAuth.fs().doc("settings/turn").set({ keyId, token, at: Date.now(), by: ctx.email }); $("turn-token").value = ""; state("Saved. Checking…"); setTimeout(read, 800); } catch (x) { state("Could not save: " + (x.message || x), true); } });
+  }
+  /* the secret address another system of ours (the concierge) posts to, in place of a Slack webhook (Nov 15): settings/teamHook { key } */
+  function hookCard() {
+    if (!ctx.owner) return; const box = $("hook-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
+    const state = (t, bad) => { $("hook-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    window.PWAuth.fs().doc("settings/teamHook").get().then((d) => { if (d.exists && (d.data() || {}).key) { state("An address exists (made " + new Date((d.data() || {}).at || 0).toLocaleDateString() + ")."); $("hook-make").textContent = "Make a new address"; } else state("Not made yet."); }).catch(() => {});
+    $("hook-form").addEventListener("submit", async (e) => { e.preventDefault(); const a = new Uint8Array(32); crypto.getRandomValues(a); const key = Array.from(a, (b) => b.toString(16).padStart(2, "0")).join("");
+      try { await window.PWAuth.fs().doc("settings/teamHook").set({ key, at: Date.now(), by: ctx.email }); $("hook-url").value = location.origin + "/api/team/hook/" + key; $("hook-copy").hidden = false; $("hook-make").textContent = "Make a new address"; state("Made. Copy it now: it is not shown again."); } catch (x) { state("Could not save: " + (x.message || x), true); } });
+    $("hook-copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText($("hook-url").value); state("Copied."); } catch (x) { $("hook-url").select(); state("Select it and copy."); } });
+  }
   function own() {
     if (!ctx.admin) return;
-    mailCard(); apnsCard();
+    mailCard(); apnsCard(); turnCard(); hookCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';

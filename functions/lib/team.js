@@ -13,7 +13,7 @@ const S = require('./stripe');
 const PUSH = require('./push');
 
 const BOT = 'proworld@bot';
-const CHANNELS = { coaches: 'new-enrollments', desk: 'front-desk-alerts' };   // the two Slack webhooks of lib/notify.js, by name
+const CHANNELS = { coaches: 'new-enrollments', desk: 'front-desk-alerts', attendance: 'full-time-attendance' };   // the two Slack webhooks of lib/notify.js, by name
 const ID_OK = /^[A-Za-z0-9_-]{1,80}$/;
 const plain = (t) => String(t || '').replace(/<(https?:[^|>\s]+)\|([^>]+)>/g, '$2').replace(/<(https?:[^>\s]+)>/g, '$1').replace(/```/g, '').replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -55,10 +55,11 @@ async function notify(db, who, body) {
   const msg = msnap.data() || {};
   if (String(msg.by || '').toLowerCase() !== me) throw S.err(403, 'message', 'Not your message.');
   if (msg.pushed) return { ok: true, sent: 0, again: true };
+  if (msg.call) return { ok: true, sent: 0, call: true };   // a call rings by itself
   await mref.set({ pushed: Date.now() }, { merge: true });
   const to = await listeners(db, chat, chatId, me, msg);
   const name = S.clean(msg.name, 60) || S.clean(who.name, 60) || 'ProWorld';
-  const r = await fanOut(db, to, { title: titleOf(chat, name), body: plain(msg.text).slice(0, 170) || 'New message', url: '/team#/c/' + chatId, tag: 'team-' + chatId });
+  const r = await fanOut(db, to, { title: titleOf(chat, name), body: plain(msg.text).slice(0, 170) || (Array.isArray(msg.files) && msg.files.length ? (/^image\//.test(String(msg.files[0].type || '')) ? '📷 Photo' : '📎 ' + S.clean(msg.files[0].name, 80)) : msg.call ? 'Started a call' : 'New message'), url: '/team#/c/' + chatId, tag: 'team-' + chatId });
   return Object.assign({ ok: true }, r);
 }
 
@@ -79,4 +80,60 @@ async function post(db, which, text, lines) {
   } catch (e) { console.error('team post error', e.message); return false; }
 }
 
-module.exports = { people, notify, post, plain, BOT, CHANNELS };
+/* A line from the system to one person (what used to be a Slack direct message: the weekly contact reminder, a private booked): a direct
+   message from "ProWorld" in their Team list, with a notification. Never throws. */
+function botChatId(email) { let a = 5381, b = 52711; const s = String(email || '').toLowerCase(); for (let i = 0; i < s.length; i++) { const ch = s.charCodeAt(i); a = ((a * 33) ^ ch) >>> 0; b = ((b * 33) ^ ch) >>> 0; } return 'bot_' + a.toString(36) + b.toString(36); }
+async function direct(db, email, text) {
+  try {
+    email = String(email || '').toLowerCase(); const body = String(text || '').slice(0, 3900); if (!db || !email.includes('@') || !body.trim()) return false;
+    const chatId = botChatId(email); const cref = db.doc('teamChats/' + chatId); const csnap = await cref.get(); const at = Date.now();
+    if (!csnap.exists) await cref.set({ kind: 'dm', bot: true, members: [BOT, email].sort(), createdBy: BOT, createdAt: at });
+    await cref.collection('messages').doc('b' + at.toString(36) + Math.random().toString(36).slice(2, 8)).set({ by: BOT, name: 'ProWorld', bot: true, text: body, at, pushed: at });
+    await cref.set({ last: { at, by: BOT, name: 'ProWorld', text: plain(body).slice(0, 140) } }, { merge: true });
+    let muted = false; try { const r = await db.doc('teamReads/' + email).get(); muted = !!(r.exists && ((r.data() || {}).mute || {})[chatId]); } catch (e) { muted = false; }
+    if (!muted) await fanOut(db, [email], { title: 'ProWorld', body: plain(body).slice(0, 170), url: '/team#/c/' + chatId, tag: 'team-' + chatId });
+    return true;
+  } catch (e) { console.error('team direct error', e.message); return false; }
+}
+
+/* What another system of ours says to the team (the concierge handing a family to a person, its daily check): POST /api/team/hook with the
+   roster feed key it already holds. { channel?: 'concierge', text, lines? } — Slack's own shape ({ text }) is accepted as it is. */
+const HOOK_CHANNELS = ['concierge', 'front-desk-alerts', 'new-enrollments', 'full-time-attendance', 'announcements'];
+async function hook(db, body) {
+  const b = body || {}; const channel = HOOK_CHANNELS.includes(String(b.channel || '')) ? String(b.channel) : 'concierge';
+  const lines = Array.isArray(b.lines) ? b.lines.slice(0, 12).map((l) => String(l == null ? '' : l).slice(0, 1500)) : null;
+  const text = String(b.text || (lines && lines[0]) || '').slice(0, 3900); if (!text.trim()) throw S.err(400, 'text', 'Nothing to post.');
+  return { ok: await post(db, channel, text, lines) };
+}
+
+/* Calls (Nov 15, 2026). The phones talk to each other directly (WebRTC); the engine does two things. ice(): the list of relay servers a
+   call may need when two phones cannot reach each other (settings/turn { keyId, token }: a Cloudflare Realtime TURN key, owners only;
+   without it, the public address finders only, which is enough on most Wi-Fi). ring(): the notification "… is calling" to the others. */
+let fetchImpl = (...a) => fetch(...a);
+const STUN = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+async function turnConfig(db) { try { const s = await db.doc('settings/turn').get(); const d = s.exists ? (s.data() || {}) : {}; const keyId = String(d.keyId || '').trim(); const token = String(d.token || '').trim(); return /^[A-Za-z0-9]{16,64}$/.test(keyId) && token.length >= 20 ? { keyId, token } : null; } catch (e) { return null; } }
+async function ice(db) {
+  const c = await turnConfig(db); if (!c) return { iceServers: STUN, relay: false };
+  try {
+    const r = await fetchImpl('https://rtc.live.cloudflare.com/v1/turn/keys/' + c.keyId + '/credentials/generate-ice-servers', { method: 'POST', headers: { authorization: 'Bearer ' + c.token, 'content-type': 'application/json' }, body: JSON.stringify({ ttl: 14400 }) });
+    if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); const list = Array.isArray(j.iceServers) ? j.iceServers : j.iceServers ? [j.iceServers] : [];
+    const clean = list.filter((x) => x && x.urls).map((x) => ({ urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter((u) => /^(stun|turn|turns):/.test(String(u)) && !/:53(\?|$)/.test(String(u))), username: x.username, credential: x.credential })).filter((x) => x.urls.length);
+    if (!clean.length) throw new Error('empty'); return { iceServers: clean, relay: clean.some((x) => x.urls.some((u) => /^turns?:/.test(u))) };
+  } catch (e) { console.error('turn error', e.message); return { iceServers: STUN, relay: false }; }
+}
+async function turnReady(db) { const c = await turnConfig(db); if (!c) return { set: false, ready: false }; const r = await ice(db); return { set: true, ready: r.relay }; }
+async function ring(db, who, body) {
+  const id = String((body && body.call) || ''); if (!ID_OK.test(id)) throw S.err(400, 'call', 'Which call?');
+  const ref = db.doc('teamCalls/' + id); const snap = await ref.get(); if (!snap.exists) throw S.err(404, 'call', 'No such call.');
+  const c = snap.data() || {}; const me = String(who.email || '').toLowerCase();
+  if (String(c.by || '').toLowerCase() !== me) throw S.err(403, 'call', 'Not your call.');
+  if (c.rang) return { ok: true, sent: 0, again: true };
+  await ref.set({ rang: Date.now() }, { merge: true });
+  const to = (Array.isArray(c.members) ? c.members : []).map((e) => String(e || '').toLowerCase()).filter((e) => e && e !== me && e !== BOT);
+  const name = S.clean(c.byName, 60) || S.clean(who.name, 60) || 'Someone';
+  const r = await fanOut(db, to, { title: (c.kind === 'video' ? '📹 ' : '📞 ') + name + ' is calling', body: c.title ? S.clean(c.title, 80) + ' · tap to join' : 'Tap to join', url: '/team#/call/' + id, tag: 'call-' + id });
+  return Object.assign({ ok: true }, r);
+}
+function _useFetch(f) { fetchImpl = f || ((...a) => fetch(...a)); }
+
+module.exports = { people, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
