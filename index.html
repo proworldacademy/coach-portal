@@ -4,6 +4,8 @@
 <title>PROWORLD HQ · Dashboard</title>
 <link rel="icon" href="data:,">
 <script>
+  // One app, two sides (Nov 14, 2026): someone who last used the family account opens the app straight into it.
+  try { if (/[?&]side=team/.test(location.search)) localStorage.setItem("pw-side", "team"); else if (location.pathname === "/" && !location.hash && localStorage.getItem("pw-side") === "family") location.replace("/family"); } catch (e) { /* no storage */ }
   // The old GitHub Pages address of the Coach Portal (proworldacademy.github.io/coach-portal) forwards here.
   // Links to the Coach Portal from before it moved under /portal keep working: /#/tryouts → /portal#/tryouts
   if (location.hostname === "proworldacademy.github.io") location.replace("https://proworld-coach-portal.web.app" + (/^#\//.test(location.hash) ? "/portal" : "/") + location.search + location.hash);
@@ -127,6 +129,14 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   <section class="sec" id="people-sec" hidden>
     <div class="sec-h"><h2>People &amp; access</h2><small id="people-small"></small></div>
+    <div class="card" id="mail-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>The mailbox for parents' sign-in codes.</b> A parent opens the family account by typing six digits we e-mail them. The e-mail goes out from an academy Google mailbox. Type its address and an <b>app password</b> for it (Google Account → Security → 2-Step Verification → App passwords; 16 letters). Kept for owners only. <span id="mail-state"></span></div>
+      <form class="addf" id="mail-form" autocomplete="off">
+        <div class="field"><label for="mail-user">Mailbox</label><input id="mail-user" type="email" placeholder="info@proworldacademy.com" autocomplete="off"></div>
+        <div class="field"><label for="mail-pass">App password</label><input id="mail-pass" type="password" placeholder="16 letters" autocomplete="new-password"></div>
+        <button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="mail-test">Send me a test</button>
+      </form>
+    </div>
     <div class="card">
       <div class="notice">Everyone signs in with their e-mail and a password. An owner sets the sign-in up here (<b>Send the password link</b> or a temporary password); nobody can make their own account. Tick a page to give it, untick to take it away — it takes effect at once. The database enforces this, so a page that isn't ticked can't be opened, even with the link. Owners always have everything. <b>Admin</b> = can manage this list.</div>
       <div class="tbl-wrap"><table class="acl" id="acl"></table></div>
@@ -395,8 +405,19 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   window.addEventListener("hashchange", folds);
 
   // ── you own it (owners and administrators) ──
+  /* the mailbox the parents' sign-in codes go out from (Nov 14): owners type it once; the engine reads settings/mail */
+  function mailCard() {
+    if (!ctx.owner) return; const box = $("mail-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
+    const state = (t, bad) => { $("mail-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    api("mail").then((j) => state(j && j.ready ? "Set. Codes can go out." : "Not set yet: parents cannot get a code.", !(j && j.ready))).catch(() => state(""));
+    $("mail-form").addEventListener("submit", async (e) => { e.preventDefault(); const user = $("mail-user").value.trim().toLowerCase(), pass = $("mail-pass").value.replace(/\s+/g, "");
+      if (!user || pass.length < 8) { state("Type the mailbox and its app password.", true); return; }
+      try { await window.PWAuth.fs().doc("settings/mail").set({ user, pass, at: Date.now(), by: ctx.email }); $("mail-pass").value = ""; state("Saved. Send yourself a test."); } catch (x) { state("Could not save: " + (x.message || x), true); } });
+    $("mail-test").addEventListener("click", async () => { state("Sending…"); try { const j = await api("mail/test", {}); state("Sent to " + j.to + ". Check the inbox."); } catch (x) { state(x.message || "Could not send.", true); } });
+  }
   function own() {
     if (!ctx.admin) return;
+    mailCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';

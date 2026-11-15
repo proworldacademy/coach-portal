@@ -33,6 +33,8 @@ const MONDAY = require('./lib/mondayimport');
 const CONTACTS = require('./lib/contacts');
 const COACHTEXT = require('./lib/coachtext');
 const PUSH = require('./lib/push');
+const SIGNIN = require('./lib/signin');
+const MAIL = require('./lib/mail');
 const USERS = require('./lib/users');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
@@ -68,6 +70,20 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
   try {
     if (route === 'GET /health') return send(res, 200, { ok: true, mode: mode(key), today: CAL.todayET(), rules: CAL.RULES.version });
     if (route === 'GET /catalog') return send(res, 200, Object.assign({ mode: mode(key), rules: { version: CAL.RULES.version, bill_day: CAL.RULES.bill_day, late: CAL.RULES.late_policy, terms: CAL.RULES.terms, breaks: CAL.RULES.breaks } }, CAT.publicCatalog()));
+    // A parent signs in with six digits sent to their e-mail (lib/signin.js) — the sign-in that works inside the App Store app.
+    if (route === 'POST /family/code' || route === 'POST /family/code/verify') {
+      const b = req.body || {}; const db = ctx.db;
+      if (route === 'POST /family/code') {
+        const out = await SIGNIN.start(db, {
+          isTeam: async (e) => (await db.collection('staff').doc(e).get()).exists,
+          onFile: async (e) => { const f = await FAMILY.findPlayers(db, S.stripeFor(key), e); return !!(f && ((f.players && f.players.length) || (f.customers && f.customers.length) || (Array.isArray(f) && f.length))); },
+          mail: (m) => MAIL.send(db, m)
+        }, b.email);
+        log('signin: code asked'); return send(res, 200, out);
+      }
+      const out = await SIGNIN.finish(db, { login: SIGNIN.firebaseLogin }, b.email, b.code);
+      log('signin: code accepted'); return send(res, 200, out);
+    }
     if (route === 'POST /quote') { const b = req.body || {}; const q = CHECKOUT.monthlyQuote(S.clean(b.program, 40), S.clean(b.plan, 40), S.clean(b.start, 10)); return send(res, 200, { lines: q.lines, dueCents: q.dueCents, then: q.then, startLabel: q.startLabel, start: q.start, anchor: q.anchor, next: q.next, program: q.program.name, plan: q.plan.label }); }
     if (route === 'POST /checkout') {
       const stripe = S.stripeFor(key); const b = req.body || {};
@@ -146,6 +162,9 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // Every family's plan, balance and contact is for the owners, administrators, the front desk and whoever holds Billing (Nov 13). A coach or a
       // director holds the backend page for Attendance and Privates: they get an empty answer here, and a refusal on the lists below.
       const seesBilling = !!(who.owner || who.admin || who.billing || who.role === 'desk');
+      // the mailbox the sign-in codes go out from: is it set, and a test to the owner's own address (settings/mail is typed on the Dashboard)
+      if (route === 'GET /admin/mail') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await MAIL.ready(ctx.db) }); }
+      if (route === 'POST /admin/mail/test') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); await MAIL.send(ctx.db, Object.assign({ to: who.email }, SIGNIN.letter('123456'), { subject: 'ProWorld: the sign-in e-mail works' })); return send(res, 200, { sent: true, to: who.email }); }
       if (route === 'GET /admin/overview') { if (!seesBilling) return send(res, 200, { mode: mode(key), who: who.email, billing: false, owner: false, at: new Date().toISOString(), today: CAL.todayET(), pending: [], counts: {}, subscriptions: [], openInvoices: [] }); return send(res, 200, Object.assign({ mode: mode(key), who: who.email, billing: who.billing, owner: who.owner }, await ADMIN.overview(stripe))); }
       if (!seesBilling && ['GET /admin/notices', 'GET /admin/switch', 'POST /admin/switch/update', 'GET /admin/catalog'].includes(route)) throw S.err(403, 'desk', 'That list is for the front desk and the owners.');
       if (route === 'GET /admin/notices') {

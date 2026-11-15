@@ -28,6 +28,7 @@ const WHO = {
 const BASE = JSON.parse(JSON.stringify(H.CLIENT_SEED.docs));
 let next = { u: '/portal/', who: 'coach', y: 0 };
 function seedFor(k) {
+  if (k === 'guest') return { user: null, docs: {} };          // nobody signed in: the sign-in screens
   if (k === 'parent') return { user: { uid: 'u-parent', email: PARENT.email, emailVerified: true, displayName: PARENT.name, providerData: [{ providerId: 'google.com' }] }, docs: {} };
   const w = WHO[k] || WHO.coach; const email = k + '@example.test'; const docs = JSON.parse(JSON.stringify(BASE));
   Object.keys(docs).filter((d) => d.startsWith('staff/')).forEach((d) => delete docs[d]);
@@ -47,6 +48,7 @@ http.createServer(async (req, res) => {
   }
   if (p === '/api/catalog') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test', rules: { version: CAL.RULES.version, bill_day: CAL.RULES.bill_day, late: CAL.RULES.late_policy, terms: CAL.RULES.terms, breaks: CAL.RULES.breaks } }, CAT.publicCatalog()))); return; }
   if (p === '/api/quote') { let raw = ''; for await (const c of req) raw += c; try { const b = JSON.parse(raw || '{}'); const q = CHECKOUT.monthlyQuote(String(b.program || ''), String(b.plan || ''), String(b.start || '')); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ lines: q.lines, dueCents: q.dueCents, then: q.then, startLabel: q.startLabel, start: q.start, anchor: q.anchor, next: q.next, program: q.program.name, plan: q.plan.label })); } catch (e) { res.writeHead(e.status || 400, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'quote', message: e.message })); } return; }
+  if (p === '/api/family/code') { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); return; }          // the test copy sends no e-mail
   if (p === '/api/family/me') { try { const j = await FAMILY.me(FAMDB, fakeStripe({ prices: PRICES }), PARENT); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test' }, j))); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'me', message: e.message })); } return; }
   if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"error":"route","message":"not in the test copy"}'); return; }
   if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
