@@ -2508,7 +2508,7 @@ const PW_CONFIG = {
       : [['home', 'Reminders', { view: 'home' }], ['players', 'Players', { view: 'players' }]]
         // the four a coach has (Antonio and Lorenzo, Nov 13, the whiteboard): Reminders · Players · Contact (texts and calls) · Privates (the booking page).
         // Try-outs, the Coach Board, Attendance, Courts and Staff & access left this row: they open from the Dashboard menu (Coaches), for directors and owners.
-        .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['team', 'Team', '/team'], ['privates', 'Privates', '/backend#privates']] : []);   // Team (Nov 15): the team's own messaging, /team
+        .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['team', 'Locker Room', '/team'], ['privates', 'Privates', '/backend#privates']] : []);   // Team (Nov 15): the team's own messaging, /team
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
     const TI = { home: 'bell', players: 'users', contact: 'msg', team: 'team', privates: 'cal' }; const ti = (k) => (TI[k] ? a2i(TI[k], 'ti') : '');

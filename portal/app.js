@@ -8,11 +8,11 @@
 
   // the bottom bar is the tab row: Reminders · Players · Contact · Team · Privates (Antonio and Lorenzo, Nov 13; Team added Nov 15). No "More": the ☰ at the top opens the Dashboard menu.
   const bar = document.createElement("nav"); bar.className = "cp-appbar"; bar.setAttribute("aria-label", "Coach Portal"); document.body.appendChild(bar);
-  const ICON = { "Reminders": "●", "Players": "◉", "Contact": "✉", "Team": "◍", "Privates": "◔", "Try-outs": "★" };
+  const ICON = { "Reminders": "●", "Players": "◉", "Contact": "✉", "Locker Room": "◍", "Privates": "◔", "Try-outs": "★" };
   const nameOf = (el) => el.textContent.replace(/\d+$/, "").trim();
   function paint() {
     const items = Array.from(vt.querySelectorAll("button, a")).slice(0, 5); if (!items.length) { bar.innerHTML = ""; return; }
-    bar.innerHTML = items.map((el, i) => { const name = nameOf(el); const red = el.querySelector("small.red"); const svg = el.querySelector(".ti"); return '<button type="button" class="' + (el.classList.contains("on") ? "on" : "") + '" data-i="' + i + '"' + (name === "Team" ? ' data-team-dot' + (window.PWTeamUnread ? ' data-has="1"' : "") : "") + '><i>' + (svg ? svg.innerHTML : (ICON[name] || "•")) + (red ? '<em class="n">' + red.textContent.trim() + "</em>" : "") + "</i>" + name + "</button>"; }).join("");
+    bar.innerHTML = items.map((el, i) => { const name = nameOf(el); const red = el.querySelector("small.red"); const svg = el.querySelector(".ti"); return '<button type="button" class="' + (el.classList.contains("on") ? "on" : "") + '" data-i="' + i + '"' + (name === "Locker Room" ? ' data-team-dot' + (window.PWTeamUnread ? ' data-has="1"' : "") : "") + '><i>' + (svg ? svg.innerHTML : (ICON[name] || "•")) + (red ? '<em class="n">' + red.textContent.trim() + "</em>" : "") + "</i>" + name + "</button>"; }).join("");
     bar.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => { const el = vt.querySelectorAll("button, a")[Number(b.dataset.i)]; if (el) el.click(); }));
   }
   paint();

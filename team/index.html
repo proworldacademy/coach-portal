@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="robots" content="noindex">
-<title>Team · PROWORLD</title>
+<title>Locker Room · PROWORLD</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/shared/brand.css">
 <link rel="stylesheet" href="/shared/design.css">
@@ -174,7 +174,7 @@ body.tc{overflow:hidden}
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let toastT; function toast(m, err) { const t = $("toast"); t.textContent = m; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 3200); }
-  try { window.PWDesign.mount({ skin: "coach", active: "team", title: "Team" }); } catch (e) { /* the page works without the top bar */ }
+  try { window.PWDesign.mount({ skin: "coach", active: "team", title: "Locker Room" }); } catch (e) { /* the page works without the top bar */ }
 
   /* ── what the page knows ── */
   const S = { me: "", name: "", ctx: null, fs: null, people: {}, peopleList: [], mine: {}, open: {}, gotMine: false, gotOpen: false, openFromServer: false,
@@ -247,7 +247,7 @@ body.tc{overflow:hidden}
     const ppl = q ? S.peopleList.filter((p) => p.email !== S.me && p.name.toLowerCase().includes(q) && !dms.some((id) => S.mine[id].kind === "dm" && others(S.mine[id])[0] === p.email)) : [];
     const pushCard = S.push.can && S.push.on === false ? '<div class="tc-push">Get a notification on this ' + (wide() ? "device" : "phone") + ' when someone writes to you.<br><button type="button" data-act="push-on"' + (S.push.busy ? " disabled" : "") + ">" + (S.push.busy ? "Turning on…" : "Turn on notifications") + "</button></div>" : "";
     const loading = !S.gotMine;
-    return '<div class="tc-sh"><h1>Team</h1><button type="button" class="tc-new" data-act="new" aria-label="New message or channel">+</button></div>' +
+    return '<div class="tc-sh"><h1>Locker Room</h1><button type="button" class="tc-new" data-act="new" aria-label="New message or channel">+</button></div>' +
       '<div class="tc-q"><input type="search" id="tcq" placeholder="Find a channel or a person" value="' + esc(S.q) + '" autocomplete="off" aria-label="Find a channel or a person"></div>' +
       '<div class="tc-list">' + pushCard +
       '<div class="tc-sec"><span>Channels</span></div>' + (chans.map((id) => row(id, S.mine[id])).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : q ? "No channel matches" : "No channels yet") + "</small></span></div>") +
@@ -324,7 +324,7 @@ body.tc{overflow:hidden}
     title(); lazy(); jump();
   }
   const grow = (t) => { t.style.height = "auto"; t.style.height = Math.min(160, Math.max(44, t.scrollHeight + 2)) + "px"; };
-  function title() { const n = Object.keys(S.mine).filter((id) => unread(id) && !S.reads.mute[id]).length; document.title = (n ? "(" + n + ") " : "") + "Team · PROWORLD"; }
+  function title() { const n = Object.keys(S.mine).filter((id) => unread(id) && !S.reads.mute[id]).length; document.title = (n ? "(" + n + ") " : "") + "Locker Room · PROWORLD"; }
 
   /* ── opening a chat, reading it ── */
   function listen(id) {
@@ -647,7 +647,7 @@ body.tc{overflow:hidden}
   document.addEventListener("visibilitychange", () => { if (!document.hidden) markRead(); });
 
   /* ── start ── */
-  $("app").innerHTML = '<aside class="tc-side"><div class="tc-sh"><h1>Team</h1></div></aside><section class="tc-main"><div class="tc-empty"><b>One moment</b>Checking who you are…</div></section>';
+  $("app").innerHTML = '<aside class="tc-side"><div class="tc-sh"><h1>Locker Room</h1></div></aside><section class="tc-main"><div class="tc-empty"><b>One moment</b>Checking who you are…</div></section>';
   window.PWAuth.start({}).then((c) => {
     S.ctx = c; S.me = String(c.email || "").toLowerCase(); S.name = c.name || S.me; S.fs = window.PWAuth.fs();
     S.people[S.me] = { email: S.me, name: S.name, role: c.owner ? "owner" : (c.rec && c.rec.role) || "team" }; S.peopleList = [S.people[S.me]];

@@ -38,7 +38,7 @@
     try {
       const role = String((ctx && ctx.rec && ctx.rec.role) || '').toLowerCase();
       if (!ctx || ctx.owner || !ctx.has || !ctx.has('coach-portal') || !(role === 'coach' || role === 'director')) { draw(null); return false; }
-      draw([['Reminders', '/portal/#/', I.bell, 'home'], ['Players', '/portal/#/players', I.people, 'players'], ['Contact', '/portal/#/messages', I.chat, 'contact'], ['Team', '/team', I.team, 'team'], ['Privates', '/backend#privates', I.cal, 'privates']], active, 'Coach Portal'); return true;
+      draw([['Reminders', '/portal/#/', I.bell, 'home'], ['Players', '/portal/#/players', I.people, 'players'], ['Contact', '/portal/#/messages', I.chat, 'contact'], ['Locker Room', '/team', I.team, 'team'], ['Privates', '/backend#privates', I.cal, 'privates']], active, 'Coach Portal'); return true;
     } catch (e) { return false; }
   };
   /* Every side has a bar on a phone (Nov 14, 2026 — "yes, bottom bar"). The page calls PWSideBar(ctx, where) once it knows who is in:
@@ -49,7 +49,7 @@
     try {
       if (!ctx) return;
       const role = String((ctx.rec && ctx.rec.role) || '').toLowerCase();
-      if (ctx.owner || ctx.admin) { draw([['Today', '/', MORE.home, 'today'], ['Coaches', '/portal/', I.people, 'coaches'], ['Admin', '/backend', MORE.desk, 'admin'], ['Team', '/team', I.team, 'team'], ['More', '#more', MORE.more, 'more']], where, 'ProWorld'); return; }
+      if (ctx.owner || ctx.admin) { draw([['Today', '/', MORE.home, 'today'], ['Coaches', '/portal/', I.people, 'coaches'], ['Admin', '/backend', MORE.desk, 'admin'], ['Locker Room', '/team', I.team, 'team'], ['More', '#more', MORE.more, 'more']], where, 'ProWorld'); return; }
       if (role === 'desk' && where === 'admin') {
         const tab = () => (location.hash || '#attendance').slice(1).split('/')[0];
         draw([['Attendance', '/backend#attendance', MORE.check, 'attendance'], ['Desk', '/backend#desk', MORE.desk, 'desk'], ['Players', '/backend#players', I.people, 'players'], ['Messages', '/backend#messages', I.chat, 'messages'], ['Courts', '/backend#courts', MORE.court, 'courts']], tab(), 'Front desk');
@@ -81,7 +81,7 @@
   }
   function teamFab() {
     const p = location.pathname.replace(/\/+$/, '') || '/'; if (/^\/(team|family|enroll)(\/|$)/.test(p)) return;
-    let fab = document.querySelector('.pw-teamfab'); if (!fab) { fab = document.createElement('a'); fab.className = 'pw-teamfab'; fab.href = '/team'; fab.setAttribute('aria-label', 'Team chat'); fab.setAttribute('data-team-dot', ''); fab.innerHTML = I.team; document.body.appendChild(fab); }
+    let fab = document.querySelector('.pw-teamfab'); if (!fab) { fab = document.createElement('a'); fab.className = 'pw-teamfab'; fab.href = '/team'; fab.setAttribute('aria-label', 'Locker Room'); fab.setAttribute('data-team-dot', ''); fab.innerHTML = I.team; document.body.appendChild(fab); }
     const inBar = !!document.querySelector('.pw-coachbar [data-k="team"], .cp-appbar [data-team-dot]'); fab.classList.toggle('show', !inBar); if (window.PWTeamUnread) fab.setAttribute('data-has', '1');
   }
   window.PWTeamWatch = function (ctx) {
@@ -104,7 +104,7 @@
         const b = document.createElement('div'); b.id = 'pw-ring'; b.dataset.id = pick.id; b.setAttribute('role', 'alertdialog');
         b.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:95;background:#0A0A0A;color:#fff;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.7);font:400 14.5px system-ui;max-width:520px;margin:0 auto';
         const who = String(pick.byName || 'Someone').replace(/[<>&]/g, ''); const where = String(pick.title || '').replace(/[<>&]/g, '');
-        b.innerHTML = '<span style="font-size:22px">' + (pick.kind === 'video' ? '📹' : '📞') + '</span><span style="flex:1;min-width:0"><b style="display:block;font-weight:700">' + who + ' is calling</b><small style="color:rgba(255,255,255,.65)">' + (where && where !== who ? where : 'Team') + '</small></span><button type="button" data-x style="border:1px solid rgba(255,255,255,.3);background:none;color:#fff;border-radius:999px;padding:9px 12px;font:700 12.5px system-ui;cursor:pointer">Not now</button><a href="/team#/call/' + pick.id + '" style="background:#E2FE78;color:#0A0A0A;border-radius:999px;padding:10px 16px;font:700 13px system-ui;text-decoration:none">Join</a>';
+        b.innerHTML = '<span style="font-size:22px">' + (pick.kind === 'video' ? '📹' : '📞') + '</span><span style="flex:1;min-width:0"><b style="display:block;font-weight:700">' + who + ' is calling</b><small style="color:rgba(255,255,255,.65)">' + (where && where !== who ? where : 'Locker Room') + '</small></span><button type="button" data-x style="border:1px solid rgba(255,255,255,.3);background:none;color:#fff;border-radius:999px;padding:9px 12px;font:700 12.5px system-ui;cursor:pointer">Not now</button><a href="/team#/call/' + pick.id + '" style="background:#E2FE78;color:#0A0A0A;border-radius:999px;padding:10px 16px;font:700 13px system-ui;text-decoration:none">Join</a>';
         b.querySelector('[data-x]').onclick = () => { quiet[pick.id] = 1; stopRing(); }; b.querySelector('a').addEventListener('click', () => { quiet[pick.id] = 1; setTimeout(stopRing, 50); });
         document.body.appendChild(b); beep(); ringT = setInterval(() => { if (Date.now() - (pick.at || 0) > 45000) { stopRing(); return; } beep(); }, 2500);
       }, () => {});

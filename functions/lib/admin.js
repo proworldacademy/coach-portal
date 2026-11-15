@@ -71,7 +71,7 @@ async function requireTeam(req) {
   if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, role: 'owner', owner: true };
   const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
-  if (!rec || rec.active !== true) throw S.err(403, 'access', 'The team chat is for the people on the team list.');
+  if (!rec || rec.active !== true) throw S.err(403, 'access', 'The Locker Room is for the people on the team list.');
   return { uid: decoded.uid, email, name: rec.name || decoded.name || email, role: String(rec.role || '').toLowerCase(), owner: rec.owner === true };
 }
 function requireBilling(who) { if (!who || !who.billing) throw S.err(403, 'billing', 'Live billing actions (hold, cancel, charge, account links) need the Billing page — ask an owner to tick it for you.'); }
