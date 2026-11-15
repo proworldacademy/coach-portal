@@ -3043,13 +3043,41 @@ const PW_CONFIG = {
     if (EDITION !== 'web') return '';
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
     const box = (ttl, line, btn) => `<div class="notice remind calm push"><span class="ttl">Notifications</span><ul class="lines"><li>${line}</li></ul>${btn || ''}</div>`;
-    if (window.Capacitor) return '';   // inside the App Store app: its notifications are the phone's own, not the web kind (next build); no hint to add a Home Screen icon
+    if (window.Capacitor) {   // inside the App Store app: the phone's own notifications (Nov 15, 2026)
+      if (!appPushPlugin()) return '';                    // an older build of the app without the notifications piece: say nothing
+      appPushCheck();
+      if (APUSH.perm === 'denied') return box('', 'Notifications are off for ProWorld on this phone. Turn them on in Settings → Notifications → ProWorld, then come back.');
+      if (APUSH.on) return box('', '<b class="n on">✓</b> on for this phone: a new text from a family shows like any other app', `<button type="button" class="linkb" data-act="push-test">Send me a test</button>`);
+      if (APUSH.perm === null) return '';
+      return box('', 'Get a notification when a family writes back.', `<button type="button" class="btn pri sm" data-act="apush-on"${APUSH.busy ? ' disabled' : ''}>Turn on notifications</button>`);
+    }
     if (!pushCan()) return ios && !standalone ? box('', '<span>On an iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>, open PROWORLD from there, and turn notifications on here.</span>') : '';
     pushCheck();
     if (Notification.permission === 'denied') return box('', 'Notifications are blocked for PROWORLD on this device. Allow them in the device’s settings, then come back.');
     if (PUSHS.on) return box('', '<b class="n on">✓</b> on for this device: a new text from a family shows like any other app', `<button type="button" class="linkb" data-act="push-test">Send me a test</button>`);
     if (PUSHS.on === null) return '';
     return box('', 'Get a notification when a family writes back.', `<button type="button" class="btn pri sm" data-act="push-on"${PUSHS.busy ? ' disabled' : ''}>Turn on notifications</button>`);
+  }
+  /* The App Store app's notifications: the phone gives a token (Capacitor's PushNotifications), the engine keeps it (POST push/apns) and Apple
+     delivers. Asked once from the card; after that the token is refreshed quietly every time the app opens. A tap on a notification opens
+     the chat it is about. */
+  const APUSH = { perm: null, on: false, busy: false, wired: false, checked: false };
+  const appPushPlugin = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) || null;
+  function appPushWire() {
+    const P = appPushPlugin(); if (!P || APUSH.wired) return; APUSH.wired = true;
+    P.addListener('registration', (t) => { const token = t && t.value; if (!token) return; api('push/apns', { token, ua: navigator.userAgent.slice(0, 180) }).then(() => { APUSH.on = true; APUSH.busy = false; render(); }, () => { APUSH.busy = false; render(); }); });
+    P.addListener('registrationError', () => { APUSH.busy = false; APUSH.on = false; toast('This phone could not register for notifications.'); render(); });
+    P.addListener('pushNotificationActionPerformed', (a) => { try { const u = a && a.notification && a.notification.data && a.notification.data.url; if (u && /^\/[^/]/.test(u)) location.href = u; } catch (e) { /* stay */ } });
+  }
+  function appPushCheck() {
+    const P = appPushPlugin(); if (!P || APUSH.checked) return; APUSH.checked = true; appPushWire();
+    P.checkPermissions().then((r) => { APUSH.perm = (r && r.receive) || 'prompt'; if (APUSH.perm === 'granted') P.register(); render(); }, () => { APUSH.perm = 'prompt'; render(); });
+  }
+  async function appPushOn() {
+    const P = appPushPlugin(); if (!P || APUSH.busy) return; APUSH.busy = true; render(); appPushWire();
+    try { const r = await P.requestPermissions(); APUSH.perm = (r && r.receive) || 'denied'; if (APUSH.perm === 'granted') await P.register(); else { APUSH.busy = false; toast('Notifications were not turned on.'); } }
+    catch (e) { APUSH.busy = false; toast('Could not turn notifications on.'); }
+    render();
   }
   async function pushOn() {
     if (PUSHS.busy) return; PUSHS.busy = true; render();
@@ -4133,6 +4161,7 @@ const PW_CONFIG = {
     else if (act === 'a2reports') { go({ view: 'players' }); }
     else if (act === 'fold') { const k = b.getAttribute('data-k'); S.ui.fold[k] = !S.ui.fold[k]; render(); }
     else if (act === 'push-on') { pushOn(); }
+    else if (act === 'apush-on') { appPushOn(); }
     else if (act === 'push-test') { api('push/test', {}).then((r) => toast(r && r.sent ? 'Sent. It should show in a moment.' : 'Nothing went out: turn notifications on again on this device.'), (e) => toast('Could not send: ' + (e && e.message ? e.message : e))); }
     else if (act === 'fam-chat') { const pid = b.getAttribute('data-pid'), tail = b.getAttribute('data-tail') || ''; if (tail) { S.ui.msgConv[pid] = tail; S.ui.msgPick = null; } S.ui.msgFocus = pid; render(); if (tail) markReadLocal(pid, tail); }
     else if (act === 'msg-go') { const pid = b.getAttribute('data-pid'); S.ui.msgFocus = pid; go({ view: 'player', pid }); }
