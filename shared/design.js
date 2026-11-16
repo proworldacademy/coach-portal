@@ -38,27 +38,37 @@
       const rgb = (c) => { if (!c) return null; if (memo[c]) return memo[c]; const m = /^rgba?\(([^)]+)\)$/.exec(c); if (m) { const a = m[1].split(/[, /]+/).map(Number); return (memo[c] = [a[0], a[1], a[2], a.length > 3 ? a[3] : 1]); } try { g2 = g2 || cv.getContext("2d", { willReadFrequently: true }); g2.clearRect(0, 0, 1, 1); g2.fillStyle = "#000"; g2.fillStyle = c; g2.fillRect(0, 0, 1, 1); const d = g2.getImageData(0, 0, 1, 1).data; return (memo[c] = [d[0], d[1], d[2], d[3] / 255]); } catch (e) { return null; } };
       const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
       const over = (t, u) => [t[0] * t[3] + u[0] * (1 - t[3]), t[1] * t[3] + u[1] * (1 - t[3]), t[2] * t[3] + u[2] * (1 - t[3]), 1];
-      let timer = 0, running = false, quietUntil = 0;
+      let timer = 0, running = false, quietUntil = 0, token = 0;
+      /* It works in short slices while the page is idle (a few milliseconds at a time), so it never holds up a tap or a scroll. */
       function run() {
-        timer = 0; if (running) return; running = true;
+        timer = 0; const my = ++token; running = true;
+        const done = () => { if (my === token) { running = false; quietUntil = Date.now() + 150; } };
         try {
           document.querySelectorAll("[data-pw-ink]").forEach((el) => { el.style.removeProperty("color"); el.removeAttribute("data-pw-ink"); });
-          if (!document.documentElement.classList.contains("dark") || !document.body) return;
+          if (!document.documentElement.classList.contains("dark") || !document.body) { done(); return; }
           const bgs = new Map();
           const bgOf = (el) => { const chain = []; let out = null; for (let n = el; n && n.nodeType === 1; n = n.parentElement) { if (bgs.has(n)) { out = bgs.get(n); break; } chain.push(n); } if (!out) out = [5, 5, 5, 1];
             for (let i = chain.length - 1; i >= 0; i--) { const cs = getComputedStyle(chain[i]); let c = rgb(cs.backgroundColor); const img = cs.backgroundImage; if (img && img !== "none") { if (/url\(/.test(img)) out = null; else if (!(c && c[3] > 0.9)) { const gm = /(rgba?|color)\([^)]+\)/.exec(img); const gc = gm ? rgb(gm[0]) : null; if (gc && gc[3] > 0.05 && out) out = over(gc, out); } } if (c && c[3] > 0.02 && out) out = over(c, out); else if (c && c[3] > 0.9) out = [c[0], c[1], c[2], 1]; bgs.set(chain[i], out); }
             return out; };
-          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); const seen = new Set(); let t, n = 0; const fix = [];
-          while ((t = w.nextNode()) && n < 3000) { if (t.nodeValue.trim().length < 1) continue; const el = t.parentElement; if (!el || seen.has(el)) continue; seen.add(el); const tag = el.tagName; if (tag === "SCRIPT" || tag === "STYLE" || tag === "OPTION" || el.closest("svg,.pc-wrap,#pw-ring")) continue; n++;
-            const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") continue; const fg = rgb(cs.color); if (!fg || fg[3] < 0.3) continue; const bg = bgOf(el); if (!bg) continue;
-            const lf = lum(over(fg, bg)), lb = lum(bg); const ratio = (Math.max(lf, lb) + 0.05) / (Math.min(lf, lb) + 0.05); if (ratio >= 2.6) continue;
-            if (lb > 0.4) fix.push([el, "#0A0A0A"]); else if (lb < 0.08 && lf < 0.08) fix.push([el, "#F4F4F0"]); }
-          fix.forEach((x) => { x[0].style.setProperty("color", x[1], "important"); x[0].setAttribute("data-pw-ink", "1"); });
-        } catch (e) { /* the pages read as the sheet left them */ } finally { running = false; quietUntil = Date.now() + 120; }
+          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); const seen = new Set(); let n = 0; const fix = [];
+          const slice = (deadline) => {
+            if (my !== token) return; const until = Date.now() + (deadline && deadline.timeRemaining ? Math.max(4, Math.min(12, deadline.timeRemaining())) : 8); let t;
+            try {
+              while (n < 3000 && (t = w.nextNode())) { if (t.nodeValue.trim().length < 1) continue; const el = t.parentElement; if (!el || seen.has(el)) continue; seen.add(el); const tag = el.tagName; if (tag === "SCRIPT" || tag === "STYLE" || tag === "OPTION" || el.closest("svg,.pc-wrap,#pw-ring")) continue; n++;
+                const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") continue; const fg = rgb(cs.color); if (!fg || fg[3] < 0.3) continue; const bg = bgOf(el); if (!bg) continue;
+                const lf = lum(over(fg, bg)), lb = lum(bg); const ratio = (Math.max(lf, lb) + 0.05) / (Math.min(lf, lb) + 0.05);
+                if (ratio < 2.6) { if (lb > 0.4) fix.push([el, "#0A0A0A"]); else if (lb < 0.08 && lf < 0.08) fix.push([el, "#F4F4F0"]); }
+                if (Date.now() >= until) { if (window.requestIdleCallback) window.requestIdleCallback(slice, { timeout: 400 }); else setTimeout(slice, 30); return; } }
+              quietUntil = Date.now() + 150; fix.forEach((x) => { if (x[0].isConnected) { x[0].style.setProperty("color", x[1], "important"); x[0].setAttribute("data-pw-ink", "1"); } });
+            } catch (e) { /* the pages read as the sheet left them */ }
+            done();
+          };
+          slice(null);
+        } catch (e) { done(); }
       }
       const soon = (ms) => { if (timer) return; timer = setTimeout(() => { if (window.requestIdleCallback) window.requestIdleCallback(run, { timeout: 800 }); else run(); }, ms); };
       window.PWInkGuard = { run, soon };
-      const start = () => { soon(350); setTimeout(() => soon(10), 1800); try { new MutationObserver((ms) => { if (Date.now() < quietUntil) return; for (const m of ms) { if (m.type === "attributes" && m.attributeName === "style" && m.target.hasAttribute && m.target.hasAttribute("data-pw-ink")) continue; if (m.type === "attributes" && m.attributeName === "data-pw-ink") continue; soon(600); return; } }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden", "data-pw-ink"] }); new MutationObserver(() => soon(60)).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] }); } catch (e) { /* no observer */ } };
+      const start = () => { soon(350); setTimeout(() => soon(10), 1800); try { new MutationObserver((ms) => { if (Date.now() < quietUntil) return; for (const m of ms) { if (m.type === "attributes" && m.attributeName === "style" && m.target.hasAttribute && m.target.hasAttribute("data-pw-ink")) continue; if (m.type === "attributes" && m.attributeName === "data-pw-ink") continue; soon(900); return; } }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] }); new MutationObserver(() => soon(60)).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] }); } catch (e) { /* no observer */ } };
       if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
     })();
     document.addEventListener("click", (e) => { const b = e.target && e.target.closest ? e.target.closest("[data-theme-btn]") : null; if (b) { e.preventDefault(); e.stopPropagation(); window.PWTheme.next(); } });
@@ -246,7 +256,7 @@
   }
   function popen() { if (!pal) return; pal.classList.add("on"); pq.value = ""; psel = 0; pdraw(); setTimeout(() => pq.focus(), 60); }
   function pclose() { if (!pal) return; pal.classList.remove("on"); pq.blur(); }
-  function go(p) { if (!p) return; if (p.ext) window.open(p.href, "_blank", "noopener"); else location.href = p.href; pclose(); }
+  function go(p) { if (!p) return; if (p.ext) window.open(p.href, "_blank", "noopener"); else { if (window.PWAlive) window.PWAlive.going(); location.href = p.href; } pclose(); }
   function drawPal() {
     if (pal || opts.jump === false) return;
     pal = document.createElement("div"); pal.className = "pwd-pal"; pal.id = "pwd-pal"; pal.setAttribute("role", "dialog"); pal.setAttribute("aria-modal", "true"); pal.setAttribute("aria-label", "Jump to a page");

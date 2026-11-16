@@ -658,6 +658,8 @@ body.tc{overflow:hidden}
     S.fs.doc("teamReads/" + S.me).onSnapshot((d) => { const x = (d.exists && d.data()) || {}; const local = S.reads.r; S.reads = { r: Object.assign({}, x.r || {}), mute: x.mute || {}, left: x.left || {} }; Object.keys(local).forEach((k) => { if (local[k] > (S.reads.r[k] || 0)) S.reads.r[k] = local[k]; }); S.gotReads = true; autoJoin(); render(true); markRead(); }, () => { S.gotReads = true; });
     window.PWCall.init({ fs: S.fs, me: S.me, name: S.name, api, toast, chatOf: chat, titleOf });
     S.fs.collection("teamCalls").where("members", "array-contains", S.me).where("state", "==", "live").onSnapshot((snap) => { S.calls = {}; snap.docs.forEach((d) => { S.calls[d.id] = d.data(); }); S.gotCalls = true; if (S.wantCall) callSheet(S.wantCall); render(true); }, () => { S.gotCalls = true; });
+    setTimeout(() => { if (window.PWAlive) window.PWAlive.expect(() => S.gotMine, 'the chats'); }, 2500);
+    document.addEventListener("pw-resume", () => { render(true); markRead(); });
     pushCheck(); render();
   });
 })();

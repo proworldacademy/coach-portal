@@ -2225,6 +2225,11 @@ const PW_CONFIG = {
   document.addEventListener('pointerdown', () => { ptrDown = true; }, true);
   ['pointerup', 'pointercancel'].forEach((t) => document.addEventListener(t, () => { ptrDown = false; if (S.pendingRender || (E && E.repaint)) drain(); }, true));
   document.addEventListener('focusout', () => { if (S.pendingRender || (E && E.repaint)) drain(); });
+  /* a finger that went down and never came up (the tap opened another page, the app was put away, Back restored the page) must not hold
+     every redraw back for good (Nov 16, 2026): back in front, restored, or told the line was reopened, the page lets go and redraws */
+  const letGo = () => { ptrDown = false; if (EDITION === 'web' && WEB.stage !== 'in') return; if (S.pendingRender || (E && E.repaint)) drain(); else if (!['edit', 'report'].includes(S.route.view) && !typing()) render(); };
+  window.addEventListener('pageshow', (e) => { if (e.persisted) letGo(); }); window.addEventListener('blur', () => { ptrDown = false; });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { ptrDown = false; if (S.pendingRender) drain(); } }); document.addEventListener('pw-resume', letGo);
 
   function unsubscribePlayer() { S.psubs.forEach((u) => { try { u(); } catch (e) { /* noop */ } }); S.psubs = []; S.pdata = { pid: null, videos: [], journal: [], goals: null, contacts: [] }; S.ui.compare = []; }
   function subscribePlayer(pid) {
@@ -2354,7 +2359,10 @@ const PW_CONFIG = {
     try {
       firebase.initializeApp(CFG.firebase); WEB.auth = firebase.auth(); WEB.fs = firebase.firestore();
       try { if (typeof WEB.fs.settings === 'function') WEB.fs.settings({ ignoreUndefinedProperties: true, merge: true }); } catch (e) { /* older build: the adapter strips undefined itself */ }
-      try { if (typeof WEB.fs.enablePersistence === 'function') await WEB.fs.enablePersistence({ synchronizeTabs: true }); } catch (e) { /* private window or older browser: the in-memory cache is fine */ }
+      /* Nov 16, 2026: the copy of the database kept on the device (enablePersistence) is off. On an iPhone it is the known cause of a page that
+         stops moving after the app was in the background (the browser drops its storage line and never gives it back), and between two of
+         our pages opened one after the other it made the second wait for the first to let go. What is on screen is kept in memory instead;
+         a write made with no signal still goes out when the signal returns, as long as the page stays open. */
     } catch (e) { WEB.stage = 'nosdk'; WEB.note = String((e && e.message) || e); renderGate(); return; }
     try {
       if (EMAIL_LINK && WEB.auth.isSignInWithEmailLink(location.href)) {
@@ -2422,6 +2430,7 @@ const PW_CONFIG = {
   }
   function enterApp() {
     WEB.stage = 'in'; S.db = webDb(WEB.fs); S.canWrite = true; S.dbState = 'live'; S.sample = webSample(); paintLive(); paintUser();
+    setTimeout(() => { if (window.PWAlive) window.PWAlive.expect(() => !!S.loaded.players, 'the players'); }, 2500);   // still waiting after a while: reconnect, then say so (Nov 16)
     WEB.core.push(S.db.collection('groups').onSnapshot((s) => { S.groups = rowsOf(s); S.loaded.groups = true; changed(); }, () => {}));
     if (!WEB.tryoutsOnly) {
       WEB.core.push(S.db.collection('players').onSnapshot((s) => { S.players = rowsOf(s).map((p) => (retired(p.coach) || retired(p.coach2) ? Object.assign({}, p, { coach: retired(p.coach) ? '' : p.coach, coach2: retired(p.coach2) ? '' : p.coach2 }) : p)); S.loaded.players = true; changed(); }, () => {}));
@@ -4141,7 +4150,7 @@ const PW_CONFIG = {
 
   document.addEventListener('click', async (ev) => {
     const jcEl = ev.target.closest('a[data-jc]'); if (jcEl && EDITION === 'web' && !ev.metaKey && !ev.ctrlKey) { ev.preventDefault(); jcOpen(jcEl.getAttribute('data-jc'), jcEl.getAttribute('data-jcpid')); return; }
-    const hrefEl = ev.target.closest('[data-href]'); if (hrefEl) { ev.preventDefault(); location.href = hrefEl.getAttribute('data-href'); return; }
+    const hrefEl = ev.target.closest('[data-href]'); if (hrefEl) { ev.preventDefault(); if (window.PWAlive) window.PWAlive.going(); location.href = hrefEl.getAttribute('data-href'); return; }
     const goEl = ev.target.closest('[data-go]'); if (goEl) { ev.preventDefault(); let r; try { r = JSON.parse(goEl.getAttribute('data-go')); } catch (e) { return; } S.ui.adding = false; S.ui.editing = false; S.ui.parentOpen = null; S.ui.parentData = null; if (r.view !== 'edit') { S.ui.back = null; saveUi(); } closeResults(); go(r); return; }
     const b = ev.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT' || b.disabled) return; const act = b.getAttribute('data-act');
     if (act === 'toggle-add') { S.ui.adding = !S.ui.adding; render(); const i = $('#ap_name'); if (i) i.focus(); }

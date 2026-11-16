@@ -112,5 +112,46 @@
       if (P && !/^\/(portal|team)(\/|$)/.test(here)) P.addListener('pushNotificationActionPerformed', (a) => { try { const u = a && a.notification && a.notification.data && a.notification.data.url; if (u && /^\/[^/]/.test(u)) location.href = u; } catch (e) { /* stay */ } });
     } catch (e) { /* the pages work without it */ }
   };
+  /* ── Staying alive (Nov 16, 2026: "the app stalls, we have to close it and open it again"). A page that sat behind another app, or came
+     back with the Back gesture, can be left holding a dead line to the database: it looks fine and nothing moves. So:
+       · back in front after more than 20 seconds away, or restored by Back, or the network returns: the line to the database is dropped
+         and opened again at once (not after the minute it can take on its own); the pages are told (the event "pw-resume") and redraw;
+       · after more than eight hours away: the page is loaded fresh;
+       · a page that is still waiting for its first data after 10 seconds reconnects once, and after 25 says so with a Reload button;
+       · a tap that leads to another page shows a line moving across the top at once, so a slow load does not look like a dead button. ── */
+  (function () {
+    const db = () => { try { const a = window.PWAuth && window.PWAuth.fs && window.PWAuth.fs(); if (a) return a; if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) return firebase.firestore(); } catch (e) { /* none */ } return null; };
+    let busy = false, hiddenAt = 0, lastKick = 0;
+    function reconnect(why) {
+      const fs = db(); if (!fs || busy || Date.now() - lastKick < 4000 || typeof fs.disableNetwork !== 'function') return Promise.resolve(false); busy = true; lastKick = Date.now();
+      return fs.disableNetwork().then(() => fs.enableNetwork()).then(() => { busy = false; try { document.dispatchEvent(new CustomEvent('pw-resume', { detail: { why } })); } catch (e) { /* fine */ } return true; }, () => { busy = false; return false; });
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { hiddenAt = Date.now(); return; } const away = hiddenAt ? Date.now() - hiddenAt : 0; hiddenAt = 0;
+      if (away > 8 * 3600 * 1000 && !(window.PWCall && window.PWCall.active && window.PWCall.active())) { location.reload(); return; }
+      if (away > 20000) reconnect('back'); else { try { document.dispatchEvent(new CustomEvent('pw-resume', { detail: { why: 'front' } })); } catch (e) { /* fine */ } }
+    });
+    window.addEventListener('pageshow', (e) => { const g = document.getElementById('pw-going'); if (g) g.remove(); if (e.persisted) reconnect('restored'); });
+    window.addEventListener('online', () => reconnect('online'));
+    /* a page says what "loaded" means; if that is not true in time, reconnect once, then say so */
+    function expect(isReady, what) {
+      setTimeout(() => { try { if (!isReady()) reconnect('slow'); } catch (e) { /* fine */ } }, 10000);
+      setTimeout(() => { try { if (isReady() || document.getElementById('pw-stuck')) return; } catch (e) { return; }
+        const b = document.createElement('div'); b.id = 'pw-stuck'; b.setAttribute('role', 'alert'); b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(110px + env(safe-area-inset-bottom,0px));z-index:94;max-width:520px;margin:0 auto;background:#0A0A0A;color:#fff;border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px;font:400 14px system-ui;box-shadow:0 20px 50px -18px rgba(0,0,0,.7)';
+        b.innerHTML = '<span style="flex:1"><b style="display:block;font-weight:700">Still loading ' + String(what || 'the page').replace(/[<>&]/g, '') + '</b><small style="color:rgba(255,255,255,.65)">The connection is slow or was lost.</small></span><button type="button" style="border:0;background:#E2FE78;color:#0A0A0A;border-radius:999px;padding:10px 16px;font:700 13px system-ui;cursor:pointer">Reload</button>';
+        b.querySelector('button').onclick = () => location.reload(); document.body.appendChild(b);
+        const t = setInterval(() => { try { if (isReady()) { clearInterval(t); b.remove(); } } catch (e) { clearInterval(t); } }, 1500);
+      }, 25000);
+    }
+    /* the line across the top while another page is on its way */
+    function going() { if (document.getElementById('pw-going') || !document.body) return; const g = document.createElement('div'); g.id = 'pw-going'; g.style.cssText = 'position:fixed;left:0;top:0;height:3px;width:100%;z-index:99;background:linear-gradient(90deg,#E2FE78,#94FCB1);transform-origin:0 50%;transform:scaleX(.08);transition:transform 6s cubic-bezier(.1,.7,.1,1);pointer-events:none'; document.body.appendChild(g); requestAnimationFrame(() => { g.style.transform = 'scaleX(.92)'; }); setTimeout(() => { if (g.parentNode) g.remove(); }, 15000); }
+    document.addEventListener('click', (e) => {
+      if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target || a.hasAttribute('download')) return;
+      let u; try { u = new URL(a.href, location.href); } catch (x) { return; } if (u.origin !== location.origin || (u.pathname === location.pathname && u.search === location.search)) return;
+setTimeout(() => { if (!e.defaultPrevented) going(); }, 0);
+    }, false);
+    window.PWAlive = { reconnect, expect, going };
+  })();
+
   (function wait(n) { let c = null; try { c = window.PWAuth && window.PWAuth.ctx; } catch (e) { c = null; } if (c) { window.PWSideAuto(c); window.PWTeamWatch(c); } else if (n < 120) setTimeout(() => wait(n + 1), 150); })(0);   // this file can load before the sign-in is read
 })();
