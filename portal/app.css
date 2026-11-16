@@ -138,3 +138,4 @@ body.app-skin .cp-appbar:empty{display:none!important}
 
 /* Nov 14: in the App Store app the page runs to the edges of the screen, so the bottom bar sits above the home line */
 body.app-skin .cp-appbar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+body.app-skin .stat b .of{color:#85857F}

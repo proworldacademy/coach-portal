@@ -33,3 +33,15 @@ html.dark #pwd-top button,html.dark #pwd-top .pwd-jump,html.dark .search button,
 html.dark .search button svg,html.dark #pwd-top button svg{stroke:currentColor}
 html.dark .pwd-burger span{background:var(--ink)!important}
 html.dark body.fresh .fx-hero small,html.dark body.fresh .fx-hero .fx-k{color:rgba(0,0,0,.66)!important}
+/* ── The dark scan (Nov 16, 2026: "in the night mode it is very hard to read certain words"). Every page was opened in dark, on a computer
+   and on a phone, and every line of text measured against what is behind it. Two kinds of fault: a bar that kept its light fill while its
+   words turned light, and words on a brand colour that turned light with the rest. A brand colour always carries black words. ── */
+html.dark body.app-skin #vtabs,html.dark body.app-skin .tabs.vtabs,html.dark nav#steps.seg{background:rgba(30,30,30,.92)!important}
+html.dark body.app-skin .vtabs button,html.dark body.app-skin .vtabs a,html.dark nav#steps.seg button{color:#C9C9C4}
+html.dark body.app-skin .vtabs button.on,html.dark body.app-skin .vtabs a.on,html.dark nav#steps.seg button.on{background:var(--lime)!important;color:#0A0A0A!important}
+html.dark body.app-skin .vtabs button.on .a2i,html.dark body.app-skin .vtabs a.on .a2i{color:#0A0A0A}
+html.dark .group .gname,html.dark .sig b,html.dark #line.sum b,html.dark .pwa h1 em,html.dark .start.rec .sbtn,html.dark .start.rec .sbtn b,html.dark .start.rec .sbtn small,html.dark .cell.blk.staff,html.dark .cell.blk.staff small,html.dark .cell.blk.staff b,html.dark .fx-ringn small{color:#0A0A0A!important}
+html.dark .btn.bad,html.dark .btn.sm.bad{color:#FF8A80}
+html.dark body.fresh .fx-hero .fx-ringn small,html.dark .fx-ringbox .fx-ringn small{color:#0A0A0A!important}
+html.dark body.fresh .fx-hero small,html.dark body.fresh .fx-hero .fx-k{color:rgba(0,0,0,.82)!important}
+html.dark #home-attn .chip,html.dark .field .pill,html.dark .cchip small{color:#C4C4BF}
