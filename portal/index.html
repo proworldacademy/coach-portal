@@ -201,6 +201,11 @@ input[type=checkbox],input[type=radio]{width:auto;height:auto}
 .rb:hover{border-color:var(--ink);color:var(--ink)}
 .rb[aria-checked="true"]{background:var(--pw-inkbg,var(--ink));border-color:var(--ink);color:var(--pc,var(--lime))}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
+.sexf{margin-top:8px}.sexf .sexsort{border-style:dashed}.sexnote{font-size:12px;align-self:center}
+.sexseg{margin-top:8px}.sexrow{margin:8px 2px 0;display:flex}
+.sexsorter{margin:12px 0;padding:14px 16px}.sexhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}.sexhead .btn{margin-left:auto}
+.sexline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14.5px;font-weight:600}
+.sexbtns{display:flex;gap:6px;flex:0 0 auto}.sexbtns .fchip{min-width:64px;min-height:38px}
 .sg{border:1px solid var(--line-2);background:var(--pw-sf,#fff);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--muted);transition:.2s}
 .sg:hover{border-color:var(--ink);color:var(--ink)}
 .sg[aria-checked="true"]{background:var(--pc);border-color:var(--pc);color:#000;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
@@ -1761,7 +1766,7 @@ const PW_CONFIG = {
     checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
+    ui: { sex: (function () { try { return sessionStorage.getItem('cp-sex') || ''; } catch (e) { return ''; } })(), sexSort: false, showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -2785,10 +2790,10 @@ const PW_CONFIG = {
     const g = group(gid); const q = curQ(); const f = S.ui.a2filter && S.ui.a2filterGroup === gid ? S.ui.a2filter : 'all';
     const all = S.players.filter((p) => p.group === gid && active(p) && mine(p)).sort((a, b) => a.name.localeCompare(b.name)); const wk = curWeek();
     const nRep = all.filter((p) => dueNow(p).overall !== 'done').length, nReach = all.filter((p) => !inTouch(p.id, wk)).length;
-    const list = f === 'report' ? all.filter((p) => dueNow(p).overall !== 'done') : f === 'reach' ? all.filter((p) => !inTouch(p.id, wk)) : all;
+    const list = (f === 'report' ? all.filter((p) => dueNow(p).overall !== 'done') : f === 'reach' ? all.filter((p) => !inTouch(p.id, wk)) : all).filter(sexOk);
     const seg = `<div class="a2seg" role="group" aria-label="Show">${[['all', 'All ' + all.length, 0], ['report', 'Report', nRep], ['reach', 'To reach', nReach]].map(([k, t, n]) => `<button type="button" class="${f === k ? 'on' : ''}" data-act="a2filter" data-gid="${esc(gid)}" data-v="${k}">${t}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>`;
     const rows = list.map((p) => a2row(a2ava(p.name, inTouch(p.id, wk)), esc(p.name), `${p.tier ? 'Tier ' + esc(p.tier) + ' · ' : ''}${p.coach ? 'Coach ' + esc(p.coach) : 'No coach'}`, a2status(p), goAttr({ view: 'player', pid: p.id }))).join('');
-    return `${notice()}${a2nav('Players', { view: 'home' }, '')}${a2title(g.label + '.', `${all.length} ${all.length === 1 ? 'player' : 'players'} · ${esc(q)} 3-month report`)}${seg}${rows ? `<div class="a2card">${rows}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? (all.length ? 'Nobody here' : 'No players of yours in this group') : 'Loading…'}</b></span></div></div>`}`;
+    return `${notice()}${a2nav('Players', { view: 'home' }, '')}${a2title(g.label + '.', `${all.length} ${all.length === 1 ? 'player' : 'players'} · ${esc(q)} 3-month report`)}${seg}${sexBar(all, true)}${rows ? `<div class="a2card">${rows}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? (all.length ? 'Nobody here' : 'No players of yours in this group') : 'Loading…'}</b></span></div></div>`}`;
   }
   /* ── the player ── */
   function view2Player(pid, tab) {
@@ -2969,8 +2974,8 @@ const PW_CONFIG = {
       const head = `<div class="head"><div><div class="lbl">${WEB.isDirector ? 'Every group' : 'Your players'} · ${day}</div><h1 class="title">Play<em>ers.</em></h1>
         <ul class="sub lines"><li><b class="n">${WEB.isDirector ? act.length : mineP.length}</b> active ${(WEB.isDirector ? act.length : mineP.length) === 1 ? 'player' : 'players'}</li>${WEB.isDirector ? `<li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>` : ''}</ul></div></div>`;
       if (EDITION === 'web' && !WEB.isDirector) {
-        const rows = mineP.slice().sort((a, b) => a.name.localeCompare(b.name)).map((p) => `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}</div><small>${esc(group(p.group).label)}${p.tier ? ' · Tier ' + esc(p.tier) : ''}</small></div></div><div class="chips">${contactChip(p)}${statusBubble(p)}</div></button>`).join('');
-        return `${notice()}${head}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
+        const rows = mineP.filter(sexOk).sort((a, b) => a.name.localeCompare(b.name)).map((p) => `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}</div><small>${esc(group(p.group).label)}${p.tier ? ' · Tier ' + esc(p.tier) : ''}</small></div></div><div class="chips">${contactChip(p)}${statusBubble(p)}</div></button>`).join('');
+        return `${notice()}${head}${sexBar(mineP)}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? mineP.length ? 'Nobody under ' + (sexPick() === 'm' ? 'Boys' : 'Girls') + ' yet.' : 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
       }
       return `${notice()}${head}${empty}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
         <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
@@ -3161,7 +3166,7 @@ const PW_CONFIG = {
     const fc = S.ui.coachFilter !== undefined && S.ui.coachFilter !== null && S.ui.coachFilterGroup === gid ? S.ui.coachFilter : null;
     const pf = multi(def) && S.ui.partFilter && S.ui.partFilterGroup === gid ? def.parts.find((x) => x.id === S.ui.partFilter) : null;
     const needs = (p, pid) => { const a = quarterlyFor(p.id, q); if (a && a.status === 'final') return false; const st = a && a.parts && a.parts[pid]; return !(st && st.done); };
-    const shown = list.filter((p) => (fc === null ? true : (p.coach || '') === fc)).sort((a, b) => a.name.localeCompare(b.name));
+    const shown = list.filter((p) => (fc === null ? true : (p.coach || '') === fc)).filter(sexOk).sort((a, b) => a.name.localeCompare(b.name));
     const rows = shown.map((p) => {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
         <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
@@ -3186,7 +3191,28 @@ const PW_CONFIG = {
         ${coaches.map((c) => `<button class="fchip" aria-pressed="${fc === c}" data-act="fcoach" data-v="${esc(c)}">${esc(c || 'No coach')} ${list.filter((p) => (p.coach || '') === c).length}</button>`).join('')}
         ${inactiveN ? `<button class="fchip" aria-pressed="${!!S.ui.showInactive}" data-act="inactive">Show not active (${inactiveN})</button>` : ''}
       </div>
+      ${sexBar(fc === null ? list : list.filter((p) => (p.coach || '') === fc))}
       ${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${empty}</div>`}`;
+  }
+  /* Boys and girls (Nov 16, 2026 — the directors: the two sections train apart, and a coach wants to see one at a time).
+     players/<id>.sex is 'm' or 'f'. A director sets it: on the player (Edit player) or, for a whole list, with "sort them", one tap a
+     player. The switch All · Boys · Girls sits on a group's page and on a coach's own list, and stays as chosen while the page is open.
+     A player with nothing set shows under All only. */
+  function sexPick() { const v = S.ui.sex; return v === 'm' || v === 'f' ? v : ''; }
+  function sexOk(p) { const v = sexPick(); return !v || p.sex === v; }
+  function sexBar(list, a2) {
+    if (!list.length) return ''; const v = sexPick(); const nm = list.filter((p) => p.sex === 'm').length, nf = list.filter((p) => p.sex === 'f').length, nu = list.length - nm - nf;
+    const can = EDITION === 'web' && WEB.isDirector && writable();
+    if (!nm && !nf && !can) return '';   // nothing set and nobody here who can set it: no switch to show
+    const btn = (k, t, n) => (a2 ? `<button type="button" class="${v === k ? 'on' : ''}" data-act="fsex" data-v="${k}">${t} ${n}</button>` : `<button class="fchip" aria-pressed="${v === k}" data-act="fsex" data-v="${k}">${t} ${n}</button>`);
+    const sort = nu ? (can ? `<button class="fchip sexsort" type="button" aria-pressed="${!!S.ui.sexSort}" data-act="sex-sort">${nu} not set · sort them</button>` : `<span class="muted sexnote">${nu} not set yet</span>`) : '';
+    return a2 ? `<div class="a2seg sexseg" role="group" aria-label="Boys or girls">${btn('', 'All', list.length)}${btn('m', 'Boys', nm)}${btn('f', 'Girls', nf)}</div>${sort ? `<div class="sexrow">${sort}</div>` : ''}${sexSorter(list)}`
+      : `<div class="filters sexf" role="group" aria-label="Boys or girls">${btn('', 'All', list.length)}${btn('m', 'Boys', nm)}${btn('f', 'Girls', nf)}${sort}</div>${sexSorter(list)}`;
+  }
+  function sexSorter(list) {
+    if (!S.ui.sexSort || !(EDITION === 'web' && WEB.isDirector)) return ''; const todo = list.filter((p) => p.sex !== 'm' && p.sex !== 'f').sort((a, b) => a.name.localeCompare(b.name));
+    if (!todo.length) return `<div class="panel sexsorter"><b>All set.</b> <button class="btn sm ghost" type="button" data-act="sex-sort">Close</button></div>`;
+    return `<div class="panel sexsorter"><div class="sexhead"><b>${todo.length} to sort</b><span class="muted">One tap each. It is saved at once.</span><button class="btn sm ghost" type="button" data-act="sex-sort">Done</button></div>${todo.map((p) => `<div class="sexline"><span>${esc(p.name)}${p.coach ? ` <small class="muted">· ${esc(p.coach)}</small>` : ''}</span><span class="sexbtns"><button class="fchip sm" type="button" data-act="set-sex" data-pid="${esc(p.id)}" data-v="m">Boy</button><button class="fchip sm" type="button" data-act="set-sex" data-pid="${esc(p.id)}" data-v="f">Girl</button></span></div>`).join('')}</div>`;
   }
   function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2), S.players.map((p) => p.coach3)).filter(Boolean))).sort(); }
   function addPlayerPanel(gid) {
@@ -3242,6 +3268,7 @@ const PW_CONFIG = {
     return `<form class="panel stack" data-form="edit-player" data-pid="${esc(p.id)}" style="margin-bottom:18px"><div class="grid2">
       <div class="field"><label for="ep_name">Player name</label><input id="ep_name" name="name" type="text" required value="${esc(p.name)}"></div>
       <div class="field"><label for="ep_group">Group</label><select id="ep_group" name="group">${groups().map((g) => `<option value="${esc(g.id)}" ${g.id === p.group ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div>
+      <div class="field"><label for="ep_sex">Boys or girls</label><select id="ep_sex" name="sex"><option value="">Not set</option><option value="m" ${p.sex === 'm' ? 'selected' : ''}>Boys</option><option value="f" ${p.sex === 'f' ? 'selected' : ''}>Girls</option></select></div>
       <div class="field"><label for="ep_tier">Tier</label><select id="ep_tier" name="tier"><option value="">—</option>${['A', 'B', 'C'].map((t) => sel(p.tier, t)).join('')}</select></div>
       <div class="field"><label for="ep_coach">Primary coach</label><input id="ep_coach" name="coach" type="text" list="coachlist2" value="${esc(p.coach || '')}"></div>
       <div class="field"><label for="ep_coach2">Secondary coach</label><input id="ep_coach2" name="coach2" type="text" list="coachlist2" value="${esc(p.coach2 || '')}"></div>
@@ -4144,6 +4171,10 @@ const PW_CONFIG = {
     else if (act === 'log-open') { const id = b.getAttribute('data-id'); S.ui.logOpen = S.ui.logOpen === id ? null : id; render(); }
     else if (act === 'log-all') { S.ui.logAll = !S.ui.logAll; render(); }
     else if (act === 'targets-edit') { S.ui.editTargets = !S.ui.editTargets; render(); }
+    else if (act === 'fsex') { S.ui.sex = b.getAttribute('data-v') || ''; try { sessionStorage.setItem('cp-sex', S.ui.sex); } catch (e) { /* no storage */ } render(); }
+    else if (act === 'sex-sort') { S.ui.sexSort = !S.ui.sexSort; render(); }
+    else if (act === 'set-sex') { const pid = b.getAttribute('data-pid'); const v = b.getAttribute('data-v') === 'f' ? 'f' : 'm'; const p = player(pid); if (!p) return; const was = p.sex || ''; p.sex = v; render();
+      (EDITION === 'web' ? WEB.fs : S.db).doc('players/' + pid).update({ sex: v, updatedAt: Date.now() }).catch((e) => { p.sex = was; render(); toast('Not saved: ' + (e && e.code === 'permission-denied' ? 'a director sets this.' : (e && e.message) || e)); }); }
     else if (act === 'fcoach') { const v = b.getAttribute('data-v'); S.ui.coachFilter = v === '__all' ? null : v; S.ui.coachFilterGroup = S.route.gid; render(); }
     else if (act === 'fcontact') { const v = b.getAttribute('data-v'); S.ui.contactCoach = v === '__all' ? null : v; render(); }
     // messages to the family (Nov 4): the recipient chip, the refresh, the jump from the weekly list to the player's composer
@@ -4289,7 +4320,7 @@ const PW_CONFIG = {
         } else { await S.db.doc('players/' + id).set(doc); S.ui.adding = false; toast(`${name} added.`); render(); }
       } else if (kind === 'edit-player') {
         const pid = f.getAttribute('data-pid'); const before = player(pid) || {}; const status = val('status') || 'active';
-        const patch = { name: val('name'), group: val('group'), tier: val('tier'), coach: val('coach'), coach2: val('coach2'), coach3: val('coach3'), status, updatedAt: t };
+        const patch = { name: val('name'), group: val('group'), tier: val('tier'), sex: ['m', 'f'].includes(val('sex')) ? val('sex') : '', coach: val('coach'), coach2: val('coach2'), coach3: val('coach3'), status, updatedAt: t };
         const was = before.status || 'active';
         if (EDITION === 'web' && status !== was && ['active', 'away', 'finished'].includes(status)) {
           // a status change also goes to Monday (the next morning sync) — saved together with the player

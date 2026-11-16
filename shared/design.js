@@ -29,6 +29,38 @@
     const tApply = () => { const m = tGet(); const dark = m === "dark" || (m === "auto" && !!(tmq && tmq.matches)); document.documentElement.classList.toggle("dark", dark); let meta = document.querySelector('meta[name="theme-color"]'); if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.appendChild(meta); } meta.content = dark ? "#050505" : "#F1F1ED"; document.querySelectorAll("[data-theme-btn]").forEach((b) => { b.textContent = "Appearance: " + (m === "auto" ? "Auto" : m === "dark" ? "Dark" : "Light"); }); };
     window.PWTheme = { apply: tApply, get: tGet, set: (m) => { try { if (m === "auto") localStorage.removeItem(TKEY); else localStorage.setItem(TKEY, m); } catch (e) { /* no storage */ } tApply(); }, next: () => { const m = tGet(); window.PWTheme.set(m === "auto" ? "light" : m === "light" ? "dark" : "auto"); } };
     tApply(); if (tmq) { if (tmq.addEventListener) tmq.addEventListener("change", tApply); else if (tmq.addListener) tmq.addListener(tApply); }
+    /* The dark guard (Nov 16, 2026). The dark sheet (shared/dark.css) names what it knows. This catches what it does not: in dark, any
+       words that end up light on a light fill (a brand colour, a pastel chip, a white box somebody hard-coded) are set black, and any words
+       left black on a black surface are set light. It measures the way the dark scan did: the word's colour against the nearest fill behind
+       it. It runs when the page settles and again, quietly, when the page changes. In light it does nothing and undoes what it set. */
+    (function () {
+      const cv = document.createElement("canvas"); cv.width = cv.height = 1; let g2 = null; const memo = {};
+      const rgb = (c) => { if (!c) return null; if (memo[c]) return memo[c]; const m = /^rgba?\(([^)]+)\)$/.exec(c); if (m) { const a = m[1].split(/[, /]+/).map(Number); return (memo[c] = [a[0], a[1], a[2], a.length > 3 ? a[3] : 1]); } try { g2 = g2 || cv.getContext("2d", { willReadFrequently: true }); g2.clearRect(0, 0, 1, 1); g2.fillStyle = "#000"; g2.fillStyle = c; g2.fillRect(0, 0, 1, 1); const d = g2.getImageData(0, 0, 1, 1).data; return (memo[c] = [d[0], d[1], d[2], d[3] / 255]); } catch (e) { return null; } };
+      const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+      const over = (t, u) => [t[0] * t[3] + u[0] * (1 - t[3]), t[1] * t[3] + u[1] * (1 - t[3]), t[2] * t[3] + u[2] * (1 - t[3]), 1];
+      let timer = 0, running = false, quietUntil = 0;
+      function run() {
+        timer = 0; if (running) return; running = true;
+        try {
+          document.querySelectorAll("[data-pw-ink]").forEach((el) => { el.style.removeProperty("color"); el.removeAttribute("data-pw-ink"); });
+          if (!document.documentElement.classList.contains("dark") || !document.body) return;
+          const bgs = new Map();
+          const bgOf = (el) => { const chain = []; let out = null; for (let n = el; n && n.nodeType === 1; n = n.parentElement) { if (bgs.has(n)) { out = bgs.get(n); break; } chain.push(n); } if (!out) out = [5, 5, 5, 1];
+            for (let i = chain.length - 1; i >= 0; i--) { const cs = getComputedStyle(chain[i]); let c = rgb(cs.backgroundColor); const img = cs.backgroundImage; if (img && img !== "none") { if (/url\(/.test(img)) out = null; else if (!(c && c[3] > 0.9)) { const gm = /(rgba?|color)\([^)]+\)/.exec(img); const gc = gm ? rgb(gm[0]) : null; if (gc && gc[3] > 0.05 && out) out = over(gc, out); } } if (c && c[3] > 0.02 && out) out = over(c, out); else if (c && c[3] > 0.9) out = [c[0], c[1], c[2], 1]; bgs.set(chain[i], out); }
+            return out; };
+          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); const seen = new Set(); let t, n = 0; const fix = [];
+          while ((t = w.nextNode()) && n < 3000) { if (t.nodeValue.trim().length < 1) continue; const el = t.parentElement; if (!el || seen.has(el)) continue; seen.add(el); const tag = el.tagName; if (tag === "SCRIPT" || tag === "STYLE" || tag === "OPTION" || el.closest("svg,.pc-wrap,#pw-ring")) continue; n++;
+            const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") continue; const fg = rgb(cs.color); if (!fg || fg[3] < 0.3) continue; const bg = bgOf(el); if (!bg) continue;
+            const lf = lum(over(fg, bg)), lb = lum(bg); const ratio = (Math.max(lf, lb) + 0.05) / (Math.min(lf, lb) + 0.05); if (ratio >= 2.6) continue;
+            if (lb > 0.4) fix.push([el, "#0A0A0A"]); else if (lb < 0.08 && lf < 0.08) fix.push([el, "#F4F4F0"]); }
+          fix.forEach((x) => { x[0].style.setProperty("color", x[1], "important"); x[0].setAttribute("data-pw-ink", "1"); });
+        } catch (e) { /* the pages read as the sheet left them */ } finally { running = false; quietUntil = Date.now() + 120; }
+      }
+      const soon = (ms) => { if (timer) return; timer = setTimeout(() => { if (window.requestIdleCallback) window.requestIdleCallback(run, { timeout: 800 }); else run(); }, ms); };
+      window.PWInkGuard = { run, soon };
+      const start = () => { soon(350); setTimeout(() => soon(10), 1800); try { new MutationObserver((ms) => { if (Date.now() < quietUntil) return; for (const m of ms) { if (m.type === "attributes" && m.attributeName === "style" && m.target.hasAttribute && m.target.hasAttribute("data-pw-ink")) continue; if (m.type === "attributes" && m.attributeName === "data-pw-ink") continue; soon(600); return; } }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden", "data-pw-ink"] }); new MutationObserver(() => soon(60)).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] }); } catch (e) { /* no observer */ } };
+      if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
+    })();
     document.addEventListener("click", (e) => { const b = e.target && e.target.closest ? e.target.closest("[data-theme-btn]") : null; if (b) { e.preventDefault(); e.stopPropagation(); window.PWTheme.next(); } });
     if (!document.querySelector('script[data-bars]')) { const sc = document.createElement('script'); sc.src = '/shared/coachbar.js'; sc.async = true; sc.setAttribute('data-bars', '1'); document.head.appendChild(sc); }   // the phone's bottom bars (shared/coachbar.js)
     /* The fresh look's moving parts (Nov 14, 2026; styles in shared/fresh.css): the page rises in once (body.fx-in for the first moments), whole
