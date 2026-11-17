@@ -11,7 +11,9 @@ self.addEventListener('fetch', (e) => {
   // Nov 16, 2026: the network still comes first, but it gets four seconds. On a weak signal a request can hang for a minute with the page
   // blank behind it; after four seconds the last copy kept on the device is shown, and the fresh one is still stored when it arrives.
   e.respondWith((async () => {
-    const net = fetch(e.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(SHELL).then((x) => x.put(e.request, c)); } return r; });
+    // Nov 17, 2026: styles and scripts are checked with the site every time (a cheap "has it changed?"), so a change that was just
+    // published shows on the next open instead of up to ten minutes later (the browser's own copy of /shared used to answer first).
+    const net = (/\.(css|js)$/.test(u.pathname) ? fetch(e.request, { cache: 'no-cache' }) : fetch(e.request)).then((r) => { if (r.ok) { const c = r.clone(); caches.open(SHELL).then((x) => x.put(e.request, c)); } return r; });
     const kept = await caches.match(e.request);
     if (!kept) return net;
     net.catch(() => {});
