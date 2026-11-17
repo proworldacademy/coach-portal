@@ -21,7 +21,8 @@ if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app
 const KEEP_REPORTS = 12;
 const REQUEST_KINDS = { court: 'Court reservation', private: 'Private lesson', change: 'Plan change', message: 'Message',
   // the client home (Nov 17, 2026): a parent says a player cannot make a session, asks for a make-up day, or writes to the coach
-  absence: 'Cannot make a session', makeup: 'Make-up day', coach: 'Message for the coach' };
+  absence: 'Cannot make a session', makeup: 'Make-up day', coach: 'Message for the coach',
+  admin: 'Registration and billing' };
 
 /* ── who is asking ── */
 async function requireFamily(req, opts) {
@@ -152,6 +153,124 @@ async function billing(stripe, customers, today) {
   return { customers: customers.map((c) => ({ id: c.id, name: c.name, email: c.email, hasCard: !!c.hasCard })), subscriptions, openInvoices };
 }
 
+/* ── the schedule (Nov 17, 2026 — Antonio: "my daughter is not going to come in for 2 weeks: I can put that on the schedule,
+   mark her absent for those 2 weeks, and add a make-up on that calendar as well") ──
+   familyDays/<player>_<date> = { player, playerName, date, kind: 'away' | 'makeup', email, at } — one document a day, written here
+   only. The attendance board reads them: an away player is not expected that day (so no no-show), a make-up player is.
+   A family may take as many make-up days as the days it gave notice for (from a month back) plus the days missed this month. */
+const DOW3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const AHEAD = 90; const BACK = 31; const MAX_RANGE = 62;
+const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+const dowOf = (d) => DOW3[CAL.dow(d)];
+const cap3 = (d) => { const x = String(d || '').slice(0, 3).toLowerCase(); return x ? x[0].toUpperCase() + x.slice(1) : ''; };
+function trainDays(p) { const en = p.enroll || {}; return (Array.isArray(en.days) ? en.days : []).map(cap3).filter((d) => DOW3.includes(d)); }
+function openDays(p) { const en = p.enroll || {}; const prog = en.program ? CAT.program(en.program) : null; const d = prog && Array.isArray(prog.days) ? prog.days.map(cap3).filter((x) => DOW3.includes(x)) : []; return d.length ? d : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']; }
+const isOpen = (d) => { try { return CAL.isTrainingDay(d); } catch (e) { return true; } };
+async function daysOf(db, pid, today) {
+  let docs = [];
+  try { docs = (await db.collection('familyDays').where('player', '==', pid).get()).docs.map((d) => d.data() || {}); } catch (e) { docs = []; }
+  const from = CAL.addDays(today, -BACK);
+  return docs.filter((d) => isDate(d.date) && d.date >= from && (d.kind === 'away' || d.kind === 'makeup')).map((d) => ({ date: d.date, kind: d.kind })).sort((a, b) => CAL.cmp(a.date, b.date));
+}
+function makeupsLeft(days, missed) { return Math.max(0, days.filter((d) => d.kind === 'away').length + (missed || 0) - days.filter((d) => d.kind === 'makeup').length); }
+const sayDay = (d) => { const p = CAL.parts(d); return `${CAL.MONTHS[p.m].slice(0, 3)} ${p.d}`; };
+async function days(db, who, body, players, opts) {
+  opts = opts || {}; body = body || {}; const today = opts.today || CAL.todayET();
+  const p = (players || []).find((x) => x.id === S.clean(body.player, 60));
+  if (!p) throw S.err(404, 'player', 'Which player?');
+  const action = String(body.action || '');
+  const ref = (d) => db.doc(`familyDays/${p.id}_${d}`);
+  const base = { player: p.id, playerName: p.name || p.id, email: who.email, at: Date.now() };
+  const have = await daysOf(db, p.id, today);
+  const range = () => {
+    const from = S.clean(body.from || body.date, 10); let to = S.clean(body.to || body.from || body.date, 10);
+    if (!isDate(from) || !isDate(to)) throw S.err(400, 'date', 'Pick the day.');
+    if (to < from) to = from;
+    if (from < today) throw S.err(400, 'past', 'That day has passed.');
+    if (to > CAL.addDays(from, MAX_RANGE)) throw S.err(400, 'long', 'For more than two months away, write to Admin so the plan can be put on hold.');
+    const out = []; for (let d = from; d <= to; d = CAL.addDays(d, 1)) out.push(d); return { from, to, all: out };
+  };
+  if (action === 'away') {
+    const r = range(); const mine = trainDays(p); const set = mine.length ? mine : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const hit = r.all.filter((d) => (set.includes(dowOf(d)) && isOpen(d)) || have.some((x) => x.date === d && x.kind === 'makeup'));
+    if (!hit.length) throw S.err(400, 'none', `${ROSTER.shortName(p.name)} has no training on ${r.from === r.to ? 'that day' : 'those days'}.`);
+    for (const d of hit) await ref(d).set(Object.assign({ date: d, kind: 'away' }, base));
+    await NOTIFY.slack(db, 'desk', `*Away* — ${p.name}`, [r.from === r.to ? sayDay(r.from) : `${sayDay(r.from)} to ${sayDay(r.to)} · ${hit.length} session${hit.length === 1 ? '' : 's'}`, `Marked by the family (${who.email}) in the client account. The attendance board already has it.`, S.clean(body.note, 300)].filter(Boolean));
+    return { ok: true, action, dates: hit };
+  }
+  if (action === 'back') {
+    const r = range(); const hit = have.filter((x) => x.kind === 'away' && x.date >= r.from && x.date <= r.to).map((x) => x.date);
+    for (const d of hit) await ref(d).delete();
+    if (hit.length) await NOTIFY.slack(db, 'desk', `*Coming after all* — ${p.name}`, [hit.length === 1 ? sayDay(hit[0]) : `${sayDay(hit[0])} to ${sayDay(hit[hit.length - 1])} · ${hit.length} sessions`, `Changed by the family (${who.email}) in the client account.`]);
+    return { ok: true, action, dates: hit };
+  }
+  if (action === 'makeup') {
+    const d = S.clean(body.date, 10);
+    if (!isDate(d)) throw S.err(400, 'date', 'Pick the day.');
+    if (d < today) throw S.err(400, 'past', 'That day has passed.');
+    if (d > CAL.addDays(today, AHEAD)) throw S.err(400, 'far', 'Pick a day in the next three months.');
+    if (trainDays(p).includes(dowOf(d)) && !have.some((x) => x.date === d && x.kind === 'away')) throw S.err(400, 'training', `${ROSTER.shortName(p.name)} already trains that day.`);
+    if (!openDays(p).includes(dowOf(d)) || !isOpen(d)) throw S.err(400, 'closed', 'There is no session of this program that day.');
+    if (have.some((x) => x.date === d && x.kind === 'makeup')) return { ok: true, action, dates: [d] };
+    const att = await attendance(db, [p], today);
+    if (makeupsLeft(have, att[p.id].missed) < 1) throw S.err(400, 'credit', 'A make-up day goes with a day missed. Mark the day away first, or write to Admin.');
+    await ref(d).set(Object.assign({ date: d, kind: 'makeup' }, base));
+    await NOTIFY.slack(db, 'desk', `*Make-up day* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)}`, `Picked by the family (${who.email}) in the client account. The attendance board expects the player that day. Not possible? Tell the family.`]);
+    return { ok: true, action, dates: [d] };
+  }
+  if (action === 'nomakeup') {
+    const d = S.clean(body.date, 10);
+    if (!isDate(d) || d < today) throw S.err(400, 'date', 'Pick the day.');
+    if (have.some((x) => x.date === d && x.kind === 'makeup')) { await ref(d).delete(); await NOTIFY.slack(db, 'desk', `*Make-up day removed* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)}`, `Removed by the family (${who.email}).`]); }
+    return { ok: true, action, dates: [d] };
+  }
+  throw S.err(400, 'action', 'Unknown change.');
+}
+
+/* ── messages (Nov 17, 2026 — Antonio: "I should have my coaches that are linked to each player, and also the admin… for any
+   question about registrations, billing and things like that") ──
+   To a coach: the words land in that coach's chat with the family in the Coach Portal, as if the parent had texted the coach's
+   number (lib/coachtext.js fromApp); the coach answers there, the answer goes to the parent's phone and shows here. To Admin:
+   a request the front desk and the billing people read and answer (familyRequests, kind 'admin'). No staff name ever shows for Admin. */
+const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+function coachesOf(p) { const out = []; for (const c of [p.coach, p.coach2, p.coach3]) { const n = firstName(c); const k = fold(n); if (k && !out.some((x) => x.key === k)) out.push({ key: k, name: n, full: c }); } return out; }
+const ADMIN_KINDS = ['admin', 'message', 'change', 'court', 'private', 'makeup'];
+function target(p, to) {
+  const all = coachesOf(p); to = fold(to);
+  if (to === 'all') { if (all.length < 2) throw S.err(400, 'to', 'Who is this for?'); return { conv: 'all', coaches: all, title: all.map((c) => 'Coach ' + c.name).join(' and ') }; }
+  const one = all.find((c) => c.key === to); if (!one) throw S.err(400, 'to', 'Who is this for?');
+  return { conv: one.key, coaches: [one], title: 'Coach ' + one.name };
+}
+async function chat(db, who, body, players) {
+  body = body || {}; const to = fold(body.to);
+  let reqs = [];
+  try { reqs = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})); } catch (e) { reqs = []; }
+  const fromReq = (r) => { const out = [{ at: r.at || 0, dir: 'me', body: String(r.text || ''), tag: r.kind === 'admin' || r.kind === 'coach' ? '' : (REQUEST_KINDS[r.kind] || '') + (r.playerName ? ' · ' + ROSTER.shortName(r.playerName) : '') }]; if (r.reply) out.push({ at: r.repliedAt || (r.at || 0) + 1, dir: 'them', body: String(r.reply), by: 'Admin' }); return out; };
+  if (to === 'admin') {
+    const lines = []; reqs.filter((r) => ADMIN_KINDS.includes(r.kind)).forEach((r) => lines.push(...fromReq(r)));
+    return { to: 'admin', title: 'Admin', lines: lines.sort((a, b) => a.at - b.at).slice(-200) };
+  }
+  const p = (players || []).find((x) => x.id === S.clean(body.player, 60)); if (!p) throw S.err(404, 'player', 'Which player?');
+  const t = target(p, to);
+  const lines = await require('./coachtext').appThread(db, p, who.email, t);
+  reqs.filter((r) => r.kind === 'coach' && r.player === p.id && (r.appConv || '') === t.conv).forEach((r) => lines.push(...fromReq(r)));
+  return { to: t.conv, player: p.id, title: t.title, lines: lines.sort((a, b) => a.at - b.at).slice(-200) };
+}
+async function message(db, who, body, players) {
+  body = body || {}; const to = fold(body.to); const text = S.clean(body.text, 600);
+  if (!text) throw S.err(400, 'text', 'Write your message first.');
+  const p = (players || []).find((x) => x.id === S.clean(body.player, 60)) || null;
+  if (to === 'admin') { const out = await request(db, who, { kind: 'admin', text, player: p ? p.id : '', name: body.name }, players); return { ok: true, to: 'admin', id: out.id }; }
+  if (!p) throw S.err(404, 'player', 'Which player?');
+  const t = target(p, to);
+  const out = await require('./coachtext').fromApp(db, p, who, t, text);
+  // a coach with no sign-in yet, or a family with no number on file: the front desk passes it on, so no message is lost
+  if (out.missing.length) { const doc = { email: who.email, name: who.name || '', phone: '', kind: 'coach', player: p.id, playerName: p.name, text, when: '', at: Date.now(), state: 'open', source: 'family', appConv: t.conv, forCoach: out.missing.join(', ') };
+    await db.collection('familyRequests').add(doc);
+    await NOTIFY.slack(db, 'desk', `*Message for Coach ${out.missing.join(' and Coach ')}* — ${p.name}`, [`From ${who.name || who.email} · ${who.email}`, text, 'Written in the client account. This coach cannot be reached in the app yet: please pass it on.']); }
+  return { ok: true, to: t.conv, reached: out.sent.length, passed: out.missing.length };
+}
+
 /* ── the whole picture for one signed-in parent ── */
 async function me(db, stripe, who, opts) {
   opts = opts || {};
@@ -159,15 +278,18 @@ async function me(db, stripe, who, opts) {
   const { players, customers } = await findPlayers(db, stripe, who.email);
   const att = await attendance(db, players, today);
   const out = [];
+  const closed = []; for (let d = today, i = 0; i <= AHEAD; i++, d = CAL.addDays(d, 1)) { const w = CAL.dow(d); if (w && w < 6 && !isOpen(d)) closed.push(d); }   // weekdays with no training (a break): the calendar greys them
   for (const p of players) {
     const en = p.enroll || {};
     const prog = en.program ? CAT.program(en.program) : null;
+    const dz = await daysOf(db, p.id, today);
     out.push({
       id: p.id, name: p.name, shortName: ROSTER.shortName(p.name), group: p.group || '', groupLabel: ROSTER.GROUP_LABEL[p.group] || (p.sport === 'soccer' ? 'Soccer' : p.sport === 'fitness' ? 'Fitness' : ''),
-      coach: firstName(p.coach), coach2: firstName(p.coach2), status: p.status || 'active', source: p.source || '',
+      coach: firstName(p.coach), coach2: firstName(p.coach2), coaches: coachesOf(p).map((c) => ({ key: c.key, name: c.name })), status: p.status || 'active', source: p.source || '',
       enroll: en.program || en.subscription ? { program: en.program || '', programName: en.programName || (prog ? prog.name : ''), programShort: en.programShort || (prog ? prog.short : ''), plan: en.plan || '', planLabel: en.planLabel || '', days: Array.isArray(en.days) ? en.days : [], start: en.start || '', monthly: en.monthly || null, status: en.status || '', hold: !!en.hold, holdReason: en.holdReason || '', endsOn: en.endsOn || null, next: en.next || null, subscription: en.subscription || '' } : null,
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
+      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed), openDays: openDays(p), closed,
       reports: await reports(db, p.id)
     });
   }
@@ -200,4 +322,4 @@ async function request(db, who, body, players) {
   return { ok: true, id: ref.id, kind, kindLabel: REQUEST_KINDS[kind] };
 }
 
-module.exports = { requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, REQUEST_KINDS, TITLES };
+module.exports = { requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, chat, message, coachesOf, REQUEST_KINDS, TITLES };

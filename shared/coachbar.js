@@ -59,9 +59,9 @@
       window.PWCoachBar(ctx, where === 'admin' ? 'privates' : where === 'team' ? 'team' : '');
     } catch (e) { /* the page works without the bar */ }
   };
-  /* The member side: Home · Reports · Billing · Front desk (sections of the family account) */
+  /* The member side: Home · Schedule · Messages · Billing (sections of the family account; Nov 17, 2026: the schedule and the messages took the places of Reports and Front desk, which the home page links to) */
   window.PWMemberBar = function (active) {
-    try { draw([['Home', '#top', MORE.home, 'top'], ['Reports', '#reports', MORE.doc, 'reports'], ['Billing', '#billing', MORE.card, 'billing'], ['Front desk', '#requests', I.chat, 'requests']], active || 'top', 'Your family');
+    try { draw([['Home', '#top', MORE.home, 'top'], ['Schedule', '#schedule', I.cal, 'schedule'], ['Messages', '#messages', I.chat, 'messages'], ['Billing', '#billing', MORE.card, 'billing']], active || 'top', 'Your family');
       document.querySelectorAll('.pw-coachbar a').forEach((a) => a.addEventListener('click', () => setOn(a.dataset.k))); } catch (e) { /* fine */ }
   };
   /* called by shared/pwauth.js once the person is in, on every page of the team side */

@@ -166,3 +166,68 @@ test('only a confirmed e-mail sign-in gets in', async () => {
   await assert.rejects(FAMILY.requireFamily({ headers: {} }, { verify: verify({}) }), (e) => e.code === 'signin');
   await assert.rejects(FAMILY.requireFamily(req('bad'), { verify: async () => { throw new Error('expired'); } }), (e) => e.code === 'token');
 });
+
+/* ── the schedule and the messages of the client account (Nov 17, 2026) ── */
+function seedClient() {
+  const db = fakeDb(Object.assign(seedRoster(), {
+    'staff/kam@example.com': { name: 'Kamryn Taub', role: 'coach', active: true, justcallNumber: '+15615550900' },
+    'staff/lee@example.com': { name: 'Lee Coach', role: 'coach', active: true }
+  }));
+  return db;
+}
+test('two weeks away go on the schedule as one day per training day; a make-up day needs a day missed; both can be undone', async () => {
+  const sent = wire(); const db = seedClient();
+  await db.doc('players/as-mia-r').set({ enroll: { program: 'afterschool', days: ['Tue', 'Thu'], subscription: 'sub_1' } }, { merge: true });
+  const who = { email: 'maria.rivera@example.com', name: 'Maria Rivera' }; const today = '2026-11-17';
+  const { players } = await FAMILY.findPlayers(db, null, who.email);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-11-18' }, players, { today }), /goes with a day missed/);
+  const out = await FAMILY.days(db, who, { player: 'as-mia-r', action: 'away', from: '2026-11-17', to: '2026-11-30' }, players, { today });
+  assert.ok(out.dates.length >= 2 && out.dates.every((d) => ['Tue', 'Thu'].includes(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(d + 'T12:00:00Z').getUTCDay()])));
+  assert.equal(out.dates[0], '2026-11-17');
+  assert.ok(sent.some((x) => /desk/.test(x.url) && /Away/.test(JSON.stringify(x.body)) && /Mia Rivera/.test(JSON.stringify(x.body))));
+  let me = await FAMILY.me(db, null, who, { today }); let mia = me.players.find((p) => p.id === 'as-mia-r');
+  assert.equal(mia.days.filter((d) => d.kind === 'away').length, out.dates.length);
+  assert.equal(mia.makeupsLeft, out.dates.length);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-03' }, players, { today }), /already trains/);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-05' }, players, { today }), /no session/);   // a Saturday
+  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-02' }, players, { today });
+  me = await FAMILY.me(db, null, who, { today }); mia = me.players.find((p) => p.id === 'as-mia-r');
+  assert.equal(mia.days.filter((d) => d.kind === 'makeup').length, 1); assert.equal(mia.makeupsLeft, out.dates.length - 1);
+  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'back', date: '2026-11-17' }, players, { today });
+  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'nomakeup', date: '2026-12-02' }, players, { today });
+  me = await FAMILY.me(db, null, who, { today }); mia = me.players.find((p) => p.id === 'as-mia-r');
+  assert.equal(mia.days.some((d) => d.date === '2026-11-17'), false); assert.equal(mia.days.some((d) => d.kind === 'makeup'), false);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'away', date: '2026-11-10' }, players, { today }), /passed/);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'u10-noah-k', action: 'away', date: '2026-11-19' }, players, { today }), /Which player/);   // another family's player
+});
+test('a message to a coach lands in that coach\'s chat and nobody else\'s; the answer shows to the parent; Admin is a request with no staff name', async () => {
+  const sent = wire(); const db = seedClient(); const COACHTEXT = require('../lib/coachtext'); COACHTEXT._seats({});
+  const who = { email: 'maria.rivera@example.com', name: 'Maria Rivera' };
+  const { players } = await FAMILY.findPlayers(db, null, who.email);
+  const me = await FAMILY.me(db, null, who, { today: '2026-11-17' });
+  assert.deepEqual(me.players.find((p) => p.id === 'as-mia-r').coaches, [{ key: 'kamryn', name: 'Kamryn' }]);
+  const out = await FAMILY.message(db, who, { player: 'as-mia-r', to: 'kamryn', text: 'Mia has a school trip on Thursday.' }, players);
+  assert.equal(out.reached, 1);
+  const kam = { email: 'kam@example.com', name: 'Kamryn Taub', keys: ['kamryn'], justcallNumber: '+15615550900' };
+  const lee = { email: 'lee@example.com', name: 'Lee Coach', keys: ['lee'], director: true };
+  const t = await COACHTEXT.thread(db, kam, 'as-mia-r', { markRead: false });
+  assert.ok(t.lines.some((l) => l.dir === 'in' && /school trip/.test(l.body) && l.note === 'from the app'));
+  const t2 = await COACHTEXT.thread(db, lee, 'as-mia-r', { markRead: false });
+  assert.equal(t2.lines.some((l) => /school trip/.test(l.body)), false);
+  // the coach answers by text from the portal: the parent reads it in the same chat
+  await db.collection('smsLog').doc().set({ at: Date.now() + 5, by: 'kam@example.com', byName: 'Kamryn Taub', player: 'as-mia-r', phone: '+15615550102', body: 'Thank you, see her Tuesday.\n- Coach Kamryn, ProWorld Academy', status: 'sent', from: 'portal', line: '+15615550900' });
+  const c = await FAMILY.chat(db, who, { player: 'as-mia-r', to: 'kamryn' }, players);
+  assert.deepEqual(c.lines.map((l) => [l.dir, l.body]), [['me', 'Mia has a school trip on Thursday.'], ['them', 'Thank you, see her Tuesday.']]);
+  assert.equal(c.lines[1].by, 'Coach Kamryn');
+  // a coach with no sign-in: the front desk passes it on, and the parent still sees what she wrote
+  const o2 = await FAMILY.message(db, who, { player: 'ft-liam-r', to: 'eric', text: 'Can Liam bring his own racket?' }, players);
+  assert.equal(o2.passed, 1);
+  assert.ok(sent.some((x) => /Message for Coach Eric/.test(JSON.stringify(x.body))));
+  assert.equal((await FAMILY.chat(db, who, { player: 'ft-liam-r', to: 'eric' }, players)).lines[0].body, 'Can Liam bring his own racket?');
+  await assert.rejects(() => FAMILY.message(db, who, { player: 'as-mia-r', to: 'eric', text: 'x' }, players), /Who is this for/);   // not her coach
+  // Admin
+  await FAMILY.message(db, who, { to: 'admin', text: 'Can we move the payment date?' }, players);
+  const a = await FAMILY.chat(db, who, { to: 'admin' }, players);
+  assert.equal(a.title, 'Admin'); assert.equal(a.lines[0].body, 'Can we move the payment date?');
+  assert.ok(sent.some((x) => /Registration and billing/.test(JSON.stringify(x.body))));
+});

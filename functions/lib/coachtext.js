@@ -78,9 +78,11 @@ function scopeLines(who, mine, outs, ins) {
   // Nov 17, 2026 (Antonio): only the owners read every line. A director is a coach here: any family may be written to, but what
   // shows is what happened on the director's own number, never the academy line's or another coach's chats.
   if (who.owner) return { outs, ins };
-  if (mine) return { outs: outs.filter((l) => l.line === mine), ins: ins.filter((l) => l.line === mine) };
+  const app = (l) => l.via === 'app';   // written in the client account (Nov 17): it is for the coach it names, whatever number that coach has
+  ins = ins.filter((l) => !app(l) || l.forCoach === who.email);
+  if (mine) return { outs: outs.filter((l) => l.line === mine), ins: ins.filter((l) => l.line === mine || app(l)) };
   const o = outs.filter((l) => l.by === who.email); const first = new Map(); o.forEach((l) => { if (!first.has(l.phone) || l.at < first.get(l.phone)) first.set(l.phone, l.at); });
-  return { outs: o, ins: ins.filter((l) => first.has(l.phone) && (l.at || 0) > first.get(l.phone) && !l.line) };
+  return { outs: o, ins: ins.filter((l) => app(l) || (first.has(l.phone) && (l.at || 0) > first.get(l.phone) && !l.line)) };
 }
 
 /* The chat key: the last four digits of every number in it, sorted, joined with '+'. One number → its own chat. */
@@ -210,7 +212,7 @@ async function text(db, who, body) {
    will be there"), with a small "texts on" note. STOP shows as a note (and their words, when they wrote more than the word). */
 const BARE_START = /^\s*(start|unstop|subscribe)\s*[.!]*\s*$/i;
 function publicLine(l) {
-  if (l.kind === 'reply') return { id: l.id, at: l.at || 0, dir: 'in', body: String(l.body || ''), tail: tail(l.phone), conv: l.conv || '' };
+  if (l.kind === 'reply') return Object.assign({ id: l.id, at: l.at || 0, dir: 'in', body: String(l.body || ''), tail: tail(l.phone), conv: l.conv || '' }, l.via === 'app' ? { note: 'from the app' } : {});
   if (l.kind === 'optin') { const body = String(l.body || '').trim(); return { id: l.id, at: l.at || 0, dir: 'in', body: body && !BARE_START.test(body) ? body : 'START', tail: tail(l.phone), conv: l.conv || '', note: 'texts on' }; }
   if (l.kind === 'optout') return { id: l.id, at: l.at || 0, dir: 'sys', body: 'The family replied STOP: no more texts to this number.', words: String(l.body || '').trim().slice(0, 200), tail: tail(l.phone), conv: l.conv || '' };
   return { id: l.id, at: l.at || 0, dir: 'out', body: String(l.body || ''), by: l.byName || l.by || '', status: l.status || '', delivery: l.delivery || '', error: l.error || '', to: l.to || '', toName: l.toName || '', tail: tail(l.phone), portal: l.from === 'portal', conv: l.conv || tail(l.phone), batch: l.batch || '' };
@@ -382,4 +384,49 @@ async function onReply(db, ev) {
   return out;
 }
 
-module.exports = { text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };
+/* ── the client account writes to a coach (Nov 17, 2026) ──
+   A parent's message from the app is kept as the family's own line in that coach's chat (kind 'reply', via 'app', forCoach), under
+   the parent's number on file, so the coach reads and answers it where every other text is: Contact. The answer goes out as a text
+   and shows in the client account too. A coach with no sign-in, or a family with no number on file, comes back as `missing`
+   and the caller hands the message to the front desk. */
+async function appPhone(db, pid, email) {
+  let c = {}; try { const x = await db.doc(`players/${pid}/private/contact`).get(); c = x.exists ? (x.data() || {}) : {}; } catch (e) { c = {}; }
+  const { numbers } = await numbersOf(db, pid);
+  const own1 = String(c.email || '').trim().toLowerCase() === String(email || '').toLowerCase() ? e164(c.phone) : '';
+  return (own1 && numbers.some((n) => n.phone === own1)) ? own1 : (numbers[0] ? numbers[0].phone : '');
+}
+async function fromApp(db, p, parent, t, bodyIn) {
+  const body = clean(bodyIn, MAX_BODY); const out = { sent: [], missing: [] };
+  const staff = await CONTACTS.staffIndex(db); const phone = await appPhone(db, p.id, parent.email);
+  const at = Date.now(); const w = String(p.name || p.id).trim().split(/\s+/); const short = w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0];
+  for (const c of t.coaches) {
+    const s = CONTACTS.staffFor(staff, c.full || c.name);
+    if (!s || !phone) { out.missing.push(c.name); continue; }
+    const line = await ownLine(db, { email: s.email, justcallNumber: s.justcallNumber });
+    await db.collection('smsLog').doc().set({ kind: 'reply', at, phone, body, players: [p.id], by: 'family', status: 'reply', via: 'app', forCoach: s.email, fromEmail: parent.email, appConv: t.conv, line: line || '' });
+    const conv = await convOfReply(db, p.id, phone);
+    await touchThread(db, p, { at, dir: 'in', body, by: 'family' }, conv);
+    const url = `/portal#/messages/${encodeURIComponent(p.id)}${conv.key ? '/' + conv.key : ''}`;
+    try { if (s.slackId) await NOTIFY.slackDm(db, s.slackId, `${short}'s family wrote from the app: "${body.slice(0, 160)}${body.length > 160 ? '…' : ''}" Answer from the portal: ${SITE}${url}`); } catch (e) { /* the push below, the red number in the portal */ }
+    try { await PUSH.send(db, [s.email], { title: `${short}'s family`, body: body.slice(0, 140), url, tag: 'chat-' + p.id }); } catch (e) { /* a nicety */ }
+    out.sent.push(c.name);
+  }
+  return out;
+}
+/* What the parent sees of that chat: their own messages from the app, and what those coaches texted to their number. */
+async function appThread(db, p, email, t) {
+  const staff = await CONTACTS.staffIndex(db); const emails = new Map();
+  t.coaches.forEach((c) => { const s = CONTACTS.staffFor(staff, c.full || c.name); if (s) emails.set(s.email, c.name); });
+  const phone = await appPhone(db, p.id, email);
+  let ins = []; try { ins = (await db.collection('smsLog').where('fromEmail', '==', String(email).toLowerCase()).get()).docs.map((d) => d.data() || {}).filter((l) => l.via === 'app' && Array.isArray(l.players) && l.players.includes(p.id) && (l.appConv || '') === t.conv); } catch (e) { ins = []; }
+  const seen = new Set(); const lines = [];
+  ins.forEach((l) => { const k = l.at + '|' + l.body; if (seen.has(k)) return; seen.add(k); lines.push({ at: l.at || 0, dir: 'me', body: String(l.body || '') }); });   // one message to two coaches is one line here
+  if (phone && emails.size) {
+    let outs = []; try { outs = (await db.collection('smsLog').where('player', '==', p.id).get()).docs.map((d) => d.data() || {}); } catch (e) { outs = []; }
+    outs.filter((l) => !l.kind && l.phone === phone && emails.has(l.by) && l.status !== 'failed' && l.status !== 'skipped' && l.from === 'portal')
+      .forEach((l) => lines.push({ at: l.at || 0, dir: 'them', body: String(l.body || '').replace(/\n- [^\n]*$/, '').trim(), by: 'Coach ' + emails.get(l.by) }));
+  }
+  return lines;
+}
+
+module.exports = { fromApp, appThread, text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };

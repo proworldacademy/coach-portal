@@ -206,6 +206,11 @@ service cloud.firestore {
       allow update: if !runs() && deskSide() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'reply', 'repliedAt', 'repliedBy'])
                     && request.resource.data.state in ['open', 'done'];
     }
+    // familyDays: the days a family marked away, and the make-up days it picked, from the client account (Nov 17, 2026). The engine
+    // writes them (admin SDK); the attendance board and the Coach Portal read them. Nobody writes one from a page.
+    match /familyDays/{id} {
+      allow read: if backend() || portal();
+    }
     // Messages (texts to families from the backend): the engine writes the batches and one line per recipient (admin SDK);
     // staff read them for the Sent history and a player's profile. Consent lives in players/<id>/private/sms, engine-written.
     match /smsBatches/{id} { allow read: if backend() || portal(); }   // Messages: every coach holds it (Antonio, Oct 24)
