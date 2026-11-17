@@ -112,6 +112,15 @@ body.sky-short .pwd-sky{height:min(50vh,420px)}
 .pwd-me b{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pwd-me .out{color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:5px 10px;font-size:11.5px;white-space:nowrap;transition:.2s}
 .pwd-me .out:hover{border-color:var(--ink);color:var(--ink)}
+/* Appearance: Auto · Light · Dark (Nov 16, 2026) */
+.pwd-theme{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--line-2);border-radius:999px;flex:none}
+.pwd-theme button{border:0;background:none;color:var(--muted);font:700 11.5px var(--body);padding:5px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;min-height:26px}
+.pwd-theme button:hover{color:var(--ink)}
+.pwd-theme button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78}
+html.dark .pwd-theme button[aria-pressed="true"]{background:#E2FE78;color:#0A0A0A}
+.pwd-menu .apr{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:14px 12px 6px;font:700 13px var(--body);color:var(--ink)}
+.pwd-menu .apr .pwd-theme button{font-size:13px;padding:9px 14px;min-height:38px}
+@media(max-width:640px){.pwd-me.open .pwd-theme button{font-size:13px;padding:9px 13px;min-height:38px}}
 .pwd-top.tight .pwd-jump{min-width:0}.pwd-top.tight .pwd-jump span{display:none}.pwd-top.tight .pwd-me .role{display:none}
 @media(max-width:900px){.pwd-strip{display:none}.pwd-jump{min-width:0}.pwd-jump span{display:none}}
 /* the phone menu: a button with three lines next to the search; it opens the doors and their views as a sheet under the bar */
@@ -355,3 +364,11 @@ footer.pwd-foot b{font-family:var(--display);font-style:italic;font-weight:800;t
 @media(max-width:700px){.row{display:flex;flex-wrap:wrap;gap:6px 12px;grid-template-columns:none!important}.row.h{display:none}.row .cell{flex:1 1 100%}.row em{margin-left:auto}.nr span{white-space:normal}.nr{grid-template-columns:24px 40px minmax(0,1fr) 18px}.nr small{display:none}}
 /* ── motion: everything respects reduced motion; nothing is ever hidden by it ── */
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.g{transform:none!important}.bars i{background-size:var(--w) 100%,100% 100%}.spark path{stroke-dashoffset:0}.spark .area{opacity:1}.spark circle,.dots i{transform:none}.sec.pre{transform:none}.rip{display:none}}
+.pwd-me .pwd-theme button{background:none!important;border:0!important;color:var(--muted)!important}
+.pwd-me .pwd-theme button[aria-pressed="true"],.pwd-menu .pwd-theme button[aria-pressed="true"]{background:#0A0A0A!important;color:#E2FE78!important}
+html.dark .pwd-me .pwd-theme button[aria-pressed="true"],html.dark .pwd-menu .pwd-theme button[aria-pressed="true"]{background:#E2FE78!important;color:#0A0A0A!important}
+html.dark #pwd-top .pwd-theme button{background-color:transparent!important;color:#B5B5B0!important}
+html.dark #pwd-top .pwd-theme button[aria-pressed="true"]{background-color:#E2FE78!important;color:#0A0A0A!important}
+/* the account corner's little menu on a phone sits above the page, solid (Nov 16) */
+@media(max-width:640px){#pwd-top:has(.pwd-me.open),.pwd-top:has(.pwd-me.open){position:relative;z-index:80}.pwd-me.open .who{z-index:81;background:#fff!important;-webkit-backdrop-filter:none;backdrop-filter:none}html.dark .pwd-me.open .who{background:#151515!important}}
+.wrap:has(.pwd-me.open),.frame:has(.pwd-me.open){z-index:80!important}
