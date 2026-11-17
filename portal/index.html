@@ -1986,7 +1986,7 @@ const PW_CONFIG = {
   async function api(path, body) {
     if (EDITION !== 'web' || !WEB.auth || !WEB.auth.currentUser) throw new Error('Sign in first.');
     const tok = await WEB.auth.currentUser.getIdToken(); let r;
-    try { r = await fetch('/api/coach/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ authorization: 'Bearer ' + tok }, body ? { 'content-type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined }); }
+    try { r = await fetch('/api/coach/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ authorization: 'Bearer ' + tok }, WEB.real && WEB.staff && WEB.staff.email ? { 'x-view-as': WEB.staff.email } : {}, body ? { 'content-type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined }); }
     catch (e) { throw new Error('No connection. Try again in a moment.'); }
     let j = null; try { j = await r.json(); } catch (e) { j = null; }
     if (!r.ok) { const err = new Error((j && j.message) || ('Error ' + r.status)); err.code = (j && j.error) || r.status; throw err; }
@@ -2397,18 +2397,35 @@ const PW_CONFIG = {
   function onUser(u) {
     off(WEB.gate); if (WEB.stage === 'in') leaveApp();
     WEB.user = u || null; WEB.email = u ? String(u.email || '').trim().toLowerCase() : ''; WEB.isAdmin = false; WEB.isOwner = false; WEB.isDirector = false; WEB.staff = null; WEB.asked = false;
-    if (!u) { if (WEB.stage !== 'confirm') WEB.stage = 'out'; paintLive(); paintUser(); renderGate(); return; }
+    if (!u) { try { localStorage.removeItem('pw-view-as'); } catch (e) { /* no storage */ } if (WEB.stage !== 'confirm') WEB.stage = 'out'; paintLive(); paintUser(); renderGate(); return; }
     if (!WEB.email || WEB.email.includes('/') || !u.emailVerified) { WEB.stage = 'unverified'; paintUser(); renderGate(); return; }   // an account an owner set up is verified; one somebody made alone is not
     if (!lsGet('pw_coach') && u.displayName) lsSet('pw_coach', String(u.displayName).trim().split(/\s+/)[0]);
     WEB.stage = 'checking'; paintUser(); renderGate();
-    const decide = async (rec) => {
+    /* View as (Nov 16, 2026): an owner looks at the portal the way one person on the team sees it (the same choice as shared/pwauth.js,
+       kept on this device as pw-view-as). Only a real owner's choice is read; the owner stays the one signed in. */
+    const decide = async (rec0) => {
+      let va = null; try { va = JSON.parse(localStorage.getItem('pw-view-as') || 'null'); } catch (e) { va = null; }
+      if (va && va.kind === 'staff' && va.email && va.until > Date.now()) {
+        let own = !!(rec0 && rec0.active === true && rec0.owner === true);
+        if (!own && !(rec0 && rec0.active === true)) { try { await WEB.fs.collection('requests').limit(1).get({ source: 'server' }); own = true; } catch (e) { own = false; } }
+        if (WEB.user !== u) return;
+        if (own) {
+          let other = null; try { const d = await WEB.fs.doc('staff/' + va.email).get(); other = d.exists ? d.data() : null; } catch (e) { other = null; }
+          if (WEB.user !== u) return;
+          WEB.real = { email: WEB.email, name: (rec0 && rec0.name) || u.displayName || WEB.email };
+          return decideFor(Object.assign({ email: va.email, name: va.name || va.email }, other || {}, { owner: false }), true);
+        }
+      }
+      WEB.real = null; return decideFor(rec0, false);
+    };
+    const decideFor = async (rec, viewing) => {
       const my = ++WEB.seq; let ok = !!(rec && rec.active === true); let admin = ok && rec.role === 'admin';
       // The PROWORLD Dashboard ticks pages per person (rec.pages). A record with no page list predates it and keeps the portal.
       const pages = ok && Array.isArray(rec.pages) ? rec.pages : null;
       const portalOk = !pages || pages.includes('coach-portal'), tryOk = !pages || pages.includes('tryouts') || portalOk;
       WEB.tryoutsOnly = !!(ok && rec.owner !== true && !portalOk && tryOk);
       if (ok && rec.owner !== true && !portalOk && !tryOk) { WEB.staff = rec; WEB.isAdmin = false; if (WEB.stage === 'in') leaveApp(); WEB.stage = 'noportal'; paintUser(); renderGate(); return; }
-      if (!ok) {
+      if (!ok && !viewing) {
         // No staff record, or access switched off. The database rules name the owners, who are administrators whatever the staff
         // list says, so ask the database a question only an administrator may ask, and ask the server itself, never the offline copy.
         // This way nothing about who the owners are has to live in this public page.
@@ -2419,7 +2436,7 @@ const PW_CONFIG = {
       }
       WEB.staff = rec; WEB.isAdmin = admin; WEB.isDirector = admin || (ok && !!rec && rec.role === 'director'); WEB.isOwner = ok && admin && (!rec || rec.active !== true || rec.owner === true);   // the sync settings are owner-only (the rules decide; this only shows the switch)
       if (ok) { if (WEB.stage !== 'in') enterApp(); else { paintUser(); if (false) go({ view: 'home' }); } return; }
-      if (WEB.stage === 'in') leaveApp(); WEB.stage = 'pending'; fileRequest(); paintUser(); renderGate();
+      if (WEB.stage === 'in') leaveApp(); WEB.stage = 'pending'; if (!viewing) fileRequest(); paintUser(); renderGate();
     };
     // my own staff record, live: approval lets me in the moment an administrator grants it, and removal shuts the door just as fast
     WEB.gate.push(WEB.fs.doc('staff/' + WEB.email).onSnapshot((d) => decide(d.exists ? d.data() : null), () => decide(null)));
@@ -2505,7 +2522,7 @@ const PW_CONFIG = {
     const pages = owner ? (P.ALL || []).slice() : Array.isArray(rec.pages) ? rec.pages.slice() : (P.LEGACY || ['coach-portal', 'tryouts']).slice();
     const withOf = (id) => { const pg = (P.PAGES || []).find((x) => x.id === id); return pg && pg.with ? pg.with : null; };
     const aliased = (id) => Object.keys(P.ALIAS || {}).some((old) => P.ALIAS[old] === id && pages.includes(old));
-    return { email: WEB.email, name: (rec && rec.name) || WEB.user.displayName || WEB.email, owner, admin: !!WEB.isAdmin, pages, has: (id) => owner || (withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) || aliased(id) };
+    return { email: WEB.email, real: WEB.real || null, as: WEB.real ? { email: rec.email || '', name: rec.name || '' } : null, name: (rec && rec.name) || WEB.user.displayName || WEB.email, owner, admin: !!WEB.isAdmin, pages, has: (id) => owner || (withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) || aliased(id) };
   }
   let pwWasIn = false;
   function syncDesign() {
@@ -4305,7 +4322,7 @@ const PW_CONFIG = {
           c.local = false; c.suggested = false; c.count = (c.count || 0) + (out.lines || [out.line]).length; c.last = { at: out.line.at, dir: 'out', body: body.slice(0, 140), by: '' };
           delete S.ui.msgDraft[p.id + '|' + key];
           if (out.tick && out.tick.ticked) {   // the week went green on the engine; show it now, the listener confirms
-            const wk = out.tick.week; const row = { id: contactId(p.id, wk), playerId: p.id, playerName: p.name, group: p.group || '', coach: p.coach || '', week: wk, done: true, by: String((WEB.staff && WEB.staff.coachAs) || signedName()).split(/\s+/)[0].slice(0, 80), byEmail: WEB.email || '', at: out.line.at, how: 'text', who: out.to && out.to.slot === 'player' ? 'player' : 'parents', source: 'portal' };
+            const wk = out.tick.week; const row = { id: contactId(p.id, wk), playerId: p.id, playerName: p.name, group: p.group || '', coach: p.coach || '', week: wk, done: true, by: String((!WEB.real && WEB.staff && WEB.staff.coachAs) || signedName()).split(/\s+/)[0].slice(0, 80), byEmail: WEB.email || '', at: out.line.at, how: 'text', who: out.to && out.to.slot === 'player' ? 'player' : 'parents', source: 'portal' };
             const i = S.contacts.findIndex((c) => c.playerId === p.id && c.week === wk); if (i >= 0) S.contacts[i] = row; else S.contacts.push(row);
             if (S.pdata.pid === p.id) { const j = S.pdata.contacts.findIndex((c) => c.week === wk); if (j >= 0) S.pdata.contacts[j] = row; else S.pdata.contacts.push(row); }
           }

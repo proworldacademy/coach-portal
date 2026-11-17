@@ -7,7 +7,7 @@ const CAL = require('./calendar');
 const CAT = require('./catalog');
 const S = require('./stripe');
 
-const OWNERS = ['PDKJkouns6g6zA1jrABJijEr3oq2'];   // Nov 13: Lorenzo's sign-in (OLWbZu29WVUWUbN8W9HdPpOZgmj2) is a coach for now, see firestore.rules;   // the same owner ids as firestore.rules
+const OWNERS = ['PDKJkouns6g6zA1jrABJijEr3oq2', 'OLWbZu29WVUWUbN8W9HdPpOZgmj2'];   // the same owner ids as firestore.rules. Nov 16: Lorenzo's sign-in is an owner again; he tests the coach side with "View as"
 if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app').initializeApp();
 
 async function requireStaff(req) {
@@ -48,9 +48,21 @@ async function requireCoach(req) {
   if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
   const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
   const first = (n) => String(n || '').trim().split(/\s+/)[0] || '';
-  if (OWNERS.includes(decoded.uid)) { const name = decoded.name || email; return { uid: decoded.uid, email, name, firstName: first(name), coachAs: '', keys: [fold(first(name))].filter(Boolean), role: 'owner', owner: true, admin: true, director: true }; }
-  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
+  /* View as (Nov 16, 2026): an owner looking at the portal the way one person on the team sees it sends that person's e-mail in
+     X-View-As. The answer is then scoped as it would be for that person, and marked `viewing`: index.js lets a viewing owner read and
+     nothing else. Anyone who is not an owner sending the header is answered as themselves. */
+  const asEmail = String(req.headers['x-view-as'] || '').trim().toLowerCase();
+  const viewing = OWNERS.includes(decoded.uid) && asEmail && asEmail !== email && !asEmail.includes('/');
+  if (OWNERS.includes(decoded.uid) && !viewing) { const name = decoded.name || email; return { uid: decoded.uid, email, name, firstName: first(name), coachAs: '', keys: [fold(first(name))].filter(Boolean), role: 'owner', owner: true, admin: true, director: true }; }
+  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + (viewing ? asEmail : email)).get();
   const rec = doc.exists ? doc.data() : null;
+  if (viewing) {
+    if (!rec || rec.active !== true) throw S.err(403, 'access', 'That person has no access to the Coach Portal.');
+    const pg = Array.isArray(rec.pages) ? rec.pages : ['coach-portal', 'tryouts'];
+    if (!(pg.includes('coach-portal') || pg.includes('backend'))) throw S.err(403, 'access', 'That person has no access to the Coach Portal.');
+    const adm = rec.role === 'admin'; const rl = String(rec.role || 'coach').toLowerCase(); const nm = rec.name || asEmail;
+    return { uid: decoded.uid, email: asEmail, name: nm, firstName: first(nm), coachAs: String(rec.coachAs || ''), justcallNumber: String(rec.justcallNumber || ''), keys: [rec.coachAs, first(nm)].map(fold).filter(Boolean), role: rl, owner: false, admin: adm, director: adm || rl === 'director', viewing: true, realEmail: email };
+  }
   const active = !!(rec && rec.active === true);
   const pages = rec && Array.isArray(rec.pages) ? rec.pages : ['coach-portal', 'tryouts'];
   if (!active || !(rec.owner === true || pages.includes('coach-portal') || pages.includes('backend'))) throw S.err(403, 'access', 'Your access does not include the Coach Portal.');

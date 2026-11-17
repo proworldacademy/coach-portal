@@ -117,10 +117,14 @@
     return "Sign-in didn't finish (" + (c || (e && e.message) || "unknown") + "). Try again.";
   }
 
+  /* View as (Nov 16, 2026): an owner looks at the site the way one person on the team sees it. Kept on this device for a few hours
+     (pw-view-as); it changes what the pages show, never what the database allows — the owner stays the one signed in, and their own
+     e-mail stays on anything they write. Only a real owner's choice is ever read. */
+  const viewAs = () => { try { const v = JSON.parse(localStorage.getItem("pw-view-as") || "null"); if (!v || !v.kind || !(v.until > Date.now())) { if (v) localStorage.removeItem("pw-view-as"); return null; } return v; } catch (e) { return null; } };
   // ── who are you, and what may you open ──
   function onUser(u) {
     if (unsubStaff) { unsubStaff(); unsubStaff = null; }
-    if (!u) { const was = stage; ctx = null; stage = "out"; busy = false; paint(); if (was === "in") location.reload(); return; }
+    if (!u) { const was = stage; ctx = null; stage = "out"; busy = false; try { localStorage.removeItem("pw-view-as"); } catch (e) { /* no storage */ } paint(); if (was === "in") location.reload(); return; }
     const email = String(u.email || "").trim().toLowerCase();
     const prov = (u.providerData || []).map((p) => p.providerId);
     if (!email || !u.emailVerified || !(prov.includes("password") || prov.includes("google.com"))) { stage = "unverified"; ctx = { email }; paint(); return; }   // an account an owner set up is verified; one somebody made alone is not
@@ -136,6 +140,18 @@
         if (my !== seq) return;
         if (owner && !rec) fs.doc("staff/" + email).set({ email, name: String(u.displayName || ""), role: "admin", active: true, owner: true, addedAt: Date.now() }, { merge: true }).catch(() => {});
       }
+      let real = null;
+      const va = owner ? viewAs() : null;
+      if (va && va.kind === "staff" && va.email) {
+        let other = null; try { const d = await fs.doc("staff/" + va.email).get(); other = d.exists ? d.data() : null; } catch (e) { other = null; }
+        if (my !== seq) return;
+        real = { email, name: (rec && rec.name) || u.displayName || email };
+        rec = Object.assign({ email: va.email, name: va.name || va.email }, other || {}, { owner: false }); owner = false;
+        return finish(rec, rec.active === true, false, real, va);
+      }
+      return finish(rec, active, owner, null, null);
+    };
+    const finish = (rec, active, owner, real, va) => {
       const admin = owner || (active && rec.role === "admin");
       const director = admin || (active && rec.role === "director");   // a tennis director (Oct 24): everything inside Coaches
       const pages = owner ? P.ALL.slice() : active ? (Array.isArray(rec.pages) ? rec.pages.slice() : P.LEGACY.slice()) : [];
@@ -145,7 +161,8 @@
       const deskSide = admin || (active && String(rec.role || "").toLowerCase() === "desk") || pages.includes("billing");   // the clients' side (who enrolled, what families asked, their accounts): never a coach, even one who holds Admin (Nov 13)
       const deskOnly = (id) => { const pg = (P.PAGES || []).find((x) => x.id === id); return !!(pg && pg.desk); };
       ctx = { user: u, email, name: (rec && rec.name) || u.displayName || email, rec: rec || null, owner, admin, director, desk: deskSide, active: active || owner, pages, has: (id) => owner || ((!deskOnly(id) || deskSide) && ((withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) || aliased(id))) };
-      if (!ctx.active) { stage = "pending"; fileRequest(u, email); paint(); if (was === "in") location.reload(); return; }
+      if (real) { ctx.real = real; ctx.as = { email: va.email, name: ctx.name }; }   // ctx.email stays the owner's own: it signs what they write and opens their own Locker Room
+      if (!ctx.active) { stage = "pending"; if (!real) fileRequest(u, email); paint(); if (was === "in") location.reload(); return; }
       if (need && !ctx.has(need)) { stage = "noaccess"; paint(); if (was === "in") location.reload(); return; }
       stage = "in"; paint(); paintUser();
       if (was !== "in") { waiters.splice(0).forEach((w) => w(ctx)); try { window.dispatchEvent(new CustomEvent("pw:auth", { detail: ctx })); } catch (e) { /* old browser */ } }
