@@ -29,21 +29,21 @@ body.skin-desk .btn.ghost{background:var(--pw-sf,#fff)}
 body.skin-desk .stat.warn{background:var(--pw-sf,#fff)}
 body.skin-desk .stat.warn b{color:var(--ink)}
 body.skin-desk .pill{border-color:transparent;background:var(--pw-sf2,#EFEFEA);color:#6B6B68;letter-spacing:.3px;text-transform:none;font-size:11.5px;padding:4px 10px}
-body.skin-desk .pill.ok{background:#DDFDE7;color:#0E3B22}
+body.skin-desk .pill.ok{background:#F2FFC2;color:#2B3A00}
 body.skin-desk .pill.warn,body.skin-desk .pill.lime{background:#F1FFC2;color:#2B3A00}
-body.skin-desk .pill.info{background:#E2FBFC;color:#0E3B3D}
-body.skin-desk .facts li.ok{background:#DDFDE7}
-body.skin-desk .recon .r.bad{background:#F1FFC2}body.skin-desk .recon .r.pack{background:#E2FBFC}body.skin-desk .recon .r.ok{background:#DDFDE7}
-body.skin-desk .offer.camp{background:#E2FBFC}
-body.skin-desk .paybox.pack{background:#E2FBFC}body.skin-desk .paybox.card{background:#F1FFC2}
-body.skin-desk .todo li .k{background:#D9D9D3;box-shadow:none}body.skin-desk .todo li .k.info{background:#A9F3F7}body.skin-desk .todo li .k.ok{background:#94FCB1}body.skin-desk .todo li .k.lime{background:#E2FE78}
+body.skin-desk .pill.info{background:#EFEFEA;color:#0A0A0A}
+body.skin-desk .facts li.ok{background:#F2FFC2}
+body.skin-desk .recon .r.bad{background:#F1FFC2}body.skin-desk .recon .r.pack{background:#EFEFEA}body.skin-desk .recon .r.ok{background:#F2FFC2}
+body.skin-desk .offer.camp{background:#EFEFEA}
+body.skin-desk .paybox.pack{background:#EFEFEA}body.skin-desk .paybox.card{background:#F1FFC2}
+body.skin-desk .todo li .k{background:#D9D9D3;box-shadow:none}body.skin-desk .todo li .k.info{background:#E6E6E1}body.skin-desk .todo li .k.ok{background:#E2FE78}body.skin-desk .todo li .k.lime{background:#E2FE78}
 body.skin-desk .note{background:var(--pw-sf,#fff)}
 /* the courts grid keeps its meaning, in pastels */
 body.skin-desk .cell{background:var(--pw-sf,#fff)}
 body.skin-desk .cell.academy{background:#E2FBFC}body.skin-desk .cell.event{background:#E2FBFC}
-body.skin-desk .cell.private{background:#DDFDE7}body.skin-desk .cell.family,body.skin-desk .cell.mine{background:#F9E2F8}
+body.skin-desk .cell.private{background:#F2FFC2}body.skin-desk .cell.family,body.skin-desk .cell.mine{background:#F9E2F8}
 body.skin-desk .cell.sel{background:var(--lime)!important}
-body.skin-desk .pc i{background:#94FCB1}body.skin-desk .pc.guest{background:#F9E2F8}body.skin-desk .pc.unexpected{background:#F1FFC2;border-color:transparent}
+body.skin-desk .pc i{background:#E2FE78}body.skin-desk .pc.guest{background:#F9E2F8}body.skin-desk .pc.unexpected{background:#F1FFC2;border-color:transparent}
 body.skin-desk .coach button:hover{background:var(--pw-inkbg,var(--ink));color:var(--lime)}
 
 /* ── Privates · the ticket ── */
@@ -89,7 +89,7 @@ body.skin-desk .pv-tline b{display:block;font-size:15px}
 body.skin-desk .pv-tline span{font-size:12.5px;color:rgba(255,255,255,.7)}
 body.skin-desk .pv-pay{margin-top:6px;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.08);font-size:13px;line-height:1.4;color:rgba(255,255,255,.85)}
 body.skin-desk .pv-pay b{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:30px;line-height:1;color:#fff;margin-bottom:4px}
-body.skin-desk .pv-pay.pack{background:rgba(148,252,177,.18)}body.skin-desk .pv-pay.pack b{color:#94FCB1}
+body.skin-desk .pv-pay.pack{background:rgba(226,254,120,.18)}body.skin-desk .pv-pay.pack b{color:#E2FE78}
 body.skin-desk .pv-pay.card{background:rgba(226,254,120,.16)}body.skin-desk .pv-pay.card b{color:var(--lime)}
 body.skin-desk .pv-pay.due b{color:#F8A95C}
 body.skin-desk .btn.pv-book{background:var(--lime);color:#0A0A0A;border:0;height:48px;font:italic 800 18px var(--display);text-transform:uppercase;letter-spacing:.01em;border-radius:999px}

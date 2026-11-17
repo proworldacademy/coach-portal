@@ -2,7 +2,7 @@
    grey, lime the one accent, the pink glow behind the bottom bar; one line per family, one status word, the thumb does the work.
    Scoped to body.app2 (portal/app.js adds it next to app-skin, so every other screen keeps the App look). The screens themselves
    are drawn by portal/index.html (view2Home … view2Messages); this file is only how they look. Loaded after app.css. */
-body.a2k{--page:#F1F1ED;--line:#EBEBE6;--muted:#7A7A76;--ink2:#3A3A38;--limeT:#F2FFC2;--mintT:#DDFDE7;--mintI:#0F5A2B;--orchT:#F9E2F8;--orchI:#5B1A5C;--amberT:#FFF1D6;--amberI:#7A5200;--redT:#FBE3E3;--redI:#8A1C1C;--cyanT:#DFF7F9;--cyanI:#0B3F44;--greyT:#EFEFEA;--glow:226,134,228}
+body.a2k{--page:#F1F1ED;--line:#EBEBE6;--muted:#7A7A76;--ink2:#3A3A38;--limeT:#F2FFC2;--mintT:#F2FFC2;--mintI:#2B3A00;--orchT:#F9E2F8;--orchI:#5B1A5C;--amberT:#FFF1D6;--amberI:#7A5200;--redT:#FBE3E3;--redI:#8A1C1C;--cyanT:#EFEFEA;--cyanI:#0A0A0A;--greyT:#EFEFEA;--glow:226,134,228}
 html:has(body.app2),body.app2{background:var(--pw-sf2,#F1F1ED)!important}
 body.a2k .a2{max-width:1180px;margin:0 auto;font-family:var(--body)}
 body.a2k .a2 *{box-sizing:border-box}
@@ -38,7 +38,7 @@ body.a2k .a2i.chev{width:18px;height:18px;color:#B5B5B0}
 /* the people: initials, a dot for the week (green = in touch, red = not yet) */
 body.a2k .a2ava{width:40px;height:40px;border-radius:50%;background:var(--greyT);display:grid;place-items:center;font:700 13px var(--body);color:var(--ink);position:relative;flex:none;text-transform:uppercase}
 body.a2k .a2ava.big{width:68px;height:68px;font-size:22px;background:var(--pw-sf,#fff)}
-body.a2k .a2ava.on::after,body.a2k .a2ava.off::after{content:"";position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#46D36E;box-shadow:0 0 0 2px #fff}
+body.a2k .a2ava.on::after,body.a2k .a2ava.off::after{content:"";position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#C9E15C;box-shadow:0 0 0 2px #fff}
 body.a2k .a2ava.off::after{background:#F06A5E}
 body.a2k .a2ico{width:36px;height:36px;border-radius:11px;background:var(--greyT);display:grid;place-items:center;flex:none;color:var(--ink)}
 body.a2k .a2ico.lime{background:var(--limeT)}body.a2k .a2ico.mint{background:var(--mintT);color:var(--mintI)}body.a2k .a2ico.orch{background:var(--orchT);color:var(--orchI)}body.a2k .a2ico.red{background:var(--redT);color:var(--redI)}

@@ -23,7 +23,7 @@
    Grey base, white glass panels, black type/buttons/pills, lime = needs you, mint = all good / paid, orchid = new, cyan = info. */
 :root{
   --surface:rgba(0,0,0,.045); --surface-2:rgba(0,0,0,.09); --black:#000000; --white:#FFFFFF;
-  --lime:#E2FE78; --mint:#94FCB1; --orchid:#E286E4; --cyan:#A9F3F7;
+  --lime:#E2FE78; --mint:#E2FE78; --orchid:#E286E4; --cyan:#E6E6E1;
   --radius:12px; --radius-s:8px;
   padding-top:0; padding-bottom:env(safe-area-inset-bottom,0px);   /* the top bar (shared/design.css) already keeps clear of the clock; both together left a gap in the app (Nov 14) */
 }
@@ -66,7 +66,7 @@ main .hero{display:block;grid-template-columns:none;padding:30px 0 6px}
 .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap;backdrop-filter:blur(8px)}
 .seg button{background:transparent;border:0;padding:7px 13px;border-radius:999px;font-size:13px;font-weight:700;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--pw-inkbg,var(--ink));color:var(--lime)}
-.note{background:rgba(169,243,247,.45);border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:12px 16px;font-size:13.5px;line-height:1.5;margin-top:18px;color:var(--ink-2)}
+.note{background:rgba(230,230,225,.45);border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:12px 16px;font-size:13.5px;line-height:1.5;margin-top:18px;color:var(--ink-2)}
 .note b{color:var(--ink)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:26px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 18px 14px;backdrop-filter:blur(12px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28);min-width:0}
@@ -182,8 +182,8 @@ table.grid td.half{border-right:1px dashed var(--line)}
 .cell{display:block;width:100%;height:42px;border:0;background:var(--pw-sf,rgba(255,255,255,.55));position:relative;transition:box-shadow .08s;font-size:10.5px;font-weight:700;color:#000;padding:0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:pan-x pan-y;border-radius:0}
 .cell.open:hover{box-shadow:inset 0 0 0 3px var(--ink);z-index:1}
 .cell.past{background:repeating-linear-gradient(135deg,transparent 0 6px,var(--surface) 6px 8px);cursor:not-allowed;color:transparent}
-.cell.academy{background:var(--cyan)}
-.cell.event{background:var(--cyan);background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.06) 0 4px,transparent 4px 8px)}
+.cell.academy{background:#A9F3F7}
+.cell.event{background:#A9F3F7;background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.06) 0 4px,transparent 4px 8px)}
 .cell.private{background:var(--mint)}
 .cell.family{background:var(--orchid)}
 .cell.outside{background:var(--pw-inkbg,var(--ink));color:#fff}

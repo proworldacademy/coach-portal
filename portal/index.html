@@ -40,7 +40,7 @@ b,strong{font-weight:700}
 .results small{color:var(--muted);font-weight:400;white-space:nowrap}
 .live{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);white-space:nowrap;margin-left:auto}
 .live i{width:8px;height:8px;border-radius:50%;background:var(--faint)}
-.live.on i{background:var(--mint);box-shadow:0 0 0 3px rgba(148,252,177,.35)}
+.live.on i{background:var(--mint);box-shadow:0 0 0 3px rgba(226,254,120,.35)}
 .live.off i{background:var(--warn)}
 .fupill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--ink);background:var(--lime);color:#0A0A0A;border-radius:999px;padding:7px 10px 7px 14px;font:700 12px var(--body);letter-spacing:.3px;cursor:pointer;transition:transform .25s var(--ease)}
 .fupill:hover{transform:translateY(-1px)}
@@ -386,7 +386,7 @@ kbd{font:700 11px/1 var(--body);border:1px solid var(--line-2);border-bottom-wid
 button.notice.remind.calm{border-color:var(--line);background:var(--card)}
 button.notice.remind{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;font:inherit;font-size:13px;color:#0A0A0A;border-color:var(--ink);background:var(--lime)}
 button.notice.remind span{font-weight:700;text-decoration:underline;text-underline-offset:3px}
-.signin .notice{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0;color:var(--ink);border-color:var(--line);background:rgba(169,243,247,.45)}
+.signin .notice{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0;color:var(--ink);border-color:var(--line);background:rgba(230,230,225,.45)}
 .signin .notice span{flex:1 1 220px}
 /* try-outs */
 .ava.when{width:auto;min-width:92px;height:auto;padding:7px 10px;border-radius:12px;font:700 12px/1.2 var(--body);font-style:normal;text-transform:none;display:grid;place-items:center;text-align:center;background:var(--pw-sf,#fff);color:var(--ink);border:1px solid var(--line-2)}
@@ -493,15 +493,15 @@ button.bp:hover{border-color:var(--ink)}
 .bfoot{margin-top:6px}
 footer.pwd-foot{position:relative;z-index:2}
 /* ── the weekly contact tracker (Nov 2026): green = in touch this week, red = nobody has been in touch yet ── */
-:root{--wk-on:#DDFDE7;--wk-on-ink:#0E3B22;--wk-off:#FBE3E3;--wk-off-ink:#8A1C1C;--wk-na:#EEEEEA}
+:root{--wk-on:#F2FFC2;--wk-on-ink:#2B3A00;--wk-off:#FBE3E3;--wk-off-ink:#8A1C1C;--wk-na:#EEEEEA}
 .chip.wk{text-transform:none;letter-spacing:.2px;font-size:11.5px;padding:4px 10px;border:0}
 .chip.wk-on,body.skin-coach .chip.wk-on{background:var(--wk-on);color:var(--wk-on-ink)}
 .chip.wk-off,body.skin-coach .chip.wk-off{background:var(--wk-off);color:var(--wk-off-ink)}
 .wkstrip{display:inline-flex;gap:3px;align-items:center;vertical-align:middle}
 .wkq{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--wk-na)}
-.wkq.on{background:#6EDC94}.wkq.off{background:#F08A8A}.wkq.na{background:var(--wk-na)}
+.wkq.on{background:#C9E15C}.wkq.off{background:#F08A8A}.wkq.na{background:var(--wk-na)}
 .wkq.now{outline:2px solid var(--ink);outline-offset:1px}
-.meter.wk i{background:#6EDC94}
+.meter.wk i{background:#C9E15C}
 .wkn.off{display:inline-block;background:var(--wk-off);color:var(--wk-off-ink);border-radius:999px;padding:0 8px}
 /* status as a list: one fact per line, the number first (Antonio, Nov 2) */
 ul.lines{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;max-width:60ch}
@@ -515,7 +515,7 @@ ul.lines.plain{gap:3px;margin-top:6px}ul.lines.plain li{font-size:13px}
 body.skin-coach .head ul.lines b.n{background:#000;color:var(--lime);padding:2px 9px}body.skin-coach .head ul.lines b.n.off{background:var(--wk-off);color:var(--wk-off-ink)}body.skin-coach .head ul.lines b.n.on{background:var(--wk-on);color:var(--wk-on-ink)}
 button.notice.remind.wk .wkn{margin-right:2px}
 .wkcard{display:grid;gap:12px;margin-bottom:18px;border-left:6px solid #F08A8A}
-.wkcard.on{border-left-color:#6EDC94}
+.wkcard.on{border-left-color:#C9E15C}
 .wkmain{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .wkword{display:block;font-size:17px;margin:4px 0 6px}
 .wkcard.off .wkword{color:var(--wk-off-ink)}.wkcard.on .wkword{color:var(--wk-on-ink)}
@@ -536,7 +536,7 @@ button.notice.remind.wk .wkn{margin-right:2px}
 /* ── the contact check: the numbers JustCall can reach ── */
 .chip.ck-off,body.skin-coach .chip.ck-off{background:#FFF1D6;color:#7A5200;text-transform:none;letter-spacing:.2px;font-size:11.5px;padding:4px 10px;border:0}
 .ckcard{display:grid;gap:10px;margin-bottom:18px;border-left:6px solid #F3C96B}
-.ckcard.on{border-left-color:#6EDC94}
+.ckcard.on{border-left-color:#C9E15C}
 .ckcard.off .wkword{color:#7A5200}.ckcard.on .wkword{color:var(--wk-on-ink)}
 .ckfiles{display:grid;gap:6px}
 .ckfile{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:13px;padding:8px 12px;border-radius:12px;background:#FFF8E8}

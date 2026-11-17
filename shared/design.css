@@ -10,7 +10,7 @@
    the ⌘K palette) is drawn by shared/design.js; the classes below are what a page builds its content with. */
 :root{
   --bg:#ECEEEB;--card:rgba(255,255,255,.7);--card-2:rgba(255,255,255,.9);--line:rgba(0,0,0,.08);--line-2:rgba(0,0,0,.14);
-  --ink:#0A0A0A;--ink-2:#3b3d38;--muted:#656860;--lime:#E2FE78;--mint:#94FCB1;--orchid:#E286E4;--cyan:#A9F3F7;--peach:#F8A95C;--blue:#5AA7E6;--navy:#1E3D7A;--warn:#FFC857;--bad:#F06A5E;
+  --ink:#0A0A0A;--ink-2:#3b3d38;--muted:#656860;--lime:#E2FE78;--mint:#E2FE78;--orchid:#E286E4;--cyan:#E6E6E1;--peach:#F8A95C;--blue:#E286E4;--navy:#5B1A5C;--warn:#FFC857;--bad:#F06A5E;
   --display:"Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;--body:"Aeonik Pro","Helvetica Neue",Helvetica,Arial,sans-serif;
   --ease:cubic-bezier(.2,.8,.2,1);color-scheme:light}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -26,11 +26,11 @@ img{display:block;max-width:100%}
 .pwd-lights{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none}
 .pwd-lights i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.36;will-change:transform}
 .pwd-lights .k1{width:54vw;height:54vw;background:#EDFF74;top:-20vw;left:-12vw;animation:pwd-f1 24s ease-in-out infinite alternate}
-.pwd-lights .k2{width:48vw;height:48vw;background:#B6FDB5;top:18vh;right:-16vw;animation:pwd-f2 28s ease-in-out infinite alternate}
-.pwd-lights .k3{width:46vw;height:46vw;background:#BFF5F7;bottom:-22vw;left:24vw;animation:pwd-f3 32s ease-in-out infinite alternate}
+.pwd-lights .k2{width:48vw;height:48vw;background:#F3FFC4;top:18vh;right:-16vw;animation:pwd-f2 28s ease-in-out infinite alternate}
+.pwd-lights .k3{width:46vw;height:46vw;background:#F9E2F8;bottom:-22vw;left:24vw;animation:pwd-f3 32s ease-in-out infinite alternate}
 .pwd-lights .k4{width:30vw;height:30vw;background:#E283E7;top:48vh;left:-6vw;opacity:.2;animation:pwd-f2 36s ease-in-out infinite alternate-reverse}
 .pwd-lights .k5{width:28vw;height:28vw;background:#F9B327;bottom:8vh;right:4vw;opacity:.16;animation:pwd-f1 40s ease-in-out infinite alternate-reverse}
-.pwd-lights .k6{width:26vw;height:26vw;background:#5EA6E3;top:6vh;left:42vw;opacity:.16;animation:pwd-f3 44s ease-in-out infinite alternate}
+.pwd-lights .k6{width:26vw;height:26vw;background:#E286E4;top:6vh;left:42vw;opacity:.16;animation:pwd-f3 44s ease-in-out infinite alternate}
 @keyframes pwd-f1{to{transform:translate(18vw,14vh) scale(1.15)}}
 @keyframes pwd-f2{to{transform:translate(-16vw,-12vh) scale(.9)}}
 @keyframes pwd-f3{to{transform:translate(-20vw,-16vh) scale(1.2)}}
@@ -51,7 +51,7 @@ img{display:block;max-width:100%}
    orchid · lime) and blue (deep blue · sky · light cyan) — as drifting clouds of colour with a slow white mist over them, fading
    into the grey; its bright spot follows the cursor. A skin only sets the colours. ── */
 .pwd-sky{position:absolute;top:0;left:0;right:0;height:min(84vh,760px);z-index:1;pointer-events:none;overflow:hidden;
-  --sa:#ACF9B8;--sb:#C1F98F;--sc:#EDFF74;--s1:#B6FDB5;--s2:#62AC49;--s3:#C1F98F;--s4:#EDFF74;--s5:#BFF5F7;
+  --sa:#E2FF72;--sb:#E5A8CC;--sc:#EDFF74;--s1:#F3FFC4;--s2:#E283E7;--s3:#EDFF74;--s4:#F9E2F8;--s5:#F9E2F8;
   background-color:var(--sb);
   background-image:
     radial-gradient(70% 80% at 12% 12%,var(--s1) 0%,rgba(255,255,255,0) 62%),
@@ -74,11 +74,11 @@ img{display:block;max-width:100%}
 @keyframes pwd-mist{from{background-position:0% 100%,100% 0%,50% 100%}to{background-position:100% 0%,0% 100%,50% 60%}}
 .pwd-sky::after{content:"";position:absolute;inset:0;background:radial-gradient(52% 72% at var(--hx,78%) var(--hy,18%),rgba(255,255,255,.5),transparent 60%)}
 @keyframes pwd-gr{from{background-position:0% 0%}to{background-position:100% 100%}}
-/* the skins */
-body.skin-coach .pwd-sky{--sa:#5EA6E3;--sb:#9ED8F0;--sc:#C0F7F7;--s1:#BFF5F7;--s2:#0457CD;--s3:#7FC3EB;--s4:#0053D4;--s5:#B6FDB5}
+/* the skins. Nov 17, 2026: the app's two colours are the lime and the pink; the mint, the cyan and the blues are gone from every page (chips, badges, the mist behind the pages). Red stays for what is wrong, amber for what is due. The court calendar keeps its own legend. */
+body.skin-coach .pwd-sky{--sa:#E286E4;--sb:#F3D3F4;--sc:#F9E2F8;--s1:#F9E2F8;--s2:#E283E7;--s3:#E5A8CC;--s4:#C24FC5;--s5:#F3FFC4}
 body.skin-desk .pwd-sky{--sa:#F6B23C;--sb:#E696E0;--sc:#E2FF72;--s1:#F9B327;--s2:#E283E7;--s3:#ED9B8B;--s4:#E2FF72;--s5:#E5A8CC}
-body.skin-studio .pwd-sky{--sa:#BFF5F7;--sb:#E696E0;--sc:#E2FF72;--s1:#C0F7F7;--s2:#E283E7;--s3:#E5A8CC;--s4:#EDFF74;--s5:#5EA6E3}
-body.skin-family .pwd-sky{--sa:#F9B327;--sb:#E5A8CC;--sc:#BFF5F7;--s1:#F6B23C;--s2:#E283E7;--s3:#ED9B8B;--s4:#C0F7F7;--s5:#E2FF72}
+body.skin-studio .pwd-sky{--sa:#F9E2F8;--sb:#E696E0;--sc:#E2FF72;--s1:#F9E2F8;--s2:#E283E7;--s3:#E5A8CC;--s4:#EDFF74;--s5:#E286E4}
+body.skin-family .pwd-sky{--sa:#F9B327;--sb:#E5A8CC;--sc:#F9E2F8;--s1:#F6B23C;--s2:#E283E7;--s3:#ED9B8B;--s4:#F9E2F8;--s5:#E2FF72}
 body.sky-short .pwd-sky{height:min(50vh,420px)}
 /* ── the page ── */
 .wrap{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -223,9 +223,9 @@ html.dark body .pwd-menu{background:#151515}
 .tick span,.tick a{display:inline-flex;align-items:center;gap:12px;padding:12px 26px;font-size:12.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;color:var(--ink-2);white-space:nowrap;cursor:pointer;text-decoration:underline transparent;text-underline-offset:4px;transition:text-decoration-color .25s,color .25s}
 .tick span:hover,.tick a:hover{color:var(--ink);text-decoration-color:var(--ink)}
 .tick b{color:var(--ink);background:linear-gradient(var(--lime),var(--lime)) no-repeat 0 60%/100% 50%;padding:0 3px}
-.tick i{font-style:normal;width:6px;height:6px;border-radius:50%;background:var(--mint);flex:none;box-shadow:0 0 0 0 rgba(148,252,177,.7);animation:pwd-pulse 2.6s infinite}
+.tick i{font-style:normal;width:6px;height:6px;border-radius:50%;background:var(--mint);flex:none;box-shadow:0 0 0 0 rgba(226,254,120,.7);animation:pwd-pulse 2.6s infinite}
 .tick i.due{background:var(--lime);box-shadow:0 0 0 1px rgba(0,0,0,.35);animation:none}.tick i.new{background:var(--orchid);animation:none}.tick i.info{background:var(--cyan);animation:none}.tick i.bad{background:var(--bad);animation:none}
-@keyframes pwd-pulse{0%{box-shadow:0 0 0 0 rgba(148,252,177,.7)}70%{box-shadow:0 0 0 7px rgba(148,252,177,0)}100%{box-shadow:0 0 0 0 rgba(148,252,177,0)}}
+@keyframes pwd-pulse{0%{box-shadow:0 0 0 0 rgba(226,254,120,.7)}70%{box-shadow:0 0 0 7px rgba(226,254,120,0)}100%{box-shadow:0 0 0 0 rgba(226,254,120,0)}}
 /* ── sections ── */
 .sec{margin-top:48px;transition:transform .9s var(--ease)}
 .sec.pre{transform:translateY(18px)}
@@ -306,7 +306,7 @@ a.chip:hover small,button.chip:hover small{color:rgba(226,254,120,.7)}
 .card{position:relative;display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:18px;background:var(--card);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28);min-width:0}
 .card.solid{background:var(--pw-inkbg,var(--ink));color:#fff;border-color:transparent}.card.solid .ey,.card.solid p{color:rgba(255,255,255,.72)}.card.solid p b{color:#fff}.card.solid h3{color:var(--lime)}
 .card.lime{background:var(--lime);border-color:transparent}
-.notice{background:rgba(169,243,247,.45);border:1px solid rgba(0,0,0,.1);color:var(--ink-2);border-radius:12px;padding:10px 14px;font-size:12.5px;line-height:1.5}
+.notice{background:rgba(230,230,225,.45);border:1px solid rgba(0,0,0,.1);color:var(--ink-2);border-radius:12px;padding:10px 14px;font-size:12.5px;line-height:1.5}
 .notice b{color:var(--ink)}
 .side{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
 @media(max-width:900px){.side{grid-template-columns:minmax(0,1fr)}}
