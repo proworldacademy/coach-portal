@@ -117,8 +117,8 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   </section>
 
   <section class="sec" id="review-sec" hidden>
-    <div class="sec-h"><h2>To review</h2><small id="review-small"></small></div>
-    <p class="hint" style="margin:0 0 12px">Pages and views that look unused or out of date. Nothing is deleted: each one still opens. Go one by one and say keep, move or delete.</p>
+    <div class="sec-h"><h2>Archive</h2><small id="review-small"></small></div>
+    <p class="hint" style="margin:0 0 12px">Out of every menu, for the two of you only. Nothing is deleted: each page still opens from here, and can go back in the Library whenever you say.</p>
     <div class="lib" id="review" style="display:block"></div>
   </section>
 
@@ -393,7 +393,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   const kindOf = (p) => ({ plan: "plan", proto: "prototype", report: "report", page: "page", archive: "archive", parked: "parked" }[p.status] || p.section);
   let libF = "";
   function library() {
-    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id) && (!p.owners || ctx.owner) && !REVIEW[p.id]);   // owners: true = the owners' shelf; what is under "To review" is listed there
+    const mine = PAGES.filter((p) => p.section !== "tools" && ctx.has(p.id) && (!p.owners || ctx.owner) && !REVIEW[p.id] && (ctx.owner || p.id === "start"));   // Nov 17: the Library is the owners'; everyone else keeps Start here   // owners: true = the owners' shelf; what is under "To review" is listed there
     $("lib-sec").hidden = !mine.length; if (!mine.length) return;
     $("lib-small").textContent = mine.length + " pages";
     const groups = [["", "All · " + mine.length], ["plan", "Plans"], ["report", "Reports"], ["page", "Pages"]];
@@ -414,7 +414,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     const pages = PAGES.filter((p) => REVIEW[p.id] && p.url).map((p) => ({ name: p.name, href: p.url, why: REVIEW[p.id], kind: kindOf(p) }));
     const views = (P.REVIEW_VIEWS || []).map((v) => ({ name: v.name, href: v.href, why: v.why, kind: "view" }));
     const rows = views.concat(pages); sec.hidden = !rows.length; if (!rows.length) return;
-    $("review-small").textContent = rows.length + " to go through";
+    $("review-small").textContent = rows.length + " kept out of the menus";
     $("review").innerHTML = rows.map((r) => '<a class="rv" href="' + esc(r.href) + '"><b>' + esc(r.name) + '</b><span class="t">' + esc(r.kind) + '</span><em>→</em><small>' + esc(r.why) + "</small></a>").join("");
   }
   // ── accordions: the sections that are not the day's work fold under their title; an address like /#people-sec opens its section ──
