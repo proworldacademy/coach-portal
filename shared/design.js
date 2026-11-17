@@ -355,7 +355,7 @@
   const clear = (stay) => { try { localStorage.removeItem(KEY); localStorage.setItem("pw-side", "team"); } catch (e) { /* no storage */ } if (!stay) location.href = "/"; };
   const fold = (x) => String(x || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const CSS = "#pw-viewing{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:2100;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);background:#0A0A0A;color:#fff;border:1px solid #E2FE78;border-radius:999px;padding:6px 6px 6px 14px;font:500 13px/1.2 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;box-shadow:0 14px 40px -14px rgba(0,0,0,.6)}" +
-    "@media(max-width:860px){#pw-viewing{bottom:calc(100px + env(safe-area-inset-bottom,0px))}#pw-viewing .t small{display:none}}" +
+    "@media(max-width:860px){#pw-viewing{left:14px;transform:none;max-width:calc(100vw - 96px);bottom:calc(100px + env(safe-area-inset-bottom,0px))}#pw-viewing .t small{display:none}}" +
     "#pw-viewing .t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#pw-viewing .t b{color:#E2FE78;font-weight:700}#pw-viewing .t small{color:#B5B5B0;font-size:12px}" +
     "#pw-viewing button{flex:none;border:0;border-radius:999px;background:#E2FE78;color:#0A0A0A;font:700 12.5px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:8px 13px;cursor:pointer;white-space:nowrap}#pw-viewing button.q{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}" +
     "#pw-view{position:fixed;inset:0;z-index:2200;background:rgba(10,10,10,.45);display:flex;align-items:center;justify-content:center;padding:16px}" +
@@ -368,6 +368,7 @@
     "#pw-view .r small{color:#6b6e66;font-size:12.5px;flex:none}#pw-view .r.on{background:#E2FE78}#pw-view .r.on small{color:#0A0A0A}#pw-view .r.me{font-weight:700}" +
     "#pw-view input{width:calc(100% - 16px);margin:4px 8px 4px;box-sizing:border-box;height:44px;border:1px solid rgba(0,0,0,.18);border-radius:12px;background:#fff;color:#0A0A0A;padding:0 14px;font:400 16px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif}#pw-view .n{margin:6px 10px;font-size:13px;color:#6b6e66}" +
     "html.dark #pw-view .sh{background:#161616;color:#F3F3EF}html.dark #pw-view h2,html.dark #pw-view .r,html.dark #pw-view .x{color:#F3F3EF}html.dark #pw-view .x{border-color:rgba(255,255,255,.2)}html.dark #pw-view p.s,html.dark #pw-view h3,html.dark #pw-view .r small,html.dark #pw-view .n{color:#B5B5B0}html.dark #pw-view .r:hover,html.dark #pw-view .r:focus-visible{background:#242424}html.dark #pw-view .r.on{background:#E2FE78;color:#0A0A0A}html.dark #pw-view .r.on small{color:#0A0A0A}html.dark #pw-view input{background:#0F0F0F;color:#F3F3EF;border-color:rgba(255,255,255,.2)}" +
+    "#pw-view .sds{display:flex;gap:8px;padding:2px 8px 0}#pw-view .sd{flex:1;border:1px solid rgba(0,0,0,.18);background:none;color:#0A0A0A;border-radius:999px;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;min-height:44px;cursor:pointer}#pw-view .sd:hover{border-color:#0A0A0A}#pw-view .sd.on{background:#0A0A0A;color:#E2FE78;border-color:#0A0A0A}#pw-view .r.hl{background:#F1F3EE}html.dark #pw-view .sd{color:#F3F3EF;border-color:rgba(255,255,255,.25)}html.dark #pw-view .sd.on{background:#E2FE78;color:#0A0A0A}html.dark #pw-view .r.hl{background:#242424}" +
     ".pwd-menu .vas{border:1px solid rgba(0,0,0,.2);background:none;color:inherit;border-radius:999px;font:700 13px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:9px 16px;min-height:38px;cursor:pointer}html.dark .pwd-menu .vas{border-color:rgba(255,255,255,.25)}";
   const css = () => { if (document.getElementById("pw-view-css")) return; const st = document.createElement("style"); st.id = "pw-view-css"; st.textContent = CSS; (document.head || document.documentElement).appendChild(st); };
   const db = () => { try { const a = window.PWAuth && window.PWAuth.fs && window.PWAuth.fs(); if (a) return a; if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) return firebase.firestore(); } catch (e) { /* none */ } return null; };
@@ -400,6 +401,8 @@
       if (e.target === box || e.target.closest("[data-x]")) { close(); return; }
       const r = e.target.closest("[data-pick]"); if (!r) return;
       if (r.dataset.pick === "me") { clear(); return; }
+      if (r.dataset.pick === "role") set({ kind: "role", role: r.dataset.role, name: r.dataset.name, label: "the whole side" });
+      if (r.dataset.pick === "coaches") { const h = box.querySelector("[data-coaches]"); if (h) { h.scrollIntoView({ behavior: "smooth", block: "start" }); box.querySelectorAll("[data-g=coach]").forEach((x) => x.classList.add("hl")); } return; }
       if (r.dataset.pick === "staff") set({ kind: "staff", email: r.dataset.email, name: r.dataset.name, label: r.dataset.label });
       if (r.dataset.pick === "client") set({ kind: "client", pid: r.dataset.pid, name: r.dataset.name, label: "Client" });
     });
@@ -408,11 +411,13 @@
     try { staff = (await fs.collection("staff").get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})); }
     catch (e) { const bd0 = box.querySelector(".bd"); if (bd0) bd0.innerHTML = '<p class="n">The team list did not load. This is for the owners only.</p>'; return; }
     const list = staff.filter((r) => r.active === true && r.owner !== true).map((r) => { const l = labelOf(r); return { email: r.id, name: r.name || r.id, g: l[0], label: l[1] }; }).sort((a, b) => a.name.localeCompare(b.name));
-    const row = (p) => '<button type="button" class="r' + (cur && cur.kind === "staff" && cur.email === p.email ? " on" : "") + '" data-pick="staff" data-email="' + esc(p.email) + '" data-name="' + esc(p.name) + '" data-label="' + esc(p.label) + '"><span>' + esc(p.name) + "</span><small>" + esc(p.label) + "</small></button>";
+    const row = (p) => '<button type="button" data-g="' + p.g + '" class="r' + (cur && cur.kind === "staff" && cur.email === p.email ? " on" : "") + '" data-pick="staff" data-email="' + esc(p.email) + '" data-name="' + esc(p.name) + '" data-label="' + esc(p.label) + '"><span>' + esc(p.name) + "</span><small>" + esc(p.label) + "</small></button>";
     const bd = box.querySelector(".bd"); if (!bd) return;
+    const VR = (window.PW_PAGES || {}).VIEW_ROLES || {}; const side = (k, name) => VR[k] ? '<button type="button" class="sd' + (cur && cur.kind === "role" && cur.role === k ? " on" : "") + '" data-pick="role" data-role="' + k + '" data-name="' + esc(name) + '">' + esc(name) + "</button>" : "";
     bd.innerHTML = (cur ? '<button type="button" class="r me" data-pick="me"><span>Back to my own view</span><small>Owner</small></button>' : "") +
+      '<h3>A whole side</h3><div class="sds">' + side("admin", "Admin") + '<button type="button" class="sd" data-pick="coaches">Coaches</button>' + side("marketing", "Marketing") + '</div><p class="n">Admin and Marketing open as that side sees them. Coaches asks which coach, because each coach has their own players. Books and the Library are yours only, so there is nothing to compare.</p>' +
       '<h3>A client</h3><input type="search" data-q placeholder="Type a player\'s name" autocomplete="off" aria-label="Find a client by the player\'s name"><div data-res>' + (cur && cur.kind === "client" ? '<button type="button" class="r on" data-pick="client" data-pid="' + esc(cur.pid) + '" data-name="' + esc(cur.name) + '"><span>' + esc(cur.name) + "</span><small>Client</small></button>" : '<p class="n">Their account, exactly as the family sees it.</p>') + "</div>" +
-      GROUPS.map((g) => { const rows = list.filter((p) => p.g === g[0]); return rows.length ? "<h3>" + g[1] + "</h3>" + rows.map(row).join("") : ""; }).join("");
+      GROUPS.map((g) => { const rows = list.filter((p) => p.g === g[0]); return rows.length ? "<h3" + (g[0] === "coach" ? " data-coaches" : "") + ">" + g[1] + "</h3>" + rows.map(row).join("") : ""; }).join("");
     const q = bd.querySelector("[data-q]"), res = bd.querySelector("[data-res]");
     const find = async () => {
       const t = fold(q.value.trim()); if (t.length < 2) { res.innerHTML = '<p class="n">Their account, exactly as the family sees it.</p>'; return; }
