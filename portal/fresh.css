@@ -113,3 +113,24 @@ body.fresh .rowb .ava{flex:none}
 }
 .cp-appbar{background:rgba(14,14,14,.95)!important}
 html.dark .cp-appbar{background:rgba(30,30,30,.94)!important;border-color:rgba(255,255,255,.16)!important}
+
+/* ── The design pass, second round (Nov 16, 2026). ──
+   On a phone the search circle sat alone on a row of its own under the top bar; it now lives in the top bar, beside the menu, and the
+   page starts 50px higher. While typing, the field opens across the whole bar. The Coach Board's rows get the same hairline as every
+   other list, and the small line on the 3-Month Report card is dark enough to read on its pale lime. */
+@media(max-width:560px){
+  body.fresh .wrap.frame{position:relative}
+  body.fresh #tools{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(max(16px,env(safe-area-inset-right,0px)) + 88px);left:auto;margin:0!important;gap:8px;flex-wrap:nowrap;z-index:3}
+  body.fresh #tools .live{order:-1;margin:0!important}
+  body.fresh #tools .search input{width:36px;height:36px}
+  body.fresh #tools:focus-within{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));z-index:70}
+  body.fresh #tools:focus-within .live{display:none}
+  body.fresh #tools:focus-within .search{flex:1 1 auto}
+  body.fresh #tools .search input:focus{width:100%;height:40px;margin-top:-2px}
+}
+body.fresh .ccard .bp+.bp{border-top:1px solid var(--fx-line)!important}
+body.fresh .start.rec .sbtn small{color:#3B3D38}
+html.dark body.fresh .start.rec .sbtn small{color:#2A2A2A}
+body.fresh #tools .results{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 18px 40px -18px rgba(0,0,0,.35)}
+html.dark body.fresh #tools .results{background:#161616!important;border-color:#2E2E2E!important}
+body.fresh .wrap.frame:has(#tools:focus-within){z-index:80!important}
