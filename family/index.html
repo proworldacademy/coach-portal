@@ -68,6 +68,32 @@ details.past summary:hover{color:var(--ink)}
 .tabs{margin-top:26px}
 .greet{padding-bottom:0}
 .lead.sum b{background:none;padding:0}
+
+/* the client home, "C · Your mix" (Nov 17, 2026) */
+.ch{display:flex;flex-direction:column;gap:18px;margin:6px 0 30px;max-width:620px}
+.ch-day{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#5E605A;font-weight:700}
+.ch-hello{margin:-10px 0 0;font:italic 800 clamp(52px,15vw,84px)/.88 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.01em;color:#0A0A0A}
+.ch-hello span{display:block}.ch-hello em{font-style:italic;color:#fff;-webkit-text-stroke:2px #0A0A0A}
+.ch-who{display:flex;gap:8px;flex-wrap:wrap}.ch-who button{height:44px;padding:0 18px;border-radius:22px;border:1.5px solid #0A0A0A;background:#fff;color:#0A0A0A;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer}.ch-who button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78}
+.ch-hero{border-radius:30px;background:#E2FE78;color:#0A0A0A;padding:22px;display:flex;flex-direction:column;gap:14px}
+.ch-hero.out{background:#fff;border:1.5px dashed #0A0A0A}
+.ch-hl{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}.ch-hl b{letter-spacing:0;text-transform:none;font-size:12.5px;background:#0A0A0A;color:#F4F4F0;border-radius:12px;padding:6px 10px}
+.ch-when{font:italic 800 clamp(64px,19vw,96px)/.84 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.02em}
+.ch-what{display:flex;flex-direction:column;gap:3px;font-size:16px}
+.ch-tg{display:flex;gap:6px;background:rgba(10,10,10,.12);border-radius:29px;padding:4px}.ch-tg button{flex:1;height:50px;border-radius:25px;border:0;background:none;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer}.ch-tg button[aria-pressed="true"]{background:#0A0A0A;color:#F4F4F0}.ch-tg button:disabled{cursor:default}
+.ch-n{font-size:13px;line-height:1.4;color:#1E201C}
+.ch-acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ch-acts button,.ch-acts a{min-height:112px;border-radius:24px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;text-align:left;font-weight:700;font-size:15px;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
+.ch-i{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:#0A0A0A;color:#E2FE78}
+.ch-card{border-radius:30px;background:#fff;border:1px solid #DADCD5;padding:22px;display:flex;flex-direction:column;gap:14px;color:#0A0A0A}
+.ch-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.ch-h h2{margin:0;font:italic 800 34px/.9 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase}.ch-h span{font-size:13px;color:#4A4C46}.ch-h span b{color:#0A0A0A}
+.ch-s{margin:0;font-size:15px;line-height:1.4;color:#2F312C}
+.ch-btn{display:flex;align-items:center;justify-content:center;height:50px;border-radius:25px;border:0;background:#0A0A0A;color:#F4F4F0;font-weight:700;font-size:15px;font-family:inherit;text-decoration:none;cursor:pointer}.ch-btn.line{background:none;color:#0A0A0A;border:1.5px solid #0A0A0A}
+.ch-dots{display:flex;gap:8px;flex-wrap:wrap}.ch-dots i{flex:1 1 24px;max-width:44px;height:44px;border-radius:12px;background:#E2FE78;border:1px solid rgba(10,10,10,.25);box-sizing:border-box}.ch-dots i.off{background:#F1F2EE;border:1.5px dashed #8A8C85}
+.ch-pay{border-radius:30px;background:#0A0A0A;color:#F4F4F0;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-decoration:none}.ch-pay span{display:flex;flex-direction:column;gap:4px}.ch-pay small{font-size:12.5px;color:#C9C9C4}.ch-pay small:first-child{letter-spacing:.14em;text-transform:uppercase}.ch-pay b{font:italic 800 40px/.9 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;color:#E2FE78}.ch-pay i{flex:none;width:52px;height:52px;border-radius:50%;background:#E2FE78;color:#0A0A0A;display:flex;align-items:center;justify-content:center}
+html.dark .ch-day{color:#B5B5B0}html.dark .ch-hello{color:#F4F4F0}html.dark .ch-hello em{color:#0A0A0A;-webkit-text-stroke:2px #F4F4F0}
+html.dark .ch-who button{background:#161616;color:#F4F4F0;border-color:#F4F4F0}html.dark .ch-who button[aria-pressed="true"]{background:#E2FE78;color:#0A0A0A;border-color:#E2FE78}
+html.dark .ch-card,html.dark .ch-acts button,html.dark .ch-acts a{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-s,html.dark .ch-h span{color:#C9C9C4}html.dark .ch-h span b{color:#F4F4F0}html.dark .ch-btn{background:#E2FE78;color:#0A0A0A}html.dark .ch-btn.line{background:none;color:#F4F4F0;border-color:#F4F4F0}html.dark .ch-dots i.off{background:#0F0F0F;border-color:#6A6A66}html.dark .ch-pay{border:1px solid #343434}
+html.dark .ch-hero.out{background:#161616;color:#F4F4F0;border-color:#F4F4F0}html.dark .ch-hero.out .ch-n{color:#C9C9C4}html.dark .ch-hero.out .ch-tg{background:rgba(255,255,255,.12)}html.dark .ch-hero.out .ch-tg button{color:#F4F4F0}html.dark .ch-hero.out .ch-tg button[aria-pressed="true"]{background:#F4F4F0;color:#0A0A0A}
 </style>
 </head>
 <body class="skin-family sky-short">
@@ -208,13 +234,49 @@ function requestsBlock(){
   const list=me.requests.map(r=>`<tr><td>${esc(r.kindLabel)}${r.player?' · '+esc(r.player):''}<br><span class="hint">${esc(r.text)}</span>${r.reply?`<br><b>Front desk:</b> ${esc(r.reply)}`:''}</td><td class="r">${r.state==='open'?'<span class="pill lime">Open</span>':'<span class="pill mint">Done</span>'}<br><span class="hint">${esc(new Date(r.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></td></tr>`).join('');
   return `<section class="sec" id="requests"><div class="sec-h"><h2>Ask the front desk</h2><small>a court, a private, a change</small></div>
     <div class="card"><form class="form one" id="req">
-      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="message">Something else</option></select></div>
+      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="coach">A message for the coach</option><option value="makeup">A make-up day</option><option value="message">Something else</option></select></div>
       <div class="field"><label for="player">Player</label><select id="player">${players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="">— not about one player —</option></select></div></div>
       <div class="form"><div class="field"><label for="when">When (if it matters)</label><input id="when" placeholder="e.g. Saturday 9 AM, or next week"></div><div class="field"><label for="phone">Best number to reach you</label><input id="phone" placeholder="(561) 555-0000" autocomplete="tel"></div></div>
       <div class="field"><label for="text">Details</label><textarea id="text" required placeholder="Tell us what you need — the front desk reads this and gets back to you by text."></textarea></div>
       <div class="rowx"><button class="btn lime" type="submit" id="send">Send to the front desk <span class="ar">→</span></button><span class="hint">Or text us any time at (561) 403-0008.</span></div>
     </form></div>
     ${list?`<div class="card"><h3>Your requests</h3><div class="scroll"><table class="tbl"><tbody>${list}</tbody></table></div></div>`:''}</section>`;
+}
+/* The client home (Nov 17, 2026 — the design Antonio chose, "C · Your mix"): the day and a greeting, a button per player, the next
+   session in one lime block with the player counted in unless the parent says otherwise, four things to do, the report, the month's
+   attendance and the next payment. What it shows comes from /api/family/me as before; "Cannot make it", a make-up day and a message
+   for the coach go to the academy as a request (the front desk sees them at once). The time and the court are not in the record a
+   family can read yet, so the block names the day, the program and the coach, and nothing it does not know. */
+let SEL='';
+const DOW=['sun','mon','tue','wed','thu','fri','sat'];
+const ymd=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function nextSession(p){const days=((p.enroll&&p.enroll.days)||[]).map(d=>String(d).slice(0,3).toLowerCase()).filter(d=>DOW.includes(d));if(!days.length)return null;
+  const t=new Date(String(me.today||ymd(new Date()))+'T12:00:00');for(let i=0;i<8;i++){const d=new Date(t.getTime()+i*864e5);if(days.includes(DOW[d.getDay()]))return{date:ymd(d),word:i===0?'Today':i===1?'Tomorrow':d.toLocaleDateString('en-US',{weekday:'long'}),long:d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}}return null}
+const isOut=(p,date)=>(me.requests||[]).some(r=>r.kind==='absence'&&r.playerId===p.id&&r.when===date);
+const usd=(c)=>'$'+(Number(c||0)/100).toLocaleString('en-US',{minimumFractionDigits:Number(c||0)%100?2:0,maximumFractionDigits:2});
+const ICO={plus:'<path d="M12 5v14M5 12h14"></path>',court:'<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M12 5v14M3 12h18"></path>',chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path>',card:'<rect x="3" y="6" width="18" height="13" rx="3"></rect><path d="M3 10h18"></path>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"></path>'};
+const ico=(k)=>`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
+function homeC(first,active){
+  const h=new Date().getHours();const hello=h<12?'Good morning,':h<18?'Good afternoon,':'Good evening,';
+  const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  if(!active.find(p=>p.id===SEL))SEL=active.length?active[0].id:'';const p=active.find(x=>x.id===SEL)||null;
+  const top=`<div class="ch-day">${esc(day)}</div><h1 class="ch-hello"><span>${hello}</span> <em>${esc(first)}.</em></h1>`;
+  if(!p)return `<div class="ch">${top}<div class="ch-card"><p class="ch-s">No active players right now.</p><a class="ch-btn" href="/enroll">Enroll a player</a></div></div>`;
+  const nm=esc(p.shortName||p.name.split(' ')[0]);const chips=active.length>1?`<div class="ch-who" role="group" aria-label="Which player">${active.map(x=>`<button type="button" data-sel="${esc(x.id)}" aria-pressed="${x.id===SEL}">${esc(x.shortName||x.name.split(' ')[0])}</button>`).join('')}</div>`:'';
+  const ns=nextSession(p);const out=ns&&isOut(p,ns.date);const coaches=[p.coach,p.coach2].filter(Boolean);const prog=(p.enroll&&(p.enroll.programShort||p.enroll.programName))||p.groupLabel||'Training';
+  const hero=`<section class="ch-hero${out?' out':''}" aria-label="Next session"><div class="ch-hl"><span>Next session</span>${ns?`<b>${esc(ns.long)}</b>`:''}</div>
+    <div class="ch-when">${ns?esc(ns.word):esc(prog)}</div>
+    <div class="ch-what">${ns?`<b>${esc(prog)}</b>`:''}${coaches.length?`<span>With Coach ${coaches.map(esc).join(' and Coach ')}</span>`:''}</div>
+    ${ns?`<div class="ch-tg" role="group" aria-label="Is ${nm} coming"><button type="button" aria-pressed="${!out}" ${out?'disabled':''}>${nm} is coming</button><button type="button" aria-pressed="${!!out}" data-absent="${esc(ns.date)}" ${out?'disabled':''}>Cannot make it</button></div>
+    <span class="ch-n">${out?`You told the academy ${nm} cannot make it. Changed your mind? Text the front desk.`:`${nm} is counted in unless you say otherwise. The academy is told right away.`}</span>`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
+  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['coach','chat','Message a coach'],['','card','Pay or see bills']].map(([k,i,l])=>k?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="#billing"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
+  const rp=(p.reports||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+  const report=`<section class="ch-card" aria-label="The report"><div class="ch-h"><h2>${nm}'s report</h2>${rp?`<span>${esc(rp.period||'')}</span>`:''}</div><p class="ch-s">${rp?'The goals for the next three months, then tennis, fitness, mental and competition, with a note from the coach.':'The coach shares the 3-month report here. The first one appears once it is sent.'}</p>${rp?'<a class="ch-btn" href="#reports">Read the report</a>':''}</section>`;
+  const at=p.attendance||{days:[],present:0,missed:0};const tot=(at.present||0)+(at.missed||0);
+  const att=tot?`<section class="ch-card" aria-label="Attendance"><div class="ch-h"><h2>${esc(String(at.month||'This month').split(' ')[0])}</h2><span><b>${at.present||0}</b> of ${tot} sessions</span></div><div class="ch-dots">${(at.days||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(-12).map(d=>`<i class="${d.present?'on':'off'}" title="${esc(nice(d.date))}"></i>`).join('')}</div>${at.missed?`<p class="ch-s">${at.missed} missed this month.</p><button type="button" class="ch-btn line" data-ask="makeup">Pick a make-up day</button>`:''}</section>`:'';
+  const sub=(me.billing.subscriptions||[]).find(x=>x.next&&x.next.date);
+  const pay=sub?`<a class="ch-pay" href="#billing" aria-label="Billing"><span><small>Next payment · ${esc(nice(sub.next.date))}</small><b>${esc(usd(sub.next.cents))}</b><small>${esc([sub.program,sub.plan].filter(Boolean).join(' · '))}</small></span><i>${ico('arrow')}</i></a>`:'';
+  return `<div class="ch">${top}${chips}${hero}${acts}${report}${att}${pay}</div>`;
 }
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
@@ -231,9 +293,7 @@ function render(){
   const active=me.players.filter(p=>p.status!=='finished');const finished=me.players.filter(p=>p.status==='finished');
   const attended=active.reduce((n,p)=>n+((p.attendance&&p.attendance.present)||0),0);
   app.innerHTML=`
-    ${title('Hi,',esc(first)+'.')}
-    <p class="lead sum">${active.length?`${active.length===1?esc(active[0].name)+' is':active.length+' players are'} on the roster.`:'No active players right now.'} ${attended?`${attended} session${attended===1?'':'s'} attended ${esc((active[0].attendance&&active[0].attendance.month)||'this month')}.`:''} ${me.billing.openInvoices.length?`<b>${me.billing.openInvoices.length} invoice${me.billing.openInvoices.length===1?'':'s'} to pay.</b>`:''}</p>
-    <nav class="tabs" aria-label="Sections"><a href="#players">Players</a><a href="#reports">Reports</a><a href="#billing">Billing</a><a href="#requests">Front desk</a></nav>
+    ${homeC(first,active)}
     <section class="sec" id="players"><div class="sec-h"><h2>Players</h2><small>${active.length} on the roster</small></div>
     ${active.map(playerCard).join('')||'<div class="card"><p class="hint">No active players under this e-mail.</p></div>'}
     ${finished.length?`<details class="past"><summary>Past players (${finished.length})</summary>${finished.map(playerCard).join('')}</details>`:''}
@@ -243,6 +303,10 @@ function render(){
     ${billingBlock()}
     ${requestsBlock()}
     ${footer()}`;
+  app.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{SEL=b.dataset.sel;render()});
+  app.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{const k=document.getElementById('kind'),pl=document.getElementById('player');if(k)k.value=b.dataset.ask;if(pl&&SEL)pl.value=SEL;const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});const tx=document.getElementById('text');if(tx)setTimeout(()=>tx.focus({preventScroll:true}),450)});
+  app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=async()=>{if(busy)return;const pl=me.players.find(x=>x.id===SEL);if(!pl)return;const date=b.dataset.absent;if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}busy=true;b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
+    try{await api('request',{kind:'absence',player:SEL,when:date,text:(pl.shortName||pl.name)+' cannot make the session on '+nice(date)+'.',name:me.name});toast('Told the academy. Thank you.');me=await api('me')}catch(x){toast(x.message,true)}busy=false;render()});
   const pb=document.getElementById('portal');if(pb)pb.onclick=async()=>{if(busy)return;busy=true;pb.disabled=true;try{const o=await api('portal',{});location.href=o.url}catch(e){toast(e.message,true)}busy=false;pb.disabled=false};
   document.getElementById('req').onsubmit=async(e)=>{e.preventDefault();if(busy)return;const btn=document.getElementById('send');busy=true;btn.disabled=true;btn.textContent='Sending…';
     try{await api('request',{kind:document.getElementById('kind').value,player:document.getElementById('player').value,when:document.getElementById('when').value,phone:document.getElementById('phone').value,text:document.getElementById('text').value,name:me.name});toast('Sent — the front desk will get back to you.');me=await api('me');render();location.hash='#requests'}catch(x){toast(x.message,true);busy=false;btn.disabled=false;btn.innerHTML='Send to the front desk <span class="ar">→</span>'}

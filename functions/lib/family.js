@@ -19,7 +19,9 @@ const FEED = require('./feed');
 if (!require('firebase-admin/app').getApps().length) require('firebase-admin/app').initializeApp();
 
 const KEEP_REPORTS = 12;
-const REQUEST_KINDS = { court: 'Court reservation', private: 'Private lesson', change: 'Plan change', message: 'Message' };
+const REQUEST_KINDS = { court: 'Court reservation', private: 'Private lesson', change: 'Plan change', message: 'Message',
+  // the client home (Nov 17, 2026): a parent says a player cannot make a session, asks for a make-up day, or writes to the coach
+  absence: 'Cannot make a session', makeup: 'Make-up day', coach: 'Message for the coach' };
 
 /* ── who is asking ── */
 async function requireFamily(req, opts) {
@@ -171,7 +173,7 @@ async function me(db, stripe, who, opts) {
   }
   const bill = await billing(stripe, customers, today);
   let requests = [];
-  try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
+  try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
   return { today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
