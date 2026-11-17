@@ -26,13 +26,14 @@ async function people(db) {
 }
 
 /* Who hears about a message: the others in the chat, minus whoever muted it. A mention or @channel gets through a mute. */
+let CLOCK = () => Date.now();   // the tests set the hour
 async function listeners(db, chat, chatId, fromEmail, msg) {
   const members = (Array.isArray(chat.members) ? chat.members : []).map((e) => String(e || '').toLowerCase()).filter((e) => e && e !== fromEmail);
   const loud = new Set((Array.isArray(msg.mentions) ? msg.mentions : []).map((e) => String(e || '').toLowerCase())); const all = msg.everyone === true;
-  const out = [];
+  const out = []; const hr = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(new Date(CLOCK()))); const night = hr >= 21 || hr < 7;
   for (const e of members) {
     if (all || loud.has(e)) { out.push(e); continue; }
-    let muted = false; try { const r = await db.doc('teamReads/' + e).get(); muted = !!(r.exists && ((r.data() || {}).mute || {})[chatId]); } catch (err) { muted = false; }
+    let muted = false; try { const r = await db.doc('teamReads/' + e).get(); const x = (r.exists && r.data()) || {}; muted = !!(x.mute || {})[chatId] || (night && x.quiet === true && chat.kind === 'channel'); } catch (err) { muted = false; }   // quiet at night (the person's own switch): a channel waits for the morning, a direct message and a mention do not
     if (!muted) out.push(e);
   }
   return out;
@@ -136,4 +137,4 @@ async function ring(db, who, body) {
 }
 function _useFetch(f) { fetchImpl = f || ((...a) => fetch(...a)); }
 
-module.exports = { people, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
+module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
