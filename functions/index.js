@@ -118,8 +118,23 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
 
     if (path.startsWith('/api/family/')) {
       // the family portal: a signed-in parent sees their own players, attendance, reports and bills — nothing else
-      const who = await FAMILY.requireFamily(req);
       const stripe = S.stripeFor(key); const b = req.body || {};
+      /* View as a client (Nov 16, 2026): an owner opens the client account the way one family sees it. The page sends the player's id
+         in X-View-Family with the owner's own sign-in; the engine looks the family's e-mail up itself and answers the one reading
+         route. Nothing can be asked, paid or changed from this view. */
+      const viewPid = S.clean(req.headers['x-view-family'], 80);
+      if (viewPid) {
+        const o = await ADMIN.requireStaff(req).catch(() => null);
+        if (o && o.owner) {
+          if (route !== 'GET /family/me') throw S.err(403, 'viewing', 'You are looking at this account as the client. Nothing is sent from this view.');
+          const snap = viewPid.includes('/') ? null : await ctx.db.doc('players/' + viewPid + '/private/contact').get();
+          const c = snap && snap.exists ? snap.data() || {} : {}; const em = String(c.email || '').trim().toLowerCase();
+          if (!em) throw S.err(404, 'noemail', 'This player has no parent e-mail on file, so the family has no account to open yet.');
+          logger.info('view as client', { by: o.email, player: viewPid });
+          return send(res, 200, Object.assign({ mode: mode(key), viewing: true }, await FAMILY.me(ctx.db, stripe, { email: em, name: String(c.guardian || '') })));
+        }
+      }
+      const who = await FAMILY.requireFamily(req);
       if (route === 'GET /family/me') return send(res, 200, Object.assign({ mode: mode(key) }, await FAMILY.me(ctx.db, stripe, who)));
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
       if (route === 'POST /family/request') {
@@ -145,6 +160,14 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // the Coach Portal's own routes (Nov 4): a text to a family through the academy's JustCall line, the conversation, the inbox.
       // Anyone active on the staff list with the portal; a coach reaches only the players whose record carries their name.
       const who = await ADMIN.requireCoach(req); const b = req.body || {};
+      if (who.viewing) {
+        // an owner looking at the portal as this person ("View as"): reading only, and nothing is marked as read for them
+        if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: false }));
+        if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
+        if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
+        if (route === 'POST /coach/read') return send(res, 200, { ok: true, viewing: true });
+        throw S.err(403, 'viewing', `You are looking at the portal as ${who.firstName || 'this person'}. Go back to your own view to send or change anything.`);
+      }
       if (route === 'POST /coach/text') { const out = await COACHTEXT.text(ctx.db, who, b); logger.info('coach text', { by: who.email, player: S.clean(b.player, 60), conv: out.conv, sent: out.sent, failed: out.failed, tick: out.tick }); return send(res, 200, out); }
       if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: String(req.query.peek || '') !== '1' }));
       // notifications on the phone (Nov 13): the public key, this phone's subscription, a test to yourself

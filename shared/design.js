@@ -173,7 +173,7 @@
     const door = (d) => '<span class="door' + (d.on ? " on" : "") + '" data-door="' + esc(d.id) + '"><a class="' + (d.on ? "on" : "") + '" href="' + esc(d.href) + '"' + (d.on ? ' aria-current="page"' : "") + (d.items.length ? ' aria-haspopup="menu"' : "") + ">" + esc(d.name) + "</a></span>";
     const strip = opts.strip === false ? '<span class="pwd-sp"></span>' : '<nav class="pwd-strip" aria-label="PROWORLD HQ">' + (ctx ? (oneDoor() ? "" : '<a class="' + (home ? "on" : "") + '" href="/"' + (home ? ' aria-current="page"' : "") + '>Dashboard</a>') + ds.map(door).join("") + ((ctx.rec || ctx.owner) && ctx.active !== false ? '<a class="' + (/^\/team(\/|$)/.test(location.pathname) ? "on" : "") + '" href="/team" data-team-dot' + (window.PWTeamUnread ? ' data-has="1"' : "") + ">Locker Room</a>" : "") : "") + "</nav>";   // Team (Nov 15, 2026): the team's own messaging
     const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
-    const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span>' + window.PWTheme.picker() + '<button class="out" type="button" data-out>Sign out</button></span></div>' : "";
+    const who = ctx ? '<div class="pwd-me"><button type="button" class="pwd-av" data-me aria-label="Your account">' + esc(initials(ctx.name || ctx.email)) + '</button><span class="who"><b>' + esc(ctx.name || ctx.email) + '</b><span class="role">' + (ctx.owner ? " · Owner" : ctx.admin ? " · Admin" : "") + '</span>' + window.PWTheme.picker() + (ctx.owner || ctx.real ? '<button class="out" type="button" data-view-as>View as</button>' : "") + '<button class="out" type="button" data-out>Sign out</button></span></div>' : "";
     const jump = opts.jump === false ? "" : '<button class="pwd-jump" type="button" data-pal aria-label="Jump to a page">' + SEARCH + "<span>Jump to a page, a report, a plan…</span><kbd>" + KBD + "</kbd></button>";
     // on a phone the strip is hidden; a menu button opens the same doors and their views as a sheet (Lorenzo, Oct 24)
     const burger = ctx && opts.strip !== false ? '<button class="pwd-burger" type="button" data-burger aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>' : "";
@@ -186,7 +186,7 @@
       // until its arrow is tapped; the door you are in opens by itself. Solid, and it ends above the bottom bar.
       const staff = (ctx.rec || ctx.owner) && ctx.active !== false; const inTeam = /^\/team(\/|$)/.test(location.pathname);
       sheet.innerHTML = (oneDoor() ? "" : '<a class="d' + (home ? " on" : "") + '" href="/">Dashboard</a>') + (staff ? '<a class="d' + (inTeam ? " on" : "") + '" href="/team" data-team-dot' + (window.PWTeamUnread ? ' data-has="1"' : "") + ">Locker Room</a>" : "") +
-        ds.map((d, i) => { const open = d.on && d.items.length; return '<div class="dr"><a class="d' + (d.on ? " on" : "") + '" href="' + esc(d.href) + '">' + esc(d.name) + "</a>" + (d.items.length ? '<button type="button" class="tg" data-tg="' + i + '" aria-expanded="' + (open ? "true" : "false") + '" aria-label="Show the pages of ' + esc(d.name) + '"><span>' + d.items.length + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' : "") + "</div>" + (d.items.length ? '<div class="sub" data-sub="' + i + '"' + (open ? "" : " hidden") + ">" + d.items.map((it) => '<a href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("") + "</div>" : ""); }).join("") + '<div class="apr"><span>Appearance</span>' + window.PWTheme.picker() + "</div>";
+        ds.map((d, i) => { const open = d.on && d.items.length; return '<div class="dr"><a class="d' + (d.on ? " on" : "") + '" href="' + esc(d.href) + '">' + esc(d.name) + "</a>" + (d.items.length ? '<button type="button" class="tg" data-tg="' + i + '" aria-expanded="' + (open ? "true" : "false") + '" aria-label="Show the pages of ' + esc(d.name) + '"><span>' + d.items.length + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' : "") + "</div>" + (d.items.length ? '<div class="sub" data-sub="' + i + '"' + (open ? "" : " hidden") + ">" + d.items.map((it) => '<a href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("") + "</div>" : ""); }).join("") + '<div class="apr"><span>Appearance</span>' + window.PWTheme.picker() + "</div>" + (ctx.owner || ctx.real ? '<div class="apr"><span>View as</span><button type="button" class="vas" data-view-as>Choose a person</button></div>' : "");
       sheet.addEventListener("click", (e) => { const t = e.target.closest("[data-tg]"); if (!t) return; e.stopPropagation(); const sub = sheet.querySelector('[data-sub="' + t.dataset.tg + '"]'); if (!sub) return; const show = sub.hidden; sub.hidden = !show; t.setAttribute("aria-expanded", show ? "true" : "false"); });
       const setOpen = (on) => { sheet.classList.toggle("on", on); bb.classList.toggle("on", on); bb.setAttribute("aria-expanded", on ? "true" : "false"); document.documentElement.classList.toggle("pwd-menu-open", on); };
       bb.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!sheet.classList.contains("on")); });
@@ -339,4 +339,94 @@
   // a page with several views (the Coach Portal's assessments / try-outs / board) re-marks the strip as the view changes
   function active(id) { opts.active = id; if (mounted) drawTop(); }
   window.PWDesign = { mount, active, signals, palette: (list) => { extra = Array.isArray(list) ? list : []; }, countUp, greet, toast, esc, get ctx() { return ctx; } };
+})();
+
+/* ── View as (Nov 16, 2026 — Antonio: "something for only me and Lorenzo, where we would see it as that person: as marketing, as a
+   coach, as a client"). An owner picks one person on the team, or one client; every page then draws what that person gets
+   (shared/pwauth.js and the Coach Portal read the same choice, the client account asks the engine for that family). It changes the
+   screen, never the database: the owner stays the one signed in. The choice is kept on this device for four hours (pw-view-as) and a
+   pill at the foot of every page says whose view it is, with the way back. The button is drawn for owners only. */
+(function () {
+  "use strict";
+  const KEY = "pw-view-as", HOURS = 4;
+  const esc = (x) => String(x == null ? "" : x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const get = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); if (!v || !v.kind || !(v.until > Date.now())) { if (v) localStorage.removeItem(KEY); return null; } return v; } catch (e) { return null; } };
+  const set = (v) => { try { localStorage.setItem(KEY, JSON.stringify(Object.assign({}, v, { until: Date.now() + HOURS * 3600000 }))); localStorage.setItem("pw-side", "team"); } catch (e) { /* no storage */ } location.href = v.kind === "client" ? "/family" : "/"; };
+  const clear = (stay) => { try { localStorage.removeItem(KEY); localStorage.setItem("pw-side", "team"); } catch (e) { /* no storage */ } if (!stay) location.href = "/"; };
+  const fold = (x) => String(x || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const CSS = "#pw-viewing{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:2100;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);background:#0A0A0A;color:#fff;border:1px solid #E2FE78;border-radius:999px;padding:6px 6px 6px 14px;font:500 13px/1.2 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;box-shadow:0 14px 40px -14px rgba(0,0,0,.6)}" +
+    "@media(max-width:860px){#pw-viewing{bottom:calc(100px + env(safe-area-inset-bottom,0px))}#pw-viewing .t small{display:none}}" +
+    "#pw-viewing .t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#pw-viewing .t b{color:#E2FE78;font-weight:700}#pw-viewing .t small{color:#B5B5B0;font-size:12px}" +
+    "#pw-viewing button{flex:none;border:0;border-radius:999px;background:#E2FE78;color:#0A0A0A;font:700 12.5px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:8px 13px;cursor:pointer;white-space:nowrap}#pw-viewing button.q{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}" +
+    "#pw-view{position:fixed;inset:0;z-index:2200;background:rgba(10,10,10,.45);display:flex;align-items:center;justify-content:center;padding:16px}" +
+    "#pw-view .sh{width:100%;max-width:440px;max-height:min(640px,calc(100vh - 32px));max-height:min(640px,calc(100dvh - 32px));display:flex;flex-direction:column;background:#fff;color:#0A0A0A;border-radius:22px;overflow:hidden;font-family:'Aeonik Pro','Helvetica Neue',Arial,sans-serif;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}" +
+    "#pw-view .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 6px}#pw-view h2{margin:0;font:italic 800 30px/1 'Review Condensed','Barlow Condensed','Arial Narrow',Impact,sans-serif;text-transform:uppercase;color:#0A0A0A}" +
+    "#pw-view .x{border:1px solid rgba(0,0,0,.15);background:none;color:#0A0A0A;border-radius:999px;width:34px;height:34px;font-size:18px;line-height:1;cursor:pointer}" +
+    "#pw-view p.s{margin:0;padding:0 20px 10px;font-size:13px;line-height:1.45;color:#5b5e57}#pw-view .bd{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px 14px}" +
+    "#pw-view h3{margin:14px 8px 4px;font:700 11px/1 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6b6e66}" +
+    "#pw-view .r{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;background:none;color:#0A0A0A;font:500 15px/1.25 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:11px 10px;border-radius:12px;cursor:pointer;min-height:44px}#pw-view .r:hover,#pw-view .r:focus-visible{background:#F1F3EE;outline:none}" +
+    "#pw-view .r small{color:#6b6e66;font-size:12.5px;flex:none}#pw-view .r.on{background:#E2FE78}#pw-view .r.on small{color:#0A0A0A}#pw-view .r.me{font-weight:700}" +
+    "#pw-view input{width:calc(100% - 16px);margin:4px 8px 4px;box-sizing:border-box;height:44px;border:1px solid rgba(0,0,0,.18);border-radius:12px;background:#fff;color:#0A0A0A;padding:0 14px;font:400 16px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif}#pw-view .n{margin:6px 10px;font-size:13px;color:#6b6e66}" +
+    "html.dark #pw-view .sh{background:#161616;color:#F3F3EF}html.dark #pw-view h2,html.dark #pw-view .r,html.dark #pw-view .x{color:#F3F3EF}html.dark #pw-view .x{border-color:rgba(255,255,255,.2)}html.dark #pw-view p.s,html.dark #pw-view h3,html.dark #pw-view .r small,html.dark #pw-view .n{color:#B5B5B0}html.dark #pw-view .r:hover,html.dark #pw-view .r:focus-visible{background:#242424}html.dark #pw-view .r.on{background:#E2FE78;color:#0A0A0A}html.dark #pw-view .r.on small{color:#0A0A0A}html.dark #pw-view input{background:#0F0F0F;color:#F3F3EF;border-color:rgba(255,255,255,.2)}" +
+    ".pwd-menu .vas{border:1px solid rgba(0,0,0,.2);background:none;color:inherit;border-radius:999px;font:700 13px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:9px 16px;min-height:38px;cursor:pointer}html.dark .pwd-menu .vas{border-color:rgba(255,255,255,.25)}";
+  const css = () => { if (document.getElementById("pw-view-css")) return; const st = document.createElement("style"); st.id = "pw-view-css"; st.textContent = CSS; (document.head || document.documentElement).appendChild(st); };
+  const db = () => { try { const a = window.PWAuth && window.PWAuth.fs && window.PWAuth.fs(); if (a) return a; if (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length) return firebase.firestore(); } catch (e) { /* none */ } return null; };
+
+  function pill() {
+    const v = get(); let el = document.getElementById("pw-viewing");
+    if (!v) { if (el) el.remove(); return; }
+    if (!document.body) { document.addEventListener("DOMContentLoaded", pill, { once: true }); return; }
+    // a client's view is the client account and the public pages; anywhere else the choice would show nothing of theirs
+    if (v.kind === "client" && !/^\/(family|enroll)(\/|$)/.test(location.pathname)) { location.replace("/family"); return; }
+    css();
+    if (!el) { el = document.createElement("div"); el.id = "pw-viewing"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.innerHTML = '<span class="t">Viewing as <b>' + esc(v.name || v.email || "a client") + "</b>" + (v.label ? " <small>· " + esc(v.label) + "</small>" : "") + '</span><button type="button" class="q" data-view-as>Change</button><button type="button" data-view-back>Back to me</button>';
+  }
+
+  const labelOf = (r) => { const role = String(r.role || "").toLowerCase(); const pages = Array.isArray(r.pages) ? r.pages : ["coach-portal", "tryouts"];
+    if (role === "admin") return ["admin", "Administrator"]; if (role === "director") return ["director", "Director"]; if (role === "desk") return ["desk", "Front desk"];
+    if (pages.includes("mkt") && !pages.includes("coach-portal")) return ["mkt", "Marketing"]; if (pages.includes("coach-portal")) return ["coach", "Coach"]; return ["other", "Team"]; };
+  const GROUPS = [["mkt", "Marketing"], ["coach", "Coaches"], ["director", "Directors"], ["desk", "Front desk"], ["admin", "Administrators"], ["other", "Others on the team"]];
+  let players = null;
+
+  async function open() {
+    const fs = db(); if (!fs) return; css();
+    const old = document.getElementById("pw-view"); if (old) old.remove();
+    const cur = get(); const box = document.createElement("div"); box.id = "pw-view"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "View as");
+    box.innerHTML = '<div class="sh"><div class="hd"><h2>View as</h2><button type="button" class="x" data-x aria-label="Close">×</button></div><p class="s">See the site the way one person sees it. Only the owners have this. You stay signed in as yourself.</p><div class="bd"><p class="n">Loading the team…</p></div></div>';
+    document.body.appendChild(box);
+    const close = () => box.remove();
+    box.addEventListener("click", (e) => {
+      if (e.target === box || e.target.closest("[data-x]")) { close(); return; }
+      const r = e.target.closest("[data-pick]"); if (!r) return;
+      if (r.dataset.pick === "me") { clear(); return; }
+      if (r.dataset.pick === "staff") set({ kind: "staff", email: r.dataset.email, name: r.dataset.name, label: r.dataset.label });
+      if (r.dataset.pick === "client") set({ kind: "client", pid: r.dataset.pid, name: r.dataset.name, label: "Client" });
+    });
+    document.addEventListener("keydown", function esc1(e) { if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc1); } });
+    let staff = [];
+    try { staff = (await fs.collection("staff").get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})); }
+    catch (e) { const bd0 = box.querySelector(".bd"); if (bd0) bd0.innerHTML = '<p class="n">The team list did not load. This is for the owners only.</p>'; return; }
+    const list = staff.filter((r) => r.active === true && r.owner !== true).map((r) => { const l = labelOf(r); return { email: r.id, name: r.name || r.id, g: l[0], label: l[1] }; }).sort((a, b) => a.name.localeCompare(b.name));
+    const row = (p) => '<button type="button" class="r' + (cur && cur.kind === "staff" && cur.email === p.email ? " on" : "") + '" data-pick="staff" data-email="' + esc(p.email) + '" data-name="' + esc(p.name) + '" data-label="' + esc(p.label) + '"><span>' + esc(p.name) + "</span><small>" + esc(p.label) + "</small></button>";
+    const bd = box.querySelector(".bd"); if (!bd) return;
+    bd.innerHTML = (cur ? '<button type="button" class="r me" data-pick="me"><span>Back to my own view</span><small>Owner</small></button>' : "") +
+      '<h3>A client</h3><input type="search" data-q placeholder="Type a player\'s name" autocomplete="off" aria-label="Find a client by the player\'s name"><div data-res>' + (cur && cur.kind === "client" ? '<button type="button" class="r on" data-pick="client" data-pid="' + esc(cur.pid) + '" data-name="' + esc(cur.name) + '"><span>' + esc(cur.name) + "</span><small>Client</small></button>" : '<p class="n">Their account, exactly as the family sees it.</p>') + "</div>" +
+      GROUPS.map((g) => { const rows = list.filter((p) => p.g === g[0]); return rows.length ? "<h3>" + g[1] + "</h3>" + rows.map(row).join("") : ""; }).join("");
+    const q = bd.querySelector("[data-q]"), res = bd.querySelector("[data-res]");
+    const find = async () => {
+      const t = fold(q.value.trim()); if (t.length < 2) { res.innerHTML = '<p class="n">Their account, exactly as the family sees it.</p>'; return; }
+      if (!players) { res.innerHTML = '<p class="n">Loading the players…</p>'; try { players = (await fs.collection("players").where("status", "==", "active").get()).docs.map((d) => ({ id: d.id, name: String((d.data() || {}).name || d.id) })).sort((a, b) => a.name.localeCompare(b.name)); } catch (e) { players = null; res.innerHTML = '<p class="n">The players did not load.</p>'; return; } }
+      const now = fold(q.value.trim()); const hit = players.filter((p) => fold(p.name).includes(now)).slice(0, 8);
+      res.innerHTML = hit.length ? hit.map((p) => '<button type="button" class="r" data-pick="client" data-pid="' + esc(p.id) + '" data-name="' + esc(p.name) + '"><span>' + esc(p.name) + "</span><small>Client</small></button>").join("") : '<p class="n">No active player with that name.</p>';
+    };
+    q.addEventListener("input", find);
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest && e.target.closest("[data-view-as],[data-view-back]"); if (!t) return;
+    e.preventDefault(); if (t.hasAttribute("data-view-back")) clear(); else open();
+  });
+  window.PWView = { get, set, clear, open, pill };
+  css(); pill();
 })();

@@ -23,6 +23,7 @@ const WHO = {
   coach: { name: 'Lee Coach', role: 'coach', coachAs: 'Lee', pages: ['start', 'coach-portal', 'backend'] },
   director: { name: 'Dee Director', role: 'director', pages: ['start', 'coach-portal', 'tryouts', 'backend', 'attendance'] },
   desk: { name: 'Dana Desk', role: 'desk', pages: ['start', 'tryouts', 'backend', 'billing', 'attendance'] },
+  marketing: { name: 'Mia Marketing', role: 'marketing', pages: ['start', 'mkt'] },
   owner: { name: 'Olive Owner', role: 'admin', owner: true, pages: [] }
 };
 const BASE = JSON.parse(JSON.stringify(H.CLIENT_SEED.docs));
@@ -36,6 +37,8 @@ function seedFor(k) {
   const w = WHO[k] || WHO.coach; const email = k + '@example.test'; const docs = JSON.parse(JSON.stringify(BASE));
   Object.keys(docs).filter((d) => d.startsWith('staff/')).forEach((d) => delete docs[d]);
   docs['staff/' + email] = Object.assign({ email, active: true }, w);
+  // an owner has a team to look at the site as ("View as", Nov 16): the other invented people, and the invented family's two players
+  if (k === 'owner') { ['coach', 'director', 'desk', 'marketing'].forEach((o) => { docs['staff/' + o + '@example.test'] = Object.assign({ email: o + '@example.test', active: true }, WHO[o]); }); docs['players/ft-liam-r'] = { name: 'Liam Rivera', group: 'ft', coach: 'Kim', status: 'active' }; docs['players/as-mia-r'] = { name: 'Mia Rivera', group: 'as', coach: 'Lee', status: 'active' }; }
   Object.assign(docs, teamFor(email));
   return { user: { uid: 'u-' + k, email, emailVerified: true, displayName: w.name, providerData: [{ providerId: 'password' }] }, docs };
 }
@@ -55,7 +58,8 @@ http.createServer(async (req, res) => {
   if (p === '/api/catalog') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test', rules: { version: CAL.RULES.version, bill_day: CAL.RULES.bill_day, late: CAL.RULES.late_policy, terms: CAL.RULES.terms, breaks: CAL.RULES.breaks } }, CAT.publicCatalog()))); return; }
   if (p === '/api/quote') { let raw = ''; for await (const c of req) raw += c; try { const b = JSON.parse(raw || '{}'); const q = CHECKOUT.monthlyQuote(String(b.program || ''), String(b.plan || ''), String(b.start || '')); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ lines: q.lines, dueCents: q.dueCents, then: q.then, startLabel: q.startLabel, start: q.start, anchor: q.anchor, next: q.next, program: q.program.name, plan: q.plan.label })); } catch (e) { res.writeHead(e.status || 400, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'quote', message: e.message })); } return; }
   if (p === '/api/family/code') { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); return; }          // the test copy sends no e-mail
-  if (p === '/api/family/me') { try { const j = await FAMILY.me(FAMDB, fakeStripe({ prices: PRICES }), PARENT); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test' }, j))); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'me', message: e.message })); } return; }
+  if (p === '/api/family/me') { try { const vp = String(req.headers['x-view-family'] || ''); const asOwner = vp && next.who === 'owner'; if (asOwner && !FAMDB._docs.get('players/' + vp + '/private/contact')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'noemail', message: 'This player has no parent e-mail on file, so the family has no account to open yet.' })); return; }
+    const j = Object.assign(asOwner ? { viewing: true } : {}, await FAMILY.me(FAMDB, fakeStripe({ prices: PRICES }), asOwner || next.who !== 'owner' ? PARENT : { email: 'owner@example.test', name: '' })); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test' }, j))); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'me', message: e.message })); } return; }
   if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"error":"route","message":"not in the test copy"}'); return; }
   if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
   const f = path.join(REPO, p); if (!f.startsWith(REPO) || !fs.existsSync(f)) { res.writeHead(404); res.end('no'); return; }
