@@ -2113,7 +2113,8 @@ const PW_CONFIG = {
     const quiet = ib ? (ib.quiet || []).slice().sort((a, b) => a.name.localeCompare(b.name)) : [];
     const n = ib ? ib.unread : 0; const families = ib ? (ib.families || new Set(chats.map((r) => r.id).concat(quiet.map((q) => q.id))).size) : 0;
     // on a computer the newest chat is open beside the list from the start, like a messages app; on the phone the list comes first
-    if (!S.route.pid && window.innerWidth > 900 && chats[0]) { S.route = { view: 'messages', pid: chats[0].id, conv: chats[0].conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
+    const first = chats.find((r) => player(r.id) && mine(player(r.id)));   // the most recent chat that is this person's to open
+    if (!S.route.pid && window.innerWidth > 900 && first) { S.route = { view: 'messages', pid: first.id, conv: first.conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
     const openPid = S.route.pid && player(S.route.pid) && mine(player(S.route.pid)) ? S.route.pid : '';
     const openKey = openPid ? curConv(openPid, S.route.conv) : '';
     const q = fold(S.ui.msgFind || '');
@@ -2859,7 +2860,8 @@ const PW_CONFIG = {
     const chats = ib ? ib.rows.slice().sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name)) : [];
     const quiet = ib ? (ib.quiet || []).slice().sort((a, b) => a.name.localeCompare(b.name)) : [];
     const wide = window.innerWidth > 900;
-    if (!S.route.pid && wide && chats[0]) { S.route = { view: 'messages', pid: chats[0].id, conv: chats[0].conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
+    const first = chats.find((r) => player(r.id) && mine(player(r.id)));   // the most recent chat that is this person's to open
+    if (!S.route.pid && wide && first) { S.route = { view: 'messages', pid: first.id, conv: first.conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
     const openPid = S.route.pid && player(S.route.pid) && mine(player(S.route.pid)) ? S.route.pid : '';
     const openKey = openPid ? curConv(openPid, S.route.conv) : '';
     const q = fold(S.ui.msgFind || ''); const hit = (r) => !q || fold(r.name).includes(q) || fold(group(r.group).label).includes(q) || fold(r.coach || '').includes(q) || fold(r.title || '').includes(q);
@@ -2870,7 +2872,7 @@ const PW_CONFIG = {
     const list = `<div class="a2list" id="mlist"><div class="a2find">${a2i('search')}<input type="search" id="mfind" placeholder="Find a family" value="${esc(S.ui.msgFind || '')}" autocomplete="off" aria-label="Find a family"></div>
       ${shownChats.length ? `<div class="a2card">${shownChats.map(row).join('')}</div>` : ''}${shownQuiet.length ? a2sec('No texts yet', shownQuiet.length) + `<div class="a2card">${shownQuiet.map(qrow).join('')}</div>` : ''}
       ${shownChats.length || shownQuiet.length ? '' : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${!ib ? 'Loading…' : q ? 'No family matches that' : 'No players of yours are active'}</b></span></div></div>`}</div>`;
-    let pane = '';
+    let pane = wide && ib ? `<section class="a2chat a2none" aria-label="No chat open"><div><b>No chat open</b><small>Pick a family on the left to read the chat or to write the first text.</small></div></section>` : '';   // a computer with no texts yet: the right side says so, where it was blank
     if (openPid) {
       const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
       if (!t && !S.msg.busy[openPid]) loadThread(openPid, false, openKey && CONV_OK.test(openKey) ? openKey : '');
