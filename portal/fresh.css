@@ -134,3 +134,9 @@ html.dark body.fresh .start.rec .sbtn small{color:#2A2A2A}
 body.fresh #tools .results{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 18px 40px -18px rgba(0,0,0,.35)}
 html.dark body.fresh #tools .results{background:#161616!important;border-color:#2E2E2E!important}
 body.fresh .wrap.frame:has(#tools:focus-within){z-index:80!important}
+
+/* Contact on a computer (Nov 16, 2026): with no chat to open, the right side says so, where it was blank. */
+body.a2k .a2chat.a2none{display:grid;place-items:center;text-align:center;min-height:min(50vh,420px);border:1px dashed var(--fx-line);background:transparent}
+body.a2k .a2chat.a2none b{display:block;font:700 16px var(--body);color:var(--fx-ink)}
+body.a2k .a2chat.a2none small{display:block;margin-top:6px;font-size:13.5px;color:var(--fx-soft);max-width:300px}
+@media(max-width:900px){body.a2k .a2chat.a2none{display:none}}
