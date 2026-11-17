@@ -297,7 +297,9 @@ async function inbox(db, who) {
   const players = (await db.collection('players').where('status', '==', 'active').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((p) => p.name && own(who, p));
   const ids = new Set(players.map((p) => p.id));
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
-  if (!who.owner) return coachInbox(db, who, players, read);
+  // a director's own inbox is their own players, plus any family they have a chat with: not every family of the academy
+  // listed with "no texts yet" (Nov 17, Antonio: "I don't want their inboxes to look crazy with a million people")
+  if (!who.owner) return coachInbox(db, who, players, read, who.director ? (p) => [p.coach, p.coach2, p.coach3].some((c) => c && who.keys.includes(fold(first(c)))) : null);
   const threads = new Map(); (await db.collection('coachThreads').get()).docs.forEach((d) => { const t = d.data() || {}; if (ids.has(t.playerId)) threads.set(t.playerId, t); });
   const legacy = players.filter((p) => { const t = threads.get(p.id); return t && t.last && !(t.convs && typeof t.convs === 'object' && Object.keys(t.convs).length); }).slice(0, 25);
   if (legacy.length) {
@@ -321,7 +323,7 @@ async function inbox(db, who) {
 
 /* A coach's inbox, from their own lines only (their number, or what they sent): one row per chat with a line, then every other
    family of theirs, quiet. Two reads: the lines on their number (or by them), the family replies. */
-async function coachInbox(db, who, players, read) {
+async function coachInbox(db, who, players, read, quietOk) {
   const mineLine = await ownLine(db, who); const ids = new Set(players.map((p) => p.id));
   const outsAll = mineLine ? (await db.collection('smsLog').where('line', '==', mineLine).get()).docs : (await db.collection('smsLog').where('by', '==', who.email).get()).docs;
   const outs = outsAll.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => !l.kind && l.status !== 'skipped' && ids.has(l.player));
@@ -330,13 +332,13 @@ async function coachInbox(db, who, players, read) {
   for (const p of players) {
     const base = { id: p.id, name: p.name, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '' };
     const sc = scopeLines(who, mineLine, outs.filter((l) => l.player === p.id), ins0.filter((l) => Array.isArray(l.players) && l.players.includes(p.id)));
-    if (!sc.outs.length && !sc.ins.length) { quiet.push(Object.assign({}, base, { conv: '', title: '', members: [], last: null, unread: false, lastReplyAt: 0, quiet: true })); continue; }
+    if (!sc.outs.length && !sc.ins.length) { if (!quietOk || quietOk(p)) quiet.push(Object.assign({}, base, { conv: '', title: '', members: [], last: null, unread: false, lastReplyAt: 0, quiet: true })); continue; }
     const { numbers } = await numbersOf(db, p.id);
     chatsOf(numbers, fileLines(sc.outs, sc.ins), read, p.id).filter((c) => c.count).forEach((c) => rows.push(Object.assign({}, base, { conv: c.key, title: c.title, members: c.members.map(publicMember), last: c.last ? { at: c.last.at, dir: c.last.dir, body: c.last.body, by: c.last.by } : null, unread: c.unread, lastReplyAt: c.lastReplyAt })));
   }
   rows.sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name) || a.conv.localeCompare(b.conv));
   quiet.sort((a, b) => a.name.localeCompare(b.name));
-  return { unread: rows.filter((r) => r.unread).length, unreadFamilies: new Set(rows.filter((r) => r.unread).map((r) => r.id)).size, rows, quiet, families: players.length, at: Date.now(), line: mineLine ? tail(mineLine) : '' };
+  return { unread: rows.filter((r) => r.unread).length, unreadFamilies: new Set(rows.filter((r) => r.unread).map((r) => r.id)).size, rows, quiet, families: quietOk ? new Set(rows.map((r) => r.id).concat(quiet.map((q) => q.id))).size : players.length, at: Date.now(), line: mineLine ? tail(mineLine) : '' };
 }
 
 /* Which chat a reply belongs to: the chat of the last text this number got from this family's record — a group text puts the
