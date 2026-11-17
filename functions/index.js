@@ -160,7 +160,9 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
     if (path.startsWith('/api/coach/')) {
       // the Coach Portal's own routes (Nov 4): a text to a family through the academy's JustCall line, the conversation, the inbox.
       // Anyone active on the staff list with the portal; a coach reaches only the players whose record carries their name.
-      const who = await ADMIN.requireCoach(req); const b = req.body || {};
+      let who = await ADMIN.requireCoach(req); const b = req.body || {};
+      const readCoach = S.clean(req.headers['x-read-coach'], 120);
+      if (readCoach && !who.viewing && req.method === 'GET') who = await ADMIN.readAs(who, readCoach);   // a director reading one coach's chats: that coach's view, reading only
       if (who.viewing) {
         // an owner looking at the portal as this person ("View as"): reading only, and nothing is marked as read for them
         if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: false }));

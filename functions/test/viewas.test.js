@@ -39,3 +39,12 @@ test('the header from anyone else changes nothing', { skip: !patched }, async ()
   const w = await ADMIN.requireCoach(req('dee', 'lee@example.test'));
   assert.equal(w.email, 'dee@example.test'); assert.equal(w.director, true); assert.ok(!w.viewing);
 });
+
+test('a director reads a coach\'s chats, reading only; not another director\'s; a coach reads nobody\'s', { skip: !patched }, async () => {
+  const dee = await ADMIN.requireCoach(req('dee'));
+  const w = await ADMIN.readAs(dee, 'lee@example.test'); assert.equal(w.viewing, true); assert.equal(w.email, 'lee@example.test'); assert.equal(w.director, false); assert.equal(w.owner, false); assert.equal(w.realEmail, 'dee@example.test');
+  await assert.rejects(() => ADMIN.readAs(dee, 'dee@example.test'), (e) => e.status === 403);
+  await assert.rejects(() => ADMIN.readAs(dee, 'mia@example.test'), (e) => e.status === 404);
+  await assert.rejects(() => ADMIN.readAs({ director: false, email: 'lee@example.test' }, 'dee@example.test'), (e) => e.status === 403);
+  const own = await ADMIN.requireCoach(req('owner')); assert.equal((await ADMIN.readAs(own, 'dee@example.test')).viewing, true);
+});

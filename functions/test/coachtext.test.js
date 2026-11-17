@@ -293,5 +293,5 @@ test('a director is a coach in the chats (Nov 17): any family can be opened, but
   await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'father', body: 'Bo had a great week.' });
   const own = await COACHTEXT.thread(db, DIR, 'ft-bo-k', {}); assert.ok(own.lines.length >= 1, 'an owner reads it');
   const dir = await COACHTEXT.thread(db, DEE, 'ft-bo-k', {}); assert.equal(dir.lines.length, 0, 'a director does not read another coach\'s chat');
-  const box = await COACHTEXT.inbox(db, DEE); assert.equal(box.rows.length, 0); assert.ok(box.families >= 1, 'every family is still there to write to');
+  const box = await COACHTEXT.inbox(db, DEE); assert.equal(box.rows.length, 0); assert.equal(box.quiet.length, 0, 'no list of every family of the academy'); assert.equal(box.families, 0);
 });

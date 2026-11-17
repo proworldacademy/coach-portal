@@ -70,6 +70,20 @@ async function requireCoach(req) {
   const name = rec.name || decoded.name || email;
   return { uid: decoded.uid, email, name, firstName: first(name), coachAs: String(rec.coachAs || ''), justcallNumber: String(rec.justcallNumber || ''), keys: [rec.coachAs, first(name)].map(fold).filter(Boolean), role, owner: rec.owner === true, admin: isAdmin, director: isAdmin || role === 'director' };
 }
+/* A director reads one coach's chats (Nov 17, 2026 — Antonio: "click on a coach, and on that coach see the messages"). The answer is
+   that coach's own view, marked `viewing`, which index.js lets read and nothing else. A director may read a coach, not another
+   director, the front desk or an owner; an owner may read anyone on the Coach Portal. */
+async function readAs(who, asEmail) {
+  const fold = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(); const first = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+  const email = String(asEmail || '').trim().toLowerCase();
+  if (!who || !who.director || !email || email.includes('/')) throw S.err(403, 'director', 'Only a director can read a coach\'s chats.');
+  const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get(); const rec = doc.exists ? doc.data() : null;
+  const pg = rec && Array.isArray(rec.pages) ? rec.pages : ['coach-portal', 'tryouts']; const rl = String((rec && rec.role) || 'coach').toLowerCase();
+  if (!rec || rec.active !== true || rec.owner === true || !pg.includes('coach-portal')) throw S.err(404, 'coach', 'That coach is not on the Coach Portal.');
+  if (!who.owner && (rl === 'admin' || rl === 'director' || rl === 'desk')) throw S.err(403, 'coach', 'A director reads the coaches\' chats, not another director\'s or the front desk\'s.');
+  const nm = rec.name || email;
+  return { uid: who.uid, email, name: nm, firstName: first(nm), coachAs: String(rec.coachAs || ''), justcallNumber: String(rec.justcallNumber || ''), keys: [rec.coachAs, first(nm)].map(fold).filter(Boolean), role: rl, owner: false, admin: false, director: false, viewing: true, realEmail: who.email };
+}
 /* The team's messaging (Nov 15, 2026): anyone active on the staff list, whatever pages they hold, and the owners. */
 async function requireTeam(req) {
   const h = String(req.headers.authorization || '');
@@ -162,4 +176,4 @@ async function requireMarketing(req) {
   return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: rec.owner === true || rec.role === 'admin', marketing: true };
 }
 
-module.exports = { requireStaff, requireCoach, requireTeam, requireMarketing, requireBilling, overview, chargeOnFile, planOf };
+module.exports = { requireStaff, requireCoach, requireTeam, requireMarketing, requireBilling, overview, chargeOnFile, planOf, readAs };

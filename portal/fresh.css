@@ -142,3 +142,10 @@ body.a2k .a2chat.a2none small{display:block;margin-top:6px;font-size:13.5px;colo
    showed through the pink glow under the bar (Antonio's screenshot). */
 body.app-skin::after{background:linear-gradient(rgba(226,134,228,0) 35%,rgba(226,134,228,.5) 100%),linear-gradient(rgba(241,242,238,0),rgba(241,242,238,.97) 46%)!important}
 html.dark body.app-skin::after{background:linear-gradient(rgba(226,134,228,0) 45%,rgba(226,134,228,.26) 100%),linear-gradient(rgba(10,10,10,0),rgba(10,10,10,.97) 46%)!important}
+
+/* Contact for directors (Nov 17): whose chats to read, and the group text */
+body.fresh .a2dir{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+body.fresh .a2dirw{display:flex;align-items:center;gap:8px;font:700 12px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--fx-soft)}
+body.fresh .a2dirw select{height:44px;border-radius:22px;border:1px solid var(--fx-line);background:var(--fx-card,#fff);color:var(--fx-ink);padding:0 16px;font:700 15px var(--body);letter-spacing:0;text-transform:none;max-width:60vw}
+body.fresh .a2dirg{display:inline-flex;align-items:center;height:44px;padding:0 18px;border-radius:22px;background:#0A0A0A;color:#E2FE78;font:700 14px var(--body);text-decoration:none}
+html.dark body.fresh .a2dirg{background:#E2FE78;color:#0A0A0A}
