@@ -3036,10 +3036,19 @@ const PW_CONFIG = {
     if (S.loaded.assess && nRep) needs.push(a2row(a2n(nRep), `3-month ${nRep === 1 ? 'report' : 'reports'} to write`, `${esc(q)}${nStarted ? ' · ' + nStarted + ' started' : ''}`, a2chev(), `data-act="a2reports"`));
     if (nOpen) needs.push(a2row(a2n(nOpen), nOpen === 1 ? 'Report to follow up' : 'Reports to follow up', 'Send to the parents, set the parent meeting', a2chev(), goAttr({ view: 'followup' })));
     const needsCard = `<div class="a2k-today">${a2sec('Needs you', needs.length ? String(needs.length) : '')}<div class="a2card">${needs.length ? needs.join('') : `<div class="a2row quiet"><span class="a2ico mint">${a2i('check')}</span><span class="a2t"><b>Nothing waiting for you</b><small>${S.loaded.contacts ? 'Every family heard from you this week' : 'Loading…'}</small></span></div>`}</div></div>`;
+    /* By coach, for directors (Nov 17, 2026 — Antonio: "they get notified if one coach hasn't contacted a parent, or hasn't done an
+       assessment"): one line per coach with what is still open on their players, the coach furthest behind first. The totals above
+       say how much; this says who. It opens the Coach Board. */
+    const byCoach = web && WEB.isDirector ? (() => { const m = new Map();
+      act.forEach((p) => [p.coach, p.coach2, p.coach3].map((c) => String(c || '').trim()).filter(Boolean).forEach((c) => { const o = m.get(c) || { name: c, n: 0, reach: 0, rep: 0 }; o.n++; if (S.loaded.contacts && !inTouch(p.id, ct.week)) o.reach++; if (S.loaded.assess && dueNow(p).overall !== 'done') o.rep++; m.set(c, o); }));
+      return Array.from(m.values()).sort((x, y) => (y.reach + y.rep) - (x.reach + x.rep) || x.name.localeCompare(y.name)); })() : [];
+    const coachCard = byCoach.length ? `<div class="a2k-today">${a2sec('By coach', String(byCoach.length))}<div class="a2card">${byCoach.map((c) => { const open = c.reach + c.rep;
+      const lines = [c.reach ? `${c.reach} ${c.reach === 1 ? 'family' : 'families'} not reached this week` : '', c.rep ? `${c.rep} ${c.rep === 1 ? 'report' : 'reports'} to write` : ''].filter(Boolean);
+      return a2row(open ? a2n(open, 'red') : `<span class="a2ico mint">${a2i('check')}</span>`, 'Coach ' + esc(c.name), `${c.n} ${c.n === 1 ? 'player' : 'players'}${lines.length ? '<br>' + lines.join('<br>') : ' · all caught up'}`, a2chev(), goAttr({ view: 'board' })); }).join('')}</div></div>` : '';
     const head = FRESH && web && !WEB.isDirector ? '' : `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
     const freshTop = FRESH && web && !WEB.isDirector ? freshHome({ day, chats: msgUnread(), wk: wkList, ck: S.loaded.checks ? ckList : 0, nRep: S.loaded.assess ? nRep : 0, nStarted, nOpen, q, total: mineP.length }) : '';
     const logN = S.assess.filter((a) => WEB.isDirector || mineIds.has(a.playerId)).length;
-    return `${notice()}${head}${freshTop || needsCard}${today}${pushCard()}
+    return `${notice()}${head}${freshTop || needsCard}${coachCard}${today}${pushCard()}
       ${foldBox('log', 'Log of activity', logN ? logN + ' on file' : '', log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`)}`;
   }
   /* The fresh look (Nov 14, 2026 — Antonio: "incredible, new, modern, fresh"): a trial on two screens, Reminders and a player's page, first a trial
