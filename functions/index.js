@@ -28,6 +28,7 @@ const SWITCH = require('./lib/switch');
 const REMOVE = require('./lib/remove');
 const FEED = require('./lib/feed');
 const FAMILY = require('./lib/family');
+const VOICE = require('./lib/voice');
 const SMS = require('./lib/sms');
 const MONDAY = require('./lib/mondayimport');
 const CONTACTS = require('./lib/contacts');
@@ -182,6 +183,13 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       throw S.err(404, 'route', 'No such coach route.');
     }
 
+    if (route.startsWith('POST /voice/twiml/')) {
+      // Twilio asks what to do with a call (Nov 17): the secret is in the address, as with the team hook; the answer is TwiML, not JSON
+      const out = await VOICE.twiml(ctx.db, route.slice('POST /voice/twiml/'.length), req.body || {});
+      logger.info('voice call', { from: String((req.body || {}).From || '').startsWith('client:') ? 'app' : 'outside' });
+      res.status(200).set('Cache-Control', 'no-store').set('Content-Type', 'text/xml; charset=utf-8').send(out); return;
+    }
+    if (route === 'GET /voice/token') { const who = await ADMIN.requireTeam(req); return send(res, 200, await VOICE.token(ctx.db, who)); }
     if (route.startsWith('POST /team/hook/')) {
       // the same door with the secret in the address, the way Slack's own "incoming webhook" works: a system that can only be given a
       // webhook address (the concierge's SLACK_WEBHOOK) is pointed here and its lines land in Team. settings/teamHook { key }, made by an owner.
@@ -216,6 +224,9 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // director holds the backend page for Attendance and Privates: they get an empty answer here, and a refusal on the lists below.
       const seesBilling = !!(who.owner || who.admin || who.billing || who.role === 'desk');
       // the mailbox the sign-in codes go out from: is it set, and a test to the owner's own address (settings/mail is typed on the Dashboard)
+      if (route === 'GET /admin/voice') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await VOICE.status(ctx.db)); }
+      if (route === 'POST /admin/voice/setup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.setup(ctx.db); logger.info('voice connected', { by: who.email }); return send(res, 200, out); }
+      if (route === 'POST /admin/voice/assign') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.assign(ctx.db, b); logger.info('voice number', { by: who.email }); return send(res, 200, out); }
       if (route === 'GET /admin/turn') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await TEAM.turnReady(ctx.db)); }
       if (route === 'GET /admin/apns') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await PUSH.apnsReady(ctx.db) }); }
       if (route === 'GET /admin/mail') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await MAIL.ready(ctx.db) }); }
