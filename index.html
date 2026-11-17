@@ -145,6 +145,16 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
         <button class="btn" type="submit">Save</button>
       </form>
     </div>
+    <div class="card" id="voice-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>Calls to families from inside the app (Twilio).</b> Each coach gets a number; they call and pick up in the app, with no second sign-in. In the Twilio console: copy the <b>Account SID</b>, then <b>Settings → API keys → Create API key</b> (Standard) and copy its <b>SID</b> and its <b>Secret</b>, which Twilio shows once. Paste the three here, Save, then Connect. Never the Auth Token. Kept for owners only. <span id="voice-state"></span></div>
+      <form class="addf" id="voice-form" autocomplete="off">
+        <div class="field"><label for="voice-ac">Account SID</label><input id="voice-ac" placeholder="AC…" autocomplete="off" maxlength="34"></div>
+        <div class="field"><label for="voice-sk">API key SID</label><input id="voice-sk" placeholder="SK…" autocomplete="off" maxlength="34"></div>
+        <div class="field" style="flex:2 1 260px"><label for="voice-secret">API key secret</label><input id="voice-secret" type="password" placeholder="shown once by Twilio" autocomplete="off" maxlength="80"></div>
+        <button class="btn" type="submit">Save</button><button class="btn lime" type="button" id="voice-connect">Connect</button>
+      </form>
+      <div id="voice-nums" style="margin-top:10px"></div>
+    </div>
     <div class="card" id="hook-card" hidden style="margin-bottom:14px">
       <div class="notice"><b>The address our other systems write to the Locker Room with.</b> The concierge tells the team about a family through a "Slack webhook" address. Give it this address instead and its lines land in the <b>#concierge</b> channel of the Locker Room. The address is a secret: it is shown once, when you make it. Making a new one cuts the old one off. <span id="hook-state"></span></div>
       <form class="addf" id="hook-form" autocomplete="off">
@@ -459,6 +469,24 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       if (!/^[A-Za-z0-9]{16,64}$/.test(keyId) || token.length < 20) { state("Paste the Turn Token ID and the API Token as Cloudflare shows them.", true); return; }
       try { await window.PWAuth.fs().doc("settings/turn").set({ keyId, token, at: Date.now(), by: ctx.email }); $("turn-token").value = ""; state("Saved. Checking…"); setTimeout(read, 800); } catch (x) { state("Could not save: " + (x.message || x), true); } });
   }
+  /* calls to families from inside the app (Nov 17): the Twilio account's three values (settings/twilio, owners only), Connect, and who has which number */
+  function voiceCard() {
+    if (!ctx.owner) return; const box = $("voice-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
+    const state = (t, bad) => { $("voice-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    const draw = (j) => {
+      if (!j || !j.set) { state("Not set yet: the Call button still opens the JustCall dialer."); $("voice-nums").innerHTML = ""; return; }
+      state(j.error ? "Saved, but Twilio did not accept it: " + j.error : j.ready ? "Connected." : "Saved. Press Connect.", !!j.error);
+      const opts = (cur) => '<option value="">nobody</option>' + (j.people || []).map((p) => '<option value="' + esc(p.email) + '"' + (cur === p.email ? " selected" : "") + ">" + esc(p.name) + "</option>").join("");
+      $("voice-nums").innerHTML = !j.ready ? "" : (j.numbers || []).length ? '<p class="hint" style="margin:0 0 6px">Who answers each number:</p>' + j.numbers.map((n) => '<div class="rowx" style="display:flex;gap:10px;align-items:center;margin:6px 0"><b style="min-width:140px">' + esc(n.number) + '</b><select class="mini" data-voice-num="' + esc(n.number) + '" aria-label="Who answers ' + esc(n.number) + '">' + opts(n.person ? n.person.email : "") + "</select></div>").join("") : '<p class="hint" style="margin:0">Connected, with no phone number on the Twilio account yet. Buy one in the Twilio console (Phone Numbers → Buy a number), then reload this page.</p>';
+    };
+    const read = () => api("voice").then(draw).catch(() => state(""));
+    read();
+    $("voice-form").addEventListener("submit", async (e) => { e.preventDefault(); const accountSid = $("voice-ac").value.trim(), keySid = $("voice-sk").value.trim(), keySecret = $("voice-secret").value.trim();
+      if (!/^AC[0-9a-f]{32}$/i.test(accountSid) || !/^SK[0-9a-f]{32}$/i.test(keySid) || keySecret.length < 20) { state("Paste the Account SID (AC…), the API key SID (SK…) and its secret as Twilio shows them.", true); return; }
+      try { await window.PWAuth.fs().doc("settings/twilio").set({ accountSid, keySid, keySecret, at: Date.now(), by: ctx.email }, { merge: true }); $("voice-secret").value = ""; state("Saved. Checking…"); setTimeout(read, 800); } catch (x) { state("Could not save: " + (x.message || x), true); } });
+    $("voice-connect").addEventListener("click", async () => { state("Connecting…"); try { draw(await api("voice/setup", {})); } catch (x) { state(x.message || "Could not connect.", true); } });
+    $("voice-nums").addEventListener("change", async (e) => { const sel = e.target.closest("[data-voice-num]"); if (!sel) return; state("Saving…"); try { draw(await api("voice/assign", { number: sel.dataset.voiceNum, email: sel.value })); } catch (x) { state(x.message || "Could not save.", true); read(); } });
+  }
   /* the secret address another system of ours (the concierge) posts to, in place of a Slack webhook (Nov 15): settings/teamHook { key } */
   function hookCard() {
     if (!ctx.owner) return; const box = $("hook-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
@@ -470,7 +498,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   }
   function own() {
     if (!ctx.admin) return;
-    mailCard(); apnsCard(); turnCard(); hookCard();
+    mailCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';
