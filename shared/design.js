@@ -73,7 +73,7 @@
     })();
     /* Appearance (Nov 16, 2026): three buttons side by side, Auto · Light · Dark, in the account corner and at the foot of the phone menu,
        in place of one button that changed each time it was pressed. Auto follows the phone or the computer; the choice is kept on this device. */
-    document.addEventListener("click", (e) => { const t = e.target && e.target.closest ? e.target.closest("[data-theme]") : null; if (t) { e.preventDefault(); e.stopPropagation(); window.PWTheme.set(t.getAttribute("data-theme")); return; } const b = e.target && e.target.closest ? e.target.closest("[data-theme-btn]") : null; if (b) { e.preventDefault(); e.stopPropagation(); window.PWTheme.next(); } });
+    document.addEventListener("click", (e) => { const t = e.target && e.target.closest ? e.target.closest(".pwd-theme button[data-theme]") : null; if (t) {   /* only the picker's own buttons (Nov 17): Admin's page carries data-theme on a wrapper, so every tap there matched and its links did nothing */ e.preventDefault(); e.stopPropagation(); window.PWTheme.set(t.getAttribute("data-theme")); return; } const b = e.target && e.target.closest ? e.target.closest("[data-theme-btn]") : null; if (b) { e.preventDefault(); e.stopPropagation(); window.PWTheme.next(); } });
     window.PWTheme.picker = (cls) => { const m = tGet(); return '<span class="pwd-theme' + (cls ? " " + cls : "") + '" role="group" aria-label="Appearance">' + [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]].map((x) => '<button type="button" data-theme="' + x[0] + '" aria-pressed="' + (m === x[0] ? "true" : "false") + '">' + x[1] + "</button>").join("") + "</span>"; };
     if (!document.querySelector('script[data-bars]')) { const sc = document.createElement('script'); sc.src = '/shared/coachbar.js'; sc.async = true; sc.setAttribute('data-bars', '1'); document.head.appendChild(sc); }   // the phone's bottom bars (shared/coachbar.js)
     /* The fresh look's moving parts (Nov 14, 2026; styles in shared/fresh.css): the page rises in once (body.fx-in for the first moments), whole
@@ -187,12 +187,18 @@
       const staff = (ctx.rec || ctx.owner) && ctx.active !== false; const inTeam = /^\/team(\/|$)/.test(location.pathname);
       sheet.innerHTML = (oneDoor() ? "" : '<a class="d' + (home ? " on" : "") + '" href="/">Dashboard</a>') + (staff ? '<a class="d' + (inTeam ? " on" : "") + '" href="/team" data-team-dot' + (window.PWTeamUnread ? ' data-has="1"' : "") + ">Locker Room</a>" : "") +
         ds.map((d, i) => { const open = d.on && d.items.length; return '<div class="dr"><a class="d' + (d.on ? " on" : "") + '" href="' + esc(d.href) + '">' + esc(d.name) + "</a>" + (d.items.length ? '<button type="button" class="tg" data-tg="' + i + '" aria-expanded="' + (open ? "true" : "false") + '" aria-label="Show the pages of ' + esc(d.name) + '"><span>' + d.items.length + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' : "") + "</div>" + (d.items.length ? '<div class="sub" data-sub="' + i + '"' + (open ? "" : " hidden") + ">" + d.items.map((it) => '<a href="' + esc(it.href) + '">' + esc(it.name) + "</a>").join("") + "</div>" : ""); }).join("") + '<div class="apr"><span>Appearance</span>' + window.PWTheme.picker() + "</div>" + (ctx.owner || ctx.real ? '<div class="apr"><span>View as</span><button type="button" class="vas" data-view-as>Choose a person</button></div>' : "");
-      sheet.addEventListener("click", (e) => { const t = e.target.closest("[data-tg]"); if (!t) return; e.stopPropagation(); const sub = sheet.querySelector('[data-sub="' + t.dataset.tg + '"]'); if (!sub) return; const show = sub.hidden; sub.hidden = !show; t.setAttribute("aria-expanded", show ? "true" : "false"); });
-      const setOpen = (on) => { sheet.classList.toggle("on", on); bb.classList.toggle("on", on); bb.setAttribute("aria-expanded", on ? "true" : "false"); document.documentElement.classList.toggle("pwd-menu-open", on); };
+      /* Nov 17: the sheet outlives every redraw of the top bar (the Coach Portal redraws it often), so its listeners are attached once.
+         A second set made each arrow open and shut in the same tap: "sometimes I click and it does not click". */
+      const wired = sheet.dataset.wired === "1"; sheet.dataset.wired = "1";
+      if (!wired) sheet.addEventListener("click", (e) => { const t = e.target.closest("[data-tg]"); if (!t) return; e.stopPropagation(); const sub = sheet.querySelector('[data-sub="' + t.dataset.tg + '"]'); if (!sub) return; const show = sub.hidden; sub.hidden = !show; t.setAttribute("aria-expanded", show ? "true" : "false"); });
+      const setOpen = (on) => { const cur = document.querySelector("#pwd-top .pwd-burger"); sheet.classList.toggle("on", on); if (cur) { cur.classList.toggle("on", on); cur.setAttribute("aria-expanded", on ? "true" : "false"); } document.documentElement.classList.toggle("pwd-menu-open", on); };
+      if (sheet.classList.contains("on")) setOpen(true);   // a redraw while the menu is open keeps the new button in step
       bb.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!sheet.classList.contains("on")); });
-      sheet.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
-      document.addEventListener("click", (e) => { if (sheet.classList.contains("on") && !sheet.contains(e.target) && !bb.contains(e.target)) setOpen(false); });
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+      if (!wired) {
+        sheet.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
+        document.addEventListener("click", (e) => { const cur = document.querySelector("#pwd-top .pwd-burger"); if (sheet.classList.contains("on") && !sheet.contains(e.target) && !(cur && cur.contains(e.target))) setOpen(false); });
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+      }
     }
     if (window.PWTheme) window.PWTheme.apply();
     const out = top.querySelector("[data-out]"); if (out) out.addEventListener("click", () => window.PWAuth && window.PWAuth.signOut());

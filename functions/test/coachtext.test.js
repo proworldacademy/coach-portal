@@ -14,7 +14,8 @@ const NOW = Date.UTC(2026, 10, 5, 20, 0, 0);
 const WK = require('../lib/contacts').weekOf(require('../lib/calendar').todayET(Date.now()));
 const KIM = { uid: 'u-kim', email: 'kim@example.test', name: 'Kim Example', firstName: 'Kim', coachAs: 'Kim', keys: ['kim'], role: 'coach', owner: false, admin: false, director: false };
 const LEE = { uid: 'u-lee', email: 'lee@example.test', name: 'Lee Example', firstName: 'Lee', coachAs: '', keys: ['lee'], role: 'coach', owner: false, admin: false, director: false };
-const DIR = { uid: 'u-dir', email: 'dir@example.test', name: 'Dee Director', firstName: 'Dee', coachAs: '', keys: ['dee'], role: 'director', owner: false, admin: false, director: true };
+const DIR = { uid: 'u-dir', email: 'dir@example.test', name: 'Dee Director', firstName: 'Dee', coachAs: '', keys: ['dee'], role: 'owner', owner: true, admin: true, director: true };   // Nov 17: only an owner reads every line, so the see-everything checks below run as an owner
+const DEE = { uid: 'u-dee', email: 'dee@example.test', name: 'Dee Director', firstName: 'Dee', coachAs: '', keys: ['dee'], role: 'director', owner: false, admin: false, director: true };
 const SEED = {
   'settings/notify': { justcallKey: 'k', justcallSecret: 's', justcallNumber: '+15614030008', textsOn: true, slackBotToken: 'xoxb-test' },
   'staff/kim@example.test': { email: 'kim@example.test', name: 'Kim Example', coachAs: 'Kim', role: 'coach', active: true, slackId: 'U_KIM' },
@@ -285,4 +286,12 @@ test('the coach\'s name goes on the first text to a number only; a group text is
   t = texts(net).slice(2); assert.ok(t.length >= 1 && t.every((b) => b.body === 'To you both\n- Coach Kim, ProWorld Academy'));
   await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', to: ['+15615550100', '+15615550109'], body: 'Again' });
   t = texts(net).slice(-1); assert.equal(t[0].body, 'Again');
+});
+
+test('a director is a coach in the chats (Nov 17): any family can be opened, but another coach\'s lines and the academy line\'s do not show', async () => {
+  const db = fakeDb(SEED); wire(db);
+  await COACHTEXT.text(db, KIM, { player: 'ft-bo-k', slot: 'father', body: 'Bo had a great week.' });
+  const own = await COACHTEXT.thread(db, DIR, 'ft-bo-k', {}); assert.ok(own.lines.length >= 1, 'an owner reads it');
+  const dir = await COACHTEXT.thread(db, DEE, 'ft-bo-k', {}); assert.equal(dir.lines.length, 0, 'a director does not read another coach\'s chat');
+  const box = await COACHTEXT.inbox(db, DEE); assert.equal(box.rows.length, 0); assert.ok(box.families >= 1, 'every family is still there to write to');
 });

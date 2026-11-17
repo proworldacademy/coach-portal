@@ -75,7 +75,9 @@ async function ownLine(db, who) {
 /* What one coach may see of a family's record: a director everything; a coach the lines on their own number — or, before they
    have one, the texts they sent and the family's answers to those numbers after them. */
 function scopeLines(who, mine, outs, ins) {
-  if (who.director) return { outs, ins };
+  // Nov 17, 2026 (Antonio): only the owners read every line. A director is a coach here: any family may be written to, but what
+  // shows is what happened on the director's own number, never the academy line's or another coach's chats.
+  if (who.owner) return { outs, ins };
   if (mine) return { outs: outs.filter((l) => l.line === mine), ins: ins.filter((l) => l.line === mine) };
   const o = outs.filter((l) => l.by === who.email); const first = new Map(); o.forEach((l) => { if (!first.has(l.phone) || l.at < first.get(l.phone)) first.set(l.phone, l.at); });
   return { outs: o, ins: ins.filter((l) => first.has(l.phone) && (l.at || 0) > first.get(l.phone) && !l.line) };
@@ -256,7 +258,7 @@ async function thread(db, who, pid, opts) {
   if (key && keyOk(key) && opts.markRead !== false) { try { await db.doc('coachInbox/' + who.email).set({ email: who.email, read: { [pid + '|' + key]: Date.now() } }, { merge: true }); } catch (e) { /* a mark only */ } }
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
   const chats = chatsOf(numbers, all, read, pid);
-  if (who.director) await fileConvs(db, p, chats);   // the shared inbox rows hold every line; a coach's own view is computed, never written
+  if (who.owner) await fileConvs(db, p, chats);   // the shared inbox rows hold every line; a coach's own view is computed, never written
   const convs = chats.map((c) => Object.assign({}, c, { members: c.members.map(publicMember) }));
   const lines = all.slice(-400).map(publicLine);
   const ln = await SMS.line(db);
@@ -295,7 +297,7 @@ async function inbox(db, who) {
   const players = (await db.collection('players').where('status', '==', 'active').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((p) => p.name && own(who, p));
   const ids = new Set(players.map((p) => p.id));
   const mark = await db.doc('coachInbox/' + who.email).get(); const read = (mark.exists && (mark.data() || {}).read) || {};
-  if (!who.director) return coachInbox(db, who, players, read);
+  if (!who.owner) return coachInbox(db, who, players, read);
   const threads = new Map(); (await db.collection('coachThreads').get()).docs.forEach((d) => { const t = d.data() || {}; if (ids.has(t.playerId)) threads.set(t.playerId, t); });
   const legacy = players.filter((p) => { const t = threads.get(p.id); return t && t.last && !(t.convs && typeof t.convs === 'object' && Object.keys(t.convs).length); }).slice(0, 25);
   if (legacy.length) {

@@ -326,14 +326,15 @@ async function history(db, who, q) {
   let all = (await (pid ? col.where('player', '==', pid) : col.orderBy('at', 'desc').limit(limit)).get()).docs.map((d) => Object.assign({ id: d.id }, d.data()));
   let logs = all.filter((l) => l.batch);
   const events = pid ? [] : all.filter((l) => !l.batch && l.kind).map((l) => ({ id: l.id, kind: l.kind, at: l.at, phone: l.phone, body: l.body, players: l.players || [], justcallId: l.justcallId || '' })).sort((a, b) => (b.at || 0) - (a.at || 0));
-  if (!who.texting) { const me = fold(who.firstName || firstName(who.name)); logs = me ? logs.filter((l) => fold(l.coach) === me) : []; }
+  let seen = events;
+  if (!who.deskLine) { logs = logs.filter((l) => l.by === who.email); seen = []; }   // not the front desk or an owner: only what this person sent, and none of the families' replies to the academy line
   logs.sort((a, b) => (b.at || 0) - (a.at || 0));
   logs = logs.slice(0, limit);
   const ids = [...new Set(logs.map((l) => l.batch))].slice(0, 100);
   const batches = [];
   for (const id of ids) { const d = await db.doc('smsBatches/' + id).get(); if (d.exists) batches.push(Object.assign({ id }, d.data())); }
   batches.sort((a, b) => (b.at || 0) - (a.at || 0));
-  return { batches, events: events.slice(0, 300), logs: logs.map((l) => ({ id: l.id, batch: l.batch, at: l.at, sentAt: l.sentAt || null, by: l.byName || l.by, player: l.player, playerName: l.playerName, group: l.group, coach: l.coach, phone: l.phone, body: l.body, status: l.status, reason: l.reason || '', error: l.error || '', delivery: l.delivery || '', attempts: l.attempts || 0 })) };
+  return { batches, events: seen.slice(0, 300), logs: logs.map((l) => ({ id: l.id, batch: l.batch, at: l.at, sentAt: l.sentAt || null, by: l.byName || l.by, player: l.player, playerName: l.playerName, group: l.group, coach: l.coach, phone: l.phone, body: l.body, status: l.status, reason: l.reason || '', error: l.error || '', delivery: l.delivery || '', attempts: l.attempts || 0 })) };
 }
 
 /* ---- Threads housekeeping (Antonio, Oct 24): remove one message from a thread, clear a thread, archive it. Nothing is deleted:
