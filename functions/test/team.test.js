@@ -113,3 +113,14 @@ test('calls: the others are rung once, by the caller only', async () => {
   await assert.rejects(() => TEAM.ring(db, { email: 'lee@example.test' }, { call: 'c1' }), /Not your call/);
   PUSH._useSender(null);
 });
+
+test('quiet at night: a channel waits for the morning, a mention still gets through, the day is as before', async () => {
+  const at = (h) => () => Date.parse('2026-11-17T' + String(h + 5).padStart(2, '0') + ':30:00Z');   // Eastern time is UTC-5 in November
+  let w = await world(); await w.db.doc('teamReads/dee@example.test').set({ quiet: true }, { merge: true });
+  TEAM._clock(at(13)); let r = await TEAM.notify(w.db, KIM, { chat: 'general', id: 'm1' }); assert.equal(r.sent, 1);
+  w = await world(); await w.db.doc('teamReads/dee@example.test').set({ quiet: true }, { merge: true });
+  TEAM._clock(() => Date.parse('2026-11-18T03:30:00Z')); r = await TEAM.notify(w.db, KIM, { chat: 'general', id: 'm1' }); assert.equal(r.sent, 0);   // 10:30 pm
+  await w.db.doc('teamChats/general/messages/m1').set({ pushed: null, mentions: ['dee@example.test'] }, { merge: true });
+  r = await TEAM.notify(w.db, KIM, { chat: 'general', id: 'm1' }); assert.equal(r.sent, 1);
+  TEAM._clock(null); PUSH._useSender(null);
+});
