@@ -91,3 +91,25 @@ body.fresh .cp-appbar .on i{box-shadow:0 0 18px rgba(226,254,120,.6)}
 @keyframes fx-draw{from{stroke-dashoffset:var(--c)}to{stroke-dashoffset:var(--off)}}
 @keyframes fx-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes fx-pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+
+/* ── The design pass (Nov 16, 2026 — Antonio: "pure, strict design… sometimes the list has no separation or a line"). ──
+   1. Lists: one hairline between every two rows, strong enough to see in dark. 2. On a phone a player's status reads as a quiet line
+   of words under the name, not a pile of bubbles (Oct 25: "lists, not bubbles"); the things you can press stay buttons.
+   3. The bottom bar is solid, so the page's big titles no longer show through it. */
+html.dark body.fresh{--fx-line:#2E2E2E}
+body.fresh .list>.rowb,body.fresh .list>.arow{border-top:1px solid var(--fx-line)!important;border-radius:0!important}
+body.fresh .list>.rowb:first-child,body.fresh .list>.arow:first-child,body.fresh .list>.arow .rowb{border-top:0!important}
+body.fresh .a2row{border-top-color:var(--fx-line)!important}
+body.fresh .rowb .ava{flex:none}
+@media(max-width:560px){
+  body.fresh .rowb{padding:13px 4px!important;gap:5px!important}
+  body.fresh .rowb .chips{gap:2px 14px!important;padding-left:48px;align-items:center}
+  body.fresh .rowb .chips span.chip{border:0!important;background:none!important;box-shadow:none!important;padding:0!important;min-height:0!important;height:auto!important;border-radius:0!important;font:500 12.5px/1.35 var(--body)!important;letter-spacing:0!important;text-transform:none!important;color:var(--fx-soft)!important}
+  body.fresh .rowb .chips span.chip.wk-off,body.fresh .rowb .chips span.chip.st-missing,body.fresh .rowb .chips span.chip.ck-off{color:var(--fx-ink)!important;font-weight:700!important}
+  body.fresh .rowb .chips span.chip.st-missing::before,body.fresh .rowb .chips span.chip.st-working::before,body.fresh .rowb .chips span.chip.st-done::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:#E2FE78;box-shadow:0 0 0 1px rgba(0,0,0,.28)}
+  body.fresh .rowb .chips span.chip.st-working::before{background:#A9F3F7}
+  body.fresh .rowb .chips span.chip.st-done::before{background:#94FCB1}
+  html.dark body.fresh .rowb .chips span.chip::before{box-shadow:none}
+}
+.cp-appbar{background:rgba(14,14,14,.95)!important}
+html.dark .cp-appbar{background:rgba(30,30,30,.94)!important;border-color:rgba(255,255,255,.16)!important}

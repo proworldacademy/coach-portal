@@ -48,3 +48,7 @@ body.pwd .pw-coachbar a.on i{box-shadow:0 0 18px rgba(226,254,120,.6)}
   body.pwd.fx-in .tile:nth-child(2),body.pwd.fx-in .stat:nth-child(2){animation-delay:.07s}body.pwd.fx-in .tile:nth-child(3),body.pwd.fx-in .stat:nth-child(3){animation-delay:.14s}body.pwd.fx-in .tile:nth-child(n+4),body.pwd.fx-in .stat:nth-child(n+4){animation-delay:.2s}
 }
 @keyframes fx-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+
+/* The design pass (Nov 16, 2026): the bottom bar is solid on every side — at 55 to 80% the page's big titles showed through it. */
+body.pwd .pw-coachbar,body.app-skin .appbar,.pw-coachbar{background:rgba(14,14,14,.95)!important}
+html.dark body.pwd .pw-coachbar,html.dark body.app-skin .appbar,html.dark .pw-coachbar{background:rgba(30,30,30,.94)!important;border-color:rgba(255,255,255,.16)!important}

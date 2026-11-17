@@ -2548,7 +2548,7 @@ const PW_CONFIG = {
     { const on = el.querySelector('.on'); if (on && el.scrollWidth > el.clientWidth + 2) { const x = on.offsetLeft - 16; if (x > 0) el.scrollLeft = x; } }
     if (window.PWDesign) {
       PWDesign.active(sec === 'tryouts' ? 'tryouts' : sec === 'board' ? 'coach-board' : 'coach-portal');
-      const act = S.players.filter(active).length; const sig = [];
+      const act = (EDITION === 'web' && !WEB.isDirector ? myPlayers() : S.players.filter(active)).length; const sig = [];   // a coach's own count, the same number as the Players page
       if (act) sig.push({ cls: 'ok', html: `<b>${act}</b> active players`, href: '#/' });
       if (nOpen) sig.push({ cls: 'due', html: `<b>${nOpen}</b> ${nOpen === 1 ? 'report needs' : 'reports need'} a follow-up`, href: '#/followup' });
       if (wkLeft) sig.push({ cls: 'bad', html: `<b>${wkLeft}</b> ${wkLeft === 1 ? 'family' : 'families'} still to reach this week`, href: '#/contact' });
