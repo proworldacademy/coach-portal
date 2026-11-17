@@ -2523,7 +2523,7 @@ const PW_CONFIG = {
     const pages = owner ? (P.ALL || []).slice() : Array.isArray(rec.pages) ? rec.pages.slice() : (P.LEGACY || ['coach-portal', 'tryouts']).slice();
     const withOf = (id) => { const pg = (P.PAGES || []).find((x) => x.id === id); return pg && pg.with ? pg.with : null; };
     const aliased = (id) => Object.keys(P.ALIAS || {}).some((old) => P.ALIAS[old] === id && pages.includes(old));
-    return { email: WEB.email, real: WEB.real || null, as: WEB.real ? { email: rec.email || '', name: rec.name || '' } : null, name: (rec && rec.name) || WEB.user.displayName || WEB.email, owner, admin: !!WEB.isAdmin, pages, has: (id) => owner || (withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) || aliased(id) };
+    return { rec, director: !!WEB.isDirector, email: WEB.email, real: WEB.real || null, as: WEB.real ? { email: rec.email || '', name: rec.name || '' } : null, name: (rec && rec.name) || WEB.user.displayName || WEB.email, owner, admin: !!WEB.isAdmin, pages, has: (id) => owner || (withOf(id) ? pages.includes(withOf(id)) : pages.includes(id)) || aliased(id) };
   }
   let pwWasIn = false;
   function syncDesign() {

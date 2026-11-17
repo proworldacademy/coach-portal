@@ -107,11 +107,11 @@
   function mine() { return ctx && ctx.has ? P.PAGES.filter((p) => ctx.has(p.id)) : []; }
   function isHere(p) { if (!p.url || external(p)) return false; const path = p.url.split("#")[0].replace(/\/$/, "") || "/"; return !p.url.includes("#") && path === here; }
 
-  // ── the doors (PROWORLD HQ): the top bar shows Dashboard · Admin · Coaches · Clients · Marketing · Library. A door opens its
+  // ── the doors (PROWORLD HQ): the top bar shows Dashboard · Admin · Coaches · Marketing, and for the owners Books and the Library (Nov 17: the clean menu). A door opens its
   //    page; its menu (shown under it on desktop — phones use the Jump palette) lists the views inside it the person may open. ──
   const DOORS = P.DOORS || [];
   const hasAny = (pages) => !pages || !pages.length || !!(ctx && ctx.has && pages.some((id) => ctx.has(id)));
-  const PATH_DOOR = { "/backend": "admin", "/portal": "coaches", "/clients": "clients", "/family": "clients", "/enroll": "clients", "/marketing": "marketing", "/p": "library" };
+  const PATH_DOOR = { "/backend": "admin", "/portal": "coaches", "/clients": "admin", "/family": "admin", "/enroll": "admin", "/marketing": "marketing", "/p": "library" };
   function doorNow() {
     const id = opts.active && opts.active !== "/" ? opts.active : null;
     const pg = id ? P.PAGES.find((p) => p.id === id) : null;
@@ -144,7 +144,7 @@
     // a coach's menu is the portal's own four (Nov 13): Reminders, Players, Contact, Privates. The Board, Try-outs, Attendance and Courts are for directors and owners.
     const coachItem = (it) => ["/portal", "/portal#/players", "/portal#/messages", "/backend#privates"].includes(it.href);
     if (cs) return DOORS.filter((d) => d.id === "coaches").map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id || now === null, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => director || coachItem(it)).concat(director ? [{ name: "Staff & access", href: "/portal#/staff" }] : []) }));
-    return DOORS.filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))
+    return DOORS.filter((d) => !d.owners || ctx.owner).filter((d) => d.id === "library" ? mine().some((p) => p.section !== "tools" || p.door === "library") : hasAny(d.page))   // owners: true = a door for the two owners (Books, the Library)
       .map((d) => ({ id: d.id, name: d.name, href: d.href, on: now === d.id, items: (d.items || []).filter((it) => hasAny(it.page ? [it.page] : d.page)).filter((it) => !(d.id === "coaches" && !director && (directorOnly(it) || !coachItem(it)))) }));
   }
   let ddEl = null, ddT = null;
