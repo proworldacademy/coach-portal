@@ -141,10 +141,11 @@
         if (owner && !rec) fs.doc("staff/" + email).set({ email, name: String(u.displayName || ""), role: "admin", active: true, owner: true, addedAt: Date.now() }, { merge: true }).catch(() => {});
       }
       let real = null;
-      const va = owner ? viewAs() : null;
-      if (va && va.kind === "staff" && va.email) {
-        let other = null; try { const d = await fs.doc("staff/" + va.email).get(); other = d.exists ? d.data() : null; } catch (e) { other = null; }
-        if (my !== seq) return;
+      let va = owner ? viewAs() : null;
+      const side = va && va.kind === "role" ? (P.VIEW_ROLES || {})[va.role] : null;   // a whole side (Admin, Marketing) with no person behind it
+      if ((va && va.kind === "staff" && va.email) || side) {
+        let other = null; if (side) other = JSON.parse(JSON.stringify(side.rec)); else { try { const d = await fs.doc("staff/" + va.email).get(); other = d.exists ? d.data() : null; } catch (e) { other = null; } }
+        if (my !== seq) return; if (side) va = { email: "", name: side.rec.name };
         real = { email, name: (rec && rec.name) || u.displayName || email };
         rec = Object.assign({ email: va.email, name: va.name || va.email }, other || {}, { owner: false }); owner = false;
         return finish(rec, rec.active === true, false, real, va);

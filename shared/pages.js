@@ -176,5 +176,11 @@
     { name: "Weekly contact (the full list)", href: "/portal#/contact", why: "Still in use: Reminders links to it. Listed here so it has one more way in." },
     { name: "Follow-up", href: "/portal#/followup", why: "Still in use: Reminders links to it." }
   ];
-  window.PW_PAGES = { PAGES, DOORS, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL, REVIEW, REVIEW_VIEWS };
+  /* "View as" by role (Nov 17, 2026): the owners look at a whole side without picking a person. A stand-in record per side, with the pages
+     that side's preset gives. A coach's screens depend on whose players they are, so Coaches asks for a coach (shared/design.js). */
+  const VIEW_ROLES = {
+    admin: { label: "Admin · the front desk", rec: { name: "Front desk", role: "desk", active: true, pages: PRESETS.desk.pages.slice() } },
+    marketing: { label: "Marketing", rec: { name: "Marketing", role: "marketing", active: true, pages: PRESETS.marketing.pages.slice() } }
+  };
+  window.PW_PAGES = { VIEW_ROLES, PAGES, DOORS, SECTIONS, OUTSIDE, PRESETS, LEGACY, ALIAS, ALL: all, STATUS_LABEL, OPENS_LABEL, REVIEW, REVIEW_VIEWS };
 })();

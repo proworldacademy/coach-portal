@@ -2406,12 +2406,13 @@ const PW_CONFIG = {
        kept on this device as pw-view-as). Only a real owner's choice is read; the owner stays the one signed in. */
     const decide = async (rec0) => {
       let va = null; try { va = JSON.parse(localStorage.getItem('pw-view-as') || 'null'); } catch (e) { va = null; }
-      if (va && va.kind === 'staff' && va.email && va.until > Date.now()) {
+      const side = va && va.kind === 'role' && va.until > Date.now() ? ((window.PW_PAGES || {}).VIEW_ROLES || {})[va.role] : null;   // a whole side (Admin, Marketing), no person behind it
+      if (side || (va && va.kind === 'staff' && va.email && va.until > Date.now())) {
         let own = !!(rec0 && rec0.active === true && rec0.owner === true);
         if (!own && !(rec0 && rec0.active === true)) { try { await WEB.fs.collection('requests').limit(1).get({ source: 'server' }); own = true; } catch (e) { own = false; } }
         if (WEB.user !== u) return;
         if (own) {
-          let other = null; try { const d = await WEB.fs.doc('staff/' + va.email).get(); other = d.exists ? d.data() : null; } catch (e) { other = null; }
+          let other = null; if (side) { other = JSON.parse(JSON.stringify(side.rec)); va = { email: '', name: side.rec.name }; } else { try { const d = await WEB.fs.doc('staff/' + va.email).get(); other = d.exists ? d.data() : null; } catch (e) { other = null; } }
           if (WEB.user !== u) return;
           WEB.real = { email: WEB.email, name: (rec0 && rec0.name) || u.displayName || WEB.email };
           return decideFor(Object.assign({ email: va.email, name: va.name || va.email }, other || {}, { owner: false }), true);
