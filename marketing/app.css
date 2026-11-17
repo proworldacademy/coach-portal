@@ -1,7 +1,7 @@
 /* The app skin (Antonio, Nov 3, 2026: "make it look like this" — white cards, one lime accent, pill tab bar, rows with a chip).
    Six parts, used on every screen: the tab bar · tiles · rows · chips · the one button · cards. Scoped to body.app-skin
    (the three-steps view). Loaded after calm.css, so it wins. Only the look: nothing in the data or the runs changes. */
-body.app-skin{--page:#F1F1ED;--line:#E6E6E1;--muted:#7A7A76;--mintT:#DDFDE7;--orchT:#F9E2F8;--amberT:#FFF1D6;--cyanT:#DFF7F9;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+body.app-skin{--page:#F1F1ED;--line:#E6E6E1;--muted:#7A7A76;--mintT:#F2FFC2;--orchT:#F9E2F8;--amberT:#FFF1D6;--cyanT:#EFEFEA;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
 body.app-skin,html:has(body.app-skin){background:var(--pw-sf2,#F1F1ED)!important}
 body.app-skin .wrap,body.app-skin main{max-width:1240px}
 body.app-skin .page-sub{display:none}
@@ -26,7 +26,7 @@ body.app-skin .tile{background:var(--pw-sf,#fff);border-radius:20px;padding:16px
 body.app-skin .tile .lab,body.app-skin .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
 body.app-skin .tile .n{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1;margin:8px 0 6px;white-space:nowrap}
 body.app-skin .tile .n small{color:#B5B5B0;font-weight:700;font-size:.6em}
-body.app-skin .dl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--mintT);color:#0E3B22;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.app-skin .dl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--mintT);color:#2B3A00;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.app-skin .dl.down{background:var(--orchT);color:#5B1A5C}body.app-skin .dl.warn{background:var(--amberT);color:#7A5200}body.app-skin .dl.flat{background:var(--pw-sf2,#EFEFEA);color:#6B6B68}
 /* the old stat tiles become the same tile */
 body.app-skin .stat{background:var(--pw-sf,#fff);border:0;border-radius:20px;box-shadow:var(--shadow);padding:16px 20px}
@@ -58,10 +58,10 @@ body.app-skin .fn-row.posted .item-title::after{content:"";}
 /* ── chips ── */
 body.app-skin .chip,body.app-skin .st{font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--pw-sf2,#EFEFEA);color:#6B6B68;white-space:nowrap;letter-spacing:0;text-transform:none}
 body.app-skin .chip.ok,body.app-skin .st.done,body.app-skin .st.today.posted{background:var(--lime);color:#0A0A0A}
-body.app-skin .chip.imp{background:var(--mintT);color:#0E3B22}
+body.app-skin .chip.imp{background:var(--mintT);color:#2B3A00}
 body.app-skin .chip.miss,body.app-skin .st.miss{background:var(--orchT);color:#5B1A5C}
 body.app-skin .chip.wait,body.app-skin .st.wait{background:var(--amberT);color:#7A5200}
-body.app-skin .chip.today,body.app-skin .st.today{background:var(--cyanT);color:#0B3F44}
+body.app-skin .chip.today,body.app-skin .st.today{background:var(--cyanT);color:#0A0A0A}
 /* ── buttons ── */
 body.app-skin .btn{border-radius:999px;font:700 14px var(--body);text-transform:none;letter-spacing:0;font-style:normal;padding:12px 20px;background:var(--pw-sf,#fff);color:var(--ink);border:0;box-shadow:0 1px 2px rgba(0,0,0,.06)}
 body.app-skin .btn.sm{padding:9px 14px;font-size:12.5px}body.app-skin .btn.xs{padding:6px 10px;font-size:12px}
@@ -113,7 +113,7 @@ body.app-skin .tbl th{font-size:11px;letter-spacing:.1em;text-transform:uppercas
 body.app-skin .attn{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);background:none;border-radius:0;margin:0}
 body.app-skin .attn:first-child{border-top:0}
 body.app-skin .attn b{order:2;flex:none;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--pw-sf2,#EFEFEA);color:#6B6B68;text-transform:none;letter-spacing:0}
-body.app-skin .attn b.bad{background:var(--orchT);color:#5B1A5C}body.app-skin .attn b.lime{background:var(--cyanT);color:#0B3F44}body.app-skin .attn b.info{background:var(--pw-sf2,#EFEFEA)}
+body.app-skin .attn b.bad{background:var(--orchT);color:#5B1A5C}body.app-skin .attn b.lime{background:var(--cyanT);color:#0A0A0A}body.app-skin .attn b.info{background:var(--pw-sf2,#EFEFEA)}
 body.app-skin .attn span{flex:1;font-size:13.5px}
 /* the page's own hero: black, compact, no summary line (the step sections carry their own title) */
 body.app-skin #mk-hero{background:var(--pw-inkbg,var(--ink));color:#fff;border-radius:24px;padding:22px 28px 18px;margin-bottom:6px;display:block}

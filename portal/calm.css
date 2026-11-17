@@ -83,7 +83,7 @@ body.skin-coach .stat b{font-size:38px}
 body.skin-coach .groups{margin-bottom:6px}
 
 /* ── one word per player (Antonio, Oct 23): the three brand colours, softly ── */
-body.skin-coach .chip.st-done{background:#DDFDE7;color:#0E3B22}        /* mint · up to date */
+body.skin-coach .chip.st-done{background:#F2FFC2;color:#2B3A00}        /* mint · up to date */
 body.skin-coach .chip.st-working{background:#F1FFC2;color:#2B3A00}     /* lime · working on it */
 body.skin-coach .chip.st-missing{background:#F9E2F8;color:#5B1A5C}     /* orchid · missing */
 body.skin-coach .due-line{margin:-6px 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}

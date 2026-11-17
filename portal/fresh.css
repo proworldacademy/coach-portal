@@ -107,8 +107,8 @@ body.fresh .rowb .ava{flex:none}
   body.fresh .rowb .chips span.chip{border:0!important;background:none!important;box-shadow:none!important;padding:0!important;min-height:0!important;height:auto!important;border-radius:0!important;font:500 12.5px/1.35 var(--body)!important;letter-spacing:0!important;text-transform:none!important;color:var(--fx-soft)!important}
   body.fresh .rowb .chips span.chip.wk-off,body.fresh .rowb .chips span.chip.st-missing,body.fresh .rowb .chips span.chip.ck-off{color:var(--fx-ink)!important;font-weight:700!important}
   body.fresh .rowb .chips span.chip.st-missing::before,body.fresh .rowb .chips span.chip.st-working::before,body.fresh .rowb .chips span.chip.st-done::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:#E2FE78;box-shadow:0 0 0 1px rgba(0,0,0,.28)}
-  body.fresh .rowb .chips span.chip.st-working::before{background:#A9F3F7}
-  body.fresh .rowb .chips span.chip.st-done::before{background:#94FCB1}
+  body.fresh .rowb .chips span.chip.st-working::before{background:#E6E6E1}
+  body.fresh .rowb .chips span.chip.st-done::before{background:#E2FE78}
   html.dark body.fresh .rowb .chips span.chip::before{box-shadow:none}
 }
 .cp-appbar{background:rgba(14,14,14,.95)!important}

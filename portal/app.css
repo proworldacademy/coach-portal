@@ -1,7 +1,7 @@
 /* The app skin on the Coach Portal (Antonio, Nov 3, 2026: the same language as Marketing — white cards, one lime accent, rows with a
    chip, the pill tab bar, the phone bottom bar). Scoped to body.app-skin (portal/app.js adds it; "In between" is one tap away).
    Look only: nothing in the data or the views changes. Loaded after calm.css. */
-body.app-skin{--page:#F1F1ED;--line:#E6E6E1;--muted:#7A7A76;--mintT:#DDFDE7;--orchT:#F9E2F8;--amberT:#FFF1D6;--cyanT:#DFF7F9;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
+body.app-skin{--page:#F1F1ED;--line:#E6E6E1;--muted:#7A7A76;--mintT:#F2FFC2;--orchT:#F9E2F8;--amberT:#FFF1D6;--cyanT:#EFEFEA;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)}
 html:has(body.app-skin),body.app-skin{background:var(--pw-sf2,#F1F1ED)!important}
 body.app-skin .pwd-sky,body.app-skin .pwd-lights{display:none!important}
 /* the title block */
@@ -48,7 +48,7 @@ body.app-skin .chip{border:0;background:var(--pw-sf2,#EFEFEA);color:#6B6B68;font
 body.app-skin .chip.done,body.app-skin .chip.ok,body.app-skin .chip.st-done{background:var(--lime);color:#0A0A0A}
 body.app-skin .chip.st-missing,body.app-skin .chip.bad,body.app-skin .chip.red,body.app-skin .chip.late{background:var(--orchT);color:#5B1A5C}
 body.app-skin .chip.due,body.app-skin .chip.st-working,body.app-skin .chip.wait,body.app-skin .chip.soon{background:var(--amberT);color:#7A5200}
-body.app-skin .chip.today,body.app-skin .chip.new{background:var(--cyanT);color:#0B3F44}
+body.app-skin .chip.today,body.app-skin .chip.new{background:var(--cyanT);color:#0A0A0A}
 /* buttons, inputs */
 body.app-skin .btn,body.app-skin a.btn{border-radius:999px;font:700 13.5px var(--body);text-transform:none;letter-spacing:0;font-style:normal;background:var(--pw-sf,#fff);color:var(--ink);border:0;box-shadow:0 1px 2px rgba(0,0,0,.06);padding:11px 18px}
 body.app-skin .btn.sm{padding:8px 13px;font-size:12.5px}
