@@ -25,7 +25,7 @@ const ROSTER = {
   'players/past-fay-o': { name: 'Fay Old', group: 'as', status: 'away' },
   'players/past-fay-o/private/contact': { guardian: 'Gus Old', phone: '5615550106', source: 'monday' }
 };
-const DESK = { email: 'desk@proworldacademy.com', name: 'Front Desk', firstName: 'Front', texting: true };
+const DESK = { email: 'desk@proworldacademy.com', name: 'Front Desk', firstName: 'Front', texting: true, deskLine: true };   // deskLine (Nov 17): the academy line's history is the front desk's and the owners'
 const COACH = { email: 'eric@proworldacademy.com', name: 'Eric Lane', firstName: 'Eric', texting: false };
 
 /* a JustCall stand-in: every request recorded; `fail` makes the first N calls to a number fail with a status */
@@ -112,7 +112,8 @@ test('a send: consent and numbers decide who gets it, every recipient gets a log
   assert.equal(batch.state, 'done'); assert.deepEqual(batch.counts, { total: 4, sent: 2, failed: 0, skipped: 2, queued: 0 }); assert.equal(batch.template, 'rain'); assert.equal(batch.segments, 1);
   // the history: the front desk sees everything, a coach only the players they coach
   const h = await SMS.history(db, DESK, {}); assert.equal(h.batches.length, 1); assert.equal(h.logs.length, 4);
-  const hc = await SMS.history(db, COACH, {}); assert.deepEqual(hc.logs.map((l) => l.player).sort(), ['as-ava-t', 'as-dee-m']);
+  const hc = await SMS.history(db, COACH, {}); assert.equal(hc.logs.length, 0); assert.equal(hc.batches.length, 0); assert.equal(hc.events.length, 0);   // Nov 17: a coach reads nothing of the academy line, not even the texts to their own group
+  const hd = await SMS.history(db, { email: 'dir@proworldacademy.com', name: 'Dee Director', texting: true }, {}); assert.equal(hd.logs.length, 0); assert.equal(hd.events.length, 0);   // a director: only what they sent themselves
   const hp = await SMS.history(db, DESK, { player: 'u10-cy-l' }); assert.equal(hp.logs.length, 1); assert.equal(hp.logs[0].status, 'sent');
 });
 

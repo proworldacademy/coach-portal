@@ -19,7 +19,7 @@ const { fakeDb } = require(REPO + '/functions/test/fake-db');
 
 /* ── the engine side ── */
 const NOW = Date.now();
-const DIR = { uid: 'u-dee', email: 'dee@example.test', name: 'Dee Director', firstName: 'Dee', coachAs: '', keys: ['dee'], role: 'director', owner: false, admin: false, director: true };
+const DIR = { uid: 'u-dee', email: 'dee@example.test', name: 'Dee Director', firstName: 'Dee', coachAs: '', keys: ['dee'], role: 'owner', owner: true, admin: false, director: true };   // Nov 17: only an owner reads every line; a director is a coach in the chats
 const PLAYERS = {
   'ft-bo-k': { name: 'Bo Kessler', group: 'ft', coach: 'Kim', status: 'active' },
   'ft-cy-l': { name: 'Cy Lane', group: 'ft', coach: 'Kim', coach2: 'Lee', status: 'active' },

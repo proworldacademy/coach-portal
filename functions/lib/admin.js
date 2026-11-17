@@ -19,7 +19,7 @@ async function requireStaff(req) {
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
   if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
-  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, firstName: String(decoded.name || '').split(' ')[0], role: 'owner', owner: true, admin: true, director: true, billing: true, texting: true };
+  if (OWNERS.includes(decoded.uid)) return { uid: decoded.uid, email, name: decoded.name || email, firstName: String(decoded.name || '').split(' ')[0], role: 'owner', owner: true, admin: true, director: true, billing: true, texting: true, deskLine: true };
   const doc = await require('firebase-admin/firestore').getFirestore().doc('staff/' + email).get();
   const rec = doc.exists ? doc.data() : null;
   const active = !!(rec && rec.active === true);
@@ -32,7 +32,7 @@ async function requireStaff(req) {
   // money moves only for owners, administrators and people with the Billing page ticked on the Dashboard;
   // texts to families go out from the same people plus the front desk (role 'desk') — coaches only read the history of their groups
   const isDirector = isAdmin || role === 'director';   // a tennis director (Oct 24): Messages, Courts, coach assignments, who has access
-  return { uid: decoded.uid, email, name, firstName: String(name).split(' ')[0], role, owner: rec.owner === true, admin: isAdmin, director: isDirector, billing: isAdmin || pages.includes('billing'), texting: isDirector || role === 'desk' || role === 'coach' || pages.includes('billing') };   // every coach holds Messages (Antonio, Oct 24); opt-in and the log still apply
+  return { uid: decoded.uid, email, name, firstName: String(name).split(' ')[0], role, owner: rec.owner === true, admin: isAdmin, director: isDirector, billing: isAdmin || pages.includes('billing'), texting: isDirector || role === 'desk' || pages.includes('billing'), deskLine: rec.owner === true || role === 'desk' || pages.includes('billing') };   // Nov 17 (Antonio): the academy line's Messages are the owners' and the front desk's (deskLine). A director may still send a group text and sees only what they sent; a coach texts from Contact, on their own number, and has no Messages tab
 }
 /* The Coach Portal's own routes (Nov 4, 2026 — texting a family from the portal): anyone active on the staff list who holds the
    portal, owners included. Returns who they are as the portal knows them — the name on player records (coachAs or the first name)
