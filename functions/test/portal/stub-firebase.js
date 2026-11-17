@@ -31,7 +31,7 @@
   function colRef(path, filters, order) {
     filters = filters || [];
     const rows = () => Object.keys(docs).filter((k) => k.startsWith(path + '/') && k.slice(path.length + 1).indexOf('/') < 0).filter((k) => filters.every((f) => { const v = getPath(docs[k], f.field); return v !== undefined && OPS[f.op](v, f.value); })).map(snapOf);
-    const qs = () => { const d = rows(); if (order) d.sort((a, b) => { const x = getPath(a.data() || {}, order), y = getPath(b.data() || {}, order); return x < y ? -1 : x > y ? 1 : 0; }); return { docs: d, size: d.length, empty: !d.length, metadata: { fromCache: false } }; };
+    const qs = () => { const d = rows(); if (order) d.sort((a, b) => { const x = getPath(a.data() || {}, order), y = getPath(b.data() || {}, order); return x < y ? -1 : x > y ? 1 : 0; }); return { docs: d, size: d.length, empty: !d.length, metadata: { fromCache: false }, forEach: (f) => d.forEach(f), docChanges: () => d.map((doc) => ({ type: 'added', doc })) }; };
     return {
       path,
       where: (f, op, v) => colRef(path, filters.concat([{ field: f, op, value: v }]), order),

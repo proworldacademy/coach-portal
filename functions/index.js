@@ -144,6 +144,14 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         logger.info('family request', { by: who.email, kind: out.kind, id: out.id });
         return send(res, 200, out);
       }
+      /* the schedule and the messages of the client account (Nov 17, 2026): days away and make-up days; a chat with the player's
+         coaches or with Admin */
+      if (route === 'POST /family/days' || route === 'POST /family/chat' || route === 'POST /family/message') {
+        const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
+        const out = route === 'POST /family/days' ? await FAMILY.days(ctx.db, who, b, players) : route === 'POST /family/chat' ? await FAMILY.chat(ctx.db, who, b, players) : await FAMILY.message(ctx.db, who, b, players);
+        if (route !== 'POST /family/chat') logger.info('family ' + route.slice(13), { by: who.email, player: S.clean(b.player, 60), action: out.action || out.to || '' });
+        return send(res, 200, out);
+      }
       throw S.err(404, 'route', 'No such family route.');
     }
 

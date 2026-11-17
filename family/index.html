@@ -71,6 +71,51 @@ details.past summary:hover{color:var(--ink)}
 
 /* the client home, "C · Your mix" (Nov 17, 2026) */
 .ch{display:flex;flex-direction:column;gap:18px;margin:6px 0 30px;max-width:620px}
+/* the schedule and the messages of the client home (Nov 17, 2026) */
+.ch-card[id]{scroll-margin-top:84px}
+.ch-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.ch-cal b{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5E605A;text-align:center;font-weight:700;padding-bottom:2px}
+.ch-cal button{position:relative;aspect-ratio:1/1;min-height:40px;border-radius:14px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ch-cal button small{position:absolute;top:3px;left:0;right:0;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;line-height:1;opacity:.75}
+.ch-cal button:disabled{cursor:default;color:#A3A59E;background:none;border-color:transparent}
+.ch-cal button.train{background:#E2FE78;border-color:rgba(10,10,10,.3)}
+.ch-cal button.away{background:#fff;border:1.5px dashed #0A0A0A;text-decoration:line-through}
+.ch-cal button.makeup{background:#94FCB1;border-color:rgba(10,10,10,.3)}
+.ch-cal button.past{opacity:.45}
+.ch-cal button.today{box-shadow:0 0 0 2px #0A0A0A}
+.ch-cal button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78;border-color:#0A0A0A;text-decoration:none}
+.ch-key{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#2F312C}.ch-key span{display:flex;align-items:center;gap:6px}.ch-key i{width:14px;height:14px;border-radius:5px;border:1px solid rgba(10,10,10,.3);background:#E2FE78;box-sizing:border-box}.ch-key i.away{background:#fff;border:1.5px dashed #0A0A0A}.ch-key i.makeup{background:#94FCB1}
+.ch-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-radius:20px;background:#F1F2EC;padding:12px 14px;font-size:14.5px}.ch-pick b{display:block}.ch-pick span{color:#2F312C;font-size:13px}
+.ch-pick .ch-btn{height:44px;padding:0 18px;flex:none}
+.ch-rng{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}.ch-rng label{display:flex;flex-direction:column;gap:5px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#5E605A;min-width:0}
+.ch-rng input{height:48px;border-radius:14px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;padding:0 10px;font-size:15px;font-family:inherit;min-width:0;width:100%;box-sizing:border-box}
+.ch-rng .ch-btn{grid-column:1/-1}
+.ch-sub{margin:0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#5E605A}
+.ch-ppl{display:flex;flex-direction:column}.ch-ppl button{display:flex;align-items:center;gap:14px;text-align:left;border:0;border-top:1px solid #E4E6DF;background:none;color:inherit;padding:14px 0;font-family:inherit;cursor:pointer;min-height:64px}.ch-ppl button:first-child{border-top:0;padding-top:2px}
+.ch-ppl button>span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ch-ppl b{font-size:16.5px}.ch-ppl small{font-size:13px;line-height:1.35;color:#2F312C}.ch-ppl .ch-i{flex:none}.ch-ppl .ch-i.lime{background:#E2FE78;color:#0A0A0A}.ch-ppl em{flex:none;font-style:normal;display:flex;color:#5E605A}
+.ch-chat{position:fixed;inset:0;z-index:1200;background:#F4F4F0;color:#0A0A0A;display:flex;flex-direction:column}
+.ch-chat header{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;border-bottom:1px solid #DADCD5;background:#fff}
+.ch-chat header button{width:44px;height:44px;border-radius:50%;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer}.ch-chat header button svg{transform:rotate(180deg)}
+.ch-chat header div{min-width:0}.ch-chat header h2{margin:0;font:italic 800 30px/.95 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase}.ch-chat header p{margin:2px 0 0;font-size:13px;color:#2F312C}
+.ch-lines{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:680px;margin:0 auto;box-sizing:border-box}
+.ch-lines .n{margin:auto 0;text-align:center;font-size:14.5px;line-height:1.45;color:#2F312C;padding:0 12px}
+.ch-b{max-width:82%;border-radius:20px;padding:11px 14px;font-size:15.5px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;border:1px solid #DADCD5;align-self:flex-start}
+.ch-b.me{align-self:flex-end;background:#0A0A0A;color:#F4F4F0;border-color:#0A0A0A}
+.ch-b small{display:block;margin-top:5px;font-size:11.5px;opacity:.7}
+.ch-send{display:flex;gap:10px;align-items:flex-end;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid #DADCD5;background:#fff}
+.ch-send form{display:flex;gap:10px;align-items:flex-end;width:100%;max-width:680px;margin:0 auto}
+.ch-send textarea{flex:1;min-height:48px;max-height:140px;border-radius:24px;border:1px solid #DADCD5;background:#F4F4F0;color:#0A0A0A;padding:13px 16px;font-size:16px;font-family:inherit;resize:none;box-sizing:border-box}
+.ch-send button{height:48px;padding:0 20px;border-radius:24px;border:0;background:#E2FE78;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;flex:none;cursor:pointer}.ch-send button:disabled{opacity:.5}
+html.dark .ch-cal b,html.dark .ch-sub,html.dark .ch-rng label{color:#B5B5B0}
+html.dark .ch-cal button{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-cal button:disabled{background:none;border-color:transparent;color:#6E6E6A}
+html.dark .ch-cal button.train{background:#E2FE78;color:#0A0A0A}html.dark .ch-cal button.makeup{background:#94FCB1;color:#0A0A0A}html.dark .ch-cal button.away{background:#161616;border-color:#F4F4F0;color:#F4F4F0}
+html.dark .ch-cal button.today{box-shadow:0 0 0 2px #F4F4F0}html.dark .ch-cal button[aria-pressed="true"]{background:#F4F4F0;color:#0A0A0A;border-color:#F4F4F0}
+html.dark .ch-key{color:#C9C9C4}html.dark .ch-key i.away{background:#161616;border-color:#F4F4F0}
+html.dark .ch-pick{background:#222}html.dark .ch-pick span,html.dark .ch-ppl small{color:#C9C9C4}html.dark .ch-ppl button{border-color:#343434}html.dark .ch-ppl em{color:#B5B5B0}
+html.dark .ch-rng input{background:#161616;border-color:#343434;color:#F4F4F0;color-scheme:dark}
+html.dark .ch-ppl .ch-i{background:#F4F4F0;color:#0A0A0A}html.dark .ch-ppl .ch-i.lime{background:#E2FE78}
+html.dark .ch-chat{background:#0A0A0A;color:#F4F4F0}html.dark .ch-chat header,html.dark .ch-send{background:#161616;border-color:#343434}html.dark .ch-chat header button{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-chat header p,html.dark .ch-lines .n{color:#C9C9C4}
+html.dark .ch-b{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-b.me{background:#E2FE78;color:#0A0A0A;border-color:#E2FE78}html.dark .ch-send textarea{background:#0A0A0A;border-color:#343434;color:#F4F4F0}
 .ch-day{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#5E605A;font-weight:700}
 .ch-hello{margin:-10px 0 0;font:italic 800 clamp(52px,15vw,84px)/.88 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.01em;color:#0A0A0A}
 .ch-hello span{display:block}.ch-hello em{font-style:italic;color:#fff;-webkit-text-stroke:2px #0A0A0A}
@@ -234,7 +279,7 @@ function requestsBlock(){
   const list=me.requests.map(r=>`<tr><td>${esc(r.kindLabel)}${r.player?' · '+esc(r.player):''}<br><span class="hint">${esc(r.text)}</span>${r.reply?`<br><b>Front desk:</b> ${esc(r.reply)}`:''}</td><td class="r">${r.state==='open'?'<span class="pill lime">Open</span>':'<span class="pill mint">Done</span>'}<br><span class="hint">${esc(new Date(r.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></td></tr>`).join('');
   return `<section class="sec" id="requests"><div class="sec-h"><h2>Ask the front desk</h2><small>a court, a private, a change</small></div>
     <div class="card"><form class="form one" id="req">
-      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="coach">A message for the coach</option><option value="makeup">A make-up day</option><option value="message">Something else</option></select></div>
+      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="message">Something else</option></select></div>
       <div class="field"><label for="player">Player</label><select id="player">${players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="">— not about one player —</option></select></div></div>
       <div class="form"><div class="field"><label for="when">When (if it matters)</label><input id="when" placeholder="e.g. Saturday 9 AM, or next week"></div><div class="field"><label for="phone">Best number to reach you</label><input id="phone" placeholder="(561) 555-0000" autocomplete="tel"></div></div>
       <div class="field"><label for="text">Details</label><textarea id="text" required placeholder="Tell us what you need — the front desk reads this and gets back to you by text."></textarea></div>
@@ -252,7 +297,63 @@ const DOW=['sun','mon','tue','wed','thu','fri','sat'];
 const ymd=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 function nextSession(p){const days=((p.enroll&&p.enroll.days)||[]).map(d=>String(d).slice(0,3).toLowerCase()).filter(d=>DOW.includes(d));if(!days.length)return null;
   const t=new Date(String(me.today||ymd(new Date()))+'T12:00:00');for(let i=0;i<8;i++){const d=new Date(t.getTime()+i*864e5);if(days.includes(DOW[d.getDay()]))return{date:ymd(d),word:i===0?'Today':i===1?'Tomorrow':d.toLocaleDateString('en-US',{weekday:'long'}),long:d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}}return null}
-const isOut=(p,date)=>(me.requests||[]).some(r=>r.kind==='absence'&&r.playerId===p.id&&r.when===date);
+const dayKind=(p,date)=>{const d=(p.days||[]).find(x=>x.date===date);return d?d.kind:''};
+const isOut=(p,date)=>dayKind(p,date)==='away'||(me.requests||[]).some(r=>r.kind==='absence'&&r.playerId===p.id&&r.when===date);
+/* The schedule (Nov 17, 2026): five weeks from this Monday. A training day is lime; a tap picks a day, and the line under the
+   calendar says what can be done with it: mark it away, come after all, add a make-up day, remove one. "Away for longer" marks
+   every training day between two dates in one go. The engine keeps it (familyDays) and the attendance board reads it. */
+let CALSEL='';let CHAT=null;
+const d3=(dt)=>DOW[dt.getDay()];
+function trainSet(p){return ((p.enroll&&p.enroll.days)||[]).map(d=>String(d).slice(0,3).toLowerCase()).filter(d=>DOW.includes(d))}
+function dayInfo(p,iso){const dt=new Date(iso+'T12:00:00');const w=d3(dt);const closed=(p.closed||[]).includes(iso);const tr=trainSet(p);const k=dayKind(p,iso);
+  const kind=k||(tr.includes(w)&&!closed?'train':'');const open=(p.openDays||[]).map(x=>String(x).toLowerCase()).includes(w)&&!closed;
+  return{iso,dt,kind,past:iso<me.today,open,pick:iso>=me.today&&(!!kind||open),noDays:!tr.length}}
+function scheduleC(p,nm){
+  const t=new Date(String(me.today)+'T12:00:00');const start=new Date(t.getTime()-((t.getDay()+6)%7)*864e5);const cells=[];
+  for(let i=0;i<35;i++){const dt=new Date(start.getTime()+i*864e5);const iso=ymd(dt);const x=dayInfo(p,iso);
+    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${x.pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':''}">${i===0||dt.getDate()===1?`<small>${dt.toLocaleDateString('en-US',{month:'short'})}</small>`:''}${dt.getDate()}</button>`)}
+  let pick='';
+  if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));
+    const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
+    pick=!x.pick?'':x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
+      :x.kind==='makeup'?row('A make-up day.',`<button type="button" class="ch-btn line" data-day-do="nomakeup">Remove</button>`)
+      :x.kind==='train'||x.noDays?row(x.noDays?'':'A training day.',`<button type="button" class="ch-btn" data-day-do="away">Mark away</button>`)
+      :left>0?row(`Not a training day. ${left} make-up day${left===1?'':'s'} to use.`,`<button type="button" class="ch-btn" data-day-do="makeup">Make up here</button>`)
+      :row('Not a training day. A make-up day goes with a day missed: mark the day away first.')}
+  const left=p.makeupsLeft||0;
+  return `<section class="ch-card" id="schedule" aria-label="Schedule"><div class="ch-h"><h2>Schedule</h2>${left?`<span><b>${left}</b> make-up day${left===1?'':'s'} to use</span>`:''}</div>
+    <p class="ch-s">Tap a day to mark ${nm} away or to add a make-up day. The academy sees it right away.</p>
+    <div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>
+    <div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span></div>
+    ${pick}
+    <p class="ch-sub">Away for longer</p>
+    <form class="ch-rng" id="rng"><label>From<input type="date" id="rfrom" min="${esc(me.today)}" required></label><label>To<input type="date" id="rto" min="${esc(me.today)}" required></label><button class="ch-btn line" type="submit">Mark ${nm} away for these days</button></form></section>`;
+}
+/* Messages (Nov 17, 2026): the coaches linked to each player, and Admin for registration, billing and the account. */
+function messagesC(active){
+  const rows=[];active.forEach(p=>{const cs=p.coaches||[];const who=esc(p.shortName||p.name.split(' ')[0]);
+    cs.forEach(c=>rows.push(`<button type="button" data-chat="${esc(c.key)}" data-chat-p="${esc(p.id)}" data-chat-t="Coach ${esc(c.name)}" data-chat-s="${who}'s coach"><span class="ch-i">${ico('chat')}</span><span><b>Coach ${esc(c.name)}</b><small>${who}'s coach</small></span><em>${ico('arrow')}</em></button>`));
+    if(cs.length>1)rows.push(`<button type="button" data-chat="all" data-chat-p="${esc(p.id)}" data-chat-t="${who}'s coaches" data-chat-s="${cs.map(c=>'Coach '+esc(c.name)).join(' and ')}"><span class="ch-i">${ico('chat')}</span><span><b>${who}'s coaches together</b><small>One message to ${cs.map(c=>'Coach '+esc(c.name)).join(' and ')}</small></span><em>${ico('arrow')}</em></button>`)});
+  rows.push(`<button type="button" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account"><span class="ch-i lime">${ico('card')}</span><span><b>Admin</b><small>Registration, billing, payments and your account. Write here and the admin team takes care of it.</small></span><em>${ico('arrow')}</em></button>`);
+  return `<section class="ch-card" id="messages" aria-label="Messages"><div class="ch-h"><h2>Messages</h2></div><div class="ch-ppl">${rows.join('')}</div></section>`;
+}
+function chatPaint(){
+  let el=document.getElementById('chat');if(!CHAT){if(el)el.remove();document.documentElement.style.overflow='';return}
+  if(!el){el=document.createElement('div');el.id='chat';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  document.documentElement.style.overflow='hidden';
+  const admin=CHAT.to==='admin';const empty=admin?'Questions about registration, billing, payments or your account go here. The admin team answers here and by text.':'Write to your coach here. The answer comes here and by text to your phone.';
+  const when=(at)=>new Date(at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  el.innerHTML=`<header><button type="button" id="chat-x" aria-label="Back">${ico('arrow')}</button><div><h2>${esc(CHAT.title)}</h2><p>${esc(CHAT.sub||'')}</p></div></header>
+    <div class="ch-lines" id="chat-l">${CHAT.err?`<p class="n">${esc(CHAT.err)}</p>`:CHAT.lines===null?'<p class="n"><span class="spin"></span></p>':CHAT.lines.length?CHAT.lines.map(l=>`<div class="ch-b ${l.dir==='me'?'me':''}">${esc(l.body)}<small>${l.dir==='me'?(l.tag?esc(l.tag)+' · ':''):esc(l.by||'')+' · '}${esc(when(l.at))}</small></div>`).join(''):`<p class="n">${empty}</p>`}</div>
+    <div class="ch-send"><form id="chat-f"><textarea id="chat-t" rows="1" maxlength="600" placeholder="${admin?'Message Admin':'Message '+esc(CHAT.title)}" aria-label="Your message"></textarea><button type="submit" id="chat-s">Send</button></form></div>`;
+  const L=document.getElementById('chat-l');L.scrollTop=L.scrollHeight;
+  document.getElementById('chat-x').onclick=()=>{CHAT=null;chatPaint()};
+  document.getElementById('chat-f').onsubmit=async(e)=>{e.preventDefault();const tx=document.getElementById('chat-t');const text=tx.value.trim();if(!text||busy)return;busy=true;const sb=document.getElementById('chat-s');sb.disabled=true;
+    try{const o=await api('message',{player:CHAT.player,to:CHAT.to,text,name:me.name});if(o.passed&&!o.reached)toast('Sent. The front desk passes it on to the coach.');const c=await api('chat',{player:CHAT.player,to:CHAT.to});if(CHAT){CHAT.lines=c.lines;CHAT.err=''}}catch(x){toast(x.message,true);busy=false;sb.disabled=false;return}
+    busy=false;chatPaint()};
+}
+async function chatOpen(b){CHAT={player:b.dataset.chatP||'',to:b.dataset.chat,title:b.dataset.chatT,sub:b.dataset.chatS,lines:null,err:''};chatPaint();
+  try{const c=await api('chat',{player:CHAT.player,to:CHAT.to});if(CHAT)CHAT.lines=c.lines}catch(x){if(CHAT){CHAT.lines=[];CHAT.err=x.message}}chatPaint()}
 const usd=(c)=>'$'+(Number(c||0)/100).toLocaleString('en-US',{minimumFractionDigits:Number(c||0)%100?2:0,maximumFractionDigits:2});
 const ICO={plus:'<path d="M12 5v14M5 12h14"></path>',court:'<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M12 5v14M3 12h18"></path>',chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path>',card:'<rect x="3" y="6" width="18" height="13" rx="3"></rect><path d="M3 10h18"></path>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"></path>'};
 const ico=(k)=>`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
@@ -267,16 +368,16 @@ function homeC(first,active){
   const hero=`<section class="ch-hero${out?' out':''}" aria-label="Next session"><div class="ch-hl"><span>Next session</span>${ns?`<b>${esc(ns.long)}</b>`:''}</div>
     <div class="ch-when">${ns?esc(ns.word):esc(prog)}</div>
     <div class="ch-what">${ns?`<b>${esc(prog)}</b>`:''}${coaches.length?`<span>With Coach ${coaches.map(esc).join(' and Coach ')}</span>`:''}</div>
-    ${ns?`<div class="ch-tg" role="group" aria-label="Is ${nm} coming"><button type="button" aria-pressed="${!out}" ${out?'disabled':''}>${nm} is coming</button><button type="button" aria-pressed="${!!out}" data-absent="${esc(ns.date)}" ${out?'disabled':''}>Cannot make it</button></div>
-    <span class="ch-n">${out?`You told the academy ${nm} cannot make it. Changed your mind? Text the front desk.`:`${nm} is counted in unless you say otherwise. The academy is told right away.`}</span>`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
-  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['coach','chat','Message a coach'],['','card','Pay or see bills']].map(([k,i,l])=>k?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="#billing"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
+    ${ns?`<div class="ch-tg" role="group" aria-label="Is ${nm} coming"><button type="button" aria-pressed="${!out}" ${out?`data-back="${esc(ns.date)}"`:'disabled'}>${nm} is coming</button><button type="button" aria-pressed="${!!out}" data-absent="${esc(ns.date)}" ${out?'disabled':''}>Cannot make it</button></div>
+    <span class="ch-n">${out?`You told the academy ${nm} cannot make it. Changed your mind? Tap "${nm} is coming".`:`${nm} is counted in unless you say otherwise. The academy is told right away.`}</span>`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
+  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['#messages','chat','Messages'],['#billing','card','Pay or see bills']].map(([k,i,l])=>k[0]!=='#'?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="${k}"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
   const rp=(p.reports||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
   const report=`<section class="ch-card" aria-label="The report"><div class="ch-h"><h2>${nm}'s report</h2>${rp?`<span>${esc(rp.period||'')}</span>`:''}</div><p class="ch-s">${rp?'The goals for the next three months, then tennis, fitness, mental and competition, with a note from the coach.':'The coach shares the 3-month report here. The first one appears once it is sent.'}</p>${rp?'<a class="ch-btn" href="#reports">Read the report</a>':''}</section>`;
   const at=p.attendance||{days:[],present:0,missed:0};const tot=(at.present||0)+(at.missed||0);
-  const att=tot?`<section class="ch-card" aria-label="Attendance"><div class="ch-h"><h2>${esc(String(at.month||'This month').split(' ')[0])}</h2><span><b>${at.present||0}</b> of ${tot} sessions</span></div><div class="ch-dots">${(at.days||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(-12).map(d=>`<i class="${d.present?'on':'off'}" title="${esc(nice(d.date))}"></i>`).join('')}</div>${at.missed?`<p class="ch-s">${at.missed} missed this month.</p><button type="button" class="ch-btn line" data-ask="makeup">Pick a make-up day</button>`:''}</section>`:'';
+  const att=tot?`<section class="ch-card" aria-label="Attendance"><div class="ch-h"><h2>${esc(String(at.month||'This month').split(' ')[0])}</h2><span><b>${at.present||0}</b> of ${tot} sessions</span></div><div class="ch-dots">${(at.days||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(-12).map(d=>`<i class="${d.present?'on':'off'}" title="${esc(nice(d.date))}"></i>`).join('')}</div>${at.missed?`<p class="ch-s">${at.missed} missed this month.</p><a class="ch-btn line" href="#schedule">Pick a make-up day</a>`:''}</section>`:'';
   const sub=(me.billing.subscriptions||[]).find(x=>x.next&&x.next.date);
   const pay=sub?`<a class="ch-pay" href="#billing" aria-label="Billing"><span><small>Next payment · ${esc(nice(sub.next.date))}</small><b>${esc(usd(sub.next.cents))}</b><small>${esc([sub.program,sub.plan].filter(Boolean).join(' · '))}</small></span><i>${ico('arrow')}</i></a>`:'';
-  return `<div class="ch">${top}${chips}${hero}${acts}${report}${att}${pay}</div>`;
+  return `<div class="ch">${top}${chips}${hero}${acts}${scheduleC(p,nm)}${messagesC(active)}${report}${att}${pay}</div>`;
 }
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
@@ -305,8 +406,16 @@ function render(){
     ${footer()}`;
   app.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{SEL=b.dataset.sel;render()});
   app.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{const k=document.getElementById('kind'),pl=document.getElementById('player');if(k)k.value=b.dataset.ask;if(pl&&SEL)pl.value=SEL;const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});const tx=document.getElementById('text');if(tx)setTimeout(()=>tx.focus({preventScroll:true}),450)});
-  app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=async()=>{if(busy)return;const pl=me.players.find(x=>x.id===SEL);if(!pl)return;const date=b.dataset.absent;if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}busy=true;b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
-    try{await api('request',{kind:'absence',player:SEL,when:date,text:(pl.shortName||pl.name)+' cannot make the session on '+nice(date)+'.',name:me.name});toast('Told the academy. Thank you.');me=await api('me')}catch(x){toast(x.message,true)}busy=false;render()});
+  const daysDo=async(body,ok)=>{if(busy)return;busy=true;try{await api('days',Object.assign({player:SEL},body));toast(ok);me=await api('me')}catch(x){toast(x.message,true)}busy=false;render()};
+  app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
+    daysDo({action:'away',date:b.dataset.absent},'Told the academy. Thank you.')});
+  app.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{b.disabled=true;daysDo({action:'back',date:b.dataset.back},'Counted in again.')});
+  app.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{CALSEL=CALSEL===b.dataset.day?'':b.dataset.day;const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-day-do]').forEach(b=>b.onclick=()=>{const a=b.dataset.dayDo;const d=CALSEL;b.disabled=true;const y=window.scrollY;
+    daysDo({action:a,date:d},a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
+  const rng=document.getElementById('rng');if(rng)rng.onsubmit=(e)=>{e.preventDefault();const f=document.getElementById('rfrom').value,t=document.getElementById('rto').value;if(!f||!t)return;if(t<f){toast('The last day is before the first.',true);return}const y=window.scrollY;
+    daysDo({action:'away',from:f,to:t},'Marked away. The academy knows.').then(()=>window.scrollTo(0,y))};
+  app.querySelectorAll('[data-chat]').forEach(b=>b.onclick=()=>chatOpen(b));
   const pb=document.getElementById('portal');if(pb)pb.onclick=async()=>{if(busy)return;busy=true;pb.disabled=true;try{const o=await api('portal',{});location.href=o.url}catch(e){toast(e.message,true)}busy=false;pb.disabled=false};
   document.getElementById('req').onsubmit=async(e)=>{e.preventDefault();if(busy)return;const btn=document.getElementById('send');busy=true;btn.disabled=true;btn.textContent='Sending…';
     try{await api('request',{kind:document.getElementById('kind').value,player:document.getElementById('player').value,when:document.getElementById('when').value,phone:document.getElementById('phone').value,text:document.getElementById('text').value,name:me.name});toast('Sent — the front desk will get back to you.');me=await api('me');render();location.hash='#requests'}catch(x){toast(x.message,true);busy=false;btn.disabled=false;btn.innerHTML='Send to the front desk <span class="ar">→</span>'}
