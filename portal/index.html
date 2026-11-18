@@ -3273,7 +3273,9 @@ const PW_CONFIG = {
     if (!todo.length) return `<div class="panel sexsorter"><b>All set.</b> <button class="btn sm ghost" type="button" data-act="sex-sort">Close</button></div>`;
     return `<div class="panel sexsorter"><div class="sexhead"><b>${todo.length} to sort</b><span class="muted">One tap each. It is saved at once.</span><button class="btn sm ghost" type="button" data-act="sex-sort">Done</button></div>${todo.map((p) => `<div class="sexline"><span>${esc(p.name)}${p.coach ? ` <small class="muted">· ${esc(p.coach)}</small>` : ''}</span><span class="sexbtns"><button class="fchip sm" type="button" data-act="set-sex" data-pid="${esc(p.id)}" data-v="m">Boy</button><button class="fchip sm" type="button" data-act="set-sex" data-pid="${esc(p.id)}" data-v="f">Girl</button></span></div>`).join('')}</div>`;
   }
-  function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2), S.players.map((p) => p.coach3)).filter(Boolean))).sort(); }
+  /* Coaches who have no player yet still have to be on the list to be given one (Nov 18, 2026: Petr joined). A coach who left (RETIRED) is not offered any more. */
+  const NEW_COACHES = ['Petr'];
+  function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2), S.players.map((p) => p.coach3), NEW_COACHES).filter(Boolean))).filter((c) => !retired(c)).sort(); }
   function addPlayerPanel(gid) {
     const web = EDITION === 'web';
     return `<form class="panel stack" data-form="add-player" data-gid="${esc(gid)}" style="margin-bottom:18px"><div class="grid2">
@@ -4740,7 +4742,7 @@ const PW_CONFIG = {
     const keys = myCoachKeys(); if (!keys || !keys.length) return false;
     return [p.coach, p.coach2, p.coach3].some((c) => c && keys.includes(nameKey(c)));   // a third coach since Nov 13 (Antonio)
   }
-  const RETIRED = ['Paolo'];   // no longer with the academy (Antonio, Oct 23): their players show with no coach until Monday is fixed
+  const RETIRED = ['Paolo', 'Sebastien', 'Sebastian'];   // no longer with the academy (Paolo: Oct 23; Sebastien: Nov 18, 2026): their players show with no coach until a director gives them one
   const retired = (n) => { const x = String(n || '').trim().toLowerCase(); return !!x && RETIRED.some((r) => x === r.toLowerCase() || x.startsWith(r.toLowerCase() + ' ')); };
   function boardData() {
     // Since Oct 23 the board reads the roster itself (Play by Point is the official list; Monday is retired). Kept for the owners' page.
@@ -4754,7 +4756,7 @@ const PW_CONFIG = {
      (functions/lib/family.js). A director with no group set still sees everyone, as before. ── */
   function dirStaff() {
     if (WEB.isDirector && EDITION === 'web' && !(WEB.staffList && WEB.staffList.length) && !WEB.staffAsked && WEB.fs) { WEB.staffAsked = true; WEB.fs.collection('staff').get().then((x) => { if (!(WEB.staffList && WEB.staffList.length)) WEB.staffList = rowsOf(x); softRender(); }).catch(() => {}); }
-    return (WEB.staffList || []).filter((r) => r.active === true && (r.owner === true || r.role === 'director' || r.role === 'admin')).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    return (WEB.staffList || []).filter((r) => r.active === true && r.role === 'director')   /* the tennis directors only (Nov 18, 2026): the owners and the admin are not directors of a group */.sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
   }
   const gDirectors = (g) => (Array.isArray(g && g.directors) ? g.directors : []).map((e) => String(e || '').toLowerCase());
   const gCoaches = (g) => (Array.isArray(g && g.coaches) ? g.coaches : []).map((c) => String(c || '').trim()).filter(Boolean);
@@ -4804,6 +4806,7 @@ const PW_CONFIG = {
     const { act } = boardData();
     const sortP = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
     const byCoach = new Map(); act.filter((p) => p.coach).forEach((p) => { if (!byCoach.has(p.coach)) byCoach.set(p.coach, []); byCoach.get(p.coach).push(p); });
+    NEW_COACHES.forEach((c) => { if (!byCoach.has(c)) byCoach.set(c, []); });   // a new coach has a card to drop the first players on
     const coaches = Array.from(byCoach.entries()).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
     const un = act.filter((p) => !p.coach);
     const gl = (gid) => { const g = groups().find((x) => x.id === gid); return g ? g.label : (gid || 'No group'); };
