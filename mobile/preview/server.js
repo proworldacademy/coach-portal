@@ -30,6 +30,11 @@ const WHO = {
   owner: { name: 'Olive Owner', role: 'admin', owner: true, pages: [] }
 };
 const BASE = JSON.parse(JSON.stringify(H.CLIENT_SEED.docs));
+// two invented try-outs, so Reminders shows the try-out block and its before/after list (Nov 18, 2026)
+Object.assign(BASE, {
+  'tryouts/seed-a': { name: 'Mila Testerson', born: 2016, group: 'u10', coach: 'Kim', date: new Date().toISOString().slice(0, 10), time: '16:30', parent: 'Pat Testerson', status: 'planned', outcome: '', checks: { confirmed: true }, createdAt: Date.now() - 3 * 864e5 },
+  'tryouts/seed-b': { name: 'Rafa Sampleton', born: 2012, group: 'ft', coach: 'Lee', date: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10), time: '09:30', parent: 'Sam Sampleton', status: 'planned', outcome: '', checks: {}, createdAt: Date.now() - 864e5 },
+});
 /* the team's own messaging (/team, Nov 15): the invented team and chats of functions/test/portal/team.harness.js; whoever is signed in stands where its director stands */
 const TH = require(REPO + '/functions/test/portal/team.harness.js');
 const teamFor = (email) => JSON.parse(JSON.stringify(TH.teamDocs()).split(TH.P.dee).join(email));
