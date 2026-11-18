@@ -2984,7 +2984,7 @@ const PW_CONFIG = {
     if (EDITION === 'web' && !WEB.isDirector) {
       const v = r.view; const a = (v === 'report' || v === 'edit') ? (S.assess || []).find((x) => x.id === r.id) : null; const ap = a ? player(a.playerId) : null;
       const deskRole = String((WEB.staff && WEB.staff.role) || '').toLowerCase() === 'desk';   // the front desk books the try-outs here
-      const closed = (v === 'board' || v === 'staff' || ((v === 'tryouts' || v === 'tryout') && !deskRole)) ? 'the tennis directors and the owners' : (v === 'parked' || v === 'commit') ? 'the owners' : (a && ap && !mine(ap)) ? 'that player’s coach' : '';
+      const closed = (v === 'board' || v === 'staff' || (v === 'tryouts' && !deskRole)) ? 'the tennis directors and the owners' : (v === 'parked' || v === 'commit') ? 'the owners' : (a && ap && !mine(ap)) ? 'that player’s coach' : '';
       if (closed) { document.body.classList.remove('a2-chat'); m.innerHTML = `<div class="wrap">${crumbs([{ t: 'Reminders', r: { view: 'home' } }])}<div class="empty">This page is for ${closed}.</div></div>`; const d0 = $('#dock'); if (d0) d0.hidden = true; return; }
     }
     // a redraw must not eat what the coach is typing to a family (Nov 4): every chat's draft and the caret come back after it
@@ -3086,9 +3086,9 @@ const PW_CONFIG = {
         <ul class="sub lines"><li><b class="n">${WEB.isDirector ? act.length : mineP.length}</b> active ${(WEB.isDirector ? act.length : mineP.length) === 1 ? 'player' : 'players'}</li>${WEB.isDirector ? `<li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>` : ''}</ul></div></div>`;
       if (EDITION === 'web' && !WEB.isDirector) {
         const rows = mineP.filter(sexOk).sort((a, b) => a.name.localeCompare(b.name)).map((p) => `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}</div><small>${esc(group(p.group).label)}${p.tier ? ' · Tier ' + esc(p.tier) : ''}</small></div></div><div class="chips">${contactChip(p)}${statusBubble(p)}</div></button>`).join('');
-        return `${notice()}${head}${homeTryouts()}${sexBar(mineP)}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? mineP.length ? 'Nobody under ' + (sexPick() === 'm' ? 'Boys' : 'Girls') + ' yet.' : 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
+        return `${notice()}${head}${sexBar(mineP)}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? mineP.length ? 'Nobody under ' + (sexPick() === 'm' ? 'Boys' : 'Girls') + ' yet.' : 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
       }
-      return `${notice()}${head}${homeTryouts()}${empty}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
+      return `${notice()}${head}${empty}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
         <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
         <div class="groups">${cards}</div>
         <div class="sect" style="margin-top:28px"><h2>The numbers</h2></div>
@@ -4604,12 +4604,13 @@ const PW_CONFIG = {
   // the block on the home screen: today, the next seven days, and anything waiting for a result
   function homeTryouts() {
     if (!S.loaded.tryouts && S.dbState !== 'none') return '';
+    const canAdd = writable() && (EDITION !== 'web' || WEB.isDirector || String((WEB.staff && WEB.staff.role) || '').toLowerCase() === 'desk');   // a coach reads and ticks; the directors and the front desk book
     const ty = tryouts(); const show = ty.today.concat(ty.week, ty.later, ty.result, ty.followup);
     const title = ty.today.length ? `${ty.today.length} today` : ty.week.length ? `${ty.week.length} this week` : ty.result.length + ty.followup.length ? 'waiting for a result' : ty.later.length ? `${ty.later.length} coming up` : 'none booked';
-    return `<div class="sect wrapb"><h2>Try-outs · ${esc(title)}</h2><div class="rowx" style="gap:6px">${writable() ? `<button class="btn sm" data-act="toggle-addtry">Add a try-out</button>` : ''}${ty.done.length ? `<button class="btn sm ghost" ${goAttr({ view: 'tryouts' })}>Finished · ${ty.done.length}</button>` : ''}</div></div>
+    return `<div class="sect wrapb"><h2>Try-outs · ${esc(title)}</h2><div class="rowx" style="gap:6px">${canAdd ? `<button class="btn sm" data-act="toggle-addtry">Add a try-out</button>` : ''}${canAdd && ty.done.length ? `<button class="btn sm ghost" ${goAttr({ view: 'tryouts' })}>Finished · ${ty.done.length}</button>` : ''}</div></div>
       <p class="hint" style="margin:-6px 0 10px">A try-out comes first that day. Open one to tick what happens before and after.</p>
-      <div id="addtry" ${S.ui.addingTry ? '' : 'hidden'}>${S.ui.addingTry ? tryForm(null) : ''}</div>
-      ${show.length ? `<div class="list" style="margin-bottom:34px">${show.map(rowTry).join('')}</div>` : `<div class="empty" style="margin-bottom:34px;padding:16px 20px">No try-outs booked. When a family books a session, add it here so every coach sees it.</div>`}`;
+      <div id="addtry" ${S.ui.addingTry && canAdd ? '' : 'hidden'}>${S.ui.addingTry && canAdd ? tryForm(null) : ''}</div>
+      ${show.length ? `<div class="list" style="margin-bottom:34px">${show.map(rowTry).join('')}</div>` : `<div class="empty" style="margin-bottom:34px;padding:16px 20px">No try-outs booked. ${canAdd ? 'When a family books a session, add it here so every coach sees it.' : 'When one is booked, it shows here.'}</div>`}`;
   }
   const tryForm = (t) => {
     const v = (k) => esc((t && t[k]) || ''); const isEdit = !!t;
@@ -4650,7 +4651,7 @@ const PW_CONFIG = {
   }
   function viewTryout(id) {
     const t = S.tryouts.find((x) => x.id === id);
-    if (!t) return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }])}<div class="empty">${S.loaded.tryouts ? 'This try-out is no longer here.' : 'Loading…'}</div>`;
+    if (!t) return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'home' } }])}<div class="empty">${S.loaded.tryouts ? 'This try-out is no longer here.' : 'Loading…'}</div>`;
     const w = writable(); const st = tryStatus(t); const miss = tryMissing(t); const late = st === 'planned' && !!t.date && t.date < todayISO();
     // required details say "missing" in the warning colour; optional ones just show a dash
     const kv = (label, val, opts) => { const o = opts || {}; return `<div><span class="lbl">${esc(label)}</span><b${has(val) ? '' : o.opt ? ' class="muted"' : ' class="miss"'}>${has(val) ? (o.href ? `<a href="${esc(o.href)}">${esc(val)}</a>` : esc(val)) : o.opt ? '—' : 'missing'}</b></div>`; };
@@ -4669,7 +4670,7 @@ const PW_CONFIG = {
         <div class="field"><label for="tr_grp">Group offered</label><select id="tr_grp" name="joinGroup"><option value="">—</option>${groups().map((g) => `<option value="${esc(g.id)}" ${t.joinGroup === g.id ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div></div>
         <div class="field"><label for="tr_seen">What we saw</label><textarea id="tr_seen" name="seen" rows="3" placeholder="Level, attitude, what stood out, what we recommend.">${esc(t.seen || '')}</textarea></div>
         <div class="rowx"><button class="btn pri" type="submit">Save result</button></div></form>` : '';
-    return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'tryouts' } }, { t: t.name || 'Try-out' }])}
+    return `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Try-outs', r: { view: 'home' } }, { t: t.name || 'Try-out' }])}
       <div class="head"><div><div class="lbl">Try-out · ${esc(tryGroupLabel(t) || 'group to decide')} · ${esc(tryWhen(t))}</div><h1 class="title">${emT(t.name || 'Unnamed')}</h1>
         <div class="sub">${miss.length ? `<span class="chip warn">Missing: ${esc(miss.join(', '))}</span>` : tryOpen(t).length && st === 'planned' ? `${tryOpen(t).length} step${tryOpen(t).length === 1 ? '' : 's'} still to do before the session.` : st === 'planned' ? 'Everything is ready for the session.' : ''}</div></div>
         <div class="rowx">${w ? `<button class="btn" data-act="try-edit">${S.ui.editingTry === id ? 'Close' : 'Edit details'}</button>` : ''}${w && canDelete() ? '<button class="btn ghost danger" data-act="del-try">Delete</button>' : ''}</div></div>
