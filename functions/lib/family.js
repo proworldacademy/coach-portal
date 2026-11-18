@@ -196,8 +196,9 @@ async function tellDirector(db, p, text) {
     const CONTACTS = require('./contacts'); const TEAM = require('./team');
     let g = {}; try { const x = await db.doc('groups/' + (p.group || '-')).get(); g = x.exists ? (x.data() || {}) : {}; } catch (e) { g = {}; }
     const staff = await CONTACTS.staffIndex(db); const to = new Set();
-    // groups/<id>.notify: the directors' sign-ins, when management sets them there; otherwise GROUP_DIRECTORS below. (`director` on the group is only the label the portal shows.)
-    const listed = Array.isArray(g.notify); (listed ? g.notify : []).forEach((e) => { e = String(e || '').toLowerCase(); if (e.includes('@')) to.add(e); });
+    // groups/<id>.directors: the directors' sign-ins set on the Coach Board (Nov 18, 2026); groups/<id>.notify is the older hand-set list; otherwise GROUP_DIRECTORS below. (`director` on the group is only the label the portal shows.)
+    const set = Array.isArray(g.directors) && g.directors.length ? g.directors : (Array.isArray(g.notify) ? g.notify : null);
+    const listed = !!set; (set || []).forEach((e) => { e = String(e || '').toLowerCase(); if (e.includes('@')) to.add(e); });
     if (!listed) (GROUP_DIRECTORS[p.group] || []).forEach((n) => { const st = CONTACTS.staffFor(staff, n); if (st && st.email) to.add(st.email); });
     const known = listed || Object.prototype.hasOwnProperty.call(GROUP_DIRECTORS, p.group || '');
     if (!to.size && !known) { const all = await db.collection('staff').get(); all.docs.forEach((d) => { const x = d.data() || {}; if (x.active !== false && String(x.role || '').toLowerCase() === 'director') to.add(d.id.toLowerCase()); }); }

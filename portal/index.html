@@ -462,6 +462,10 @@ button.lhead:hover{background:rgba(0,0,0,.04)}
 .le.k-sent,.le.k-wouldSend,.le.k-queued,.le.k-tryout,.le.k-tryoutDone{border-left-color:var(--mint)}
 .ccards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:34px}
 .ccard{border:1px solid var(--line);border-radius:var(--r);background:var(--card);backdrop-filter:blur(12px);padding:16px 18px;display:grid;gap:12px;align-content:start;box-shadow:var(--shadow)}
+.dcards{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.dgrp{display:grid;gap:6px;padding:8px 0;border-top:1px solid var(--line)}.dgh{display:flex;justify-content:space-between;align-items:center;font-size:13px}.dgh .lnk{font-size:11px;color:#8E8E8A}
+.dchips{justify-content:flex-start}.dchip{text-transform:none;letter-spacing:0;font-size:12px;padding:4px 6px 4px 10px;gap:4px}.dchip button{border:0;background:none;font:inherit;font-size:14px;line-height:1;color:#8E8E8A;cursor:pointer;padding:0 2px}.dchip button:hover{color:#111}
+.dcard select{font:inherit;font-size:12px;border:1px dashed var(--line);border-radius:999px;background:#fff;padding:3px 8px;color:#6B6B68;max-width:150px}
 .ccard .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .ccard .cname,.ccard .count{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:28px;line-height:.95}
 .bps{display:flex;flex-wrap:wrap;gap:6px}
@@ -3039,12 +3043,17 @@ const PW_CONFIG = {
     /* By coach, for directors (Nov 17, 2026 — Antonio: "they get notified if one coach hasn't contacted a parent, or hasn't done an
        assessment"): one line per coach with what is still open on their players, the coach furthest behind first. The totals above
        say how much; this says who. It opens the Coach Board. */
+    /* A director with groups on the Coach Board sees only the coaches under them, one line per coach per group (Nov 18: Nico hears
+       about Eric in Full Time, Kam about Eric in Afterschool). Nothing set, or an owner: every coach, as before. */
+    const dg = web && WEB.isDirector ? myDirGroups() : [];
     const byCoach = web && WEB.isDirector ? (() => { const m = new Map();
-      act.forEach((p) => [p.coach, p.coach2, p.coach3].map((c) => String(c || '').trim()).filter(Boolean).forEach((c) => { const o = m.get(c) || { name: c, n: 0, reach: 0, rep: 0 }; o.n++; if (S.loaded.contacts && !inTouch(p.id, ct.week)) o.reach++; if (S.loaded.assess && dueNow(p).overall !== 'done') o.rep++; m.set(c, o); }));
+      act.forEach((p) => { const g = dg.length ? dg.find((x) => x.id === (p.group || '')) : null; if (dg.length && !g) return;
+        [p.coach, p.coach2, p.coach3].map((c) => String(c || '').trim()).filter(Boolean).forEach((c) => { if (g && !gCoaches(g).some((k) => nameKey(k) === nameKey(c))) return;
+          const key = c + (g ? '|' + g.id : ''); const o = m.get(key) || { name: c, grp: g ? g.label : '', n: 0, reach: 0, rep: 0 }; o.n++; if (S.loaded.contacts && !inTouch(p.id, ct.week)) o.reach++; if (S.loaded.assess && dueNow(p).overall !== 'done') o.rep++; m.set(key, o); }); });
       return Array.from(m.values()).sort((x, y) => (y.reach + y.rep) - (x.reach + x.rep) || x.name.localeCompare(y.name)); })() : [];
-    const coachCard = byCoach.length ? `<div class="a2k-today">${a2sec('By coach', String(byCoach.length))}<div class="a2card">${byCoach.map((c) => { const open = c.reach + c.rep;
+    const coachCard = web && WEB.isDirector && (byCoach.length || dg.length) ? `<div class="a2k-today">${a2sec(dg.length ? 'My coaches' : 'By coach', String(byCoach.length))}<div class="a2card">${byCoach.length ? byCoach.map((c) => { const open = c.reach + c.rep;
       const lines = [c.reach ? `${c.reach} ${c.reach === 1 ? 'family' : 'families'} not reached this week` : '', c.rep ? `${c.rep} ${c.rep === 1 ? 'report' : 'reports'} to write` : ''].filter(Boolean);
-      return a2row(open ? a2n(open, 'red') : `<span class="a2ico mint">${a2i('check')}</span>`, 'Coach ' + esc(c.name), `${c.n} ${c.n === 1 ? 'player' : 'players'}${lines.length ? '<br>' + lines.join('<br>') : ' · all caught up'}`, a2chev(), goAttr({ view: 'board' })); }).join('')}</div></div>` : '';
+      return a2row(open ? a2n(open, 'red') : `<span class="a2ico mint">${a2i('check')}</span>`, 'Coach ' + esc(c.name) + (c.grp ? ' · ' + esc(c.grp) : ''), `${c.n} ${c.n === 1 ? 'player' : 'players'}${lines.length ? '<br>' + lines.join('<br>') : ' · all caught up'}`, a2chev(), goAttr({ view: 'board' })); }).join('') : `<div class="a2row quiet"><span class="a2t"><b>No coaches under you yet</b><small>Add them under your groups on the Coach Board.</small></span></div>`}</div></div>` : '';
     const head = FRESH && web && !WEB.isDirector ? '' : `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
     const freshTop = FRESH && web && !WEB.isDirector ? freshHome({ day, chats: msgUnread(), wk: wkList, ck: S.loaded.checks ? ckList : 0, nRep: S.loaded.assess ? nRep : 0, nStarted, nOpen, q, total: mineP.length }) : '';
     const logN = S.assess.filter((a) => WEB.isDirector || mineIds.has(a.playerId)).length;
@@ -4730,6 +4739,54 @@ const PW_CONFIG = {
     const act = S.players.filter(active).filter((p) => !/soccer/i.test(String(p.group || '')));
     return { B: S.players.length ? { at: null } : null, items: [], act };
   }
+  /* ── Directors and their coaches, per group (Antonio, Nov 18, 2026: "assign coaches under a director… Eric under Kam in the
+     afterschool and under Nico in the full time… that director gets the notifications for each coach depending on each group").
+     groups/<id>.directors = the directors' sign-ins; groups/<id>.coaches = the coach names (as written on the players). A director
+     with groups set sees only their coaches in those groups on Reminders; "cannot make it" goes to the group's directors
+     (functions/lib/family.js). A director with no group set still sees everyone, as before. ── */
+  function dirStaff() {
+    if (WEB.isDirector && EDITION === 'web' && !(WEB.staffList && WEB.staffList.length) && !WEB.staffAsked && WEB.fs) { WEB.staffAsked = true; WEB.fs.collection('staff').get().then((x) => { if (!(WEB.staffList && WEB.staffList.length)) WEB.staffList = rowsOf(x); softRender(); }).catch(() => {}); }
+    return (WEB.staffList || []).filter((r) => r.active === true && (r.owner === true || r.role === 'director' || r.role === 'admin')).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
+  }
+  const gDirectors = (g) => (Array.isArray(g && g.directors) ? g.directors : []).map((e) => String(e || '').toLowerCase());
+  const gCoaches = (g) => (Array.isArray(g && g.coaches) ? g.coaches : []).map((c) => String(c || '').trim()).filter(Boolean);
+  /* the groups this person directs, with the coaches under them; [] = nothing set → everything, as before */
+  function myDirGroups() { if (EDITION !== 'web' || !WEB.isDirector || WEB.isOwner) return []; return groups().filter((g) => gDirectors(g).includes(WEB.email)); }
+  async function saveGroupTeam(gid, patch) {
+    const g = groups().find((x) => x.id === gid) || DEFAULT_GROUPS.find((x) => x.id === gid) || { id: gid, label: gid, form: 'quarterly_hp', color: 'lime', order: 99 };
+    const full = { id: g.id, label: g.label, form: g.form, color: g.color, order: g.order || 99, director: g.director || '', directors: gDirectors(g), coaches: gCoaches(g) };
+    Object.assign(full, patch, { updatedAt: Date.now(), updatedBy: WEB.email });
+    try { await WEB.fs.doc('groups/' + gid).set(full, { merge: true }); } catch (e) { toast('Not saved: ' + (e && e.code === 'permission-denied' ? 'a director sets this.' : (e && e.message) || e)); }
+  }
+  function dirSection() {
+    if (!(EDITION === 'web' && WEB.isDirector)) return '';
+    const staff = dirStaff(); const gs = groups(); const all = coachList();
+    const sel = (attrs, opts, first) => `<select ${attrs}><option value="">${first}</option>${opts.map((o) => `<option value="${esc(o.v)}">${esc(o.t)}</option>`).join('')}</select>`;
+    const cards = staff.map((d) => {
+      const mineG = gs.filter((g) => gDirectors(g).includes(d.id));
+      const rows = mineG.map((g) => { const cs = gCoaches(g);
+        return `<div class="dgrp"><div class="dgh"><b>${esc(g.label)}</b><button type="button" class="lnk" data-dir-act="drop-group" data-gid="${esc(g.id)}" data-email="${esc(d.id)}" title="Take this group off ${esc(d.name || d.id)}">remove</button></div>
+          <div class="chips dchips">${cs.map((c) => `<span class="chip dchip">${esc(c)}<button type="button" data-dir-act="drop-coach" data-gid="${esc(g.id)}" data-coach="${esc(c)}" aria-label="Take ${esc(c)} off ${esc(g.label)}">×</button></span>`).join('')}
+          ${sel(`data-dir-act="add-coach" data-gid="${esc(g.id)}" aria-label="Add a coach under ${esc(g.label)}"`, all.filter((c) => !cs.includes(c)).map((c) => ({ v: c, t: c })), '+ coach')}</div></div>`; }).join('');
+      const addG = gs.filter((g) => !gDirectors(g).includes(d.id));
+      return `<div class="ccard dcard"><div class="top"><div class="cname">${esc(d.name || d.id)}</div><div class="count">${mineG.length}</div></div>${rows || '<p class="hint" style="margin:6px 0">No group yet · sees every coach</p>'}
+        ${addG.length ? sel(`data-dir-act="add-group" data-email="${esc(d.id)}" aria-label="Add a group under ${esc(d.name || d.id)}"`, addG.map((g) => ({ v: g.id, t: g.label })), '+ group') : ''}</div>`; }).join('');
+    return `<div class="sect"><h2>Directors</h2><span class="muted" style="font-size:12px">who directs which group, and the coaches under them there · a coach can sit under two directors in two groups</span></div>
+      ${staff.length ? `<div class="ccards dcards">${cards}</div>` : '<p class="hint">Loading the team…</p>'}`;
+  }
+  document.addEventListener('change', async (ev) => {
+    const t = ev.target; if (!t.getAttribute || !t.getAttribute('data-dir-act')) return;
+    const act = t.getAttribute('data-dir-act'), gid = t.getAttribute('data-gid'), v = t.value; if (!v) return;
+    const g = groups().find((x) => x.id === (gid || v)) || {};
+    if (act === 'add-coach') await saveGroupTeam(gid, { coaches: gCoaches(g).concat([v]) });
+    if (act === 'add-group') await saveGroupTeam(v, { directors: gDirectors(g).concat([t.getAttribute('data-email')]) });
+  });
+  document.addEventListener('click', async (ev) => {
+    const t = ev.target.closest && ev.target.closest('[data-dir-act]'); if (!t || t.tagName === 'SELECT') return;
+    const act = t.getAttribute('data-dir-act'), gid = t.getAttribute('data-gid'); const g = groups().find((x) => x.id === gid) || {};
+    if (act === 'drop-coach') await saveGroupTeam(gid, { coaches: gCoaches(g).filter((c) => c !== t.getAttribute('data-coach')) });
+    if (act === 'drop-group') await saveGroupTeam(gid, { directors: gDirectors(g).filter((e) => e !== t.getAttribute('data-email')) });
+  });
   function viewBoard() {
     const own = EDITION === 'web' && WEB.isOwner;
     const top = `${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Coach Board' }])}
@@ -4751,7 +4808,7 @@ const PW_CONFIG = {
     const awayNow = S.players.filter((p) => p.status === 'away' && p.pbpNote && /^Not in/.test(p.pbpNote));
     const syncLine = `<p class="hint due-line"><b>The list:</b> the Fall 2026 coach list (Play by Point current players, Oct 24) · ${un.length ? `<span class="chip st-missing">${un.length} with no coach</span>` : '<span class="chip st-done">everyone has a coach</span>'}${newOnes.length ? ` · <span class="chip st-working">${newOnes.length} new, no coach yet</span>` : ''}${awayNow.length ? ` · ${awayNow.length} set to Away for the coaches to decide` : ''}</p>`;
     const undoBar = EDITION === 'web' && WEB.isDirector && BOARD_MOVES.length ? `<div class="undo-bar"><b>Moved just now</b>${BOARD_MOVES.map((mv, i) => `<span class="mv">${esc(mv.name)} <span class="muted">${esc(mv.from || 'no coach')} → ${esc(mv.to || 'no coach')}</span><button type="button" class="lnk" data-undo="${i}">Undo</button></span>`).join('')}</div>` : '';
-    return `${top}${syncLine}${undoBar}
+    return `${top}${syncLine}${undoBar}${dirSection()}
       <div class="stats"><div class="stat lead"><div class="lbl">Active players</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs coming</div><b>${tries.length}</b></div></div>
       <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">primary coach · players with their group</span></div>
