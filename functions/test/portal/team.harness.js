@@ -94,10 +94,10 @@ if (require.main !== module) return;
   { const { page, ctx, errs } = await open(1280, 860, 'light');
     ok(await page.locator('.tc-row[data-open="general"].on').count() === 1, 'desktop: #general is open beside the list');
     ok(await page.locator('.tc-main .tc-m').count() === 6, 'desktop: six lines in the channel (the two thread answers stay in the thread)');
-    ok(await page.locator('.tc-row[data-open="dm_kd"].un .dot').count() === 1, 'desktop: the direct message with a new line is marked unread');
+    ok(await page.locator('.tc-hero .hr[data-open="dm_kd"]').count() === 1, 'desktop: the direct message with a new line is marked unread');   // the new look (Nov 18): what is unread sits in the Catch up block
     ok(await page.locator('.tc-row[data-open="general"] .dot').count() === 0, 'desktop: the open channel counts as read');
     ok(await page.locator('.tc-row[data-open="tournaments"] .join').count() === 1, 'desktop: an open channel you are not in is listed with Join');
-    ok(await page.locator('.tc-row[data-open="new-enrollments"] .mu').first().textContent() === '🔕', 'desktop: a muted channel shows it');
+    ok(await page.locator('.tc-row[data-open="new-enrollments"] .mu[title="Muted"] svg').count() === 1, 'desktop: a muted channel shows it');
     ok((await page.locator('.tc-main .bd .at').first().textContent()) === '@Kim Coach', 'desktop: a mention is marked');
     ok(await page.locator('.tc-main .bd a[href="https://example.test/plan"]').count() === 1, 'desktop: a link is a link');
     ok(await page.locator('.tc-main .bd b').first().textContent() === 'wet', 'desktop: *bold* is bold');
