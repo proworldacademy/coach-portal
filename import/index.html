@@ -65,6 +65,8 @@ try { window.PWDesign.mount({ skin: "desk", title: "Play by Point import" }); } 
     $("check").onclick = async () => { say("Checking…"); try { show(await api("preview", { rows: rows() })); say("Nothing written yet."); } catch (e) { say(e.message); } };
     $("apply").onclick = async () => { const b = $("apply"); if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Press again to apply"; return; } b.disabled = true; say("Writing…");
       try { const o = await api("apply", { rows: rows() }); say("Done: " + o.updated + " updated, " + o.created + " added, " + o.contacts + " contact cards."); b.textContent = "Applied"; show(await api("preview", { rows: rows() })); $("apply").disabled = true; } catch (e) { say(e.message); b.disabled = false; b.dataset.sure = ""; b.textContent = "Apply"; } };
+    // the list can ride in on the tab's own name (set in the Play by Point tab before coming here), so it never passes through a link
+    try { if (/^\[\{"child"/.test(window.name || "")) { $("data").value = window.name; window.name = ""; say(JSON.parse($("data").value).length + " rows in the box. Press Check."); } } catch (e) { /* an empty box */ }
     window.PBPImport = { set: (list) => { $("data").value = JSON.stringify(list); return list.length; }, add: (list) => { const cur = JSON.parse($("data").value || "[]").concat(list); $("data").value = JSON.stringify(cur); return cur.length; } };
   }
   window.PWAuth.start({}).then((c) => { if (!c || !c.owner) { $("app").innerHTML = '<h1>Owners only</h1><p class="lead">This page is for the two owners.</p>'; return; } start(); });
