@@ -25,7 +25,7 @@ function fakeDb(seed) {
       collection: (sub) => colRef(path + '/' + sub)
     };
   }
-  const OPS = { '==': (a, b) => a === b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b, '>': (a, b) => a > b, '<': (a, b) => a < b, '!=': (a, b) => a !== b, 'in': (a, b) => Array.isArray(b) && b.includes(a) };
+  const OPS = { '==': (a, b) => a === b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b, '>': (a, b) => a > b, '<': (a, b) => a < b, '!=': (a, b) => a !== b, 'in': (a, b) => Array.isArray(b) && b.includes(a), 'array-contains': (a, b) => Array.isArray(a) && a.includes(b) };
   const matches = (k, filters) => filters.every((f) => { const v = getPath(docs.get(k), f.field); return v !== undefined && OPS[f.op](v, f.value); });
   function colRef(path, filters, group) {
     filters = filters || [];

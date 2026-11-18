@@ -47,6 +47,8 @@ b,strong{font-weight:700}
 .fupill b{background:var(--pw-inkbg,var(--ink));color:var(--lime);border-radius:999px;min-width:22px;padding:2px 7px;text-align:center;font-size:11px}
 .userbox{display:none}
 .tabs.vtabs,#vtabs{margin:18px 0 28px}
+#vtabs.many{max-width:100%;overflow-x:auto;scrollbar-width:none}#vtabs.many::-webkit-scrollbar{display:none}#vtabs.many>*{white-space:nowrap;flex:none}
+@media(max-width:1500px){#vtabs.many>*{padding-left:13px;padding-right:13px;font-size:13.5px}}
 /* phones: the Coaches row is one line that scrolls sideways, the page you are on kept in view (same as the Admin page) */
 /* phones (Antonio, Oct 25): the row under the bar goes — the ☰ menu has the same eight; lists instead of bubbles wherever a bubble only costs space */
 @media(max-width:560px){.vtabs{display:none!important}}
@@ -577,6 +579,35 @@ button.notice.remind.wk .wkn{margin-right:2px}
 .msgno{padding:10px 12px;border-radius:12px;background:#FFF1F1;margin:0}
 @media(max-width:560px){.bub{max-width:92%}.bubs{max-height:300px}}
 /* the chats (Nov 4 evening): one per number, group chats — the switcher, the picker, the Messages view as two panes */
+.ckp{display:grid;gap:14px}
+.ck-who{display:grid;gap:10px;padding:14px 16px;border-radius:18px;background:var(--pw-sf2,#F6F6F2);border:1px solid var(--line)}
+.ck-row{display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:start}
+.ck-l{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:11px}
+.ck-sws{display:flex;gap:8px;flex-wrap:wrap}
+.ck-sw{position:relative;display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 10px;border-radius:999px;border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:var(--muted);font:inherit;font-size:13px;line-height:1.15;cursor:pointer;text-align:left;transition:background .15s,border-color .15s,color .15s}
+.ck-sw .tk{width:18px;height:18px;flex:none;border-radius:50%;padding:3px;box-sizing:border-box;background:transparent;border:1.5px solid var(--line-2);color:transparent}
+.ck-sw b{display:block;font-weight:700;color:inherit}.ck-sw small{display:block;font-size:11px;opacity:.8;font-weight:400}
+.ck-sw.on{background:var(--pw-inkbg,var(--ink));border-color:var(--pw-inkbg,var(--ink));color:#fff}
+.ck-sw.on .tk{background:var(--lime);border-color:var(--lime);color:#0b0b0b}
+.ck-sw.me{cursor:default;opacity:.92}
+.ck-sw:disabled{cursor:default;opacity:.6}
+.ck-sw .dot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--orchid,#E286E4);box-shadow:0 0 0 2px var(--pw-sf,#fff)}
+.ck-sw:not(.me):not(:disabled):hover{border-color:var(--ink)}
+.ckp .bubs{max-height:min(52vh,520px);padding:6px 4px}
+.ckp .bub .bt{border-radius:20px;padding:10px 15px;font-size:14.5px}
+.ckp .bub.b-out .bt{border-bottom-right-radius:6px}.ckp .bub.b-in .bt{border-bottom-left-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.ck-form{gap:10px;padding:12px;border-radius:20px;border:1px solid var(--line-2);background:var(--pw-sf,#fff)}
+.ck-form textarea{border:0;padding:4px 6px;min-height:64px;resize:none;background:transparent}
+.ck-form textarea:focus,.ck-form textarea:focus-visible{outline:0!important;box-shadow:none!important}
+.ck-form:focus-within{border-color:var(--ink)}
+.ck-seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--pw-sf2,#F1F1EC);justify-self:start}
+.ck-seg button{border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:6px 14px;border-radius:999px;cursor:pointer}
+.ck-seg button[aria-pressed="true"]{background:var(--pw-inkbg,var(--ink));color:#fff}
+.ck-seg button:disabled{opacity:.4;cursor:default}
+.ck-send{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ck-send a.btn{text-decoration:none}
+.ckp .msgfoot .hint b{color:var(--ink)}
+@media(max-width:640px){.ck-row{grid-template-columns:1fr;gap:6px}.ck-l{padding-top:0}.ck-who{padding:12px}.ck-sw{padding:6px 12px 6px 8px}}
 .ctabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .cchip{position:relative;display:inline-flex;align-items:center;gap:5px}
 .cchip small{font-weight:400;opacity:.75;font-size:11px}
@@ -1774,7 +1805,7 @@ const PW_CONFIG = {
     checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { sex: (function () { try { return sessionStorage.getItem('cp-sex') || ''; } catch (e) { return ''; } })(), sexSort: false, showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
+    ui: { msgTeamOff: {}, msgVia: {}, sex: (function () { try { return sessionStorage.getItem('cp-sex') || ''; } catch (e) { return ''; } })(), sexSort: false, showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -2090,7 +2121,7 @@ const PW_CONFIG = {
       if (ms.length === 1) return (sent.length ? (group ? ' · to ' + esc(name(ms[0])) : '') : '') + (failed.length ? ' · <b class="bad">not sent' + (group ? ' to ' + esc(name(ms[0])) : '') + '</b>' : /deliver/i.test(ms[0].delivery || '') ? ' · delivered' : '');
       return ' · to ' + esc(sent.map(name).join(' and ')) + (failed.length ? ' · <b class="bad">not sent to ' + esc(failed.map(name).join(' and ')) + '</b>' : ms.every((x) => /deliver/i.test(x.delivery || '')) ? ' · delivered' : ''); };
     const bub = (l) => l.dir === 'sys' ? (l.words && !/^\s*(stop|stopall|stop all|unsubscribe|cancel|end|quit)\s*[.!]*\s*$/i.test(l.words) ? `<div class="bub b-in"><span class="bt">${esc(l.words)}</span><small>${esc(whoWrote(t, l, key))} · ${esc(msgWhen(l.at))}</small></div>` : '') + `<div class="bub b-sys">${esc(l.body)}</div>`
-      : `<div class="bub b-${l.dir}${(l.tos || [l]).every((x) => x.status === 'failed') ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? esc(whoWrote(t, l, key)) + ' · ' + esc(msgWhen(l.at)) + (l.note ? ' · ' + esc(l.note) : '') : esc(l.by || '') + ' · ' + esc(msgWhen(l.at)) + who(l)}</small></div>`;
+      : `<div class="bub b-${l.dir}${(l.tos || [l]).every((x) => x.status === 'failed') ? ' failed' : ''}"><span class="bt">${esc(l.body)}</span><small>${l.dir === 'in' ? esc(whoWrote(t, l, key)) + ' · ' + esc(msgWhen(l.at)) + (l.note ? ' · ' + esc(l.note) : '') : esc(l.by || '') + ' · ' + esc(msgWhen(l.at)) + who(l) + ((l.team || []).length ? ' · team' : '')}</small></div>`;
     return lines.length ? `<div class="bubs" id="bubs">${lines.map(bub).join('')}</div>` : `<p class="hint empty-chat">${group ? 'Nothing in this group chat yet. The first text goes to everyone in it; their answers land here.' : 'Nothing yet. The first text starts the chat; the family answers right here.'}</p>`;
   }
   function chatComposer(p, t, key) {
@@ -2100,13 +2131,40 @@ const PW_CONFIG = {
     if (t.optOut) return `<p class="hint msgno"><b>${esc(t.optOutWhy || 'The family asked for no texts.')}</b> Call them instead.</p>`;
     if (!(t.numbers || []).length) return '<p class="hint msgno"><b>No number on file.</b> Add one under Contacts for JustCall on the player\'s page, then write here.</p>';
     const c = convOf(t, key); if (!c) return '<p class="hint msgno">Pick a chat above.</p>';
-    const ms = c.members || []; const to = ms.map((m) => `<span class="fchip sm to">${esc(memberWord(m))}${m.name && m.slot ? ' · ' + esc(m.name) : ''} · …${esc(m.tail)}</span>`).join('');
-    return `<form class="msgform" data-form="msg" data-pid="${esc(p.id)}" data-conv="${esc(key)}"><div class="msgto"><span class="flbl">To</span>${to}</div><textarea name="body" rows="3" maxlength="${MSG_MAX}" data-draft="${esc(p.id + '|' + key)}" placeholder="${ms.length > 1 ? 'Write to everyone in this chat…' : 'Write to the family…'}" aria-label="Message" required></textarea><div class="msgfoot"><span class="hint">${ms.length > 1 ? 'Each of them gets it as their own text. ' : ''}Counts as this week's contact.</span><button class="btn pri sendbtn" type="submit" aria-label="Send"><span class="sl" data-win="Make their day">Send</span>${a2i('plane', 'plane')}</button></div></form>`;
+    const ms = c.members || []; const via = ckVia(p.id); const on = teamOn(p.id, t); const others = teamOthers(t);
+    const names = (l) => l.length === 1 ? l[0] : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1];
+    const emails = t.emails || [];
+    const seg = `<div class="ck-seg" role="group" aria-label="How to send it">${[['text', 'Text'], ['wa', 'WhatsApp'], ['mail', 'E-mail']].map(([k, l]) => `<button type="button" data-act="msg-via" data-pid="${esc(p.id)}" data-via="${k}" aria-pressed="${via === k}" ${k === 'mail' && !emails.length ? 'disabled title="No e-mail on file for this family"' : ''}>${l}</button>`).join('')}</div>`;
+    const teamLine = !others.length ? '' : on.length ? `<b>${esc(names(on.map((m) => 'Coach ' + m.name)))}</b> ${on.length === 1 ? 'reads' : 'read'} this chat and ${on.length === 1 ? 'hears' : 'hear'} about it.` : '<b>Only you.</b> The other coaches do not see this one.';
+    const hint = via === 'text' ? `${teamLine} ${ms.length > 1 ? 'Each parent gets it as their own text. ' : ''}Counts as this week's contact.`
+      : via === 'wa' ? 'Opens WhatsApp on this device with your words ready, from your own WhatsApp. It is not kept in the app, so the team does not see it.'
+      : `Opens your e-mail with your words ready${on.some((m) => m.email) ? ', and the team in copy' : ''}. It is not kept in the app.`;
+    const full = (m) => (t.numbers || []).find((n) => n.tail === m.tail) || {};
+    const send = via === 'text' ? `<button class="btn pri sendbtn" type="submit" aria-label="Send"><span class="sl" data-win="Make their day">Send</span>${a2i('plane', 'plane')}</button>`
+      : via === 'wa' ? ms.map((m) => `<a class="btn pri sendbtn" data-wa="${esc(String(full(m).phone || '').replace(/\D/g, ''))}" href="#" target="_blank" rel="noopener">WhatsApp ${esc(memberWord(m))}</a>`).join('')
+      : `<a class="btn pri sendbtn" data-mail="${esc(emails.map((e) => e.email).join(','))}" data-cc="${esc(on.map((m) => m.email).filter(Boolean).join(','))}" data-subj="${esc(p.name)}" href="#">Open e-mail</a>`;
+    return `<form class="msgform ck-form" data-form="msg" data-pid="${esc(p.id)}" data-conv="${esc(key)}">${seg}<textarea name="body" rows="3" maxlength="${MSG_MAX}" data-draft="${esc(p.id + '|' + key)}" placeholder="${esc('Write to ' + names(ms.map((m) => (m.slot ? 'the ' + String(memberWord(m)).toLowerCase().replace(/^the /, '') : m.name || 'the family'))) + '…')}" aria-label="Message" ${via === 'text' ? 'required' : ''}></textarea><div class="msgfoot"><span class="hint">${hint}</span><span class="ck-send">${send}</span></div></form>`;
   }
-  /* the chat itself: the switcher, the bubbles of the open chat, the composer — on the player's page and in Messages */
+  /* Who this goes to, and who on the team is in (Nov 18, 2026 — management: "it is not clear who a coach is texting"; "every
+     communication has every coach assigned to that player"). Two rows of switches above the chat:
+     To   — every number on the player's page; tap to add or take out. The ones that are on are the chat that is open.
+     Team — the other coaches on the player; all on from the start, so they read the chat and hear about it; tap one off, or all, to write alone. */
+  const teamOthers = (t) => (t && Array.isArray(t.team) ? t.team.filter((m) => !m.me) : []);
+  const teamOn = (pid, t) => { const off = S.ui.msgTeamOff[pid] || {}; return teamOthers(t).filter((m) => !off[m.key]); };
+  const CK_TICK = '<svg class="tk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function chatWho(p, t, sel, inMessages) {
+    const nums = t.numbers || []; if (!nums.length) return '';
+    const c = convOf(t, sel); const inChat = new Set(c ? (c.members || []).map((m) => m.tail) : String(sel || '').split('+'));
+    const dot = (n) => convsOf(t).some((x) => x.unread && (x.members || []).some((m) => m.tail === n.tail));
+    const to = nums.map((n) => `<button type="button" class="ck-sw${inChat.has(n.tail) ? ' on' : ''}" data-act="msg-to" data-pid="${esc(p.id)}" data-tail="${esc(n.tail)}" data-in="${inMessages ? 1 : 0}" aria-pressed="${inChat.has(n.tail)}">${CK_TICK}<span><b>${esc(n.slot ? n.word : n.name || 'On file')}</b><small>${esc(n.slot && n.name ? n.name + ' · ' : '')}…${esc(n.tail)}</small></span>${dot(n) ? '<i class="dot" aria-label="new reply"></i>' : ''}</button>`).join('');
+    const others = teamOthers(t); const off = S.ui.msgTeamOff[p.id] || {}; const can = writable() && mine(p) && !S.msgAs;
+    const team = others.length ? `<div class="ck-row"><span class="ck-l">Team</span><div class="ck-sws"><span class="ck-sw on me" aria-label="You">${CK_TICK}<span><b>You</b></span></span>${others.map((m) => `<button type="button" class="ck-sw${off[m.key] ? '' : ' on'}" data-act="msg-team" data-pid="${esc(p.id)}" data-key="${esc(m.key)}" aria-pressed="${!off[m.key]}" ${can ? '' : 'disabled'}>${CK_TICK}<span><b>Coach ${esc(m.name)}</b>${m.signIn ? '' : '<small>no sign-in yet</small>'}</span></button>`).join('')}</div></div>` : '';
+    return `<div class="ck-who"><div class="ck-row"><span class="ck-l">To</span><div class="ck-sws">${to}</div></div>${team}</div>`;
+  }
+  const ckVia = (pid) => S.ui.msgVia[pid] || 'text';
   function chatPane(p, t, sel, inMessages) {
     const c = convOf(t, sel); const group = !!(c && (c.members || []).length > 1);
-    return `${chatTabs(p, t, sel, inMessages)}${chatPicker(p, t, inMessages)}${chatBubbles(t, sel, group)}${chatComposer(p, t, sel)}`;
+    return `<div class="ckp">${chatWho(p, t, sel, inMessages)}${chatBubbles(t, sel, group)}${chatComposer(p, t, sel)}</div>`;
   }
   function msgCard(p) {
     const t = msgThread(p.id); const head = (word) => `<div class="wkmain"><div><div class="lbl">Messages · through JustCall</div><b class="wkword">${word}</b></div>${t ? '<button class="fchip sm" data-act="msg-refresh" title="Check for new replies" aria-label="Check for new replies">↻ Refresh</button>' : ''}</div>`;
@@ -2144,7 +2202,7 @@ const PW_CONFIG = {
     }
     return `${notice()}${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Messages' }])}
       <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
-        <div class="sub">Every family of yours, like your phone: one chat per number and group chats for the parents together. Open a family and write; the text goes out from the academy number, signed with your name, and the family answers here.</div>
+        <div class="sub">Open a family, pick who you write to, and write. The other coaches on the player are in the chat unless you switch them off.</div>
         <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'chat has' : 'chats have'} a new reply</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${families}</b> ${families === 1 ? 'family' : 'families'}</li></ul></div></div>
       ${msgDirBar()}
       ${ib && ib.error ? `<p class="hint due-line"><b>Could not refresh:</b> ${esc(ib.error)}</p>` : ''}
@@ -2551,10 +2609,13 @@ const PW_CONFIG = {
       : [['home', 'Reminders', { view: 'home' }], ['players', 'Players', { view: 'players' }]]
         // the four a coach has (Antonio and Lorenzo, Nov 13, the whiteboard): Reminders · Players · Contact (texts and calls) · Privates (the booking page).
         // Try-outs, the Coach Board, Attendance, Courts and Staff & access left this row: they open from the Dashboard menu (Coaches), for directors and owners.
-        .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['team', 'Locker Room', '/team'], ['privates', 'Privates', '/backend#privates']] : []);   // Team (Nov 15): the team's own messaging, /team
+        .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['team', 'Locker Room', '/team'], ['privates', 'Privates', '/backend#privates']] : [])
+        // Nov 18, 2026 (management): the strip carries the whole Coaches menu, so nothing is two taps away. A director's has it all.
+        .concat(EDITION === 'web' && WEB.isDirector ? [['attendance', 'Attendance', '/backend#attendance'], ['grouptext', 'Text a group', '/backend#messages'], ['board', 'Coach Board', { view: 'board' }], ['staff', 'Staff & access', { view: 'staff' }]] : []);   // Team (Nov 15): the team's own messaging, /team
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
-    const TI = { home: 'bell', players: 'users', contact: 'msg', team: 'team', privates: 'cal' }; const ti = (k) => (TI[k] ? a2i(TI[k], 'ti') : '');
+    const TI = { home: 'bell', players: 'users', contact: 'msg', team: 'team', privates: 'cal', attendance: 'check', grouptext: 'send', board: 'users', staff: 'file' }; const ti = (k) => (TI[k] ? a2i(TI[k], 'ti') : '');
+    el.classList.toggle('many', items.length > 6);
     el.innerHTML = items.map(([k, label, r]) => typeof r === 'string' ? `<a class="${k === sec ? 'on' : ''}" href="${r}"${k === 'team' ? ' data-team-dot' : ''}>${ti(k)}${label}</a>` : `<button type="button" class="${k === sec ? 'on' : ''}" ${goAttr(r)}${k === sec ? ' aria-current="page"' : ''}>${ti(k)}${label}${k === 'followup' && nOpen ? `<small>${nOpen}</small>` : ''}${k === 'home' && wkLeft ? `<small class="red">${wkLeft}</small>` : ''}${k === 'contact' && msgUnread() ? `<small class="red">${msgUnread()}</small>` : ''}</button>`).join('');
     if (EDITION === 'web' && WEB.stage === 'in' && !S.msg.at && !S.msg.busy.inbox) loadInbox(true);
     { const on = el.querySelector('.on'); if (on && el.scrollWidth > el.clientWidth + 2) { const x = on.offsetLeft - 16; if (x > 0) el.scrollLeft = x; } }
@@ -4256,6 +4317,16 @@ const PW_CONFIG = {
     else if (act === 'fcontact') { const v = b.getAttribute('data-v'); S.ui.contactCoach = v === '__all' ? null : v; render(); }
     // messages to the family (Nov 4): the recipient chip, the refresh, the jump from the weekly list to the player's composer
     else if (act === 'msg-conv') { const pid = b.getAttribute('data-pid'), key = b.getAttribute('data-key') || ''; S.ui.msgConv[pid] = key; S.ui.msgPick = null; render(); markReadLocal(pid, key); }
+    else if (act === 'msg-to') {   // a number in or out of the chat: the ones that are on are the chat that is open
+      const pid = b.getAttribute('data-pid'), tl = b.getAttribute('data-tail'); const t = msgThread(pid); if (!t) return;
+      const cur = new Set(String(curConv(pid, S.route.view === 'messages' ? S.route.conv : '') || '').split('+').filter(Boolean)); if (cur.has(tl)) cur.delete(tl); else cur.add(tl);
+      if (!cur.size) { toast('A chat needs at least one person.'); return; }
+      const on = (t.numbers || []).filter((n) => cur.has(n.tail)); const key = convKeyOf(on.map((n) => n.tail));
+      if (!convOf(t, key)) t.convs = convsOf(t).concat([{ key, members: on.map((n) => ({ slot: n.slot, word: n.word, name: n.name, tail: n.tail })), title: on.map((n) => n.word).join(' & '), count: 0, last: null, unread: false, suggested: false, local: true }]);
+      S.ui.msgConv[pid] = key; S.ui.msgFocus = pid;
+      if (b.getAttribute('data-in') === '1') go({ view: 'messages', pid, conv: key }); else render(); markReadLocal(pid, key); }
+    else if (act === 'msg-team') { const pid = b.getAttribute('data-pid'), k = b.getAttribute('data-key'); const off = S.ui.msgTeamOff[pid] || (S.ui.msgTeamOff[pid] = {}); off[k] = !off[k]; render(); }
+    else if (act === 'msg-via') { S.ui.msgVia[b.getAttribute('data-pid')] = b.getAttribute('data-via'); render(); const ta = $('.ck-form textarea'); if (ta) ta.focus(); }
     else if (act === 'msg-pick') { const pid = b.getAttribute('data-pid'); S.ui.msgPick = S.ui.msgPick === pid ? null : pid; S.ui.msgPickSel = {}; render(); const f = $('#msgpick input'); if (f) f.focus(); }
     else if (act === 'msg-pick-tog') { const tl = b.getAttribute('data-tail'); S.ui.msgPickSel[tl] = b.checked; const go2 = $('#msgpick [data-act="msg-pick-go"]'); const t = msgThread(S.ui.msgPick); const on = (t && t.numbers || []).filter((n) => S.ui.msgPickSel[n.tail]); if (go2) { go2.disabled = on.length < 2; go2.textContent = (convOf(t, convKeyOf(on.map((n) => n.tail))) ? 'Open that chat' : 'Start the chat') + (on.length ? ' · ' + on.map((n) => n.word).join(' & ') : ''); } }
     else if (act === 'msg-pick-go') { const pid = b.getAttribute('data-pid'); const t = msgThread(pid); if (!t) return; const on = (t.numbers || []).filter((n) => S.ui.msgPickSel[n.tail]); if (on.length < 2) return;
@@ -4364,11 +4435,12 @@ const PW_CONFIG = {
         await setSlot(p, sl, { state: 'ok', phone, name: val('name').slice(0, 80), from: 'coach' }); S.ui.slotOpen = null; toast(`${SLOT_LABEL[sl]}: saved. JustCall will find this family on that number too.`); render();
       } else if (kind === 'msg') {
         const p = player(f.getAttribute('data-pid')); if (!p || !mine(p)) return;
+        if (ckVia(p.id) !== 'text') return;   // WhatsApp and e-mail leave through their own buttons
         const body = val('body').slice(0, MSG_MAX); if (!body) return;
         const th = msgThread(p.id) || { numbers: [], lines: [], convs: [] }; const key = f.getAttribute('data-conv') || curConv(p.id); if (!CONV_OK.test(key)) { toast('Pick a chat first.'); return; }
         const btn = f.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
         try {
-          const out = await api('text', { player: p.id, conv: key, body });
+          const out = await api('text', { player: p.id, conv: key, body, team: teamOn(p.id, th).map((m) => m.name) });
           th.lines = (th.lines || []).concat(out.lines || [out.line]); th.at = Date.now(); S.msg.threads[p.id] = th;
           let c = convOf(th, key); if (!c) { c = { key, members: (out.to && [].concat(out.to)) || [], title: out.title || '', count: 0, last: null, unread: false }; th.convs = convsOf(th).concat([c]); }
           c.local = false; c.suggested = false; c.count = (c.count || 0) + (out.lines || [out.line]).length; c.last = { at: out.line.at, dir: 'out', body: body.slice(0, 140), by: '' };
@@ -4800,6 +4872,12 @@ const PW_CONFIG = {
     return `<div class="sect"><h2>Directors</h2><span class="muted" style="font-size:12px">who directs which group, and the coaches under them there · a coach can sit under two directors in two groups</span></div>
       ${staff.length ? `<div class="ccards dcards">${cards}</div>` : '<p class="hint">Loading the team…</p>'}`;
   }
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest && ev.target.closest('a[data-wa],a[data-mail]'); if (!a) return;
+    const f = a.closest('form'); const ta = f && f.querySelector('textarea'); const words = ta ? ta.value.trim() : '';
+    if (a.hasAttribute('data-wa')) { const n = a.getAttribute('data-wa'); if (!n) { ev.preventDefault(); toast('No number for this person.'); return; } a.href = 'https://wa.me/' + n + (words ? '?text=' + encodeURIComponent(words) : ''); }
+    else { const cc = a.getAttribute('data-cc'); const q = [cc ? 'cc=' + encodeURIComponent(cc) : '', 'subject=' + encodeURIComponent(a.getAttribute('data-subj') || ''), words ? 'body=' + encodeURIComponent(words) : ''].filter(Boolean).join('&'); a.href = 'mailto:' + a.getAttribute('data-mail') + '?' + q; a.removeAttribute('target'); }
+  }, true);
   document.addEventListener('click', (ev) => { const b = ev.target.closest && ev.target.closest('[data-board-g]'); if (!b) return; S.ui.boardG = b.getAttribute('data-board-g'); softRender(); });
   document.addEventListener('change', async (ev) => {
     const t = ev.target; const k = t.getAttribute && t.getAttribute('data-board-set'); if (!k) return;
