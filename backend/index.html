@@ -588,6 +588,7 @@ function fromDb(id,d){const ov=(state.overrides||{})[id]||{};const en=d.enroll||
   const plan=ov.plan||(kind==='monthly'?'monthly':kind==='pack'?'flex':kind==='weekly'?'weekly':kind==='dropin'?'dropin':kind==='camp'?'camp':kind==='lesson'?'lesson':'roster');
   const planId=en&&en.plan?String(en.plan):null;const pl=P&&planId?P.plans.find(x=>x.id===planId):null;
   let days=Array.isArray(ov.days)?ov.days.slice():(en&&Array.isArray(en.days)&&en.days.length?en.days.slice():null);
+  if(!days&&en&&en.pbp&&en.pbp.bySession)days=[];   // by the session in Play by Point (a flex pack, a drop-in): no fixed weekday, so never expected and never a no-show; the coach adds the player on the day
   if(!days)days=plan==='monthly'&&pl&&P&&pl.days>=P.days.length?P.days.slice():(plan==='roster'&&P?P.days.slice():[]);   // from Monday: every training day until the front desk narrows it
   let group=ov.group||null;if(!group&&program==='fulltime'){const s=String(mon&&mon.schedule||'');group=s.includes('7:45')?'am1':s.includes('9:30')?'am2':s.includes('2:00')?'pm2':'am2'}
   const purchases=Array.isArray(d.purchases)?d.purchases:[];
