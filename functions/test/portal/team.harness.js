@@ -160,7 +160,7 @@ if (require.main !== module) return;
   for (const look of ['light', 'dark']) { const { page, ctx, errs } = await open(390, 844, look);
     ok(await page.locator('.tc-side').isVisible() && !(await page.locator('.tc-main').isVisible()), 'phone ' + look + ': the list comes first');
     await shot(page, 'team-phone-list-' + look);
-    await page.tap('.tc-row[data-open="general"]'); await page.waitForTimeout(400);
+    await page.locator('[data-open="general"]').first().tap(); await page.waitForTimeout(400);
     ok(await page.locator('.tc-main').isVisible() && !(await page.locator('.tc-side').isVisible()), 'phone ' + look + ': a chat opens full screen');
     const box = await page.locator('.tc-comp').boundingBox(); ok(box && box.y + box.height <= 844 + 1 && box.y > 600, 'phone ' + look + ': the box to write in sits at the bottom of the screen');
     ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'phone ' + look + ': nothing runs off the side');

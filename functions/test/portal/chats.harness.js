@@ -26,7 +26,7 @@ const PLAYERS = {
   'as-di-m': { name: 'Di Moreau', group: 'as', coach: 'Lee', status: 'active' },
   'as-ed-m': { name: 'Ed Moreau', group: 'as', coach: 'Lee', status: 'active' },
   'as-no-n': { name: 'No Number', group: 'as', coach: 'Lee', status: 'active' },
-  'u10-fay-r': { name: 'Fay Rowe', group: 'u10', coach: 'Kim', status: 'active' }
+  'u10-fay-r': { name: 'Fay Rowe', group: 'u10', coach: 'Kim', coach2: 'Lee', coach3: 'Toño', status: 'active' }
 };
 const SEED = {
   'settings/notify': { justcallKey: 'k', justcallSecret: 's', justcallNumber: '+15614030008', textsOn: true },
@@ -35,7 +35,7 @@ const SEED = {
   'players/ft-cy-l/private/contact': { guardian: 'Sam Lane', phone: '(561) 555-0101' },
   'players/as-di-m/private/contact': { guardian: 'Mo Moreau', phone: '(561) 555-0103' },
   'players/as-ed-m/private/contact': { guardian: 'Mo Moreau', phone: '(561) 555-0103' },
-  'players/u10-fay-r/private/contact': { guardian: 'Ivy Rowe', phone: '(561) 555-0120', phone2: '(561) 555-0121' },
+  'players/u10-fay-r/private/contact': { guardian: 'Ivy Rowe', phone: '(561) 555-0120', phone2: '(561) 555-0121', email: 'ivy.rowe@example.test' },
   'contactCheck/ft-bo-k': { playerId: 'ft-bo-k', playerName: 'Bo Kessler', slots: { mother: { state: 'ok', phone: '+15615550100', name: 'Pat Kessler', from: 'file' }, father: { state: 'ok', phone: '+15615550109', name: 'Lou Kessler', from: 'coach' }, guardian: { state: 'na' }, player: { state: 'ok', phone: '+15615550111', name: 'Bo', from: 'coach' } } },
   'contactCheck/u10-fay-r': { playerId: 'u10-fay-r', playerName: 'Fay Rowe', slots: { mother: { state: 'ok', phone: '+15615550120', name: 'Ivy Rowe', from: 'file' }, father: { state: 'ok', phone: '+15615550121', name: 'Max Rowe', from: 'coach' } } },
   // the desk texted Bo's family on Tuesday, the mother answered; the coach texted Fay's parents together yesterday and the father answered
@@ -117,25 +117,25 @@ if (require.main === module) (async () => {
   try {
     /* ── desktop ── */
     const d = await page(browser, 1280, 900);
-    await d.goto('http://localhost:4173/portal/#/p/ft-bo-k'); try { await d.waitForSelector('#msgcard .ctabs', { timeout: 15000 }); } catch (e) { console.log('MAIN:', (await text(d, 'main')).slice(0, 600)); throw e; }
+    await d.goto('http://localhost:4173/portal/#/p/ft-bo-k'); try { await d.waitForSelector('#msgcard .ck-who', { timeout: 15000 }); } catch (e) { console.log('MAIN:', (await text(d, 'main')).slice(0, 600)); throw e; }
     await d.waitForTimeout(300);
-    const chips = await d.locator('#msgcard .ctabs .cchip').allInnerTexts();
-    log(chips.length === 5 && /Mother/.test(chips[0]) && /Father/.test(chips[1]) && /player/i.test(chips[2]) && /Mother & Father/.test(chips[3]) && /Group/.test(chips[4]), 'player page: the chips — Mother · Father · The player · Mother & Father (suggested) · + Group: ' + JSON.stringify(chips));
-    log((await d.locator('#msgcard .cchip[aria-pressed="true"]').innerText()).includes('Mother'), 'the mother\'s chat opens (it has the newest line)');
+    const SW = '#msgcard .ck-sw[data-act="msg-to"]'; const sw = (pg, word, root) => pg.locator((root || '#msgcard') + ' .ck-sw[data-act="msg-to"]', { hasText: word }).first();
+    const chips = await d.locator(SW).allInnerTexts();
+    log(chips.length === 3 && /Mother/.test(chips[0]) && /Father/.test(chips[1]) && /player/i.test(chips[2]), 'player page: the To switches — Mother · Father · The player: ' + JSON.stringify(chips));
+    log((await d.locator(SW + '[aria-pressed="true"]').allInnerTexts()).join('|').includes('Mother') && (await count(d, SW + '[aria-pressed="true"]')) === 1, 'the mother\'s chat opens (it has the newest line): only her switch is on');
     log((await count(d, '#msgcard .bub')) === 2, 'her chat: the desk text and her reply');
-    log(await d.locator('#msgcard .cchip.sug').count() === 1 && /Mother & Father/.test(await d.locator('#msgcard .cchip.sug').innerText()), 'the parents together is suggested (dashed)');
     await shot(d, 'desktop-player-mother');
     // the group chat: open it, write, send → one bubble, two texts out
-    await d.locator('#msgcard .cchip', { hasText: 'Mother & Father' }).click(); await d.waitForTimeout(150);
-    log(/Nothing in this group chat yet/.test(await text(d, '#msgcard')), 'the group chat is empty');
-    log(/Mother · Pat Kessler · …0100/.test(await text(d, '#msgcard .msgto')) && /Father · Lou Kessler · …0109/.test(await text(d, '#msgcard .msgto')), 'the composer says To: Mother · Father');
+    await sw(d, 'Father').click(); await d.waitForTimeout(150);
+    log(/Nothing in this group chat yet/.test(await text(d, '#msgcard')), 'the father switched on too: the parents\' chat, empty');
+    log((await count(d, SW + '[aria-pressed="true"]')) === 2 && /Pat Kessler · …0100/.test(await text(d, '#msgcard .ck-who')) && /Lou Kessler · …0109/.test(await text(d, '#msgcard .ck-who')) && /the mother and the father/.test(await d.locator('#msgcard textarea').getAttribute('placeholder')), 'To: Mother and Father are on, and the box says so');
+    log((await count(d, '#msgcard .ck-seg button')) === 3, 'Text · WhatsApp · E-mail');
     await d.fill('#msgcard textarea', 'Bo played great today. Tournament Saturday at 9, please be there 8:30.');
     const before = net.filter((c) => /texts\/new/.test(c.url)).length;
     await d.click('#msgcard button[type="submit"]'); await d.waitForTimeout(600);
     log(net.filter((c) => /texts\/new/.test(c.url)).length - before === 2, 'two texts went out (one per parent)');
     log((await count(d, '#msgcard .bub.b-out')) === 1, 'one bubble in the group chat for the group text');
     log(/to the mother and the father/.test(await text(d, '#msgcard .bub.b-out small')), 'the bubble says who got it: ' + (await text(d, '#msgcard .bub.b-out small')));
-    log(!(await d.locator('#msgcard .cchip', { hasText: 'Mother & Father' }).evaluate((el) => el.classList.contains('sug'))), 'the group chat is no longer a suggestion');
     log((await d.locator('#msgcard textarea').inputValue()) === '', 'the box emptied');
     await shot(d, 'desktop-player-group');
     // the father answers → the reply lands in the group chat, the chip and the tab go red
@@ -144,19 +144,15 @@ if (require.main === module) (async () => {
     // a draft survives a redraw, and is per chat
     await d.fill('#msgcard textarea', 'half-written to both');
     await d.evaluate(() => { const ev = new Event('visibilitychange'); document.dispatchEvent(ev); }); await d.waitForTimeout(200);
-    await d.locator('#msgcard .cchip', { hasText: 'Father' }).first().click(); await d.waitForTimeout(150);
+    await sw(d, 'Mother').click(); await d.waitForTimeout(150);
     log((await d.locator('#msgcard textarea').inputValue()) === '', 'the father\'s own chat has no draft');
     log((await count(d, '#msgcard .bub')) === 0 && /Nothing yet/.test(await text(d, '#msgcard')), 'his own chat is empty — the group answer stayed in the group');
-    await d.locator('#msgcard .cchip', { hasText: 'Mother & Father' }).click(); await d.waitForTimeout(150);
+    await sw(d, 'Mother').click(); await d.waitForTimeout(150);
     log((await d.locator('#msgcard textarea').inputValue()) === 'half-written to both', 'back in the group: the draft is back');
-    // + Group: Mother & the player
-    await d.click('#msgcard [data-act="msg-pick"]'); await d.waitForTimeout(100);
-    log((await count(d, '#msgpick .pickrow')) === 3 && (await d.locator('#msgpick [data-act="msg-pick-go"]').isDisabled()), 'the picker lists the three numbers, Start is off until two are ticked');
-    await d.locator('#msgpick .pickrow', { hasText: 'Mother' }).click(); await d.locator('#msgpick .pickrow', { hasText: 'player' }).click(); await d.waitForTimeout(100);
-    log(/Start the chat · Mother & The player/.test(await text(d, '#msgpick [data-act="msg-pick-go"]')), 'Start the chat · Mother & The player');
-    await shot(d, 'desktop-player-picker');
-    await d.click('#msgpick [data-act="msg-pick-go"]'); await d.waitForTimeout(200);
-    log(/Mother & The player/.test(await d.locator('#msgcard .cchip[aria-pressed="true"]').innerText()), 'the new group chat is open');
+    // Mother & the player: the father off, the player on
+    await sw(d, 'Father').click(); await d.waitForTimeout(150); await sw(d, 'player').click(); await d.waitForTimeout(200);
+    log((await d.locator(SW + '[aria-pressed="true"]').allInnerTexts()).map((x) => x.split('\n')[0].trim()).join(' & ') === 'Mother & The player', 'the new group chat is open: Mother & The player');
+    await d.evaluate(() => { const t = document.querySelector('#msgcard textarea'); if (t) t.value = ''; });
     await d.fill('#msgcard textarea', 'Bo, your mom and you: bring the second racket'); await d.click('#msgcard button[type="submit"]'); await d.waitForTimeout(600);
     log((await count(d, '#msgcard .bub.b-out')) === 1 && /to the mother and the player/.test(await text(d, '#msgcard .bub.b-out small')), 'sent to the mother and the player');
     log(Object.keys(db._docs.get('coachThreads/ft-bo-k').convs).sort().join(',') === '0100,0100+0109,0100+0111', 'the engine has the three chats: ' + Object.keys(db._docs.get('coachThreads/ft-bo-k').convs).join(' '));
@@ -185,12 +181,12 @@ if (require.main === module) (async () => {
     await shot(d, 'desktop-messages');
     await d.locator('.mlist .msgrow', { hasText: 'Bo Kessler' }).filter({ hasText: 'Mother & Father' }).click(); await d.waitForTimeout(300);
     log(/Bo Kessler/.test(await text(d, '.mhead .mwho b')) && /Mother & Father/.test(await text(d, '.mhead .mwho small')) && (await count(d, '.mpane .bub')) === 2, 'Bo · Mother & Father opens on the right with its two bubbles');
-    await d.locator('.mpane .cchip', { hasText: 'Mother' }).first().click(); await d.waitForTimeout(300);
+    await sw(d, 'Father', '.mpane').click(); await d.waitForTimeout(300);
     log(/^#\/messages\/ft-bo-k\/0100$/.test(await d.evaluate(() => location.hash)) && (await count(d, '.mpane .bub')) === 2, 'the chip switches to the mother\'s chat (desk text + her reply)');
     await d.fill('.mpane textarea', 'Pat, one more thing about Saturday'); await d.click('.mpane button[type="submit"]'); await d.waitForTimeout(600);
     log((await count(d, '.mpane .bub')) === 3 && /Pat, one more thing/.test(await text(d, '.mlist .msgrow.on')), 'sent from the pane; the row preview updates');
     await d.locator('.mlist .msgrow.quiet', { hasText: 'Cy Lane' }).click(); await d.waitForTimeout(400);
-    log(/Cy Lane/.test(await text(d, '.mhead .mwho b')) && /Nothing yet/.test(await text(d, '.mpane')) && (await count(d, '.mpane .cchip')) === 1, 'a family with no texts opens with its one chat (the mother\'s), ready to write');
+    log(/Cy Lane/.test(await text(d, '.mhead .mwho b')) && /Nothing yet/.test(await text(d, '.mpane')) && (await count(d, '.mpane .ck-sw[data-act="msg-to"]')) === 1, 'a family with no texts opens with its one chat (the mother\'s), ready to write');
     await shot(d, 'desktop-messages-quiet');
     await d.context().close();
 
@@ -211,12 +207,10 @@ if (require.main === module) (async () => {
     log(await m.locator('.mback').isVisible(), '‹ Chats back button is there');
     log((await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'no sideways scroll in the chat');
     await shot(m, 'phone-messages-chat');
-    await m.locator('.mpane .cchip', { hasText: 'Group' }).tap(); await m.waitForTimeout(200);
-    await shot(m, 'phone-messages-picker');
-    await m.locator('#msgpick [data-act="msg-pick-x"]').tap(); await m.waitForTimeout(150);
+    log((await count(m, '.mpane .ck-sw[data-act="msg-team"]')) === 3 && (await count(m, '.mpane .ck-sw[data-act="msg-team"][aria-pressed="true"]')) === 3, 'the team row: the other coaches on the player, all on from the start');
     await m.locator('.mback').tap(); await m.waitForTimeout(400);
     log(/^#\/messages$/.test(await m.evaluate(() => location.hash)) && await m.locator('.mlist').isVisible(), 'Back returns to the list');
-    await m.goto('http://localhost:4173/portal/#/p/ft-bo-k'); await m.waitForSelector('#msgcard .ctabs', { timeout: 15000 }); await m.waitForTimeout(400);
+    await m.goto('http://localhost:4173/portal/#/p/ft-bo-k'); await m.waitForSelector('#msgcard .ck-who', { timeout: 15000 }); await m.waitForTimeout(400);
     log((await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'no sideways scroll on the player page');
     const card = await m.locator('#msgcard').boundingBox(); await m.evaluate((y) => window.scrollTo(0, y - 10), card.y);
     await m.screenshot({ path: path.join(SHOTS, 'phone-player-card.png'), fullPage: false });

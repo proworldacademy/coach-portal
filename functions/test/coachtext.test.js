@@ -295,3 +295,26 @@ test('a director is a coach in the chats (Nov 17): any family can be opened, but
   const dir = await COACHTEXT.thread(db, DEE, 'ft-bo-k', {}); assert.equal(dir.lines.length, 0, 'a director does not read another coach\'s chat');
   const box = await COACHTEXT.inbox(db, DEE); assert.equal(box.rows.length, 0); assert.equal(box.quiet.length, 0, 'no list of every family of the academy'); assert.equal(box.families, 0);
 });
+
+test('a text is a team text by default (Nov 18): the other coach on the player reads it and the answer to it; "only me" stays with its coach', async () => {
+  const db = fakeDb(Object.assign({}, SEED, { 'staff/kim@example.test': Object.assign({}, SEED['staff/kim@example.test'], { justcallNumber: '+15615557777' }), 'staff/lee@example.test': Object.assign({}, SEED['staff/lee@example.test'], { justcallNumber: '+15615556666' }) }));
+  wire(db); const KIMN = Object.assign({}, KIM, { justcallNumber: '+15615557777' }); const LEEN = Object.assign({}, LEE, { justcallNumber: '+15615556666' });
+  const out = await COACHTEXT.text(db, KIMN, { player: 'ft-cy-l', to: '+15615550101', body: 'Team text about Cy', dry: true });
+  assert.deepEqual(out.team, ['lee'], 'everyone on the player but the sender, by default');
+  await new Promise((r) => setTimeout(r, 5));
+  db._docs.set('smsLog/ra', { kind: 'reply', at: Date.now(), phone: '+15615550101', body: 'Thanks both', players: ['ft-cy-l'], by: 'family', status: 'reply', justcallId: 'jc-a', line: '+15615557777' });
+  let t = await COACHTEXT.thread(db, LEEN, 'ft-cy-l', { markRead: false });
+  assert.deepEqual(t.lines.map((l) => l.dir + ':' + l.body.split('\n')[0]), ['out:Team text about Cy', 'in:Thanks both'], 'Lee reads the team text and the answer to it');
+  assert.deepEqual(t.team.map((m) => m.key + (m.me ? '*' : '')), ['kim', 'lee*']);
+  const ib = await COACHTEXT.inbox(db, LEEN); assert.deepEqual(ib.rows.map((r) => r.id + '/' + r.last.body), ['ft-cy-l/Thanks both'], 'and it lists in Lee\'s Contact');
+  await new Promise((r) => setTimeout(r, 5));
+  const solo = await COACHTEXT.text(db, KIMN, { player: 'ft-cy-l', to: '+15615550101', body: 'Only from Kim', team: [], dry: true });
+  assert.deepEqual(solo.team, []);
+  await new Promise((r) => setTimeout(r, 5));
+  db._docs.set('smsLog/rb', { kind: 'reply', at: Date.now(), phone: '+15615550101', body: 'Just for Kim', players: ['ft-cy-l'], by: 'family', status: 'reply', justcallId: 'jc-b', line: '+15615557777' });
+  t = await COACHTEXT.thread(db, LEEN, 'ft-cy-l', { markRead: false });
+  assert.deepEqual(t.lines.map((l) => l.body.split('\n')[0]), ['Team text about Cy', 'Thanks both'], 'the one-to-one text and its answer stay with Kim');
+  t = await COACHTEXT.thread(db, KIMN, 'ft-cy-l', { markRead: false }); assert.equal(t.lines.length, 4);
+  // a coach who is not on the player is never added, whatever the page asks for
+  assert.deepEqual(COACHTEXT.teamOf({ coach: 'Kim', coach2: 'Lee' }, KIM, ['Lee', 'Zed']), ['lee']);
+});

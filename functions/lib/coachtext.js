@@ -58,6 +58,19 @@ const shortName = (who) => who.coachAs || who.firstName || first(who.name) || wh
 const signature = (who) => `- Coach ${shortName(who)}, ProWorld Academy`;
 const optedOutError = (msg) => /opt(ed)?[ -]?out|unsubscrib|blacklist|blocked|\bdnd\b|do not (disturb|message)/i.test(String(msg || ''));
 const own = (who, p) => !!who.director || [p.coach, p.coach2, p.coach3].some((c) => c && who.keys.includes(fold(first(c))));
+/* The team on a family's chat (Nov 18, 2026, management and the directors): every text a coach sends from the app is, by default,
+   a team text: every coach on the player's record (coach, coach2, coach3) reads it in their own Contact and hears about it, and
+   so with the family's answer to it. The sender can switch a coach off, or all of them ("only me"). A line carries
+   `team: [<first name, folded>, …]`: the coaches it was shared with (the sender is not listed; they see their own line anyway).
+   A line with no `team` is from before, or was sent to the family alone: only its own coach sees it, as always. */
+const teamKeys = (p) => Array.from(new Set([p.coach, p.coach2, p.coach3].map((c) => fold(first(c))).filter(Boolean)));
+function teamOf(p, who, want) {
+  const all = teamKeys(p).filter((k) => !(who.keys || []).includes(k));
+  if (want === undefined || want === null) return all;                      // the default: everyone on the player
+  const pick = new Set([].concat(want).map((c) => fold(first(c))).filter(Boolean));
+  return all.filter((k) => pick.has(k));
+}
+const onTeam = (who, l) => Array.isArray(l.team) && l.team.some((k) => (who.keys || []).includes(k));
 const pidOf = (v) => { const pid = clean(v, 60); if (!/^[a-z0-9-]{1,60}$/i.test(pid)) throw S.err(400, 'player', 'A player id is required.'); return pid; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pace = (ms) => sleep(ms);
@@ -79,10 +92,15 @@ function scopeLines(who, mine, outs, ins) {
   // shows is what happened on the director's own number, never the academy line's or another coach's chats.
   if (who.owner) return { outs, ins };
   const app = (l) => l.via === 'app';   // written in the client account (Nov 17): it is for the coach it names, whatever number that coach has
+  /* a team text (Nov 18): the coaches it was shared with read it, and the family's answer to it — the answer belongs to the last
+     text that number got; when that one was shared with this coach, so is the answer */
+  const sorted = outs.filter((l) => l.status !== 'failed').slice().sort((a, b) => (a.at || 0) - (b.at || 0));
+  const lastOut = (l) => { let hit = null; for (const o of sorted) { if ((o.at || 0) > (l.at || 0)) break; if (o.phone === l.phone) hit = o; } return hit; };
+  const shared = (l) => { if (app(l)) return false; const o = lastOut(l); return !!o && onTeam(who, o) && (!l.line || !o.line || l.line === o.line); };
   ins = ins.filter((l) => !app(l) || l.forCoach === who.email);
-  if (mine) return { outs: outs.filter((l) => l.line === mine), ins: ins.filter((l) => l.line === mine || app(l)) };
+  if (mine) return { outs: outs.filter((l) => l.line === mine || onTeam(who, l)), ins: ins.filter((l) => l.line === mine || app(l) || shared(l)) };
   const o = outs.filter((l) => l.by === who.email); const first = new Map(); o.forEach((l) => { if (!first.has(l.phone) || l.at < first.get(l.phone)) first.set(l.phone, l.at); });
-  return { outs: o, ins: ins.filter((l) => app(l) || (first.has(l.phone) && (l.at || 0) > first.get(l.phone) && !l.line)) };
+  return { outs: outs.filter((l) => l.by === who.email || onTeam(who, l)), ins: ins.filter((l) => app(l) || shared(l) || (first.has(l.phone) && (l.at || 0) > first.get(l.phone) && !l.line)) };
 }
 
 /* The chat key: the last four digits of every number in it, sorted, joined with '+'. One number → its own chat. */
@@ -177,6 +195,7 @@ async function text(db, who, body) {
   if (!numbers.length) throw S.err(409, 'numbers', 'No number on file for this family. Add one under Contacts for JustCall on the player\'s page.');
   if (optOut) throw S.err(403, 'optout', `${optOutWhy} Call them instead.`);
   const tos = recipientsOf(body, numbers); const key = convKey(tos.map((t) => t.phone));
+  const team = teamOf(p, who, body.team);
   const ln = await SMS.line(db);
   if (!ln.connected) throw S.err(409, 'keys', 'JustCall is not connected yet — an owner pastes the API key under Players & billing → Notifications.');
   const mineLine = await ownLine(db, who); const fromNum = mineLine || ln.from;
@@ -196,7 +215,7 @@ async function text(db, who, body) {
     if (i) await pace(PACE_MS);
     let r = null, err = '';
     try { r = await SMS.justcallSend({ key: s.justcallKey, secret: s.justcallSecret }, fromNum, to.phone, full); } catch (e) { err = String(e.message || e).slice(0, 200); }
-    const line = { batch: batchRef.id, at: at + i, by: who.email, byName: who.name || who.email, player: p.id, playerName: p.name || p.id, group: p.group || '', program: '', coach: p.coach || '', phone: to.phone, to: to.slot || '', toName: to.name || '', conv: key, body: full, status: r ? 'sent' : 'failed', reason: '', attempts: 1, justcallId: r ? r.id : '', delivery: '', error: r ? '' : err, from: 'portal', line: fromNum };
+    const line = { batch: batchRef.id, at: at + i, by: who.email, byName: who.name || who.email, player: p.id, playerName: p.name || p.id, group: p.group || '', program: '', coach: p.coach || '', phone: to.phone, to: to.slot || '', toName: to.name || '', conv: key, body: full, status: r ? 'sent' : 'failed', reason: '', attempts: 1, justcallId: r ? r.id : '', delivery: '', error: r ? '' : err, from: 'portal', line: fromNum, team };
     if (r) { line.sentAt = Date.now(); sent++; } else { line.failedAt = Date.now(); failed++; lastErr = err; if (optedOutError(err)) { try { await SMS.setOptIn(db, p.id, false, { source: 'justcall', by: 'justcall', phone: to.phone }); } catch (e) { /* the line says failed */ } } }
     lines.push(Object.assign({ id: lineRef.id }, line)); await lineRef.set(line);
   }
@@ -204,7 +223,17 @@ async function text(db, who, body) {
   if (!sent) throw S.err(502, 'justcall', 'JustCall did not take it: ' + lastErr);
   const tick = await tickWeek(db, who, p, tos.filter((t, i) => lines[i].status === 'sent'), at);
   await touchThread(db, p, { at, dir: 'out', body: msg, by: shortName(who) }, { key, members: tos });
-  const out = { ok: true, lines: lines.map(publicLine), tick, conv: key, title: titleOf(tos), to: tos.map((t) => ({ slot: t.slot, name: t.name, tail: tail(t.phone) })), sent, failed };
+  /* the team hears about it: a notification on the phone of every coach it was shared with; a tap opens the same chat */
+  const told = [];
+  if (team.length && !body.dry) {
+    try {
+      const staff = await CONTACTS.staffIndex(db); const names = [p.coach, p.coach2, p.coach3].filter((c) => c && team.includes(fold(first(c))));
+      const emails = Array.from(new Set(names.map((c) => CONTACTS.staffFor(staff, c)).filter((x) => x && x.email && x.email !== who.email).map((x) => x.email)));
+      const w = String(p.name || pid).trim().split(/\s+/); const short = w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0];
+      if (emails.length) { await PUSH.send(db, emails, { title: `Coach ${shortName(who)} to ${short}'s family`, body: msg.slice(0, 140), url: `/portal#/messages/${encodeURIComponent(pid)}/${key}`, tag: 'chat-' + pid }); told.push(...emails); }
+    } catch (e) { /* a nicety: the line itself is in their Contact */ }
+  }
+  const out = { ok: true, team, told: told.length, lines: lines.map(publicLine), tick, conv: key, title: titleOf(tos), to: tos.map((t) => ({ slot: t.slot, name: t.name, tail: tail(t.phone) })), sent, failed };
   out.line = out.lines[0]; if (tos.length === 1) out.to = out.to[0];   // the one-number shape the page knew first
   return out;
 }
@@ -216,7 +245,7 @@ function publicLine(l) {
   if (l.kind === 'reply') return Object.assign({ id: l.id, at: l.at || 0, dir: 'in', body: String(l.body || ''), tail: tail(l.phone), conv: l.conv || '' }, l.via === 'app' ? { note: 'from the app' } : {});
   if (l.kind === 'optin') { const body = String(l.body || '').trim(); return { id: l.id, at: l.at || 0, dir: 'in', body: body && !BARE_START.test(body) ? body : 'START', tail: tail(l.phone), conv: l.conv || '', note: 'texts on' }; }
   if (l.kind === 'optout') return { id: l.id, at: l.at || 0, dir: 'sys', body: 'The family replied STOP: no more texts to this number.', words: String(l.body || '').trim().slice(0, 200), tail: tail(l.phone), conv: l.conv || '' };
-  return { id: l.id, at: l.at || 0, dir: 'out', body: String(l.body || ''), by: l.byName || l.by || '', status: l.status || '', delivery: l.delivery || '', error: l.error || '', to: l.to || '', toName: l.toName || '', tail: tail(l.phone), portal: l.from === 'portal', conv: l.conv || tail(l.phone), batch: l.batch || '' };
+  return { id: l.id, at: l.at || 0, dir: 'out', body: String(l.body || ''), by: l.byName || l.by || '', status: l.status || '', delivery: l.delivery || '', error: l.error || '', to: l.to || '', toName: l.toName || '', tail: tail(l.phone), portal: l.from === 'portal', conv: l.conv || tail(l.phone), batch: l.batch || '', team: Array.isArray(l.team) ? l.team : [], byEmail: l.by || '' };
 }
 
 /* Every line of this family's record, in order, each filed in its chat: a text sent from here or from the desk carries its key
@@ -265,7 +294,9 @@ async function thread(db, who, pid, opts) {
   const convs = chats.map((c) => Object.assign({}, c, { members: c.members.map(publicMember) }));
   const lines = all.slice(-400).map(publicLine);
   const ln = await SMS.line(db);
-  return { player: { id: p.id, name: p.name || p.id, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', status: p.status || 'active' }, numbers: numbers.map((n) => ({ slot: n.slot, word: n.slot ? SLOT_WORD[n.slot] : 'On file', name: n.name, phone: n.phone, tail: tail(n.phone) })), convs, optOut, optOutWhy, consent, line: { connected: ln.connected, from: (mineLine || ln.from) ? tail(mineLine || ln.from) : '', own: !!mineLine }, signature: signature(who), lines };
+  let team = []; try { const staff = await CONTACTS.staffIndex(db); team = [p.coach, p.coach2, p.coach3].filter(Boolean).filter((c, i, a) => a.findIndex((x) => fold(first(x)) === fold(first(c))) === i).map((c) => { const st = CONTACTS.staffFor(staff, c); return { key: fold(first(c)), name: first(c), email: (st && st.email) || '', signIn: !!(st && st.email), me: (who.keys || []).includes(fold(first(c))) }; }); } catch (e) { team = []; }
+  let emails = []; try { const c = (await db.doc(`players/${pid}/private/contact`).get()); const d = c.exists ? (c.data() || {}) : {}; emails = [[d.email, d.guardian], [d.email2, '']].filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(x[0] || ''))).map((x) => ({ email: String(x[0]).trim().toLowerCase(), name: clean(x[1], 80) })); } catch (e) { emails = []; }
+  return { team, emails, player: { id: p.id, name: p.name || p.id, group: p.group || '', coach: p.coach || '', coach2: p.coach2 || '', coach3: p.coach3 || '', status: p.status || 'active' }, numbers: numbers.map((n) => ({ slot: n.slot, word: n.slot ? SLOT_WORD[n.slot] : 'On file', name: n.name, phone: n.phone, tail: tail(n.phone) })), convs, optOut, optOutWhy, consent, line: { connected: ln.connected, from: (mineLine || ln.from) ? tail(mineLine || ln.from) : '', own: !!mineLine }, signature: signature(who), lines };
 }
 
 /* The chats as the inbox lists them, written onto coachThreads/<pid>.convs (only the chats with a line in them). A thread
@@ -330,6 +361,13 @@ async function coachInbox(db, who, players, read, quietOk) {
   const mineLine = await ownLine(db, who); const ids = new Set(players.map((p) => p.id));
   const outsAll = mineLine ? (await db.collection('smsLog').where('line', '==', mineLine).get()).docs : (await db.collection('smsLog').where('by', '==', who.email).get()).docs;
   const outs = outsAll.map((d) => Object.assign({ id: d.id }, d.data() || {})).filter((l) => !l.kind && l.status !== 'skipped' && ids.has(l.player));
+  /* team texts (Nov 18): the families where a line was shared with this coach bring their whole record, so scopeLines can tell
+     which answers followed a shared text; every other family stays on the coach's own lines */
+  try {
+    const have = new Set(outs.map((l) => l.id)); const sharedPids = new Set();
+    for (const k of (who.keys || []).slice(0, 4)) { (await db.collection('smsLog').where('team', 'array-contains', k).get()).docs.forEach((d) => { const x = d.data() || {}; if (!x.kind && ids.has(x.player)) sharedPids.add(x.player); }); }
+    for (const sp of sharedPids) { (await db.collection('smsLog').where('player', '==', sp).get()).docs.forEach((d) => { const x = Object.assign({ id: d.id }, d.data() || {}); if (!x.kind && x.status !== 'skipped' && !have.has(x.id)) { have.add(x.id); outs.push(x); } }); }
+  } catch (e) { /* the coach's own lines still list */ }
   const ins0 = (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {}));
   const rows = [], quiet = [];
   for (const p of players) {
@@ -372,8 +410,9 @@ async function onReply(db, ev) {
     const p = Object.assign({ id: pid }, snap.data() || {});
     const conv = phone ? await convOfReply(db, pid, phone) : { key: '', members: [] };
     await touchThread(db, p, { at, dir: 'in', body, by: 'family' }, conv); out.threads++;
+    let answered = []; try { if (phone) { const last = (await db.collection('smsLog').where('player', '==', pid).get()).docs.map((d) => d.data() || {}).filter((l) => !l.kind && l.status !== 'skipped' && l.status !== 'failed' && l.phone === phone && (l.at || 0) <= at).sort((a, b) => (b.at || 0) - (a.at || 0))[0]; answered = (last && Array.isArray(last.team)) ? last.team : []; } } catch (e) { answered = []; }
     for (const c of [p.coach, p.coach2, p.coach3]) {
-      const s = c && CONTACTS.staffFor(staff, c); if (!s || told.has(s.email)) continue; if (lineOwner && s.email !== lineOwner) continue; told.add(s.email); out.coaches.push(s.short || s.name);
+      const s = c && CONTACTS.staffFor(staff, c); if (!s || told.has(s.email)) continue; if (lineOwner && s.email !== lineOwner && !answered.includes(fold(first(c)))) continue; told.add(s.email); out.coaches.push(s.short || s.name);
       const w = String(p.name || pid).trim().split(/\s+/); const short = w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0];
       const whoWrote = conv.members.length > 1 ? (conv.members.find((m) => m.phone === phone) || {}) : {};
       const line = `${short}'s family wrote back${whoWrote.slot ? ' (' + SLOT_WORD[whoWrote.slot].toLowerCase().replace('the ', '') + ')' : ''}: "${body.slice(0, 160)}${body.length > 160 ? '…' : ''}" Answer from the portal: ${SITE}/portal#/messages/${encodeURIComponent(pid)}${conv.key ? '/' + conv.key : ''}`;
@@ -434,4 +473,4 @@ async function appThread(db, p, email, t) {
   return lines;
 }
 
-module.exports = { fromApp, appThread, text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };
+module.exports = { teamOf, teamKeys, fromApp, appThread, text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };

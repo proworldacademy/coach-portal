@@ -30,7 +30,7 @@ if (require.main === module) (async () => {
       log(/Guardian · Aunt/.test(await text(m, '.a2k-p .a2card')) && await m.locator('.a2row.a2f').count() === 4, n + ' player: a new number shows as a family line right away');
       await m.locator('[data-act="a2numbers"]').click(); await m.waitForTimeout(200);
       await m.locator('.a2fam[data-tail="0109"]').click(); await m.waitForTimeout(700);
-      log(await m.locator('#msgcard .cchip[aria-pressed="true"]', { hasText: 'Father' }).count() === 1, n + ' player: tapping the father opens his chat');
+      log(await m.locator('#msgcard .ck-sw[data-act="msg-to"][aria-pressed="true"]', { hasText: 'Father' }).count() === 1, n + ' player: tapping the father opens his chat');
       // Call stays in the app: the JustCall dialer opens in a sheet, the number handed to it (Nov 13)
       await m.locator('.a2qa a[data-jc]').click(); await m.waitForTimeout(400);
       log(await m.evaluate(() => { const el = document.querySelector('#jcs'); const f = el && el.querySelector('iframe'); return !!el && !el.hidden && !!f && f.src === 'https://app.justcall.io/dialer' && /microphone/.test(f.allow) && /Bo Kessler/.test(el.querySelector('.jcs-t').textContent) && /justcall:\/\/app\/call\?number=%2B1561555/.test(el.querySelector('.jcs-app').getAttribute('href')); }), n + ' call: the dialer opens inside the portal, with the way out to the JustCall app');
@@ -52,7 +52,7 @@ if (require.main === module) (async () => {
       // the four: Reminders · Players · Contact · Privates (Nov 13), and Team (Nov 15)
       await m.goto('http://localhost:4173/portal/#/'); await m.waitForSelector('h1.title', { timeout: 15000 }); await m.waitForTimeout(900);
       log(/Reminders/i.test(await text(m, 'h1.title')) && await count(m, '.groups .group') === 0 && /Log of activity/i.test(await text(m, 'main')), n + ' home: Reminders — what is waiting and the log, no groups');
-      log(await m.evaluate(() => Array.from(document.querySelectorAll('#vtabs button, #vtabs a')).map((b) => b.textContent.replace(/\d+$/, '').trim()).join('·')) === 'Reminders·Players·Contact·Locker Room·Privates', n + ': the row is Reminders · Players · Contact · Team · Privates');
+      log((await m.evaluate(() => Array.from(document.querySelectorAll('#vtabs button, #vtabs a')).map((b) => b.textContent.replace(/\d+$/, '').trim()).join('·'))).startsWith('Reminders·Players·Contact·Locker Room·Privates'), n + ': the row starts Reminders · Players · Contact · Locker Room · Privates (a director\'s goes on: Attendance · Text a group · Coach Board · Staff & access)');
       if (n === 'phone') log(await m.evaluate(() => Array.from(document.querySelectorAll('.cp-appbar button')).map((b) => b.textContent.replace(/\d+/g, '').replace(/[^A-Za-z]/g, '')).join('·')) === 'Reminders·Players·Contact·LockerRoom·Privates' && await m.evaluate(() => getComputedStyle(document.querySelector('.pwd-burger')).display !== 'none'), 'phone: the bottom bar is the five (Locker Room since Nov 15), the ☰ is at the top');
       log(!(await overflow(m)).length, n + ' home: nothing wider than the screen ' + JSON.stringify(await overflow(m)));
       await shot(m, 'app-' + n + '-home');
