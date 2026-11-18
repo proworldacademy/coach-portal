@@ -80,6 +80,12 @@ details.past summary:hover{color:var(--ink)}
 .ch-cal button:disabled{cursor:default;color:#A3A59E;background:none;border-color:transparent}
 .ch-cal button.train{background:#E2FE78;border-color:rgba(10,10,10,.3)}
 .ch-cal button.away{background:#fff;border:1.5px dashed #0A0A0A;text-decoration:line-through}
+.ch-cal button.book{background:#E2FE78;border-color:rgba(10,10,10,.3)}
+.ch-pick.col{flex-direction:column;align-items:stretch}.ch-ses{display:flex;gap:8px;flex-wrap:wrap}.ch-ses button{flex:1 1 120px;min-height:56px;border-radius:16px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;font-size:13px;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:8px 14px;cursor:pointer}.ch-ses button b{font-size:16px}.ch-ses button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78;border-color:#0A0A0A}
+.ch .ch-tg{height:40px;padding:0 16px;border-radius:20px;border:1px solid #0A0A0A;background:#fff;color:#0A0A0A;-webkit-appearance:none;appearance:none;font-weight:700;font-size:13.5px;font-family:inherit;cursor:pointer;flex:none}
+.ch-also{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid #E4E6DF;padding-top:14px;font-size:13.5px}.ch-also>span{color:#2F312C;width:100%}.ch-also em{font-style:normal;display:inline-flex;align-items:center;gap:8px;border:1px solid #DADCD5;border-radius:18px;padding:6px 6px 6px 12px}.ch-also em button{width:26px;height:26px;border-radius:50%;border:0;background:#F1F2EC;color:#0A0A0A;cursor:pointer;font-size:12px}
+.ch-addp{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}.ch-addp input{height:46px;border-radius:14px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;padding:0 12px;font-size:15px;font-family:inherit;min-width:0}.ch-addp .ch-btn{grid-column:1/-1}
+html.dark .ch-ses button{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-ses button[aria-pressed="true"]{background:#E2FE78;color:#0A0A0A;border-color:#E2FE78}html.dark .ch .ch-tg{border-color:#F4F4F0;color:#F4F4F0;background:#161616}html.dark .ch-also{border-color:#343434}html.dark .ch-also>span{color:#C9C9C4}html.dark .ch-also em{border-color:#343434}html.dark .ch-also em button{background:#343434;color:#F4F4F0}html.dark .ch-addp input{background:#161616;border-color:#343434;color:#F4F4F0}
 .ch-cal button.makeup{background:#E286E4;border-color:rgba(10,10,10,.3)}
 .ch-cal button.past{opacity:.45}
 .ch-cal button.today{box-shadow:0 0 0 2px #0A0A0A}
@@ -303,40 +309,44 @@ const isOut=(p,date)=>dayKind(p,date)==='away'||(me.requests||[]).some(r=>r.kind
 /* The schedule (Nov 17, 2026): five weeks from this Monday. A training day is lime; a tap picks a day, and the line under the
    calendar says what can be done with it: mark it away, come after all, add a make-up day, remove one. "Away for longer" marks
    every training day between two dates in one go. The engine keeps it (familyDays) and the attendance board reads it. */
-let CALSEL='';let CHAT=null;
+let CALSEL='';let CHAT=null;let CALOPEN={};let PICK=null;let ADDP=false;
 const d3=(dt)=>DOW[dt.getDay()];
 function trainSet(p){return ((p.enroll&&p.enroll.days)||[]).map(d=>String(d).slice(0,3).toLowerCase()).filter(d=>DOW.includes(d))}
 function dayInfo(p,iso){const dt=new Date(iso+'T12:00:00');const w=d3(dt);const closed=(p.closed||[]).includes(iso);const tr=trainSet(p);const k=dayKind(p,iso);
   const kind=k||(tr.includes(w)&&!closed?'train':'');const open=(p.openDays||[]).map(x=>String(x).toLowerCase()).includes(w)&&!closed;
-  return{iso,dt,kind,past:iso<me.today,open,pick:iso>=me.today&&(!!kind||open),noDays:!tr.length}}
+  return{iso,dt,kind,past:iso<me.today,open,pick:iso>=me.today&&(!!kind||open),noDays:!tr.length,flex:!!p.flex&&(p.sessions||[]).length>0}}
 function scheduleC(p,nm){
   const t=new Date(String(me.today)+'T12:00:00');const start=new Date(t.getTime()-((t.getDay()+6)%7)*864e5);const cells=[];
   for(let i=0;i<35;i++){const dt=new Date(start.getTime()+i*864e5);const iso=ymd(dt);const x=dayInfo(p,iso);
-    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${x.pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':''}">${i===0||dt.getDate()===1?`<small>${dt.toLocaleDateString('en-US',{month:'short'})}</small>`:''}${dt.getDate()}</button>`)}
+    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${x.pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${i===0||dt.getDate()===1?`<small>${dt.toLocaleDateString('en-US',{month:'short'})}</small>`:''}${dt.getDate()}</button>`)}
   let pick='';
   if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));
     const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
-    pick=!x.pick?'':x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
+    const bk=(p.days||[]).find(d=>d.date===CALSEL&&d.kind==='book');if(x.flex&&x.pick&&!PICK)PICK=(bk&&bk.sessions||[]).slice();
+    pick=!x.pick?'':x.flex?`<div class="ch-pick col" role="group" aria-label="Sessions"><div><b>${day}</b><span>Pick the session${(p.sessions||[]).length>1?'s':''} ${nm} is coming to.</span></div><div class="ch-ses">${(p.sessions||[]).map(m=>`<button type="button" data-ses="${esc(m.id)}" aria-pressed="${(PICK||[]).includes(m.id)}"><b>${esc(m.time)}</b>${esc(m.label)}</button>`).join('')}</div><button type="button" class="ch-btn" data-day-do="book">${bk?((PICK||[]).length?'Save the change':'Take this day off'):'Book'}</button></div>`:x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
       :x.kind==='makeup'?row('A make-up day.',`<button type="button" class="ch-btn line" data-day-do="nomakeup">Remove</button>`)
       :x.kind==='train'||x.noDays?row(x.noDays?'':'A training day.',`<button type="button" class="ch-btn" data-day-do="away">Mark away</button>`)
       :left>0?row(`Not a training day. ${left} make-up day${left===1?'':'s'} to use.`,`<button type="button" class="ch-btn" data-day-do="makeup">Make up here</button>`)
       :row('Not a training day. A make-up day goes with a day missed: mark the day away first.')}
-  const left=p.makeupsLeft||0;
-  return `<section class="ch-card" id="schedule" aria-label="Schedule"><div class="ch-h"><h2>Schedule</h2>${left?`<span><b>${left}</b> make-up day${left===1?'':'s'} to use</span>`:''}</div>
-    <p class="ch-s">Tap a day to mark ${nm} away or to add a make-up day. The academy sees it right away.</p>
-    <div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>
-    <div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span></div>
-    ${pick}
-    <p class="ch-sub">Away for longer</p>
-    <form class="ch-rng" id="rng"><label>From<input type="date" id="rfrom" min="${esc(me.today)}" required></label><label>To<input type="date" id="rto" min="${esc(me.today)}" required></label><button class="ch-btn line" type="submit">Mark ${nm} away for these days</button></form></section>`;
+  const left=p.makeupsLeft||0;const flex=!!p.flex&&(p.sessions||[]).length>0;const open=flex||!!CALOPEN[p.id];
+  const key=flex?`<div class="ch-key"><span><i></i>Booked</span></div>`:`<div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span></div>`;
+  const body=!open?'':`<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${key}${pick}
+    ${flex?'':`<p class="ch-sub">Away for longer</p>
+    <form class="ch-rng" id="rng"><label>From<input type="date" id="rfrom" min="${esc(me.today)}" required></label><label>To<input type="date" id="rto" min="${esc(me.today)}" required></label><button class="ch-btn line" type="submit">Mark ${nm} away for these days</button></form>`}`;
+  /* By the session: the calendar is open and the family books its own sessions. A monthly plan: the calendar stays folded
+     away until it is needed, which is rare: a day away, a make-up day (Nov 18, 2026). */
+  return `<section class="ch-card" id="schedule" aria-label="Schedule"><div class="ch-h"><h2>Schedule</h2>${flex?'':`<button type="button" class="ch-tg" data-cal-open aria-expanded="${open}">${open?'Close':left?`Open · ${left} make-up day${left===1?'':'s'}`:'Mark a day away'}</button>`}</div>
+    <p class="ch-s">${flex?`Tap a day and pick the sessions ${nm} is coming to. The academy sees it right away.`:open?`Tap a day to mark ${nm} away or to add a make-up day. The academy sees it right away.`:`${nm} is counted in on every training day. Open this only when a day changes.`}</p>${body}</section>`;
 }
 /* Messages (Nov 17, 2026): the coaches linked to each player, and Admin for registration, billing and the account. */
-function messagesC(active){
+function messagesC(active,sel){
   const rows=[];active.forEach(p=>{const cs=p.coaches||[];const who=esc(p.shortName||p.name.split(' ')[0]);
     cs.forEach(c=>rows.push(`<button type="button" data-chat="${esc(c.key)}" data-chat-p="${esc(p.id)}" data-chat-t="Coach ${esc(c.name)}" data-chat-s="${who}'s coach"><span class="ch-i">${ico('chat')}</span><span><b>Coach ${esc(c.name)}</b><small>${who}'s coach</small></span><em>${ico('arrow')}</em></button>`));
     if(cs.length>1)rows.push(`<button type="button" data-chat="all" data-chat-p="${esc(p.id)}" data-chat-t="${who}'s coaches" data-chat-s="${cs.map(c=>'Coach '+esc(c.name)).join(' and ')}"><span class="ch-i">${ico('chat')}</span><span><b>${who}'s coaches together</b><small>One message to ${cs.map(c=>'Coach '+esc(c.name)).join(' and ')}</small></span><em>${ico('arrow')}</em></button>`)});
   rows.push(`<button type="button" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account"><span class="ch-i lime">${ico('card')}</span><span><b>Admin</b><small>Registration, billing, payments and your account. Write here and the admin team takes care of it.</small></span><em>${ico('arrow')}</em></button>`);
-  return `<section class="ch-card" id="messages" aria-label="Messages"><div class="ch-h"><h2>Messages</h2></div><div class="ch-ppl">${rows.join('')}</div></section>`;
+  const who=sel?esc(sel.shortName||sel.name.split(' ')[0]):'';const ppl=(sel&&sel.people)||[];
+  const also=!sel?'':`<div class="ch-also"><span>${ppl.length?`Also on ${who}'s messages. The coaches can text and include them.`:`Want someone else on ${who}'s messages? Add the other parent, or a trainer.`}</span>${ppl.map(x=>`<em>${esc(x.name)} · ••${esc(x.tail)}<button type="button" data-people-x="${esc(x.tail)}" data-people-n="${esc(x.name)}" aria-label="Remove ${esc(x.name)}">✕</button></em>`).join('')}${ADDP?`<form class="ch-addp" id="addp"><input id="ap-name" placeholder="Name" maxlength="60" required aria-label="Name"><input id="ap-phone" type="tel" inputmode="tel" placeholder="Mobile number" required aria-label="Mobile number"><button class="ch-btn" type="submit">Add to ${who}'s messages</button></form>`:(ppl.length<4?`<button type="button" class="ch-tg" data-people-add>Add a number</button>`:'')}</div>`;
+  return `<section class="ch-card" id="messages" aria-label="Messages"><div class="ch-h"><h2>Messages</h2></div><div class="ch-ppl">${rows.join('')}</div>${also}</section>`;
 }
 function chatPaint(){
   let el=document.getElementById('chat');if(!CHAT){if(el)el.remove();document.documentElement.style.overflow='';return}
@@ -381,7 +391,7 @@ function homeC(first,active){
   /* Renew here (Nov 18, 2026): a child brought over from Play by Point, not yet on a plan in the app. The names go to the
      enrollment page in this tab's own storage, never in the link. */
   const rn=p.renew;const renew=!rn?'':`<div class="ch-pay ch-renew" role="group" aria-label="Renew"><span><small>Renew for ${esc(rn.month)}</small><b>${esc((rn.programName||'Program').split('|')[0].trim())}</b><small>${rn.online?`${esc(rn.planName)}${rn.monthly?' · '+usd(rn.monthly*100)+' a month':''} · billing here starts ${esc(nice(rn.start))}`:`${esc(rn.planName||'Your plan')} · this plan is renewed with the admin team`}</small>${rn.online?`<button type="button" class="ch-rb" data-renew="${esc(p.id)}">Renew ${nm}</button>`:`<button type="button" class="ch-rb" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account">Write to Admin</button>`}</span></div>`;
-  return `<div class="ch">${top}${chips}${hero}${renew}${acts}${scheduleC(p,nm)}${messagesC(active)}${report}${att}${pay}</div>`;
+  return `<div class="ch">${top}${chips}${hero}${renew}${acts}${scheduleC(p,nm)}${messagesC(active,p)}${report}${att}${pay}</div>`;
 }
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
@@ -414,9 +424,15 @@ function render(){
   app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
     daysDo({action:'away',date:b.dataset.absent},'Told the academy. Thank you.')});
   app.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{b.disabled=true;daysDo({action:'back',date:b.dataset.back},'Counted in again.')});
-  app.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{CALSEL=CALSEL===b.dataset.day?'':b.dataset.day;const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-cal-open]').forEach(b=>b.onclick=()=>{CALOPEN[SEL]=!CALOPEN[SEL];CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-ses]').forEach(b=>b.onclick=()=>{PICK=PICK||[];const id=b.dataset.ses;PICK=PICK.includes(id)?PICK.filter(x=>x!==id):PICK.concat(id);const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-people-add]').forEach(b=>b.onclick=()=>{ADDP=true;const y=window.scrollY;render();window.scrollTo(0,y);const n=document.getElementById('ap-name');if(n)n.focus()});
+  const peopleDo=async(body,ok)=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('people',Object.assign({player:SEL},body));toast(ok);ADDP=false;me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)};
+  const addp=document.getElementById('addp');if(addp)addp.onsubmit=(e)=>{e.preventDefault();peopleDo({name:document.getElementById('ap-name').value,phone:document.getElementById('ap-phone').value},'Added. The coaches can include this number.')};
+  app.querySelectorAll('[data-people-x]').forEach(b=>b.onclick=()=>peopleDo({remove:b.dataset.peopleX,name:b.dataset.peopleN},'Removed.'));
+  app.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{PICK=null;CALSEL=CALSEL===b.dataset.day?'':b.dataset.day;const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-day-do]').forEach(b=>b.onclick=()=>{const a=b.dataset.dayDo;const d=CALSEL;b.disabled=true;const y=window.scrollY;
-    daysDo({action:a,date:d},a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
+    daysDo(a==='book'?{action:a,date:d,sessions:PICK||[]}:{action:a,date:d},a==='book'?((PICK||[]).length?'Booked. The academy knows.':'Taken off.'):a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
   const rng=document.getElementById('rng');if(rng)rng.onsubmit=(e)=>{e.preventDefault();const f=document.getElementById('rfrom').value,t=document.getElementById('rto').value;if(!f||!t)return;if(t<f){toast('The last day is before the first.',true);return}const y=window.scrollY;
     daysDo({action:'away',from:f,to:t},'Marked away. The academy knows.').then(()=>window.scrollTo(0,y))};
   app.querySelectorAll('[data-chat]').forEach(b=>b.onclick=()=>chatOpen(b));

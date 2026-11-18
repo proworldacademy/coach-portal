@@ -119,6 +119,7 @@ async function numbersOf(db, pid) {
   const slots = k.slots || {};
   SLOTS.forEach((sl) => { const x = slots[sl]; if (x && x.state === 'ok' && x.phone) put(sl, x.phone, x.name, 'check'); });
   put('', c.phone, c.guardian, 'contact'); put('', c.phone2, '', 'contact'); put('', s.phone, c.guardian, 'consent');
+  (Array.isArray(c.extra) ? c.extra : []).slice(0, 4).forEach((x) => put('', x && x.phone, x && x.name, 'family'));   // numbers the family added itself in the client account (Nov 18, 2026)
   const optOut = c.optOut === true || s.optIn === false;   // "Requested to OPT OUT" from the contacts import, STOP from the family, or consent switched off by staff
   return { numbers: list, optOut, optOutWhy: c.optOut === true ? 'The family asked for no texts (on file).' : s.optIn === false ? (s.source === 'stop' ? 'The family replied STOP.' : 'Texts are switched off for this family.') : '', consent: s.optIn === true };
 }

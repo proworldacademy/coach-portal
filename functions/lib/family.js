@@ -166,11 +166,22 @@ const cap3 = (d) => { const x = String(d || '').slice(0, 3).toLowerCase(); retur
 function trainDays(p) { const en = p.enroll || {}; return (Array.isArray(en.days) ? en.days : []).map(cap3).filter((d) => DOW3.includes(d)); }
 function openDays(p) { const en = p.enroll || {}; const prog = en.program ? CAT.program(en.program) : null; const d = prog && Array.isArray(prog.days) ? prog.days.map(cap3).filter((x) => DOW3.includes(x)) : []; return d.length ? d : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']; }
 const isOpen = (d) => { try { return CAL.isTrainingDay(d); } catch (e) { return true; } };
+/* By the session (Nov 18, 2026 — management: "people that have the flex sessions should have the calendar open, and mark which
+   sessions they are attending… the 7:45, the 9:45, the afterschool"). The sessions a player of each group can pick; the ids are
+   the attendance board's own (backend SESSIONS), so a booked player is expected in that session and nowhere else. */
+const SESSION_MENU = {
+  ft: [{ id: 'ft1', time: '7:45 AM', label: 'Morning 1' }, { id: 'ft2', time: '9:30 AM', label: 'Morning 2' }, { id: 'pm2', time: '2:00 PM', label: 'Afternoon' }, { id: 'as', time: '4:00 PM', label: 'Afterschool' }],
+  tour: [{ id: 'ft1', time: '7:45 AM', label: 'Morning 1' }, { id: 'ft2', time: '9:30 AM', label: 'Morning 2' }, { id: 'pm2', time: '2:00 PM', label: 'Afternoon' }, { id: 'as', time: '4:00 PM', label: 'Afterschool' }],
+  as: [{ id: 'as', time: '4:00 PM', label: 'Afterschool' }],
+  u10: [{ id: 'u10', time: '4:30 PM', label: '10 & Under' }]
+};
+const isFlex = (p) => { const en = p.enroll || {}; return !!(en.pbp && en.pbp.bySession) || en.kind === 'pack'; };
+const menuOf = (p) => (isFlex(p) ? (SESSION_MENU[p.group] || []) : []);
 async function daysOf(db, pid, today) {
   let docs = [];
   try { docs = (await db.collection('familyDays').where('player', '==', pid).get()).docs.map((d) => d.data() || {}); } catch (e) { docs = []; }
   const from = CAL.addDays(today, -BACK);
-  return docs.filter((d) => isDate(d.date) && d.date >= from && (d.kind === 'away' || d.kind === 'makeup')).map((d) => ({ date: d.date, kind: d.kind })).sort((a, b) => CAL.cmp(a.date, b.date));
+  return docs.filter((d) => isDate(d.date) && d.date >= from && (d.kind === 'away' || d.kind === 'makeup' || d.kind === 'book')).map((d) => Object.assign({ date: d.date, kind: d.kind }, d.kind === 'book' ? { sessions: Array.isArray(d.sessions) ? d.sessions : [] } : {})).sort((a, b) => CAL.cmp(a.date, b.date));
 }
 function makeupsLeft(days, missed) { return Math.max(0, days.filter((d) => d.kind === 'away').length + (missed || 0) - days.filter((d) => d.kind === 'makeup').length); }
 const sayDay = (d) => { const p = CAL.parts(d); return `${CAL.MONTHS[p.m].slice(0, 3)} ${p.d}`; };
@@ -248,6 +259,20 @@ async function days(db, who, body, players, opts) {
     if (have.some((x) => x.date === d && x.kind === 'makeup')) { await ref(d).delete(); await NOTIFY.slack(db, 'desk', `*Make-up day removed* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)}`, `Removed by the family (${who.email}).`]); }
     return { ok: true, action, dates: [d] };
   }
+  if (action === 'book') {   // a by-the-session player picks the sessions of one day; an empty pick takes the day off again
+    const menu = menuOf(p); if (!menu.length) throw S.err(400, 'fixed', 'This player has fixed training days. Mark a day away instead.');
+    const d = S.clean(body.date, 10);
+    if (!isDate(d) || d < today) throw S.err(400, 'date', 'Pick a day from today on.');
+    if (d > CAL.addDays(today, AHEAD)) throw S.err(400, 'far', 'Pick a day in the next three months.');
+    if (!openDays(p).includes(dowOf(d)) || !isOpen(d)) throw S.err(400, 'closed', 'There is no session that day.');
+    const pick = (Array.isArray(body.sessions) ? body.sessions : []).map((x) => String(x)).filter((x) => menu.some((m) => m.id === x));
+    const was = have.find((x) => x.date === d && x.kind === 'book');
+    if (!pick.length) { if (was) { await ref(d).delete(); await NOTIFY.slack(db, 'desk', `*Session taken off* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)}`, `Changed by the family (${who.email}) in the client account.`]); } return { ok: true, action, dates: [d], sessions: [] }; }
+    await ref(d).set(Object.assign({ date: d, kind: 'book', sessions: pick }, base));
+    const said = pick.map((x) => { const m = menu.find((y) => y.id === x); return `${m.time} ${m.label}`; }).join(', ');
+    await NOTIFY.slack(db, 'desk', `*Session booked* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)} · ${said}`, `Picked by the family (${who.email}) in the client account. The attendance expects the player in ${pick.length === 1 ? 'that session' : 'those sessions'}.`]);
+    return { ok: true, action, dates: [d], sessions: pick };
+  }
   throw S.err(400, 'action', 'Unknown change.');
 }
 
@@ -295,6 +320,33 @@ async function message(db, who, body, players) {
   return { ok: true, to: t.conv, reached: out.sent.length, passed: out.missing.length };
 }
 
+/* ── more people on a player's messages (Nov 18, 2026 — management: "let's say my wife's number is not added and I want to include
+   her… or a fitness trainer outside… give me the option to add numbers") ──
+   The parent adds a name and a mobile number to the player's contact card (private/contact.extra, four at most). The coaches see
+   that number with the family's others in Contact and can text it or put it in a group chat. The family only ever sees the name
+   and the last four digits back. */
+const tail4 = (v) => String(v || '').replace(/\D+/g, '').slice(-4);
+async function peopleOf(db, pid) {
+  try { const x = await db.doc(`players/${pid}/private/contact`).get(); const c = x.exists ? (x.data() || {}) : {}; return (Array.isArray(c.extra) ? c.extra : []).map((e) => ({ name: String(e.name || ''), tail: tail4(e.phone) })); } catch (e) { return []; }
+}
+async function people(db, who, body, players) {
+  body = body || {}; const p = (players || []).find((x) => x.id === S.clean(body.player, 60)); if (!p) throw S.err(404, 'player', 'Which player?');
+  const ref = db.doc(`players/${p.id}/private/contact`); const snap = await ref.get(); const c = snap.exists ? (snap.data() || {}) : {};
+  let extra = Array.isArray(c.extra) ? c.extra.slice() : [];
+  if (body.remove) { const t = tail4(body.remove); const nm = fold(body.name); extra = extra.filter((e) => !(tail4(e.phone) === t && (!nm || fold(e.name) === nm))); }
+  else {
+    const name = S.clean(body.name, 60); let digits = String(body.phone || '').replace(/\D+/g, ''); if (digits.length === 10) digits = '1' + digits;
+    if (!name) throw S.err(400, 'name', 'Whose number is it?');
+    if (digits.length < 11 || digits.length > 15) throw S.err(400, 'phone', 'That does not look like a mobile number. Include the area code.');
+    if (extra.some((e) => String(e.phone).replace(/\D+/g, '') === digits)) throw S.err(400, 'dup', 'That number is already on the list.');
+    if (extra.length >= 4) throw S.err(400, 'full', 'Four extra numbers is the most. Remove one first.');
+    extra.push({ name, phone: '+' + digits, by: who.email, at: Date.now() });
+    await NOTIFY.slack(db, 'desk', `*New number on a player's messages* — ${p.name}`, [`${name} · number ending ${digits.slice(-4)}`, `Added by the family (${who.email}) in the client account. The coaches see it in Contact.`]);
+  }
+  await ref.set({ extra, updatedAt: Date.now() }, { merge: true });
+  return { ok: true, people: extra.map((e) => ({ name: e.name, tail: tail4(e.phone) })) };
+}
+
 /* ── renewing here (Nov 18, 2026 — management: "now that we have the clients in the programs they're in, we renew them through our
    app… December 1st") ──
    A player brought over from Play by Point with no plan here yet gets a "Renew" card: the program and the days-a-week plan read
@@ -337,6 +389,7 @@ async function me(db, stripe, who, opts) {
         program: en.program || '', programName: en.programName || (prog ? prog.name : ''), programShort: en.programShort || (prog ? prog.short : ''), plan: en.plan || '', planLabel: en.planLabel || '', days: Array.isArray(en.days) ? en.days : [], start: en.start || '', monthly: en.monthly || null, status: en.status || '', hold: !!en.hold, holdReason: en.holdReason || '', endsOn: en.endsOn || null, next: en.next || null, subscription: en.subscription || '' } : null,
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
+      flex: isFlex(p), sessions: menuOf(p), people: await peopleOf(db, p.id),
       days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed), openDays: openDays(p), closed,
       reports: await reports(db, p.id)
     });
@@ -370,4 +423,4 @@ async function request(db, who, body, players) {
   return { ok: true, id: ref.id, kind, kindLabel: REQUEST_KINDS[kind] };
 }
 
-module.exports = { requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, chat, message, coachesOf, REQUEST_KINDS, TITLES };
+module.exports = { people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, chat, message, coachesOf, REQUEST_KINDS, TITLES };
