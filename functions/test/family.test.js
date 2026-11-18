@@ -251,3 +251,29 @@ test('a player brought over from Play by Point shows the calendar and a Renew ca
   await db.doc('players/as-mia-r').set({ enroll: { subscription: 'sub_1' } }, { merge: true });
   assert.equal((await FAMILY.me(db, null, who, { today: '2026-11-18' })).players.find((p) => p.id === 'as-mia-r').renew, null);
 });
+
+test('a by-the-session player books sessions of a day; a monthly player cannot; a parent adds a number the coaches then see', async () => {
+  const sent = wire(); const db = seedClient(); const who = { email: 'maria.rivera@example.com', name: 'Maria Rivera' }; const today = '2026-11-18';
+  await db.doc('players/ft-liam-r').set({ enroll: { programName: 'Full Time Program | Fall 2026', pbp: { plan: '10 FLEX Sessions | Tennis Only', bySession: true } } }, { merge: true });
+  await db.doc('players/as-mia-r').set({ enroll: { program: 'afterschool', days: ['Tue', 'Thu'], subscription: 'sub_1' } }, { merge: true });
+  const { players } = await FAMILY.findPlayers(db, null, who.email);
+  let me = await FAMILY.me(db, null, who, { today }); let liam = me.players.find((p) => p.id === 'ft-liam-r');
+  assert.equal(liam.flex, true); assert.deepEqual(liam.sessions.map((x) => x.id), ['ft1', 'ft2', 'pm2', 'as']);
+  assert.equal(me.players.find((p) => p.id === 'as-mia-r').flex, false);
+  await FAMILY.days(db, who, { player: 'ft-liam-r', action: 'book', date: '2026-11-19', sessions: ['ft1', 'as', 'nope'] }, players, { today });
+  liam = (await FAMILY.me(db, null, who, { today })).players.find((p) => p.id === 'ft-liam-r');
+  assert.deepEqual(liam.days, [{ date: '2026-11-19', kind: 'book', sessions: ['ft1', 'as'] }]);
+  assert.ok(sent.some((x) => /Session booked/.test(JSON.stringify(x.body)) && /7:45 AM/.test(JSON.stringify(x.body))));
+  await FAMILY.days(db, who, { player: 'ft-liam-r', action: 'book', date: '2026-11-19', sessions: [] }, players, { today });
+  assert.deepEqual((await FAMILY.me(db, null, who, { today })).players.find((p) => p.id === 'ft-liam-r').days, []);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'book', date: '2026-11-19', sessions: ['as'] }, players, { today }), /fixed training days/);
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'ft-liam-r', action: 'book', date: '2026-11-21', sessions: ['ft1'] }, players, { today }), /no session/);   // a Saturday
+  // another number on the player's messages
+  await assert.rejects(() => FAMILY.people(db, who, { player: 'as-mia-r', name: 'Dad', phone: '555' }, players), /mobile number/);
+  const out = await FAMILY.people(db, who, { player: 'as-mia-r', name: 'Dad', phone: '(561) 555-0177' }, players);
+  assert.deepEqual(out.people, [{ name: 'Dad', tail: '0177' }]);
+  const nums = await require('../lib/coachtext').numbersOf(db, 'as-mia-r');
+  assert.ok(nums.numbers.some((n) => n.phone === '+15615550177' && n.name === 'Dad'));
+  assert.deepEqual((await FAMILY.me(db, null, who, { today })).players.find((p) => p.id === 'as-mia-r').people, [{ name: 'Dad', tail: '0177' }]);
+  assert.deepEqual((await FAMILY.people(db, who, { player: 'as-mia-r', remove: '0177', name: 'Dad' }, players)).people, []);
+});
