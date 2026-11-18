@@ -235,6 +235,13 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       const seesBilling = !!(who.owner || who.admin || who.billing || who.role === 'desk');
       // the mailbox the sign-in codes go out from: is it set, and a test to the owner's own address (settings/mail is typed on the Dashboard)
       if (route === 'GET /admin/voice') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await VOICE.status(ctx.db)); }
+      /* The move from Play by Point (Nov 17, 2026): owners only. preview writes nothing; apply writes players and their contact
+         cards, never Stripe. */
+      if (route === 'POST /admin/pbp/preview' || route === 'POST /admin/pbp/apply') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.');
+        const PBP = require('./lib/pbpimport'); const rows = Array.isArray(b.rows) ? b.rows : [];
+        if (!rows.length) throw S.err(400, 'rows', 'There is nothing to read.');
+        if (route.endsWith('preview')) return send(res, 200, await PBP.preview(ctx.db, rows));
+        const out = await PBP.apply(ctx.db, rows, who); logger.info('play by point import', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       if (route === 'POST /admin/voice/setup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.setup(ctx.db); logger.info('voice connected', { by: who.email }); return send(res, 200, out); }
       if (route === 'POST /admin/voice/assign') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.assign(ctx.db, b); logger.info('voice number', { by: who.email }); return send(res, 200, out); }
       if (route === 'GET /admin/turn') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await TEAM.turnReady(ctx.db)); }
