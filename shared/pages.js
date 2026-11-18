@@ -94,13 +94,13 @@
     { id: "admin", name: "Admin", href: "/backend", page: ["backend"], items: [
       { name: "Front desk", href: "/backend#desk" }, { name: "Attendance", href: "/backend#attendance" }, { name: "Players & billing", href: "/backend#players" },
       { name: "Courts", href: "/backend#courts" }, { name: "Privates", href: "/backend#privates" }, { name: "Messages", href: "/backend#messages" },
-      { name: "Enroll · the link", href: "/backend#enroll" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
+      { name: "Enroll · the link", href: "/backend#enroll" },
       { name: "Clients · enrolled online, requests", href: "/clients", page: "clients" }, { name: "Look up an account", href: "/backend#account" } ] },
     { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal"], items: [   // the front desk reaches Try-outs from Admin
       { name: "Reminders", href: "/portal", page: "coach-portal" }, { name: "Players", href: "/portal#/players", page: "coach-portal" },
       { name: "Contact", href: "/portal#/messages", page: "coach-portal" }, { name: "Privates", href: "/backend#privates", page: "backend" },
       // for directors and owners (shared/design.js keeps these from a coach)
-      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" }, { name: "Try-outs", href: "/portal#/tryouts", page: "tryouts" },
+      { name: "Coach Board", href: "/portal#/board", page: "coach-portal" },
       { name: "Attendance", href: "/backend#attendance", page: "backend" },
       { name: "Text a group", href: "/backend#messages", page: "backend" } ] },   // Nov 17: the group text (a whole group, or who trains that day) is back in the directors' menu
     { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [

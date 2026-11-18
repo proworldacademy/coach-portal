@@ -143,6 +143,9 @@ button.rowb:hover{background:rgba(0,0,0,.045)}
 .btn:disabled{opacity:.45}
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .fchip{border:1px solid var(--line-2);background:var(--card);backdrop-filter:blur(8px);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--ink-2);transition:.2s}
+.rowb.brow{cursor:default;display:grid;grid-template-columns:minmax(160px,1fr) repeat(auto-fit,minmax(120px,170px));grid-auto-flow:column;gap:8px;align-items:center}
+.rowb.brow .bset{width:100%;min-width:0;padding:8px 10px;font-size:13px}
+@media(max-width:700px){.rowb.brow{grid-auto-flow:row;grid-template-columns:1fr 1fr}.rowb.brow .who{grid-column:1/-1}}
 .fchip:hover{border-color:var(--ink);transform:translateY(-1px)}
 .fchip[aria-pressed="true"]{background:var(--pw-inkbg,var(--ink));color:var(--lime);border-color:var(--ink)}
 
@@ -2818,7 +2821,9 @@ const PW_CONFIG = {
     const gs = groups().map((g) => { const list = (WEB.isDirector ? act : my).filter((p) => p.group === g.id); if (!list.length) return ''; const w = contactTally(list); const done = list.filter((p) => dueNow(p).overall === 'done').length;
       return a2row(`<span class="a2ico" style="background:${GCOLOR[g.color] || 'var(--lime)'}33">${a2i('users')}</span>`, esc(g.label), `${list.length} ${list.length === 1 ? 'player' : 'players'} · ${done} ${done === 1 ? 'report' : 'reports'} done`, a2ring(w.done, w.total, 38) + a2chev(), goAttr({ view: 'group', gid: g.id })); }).join('');
     const empty = S.loaded.players && !gs ? `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>No players on your name yet</b><small>A director puts your name on a player’s record.</small></span></div></div>` : '';
-    return `${notice()}${a2title('Players.', esc(a2day(now)))}${a2sec('Needs you')}${needsCard}${a2today()}${a2sec('Your groups', 'in touch this week')}${gs ? `<div class="a2card">${gs}</div>` : empty}`;
+    const TY = S.loaded.tryouts ? tryouts() : null; const tyList = TY ? TY.today.concat(TY.week, TY.later, TY.result, TY.followup) : [];
+    const tyCard = tyList.length ? a2sec('Try-outs', 'first priority') + `<div class="a2card">${tyList.slice(0, 6).map((t) => a2row(`<span class="a2ico" style="background:var(--lime)">${a2i('users')}</span>`, esc(t.name || 'Unnamed'), esc([t.date ? (t.date === todayISO() ? 'Today' : dayLabel(t.date)) : 'No date', t.time ? timeLabel(t.time) : '', tryGroupLabel(t), tryOpen(t).length ? tryOpen(t).length + ' to do' : 'ready'].filter(Boolean).join(' · ')), a2chev(), goAttr({ view: 'tryout', id: t.id }))).join('')}</div>` : '';
+    return `${notice()}${a2title('Players.', esc(a2day(now)))}${tyCard}${a2sec('Needs you')}${needsCard}${a2today()}${a2sec('Your groups', 'in touch this week')}${gs ? `<div class="a2card">${gs}</div>` : empty}`;
   }
   /* ── a group ── */
   function view2Group(gid) {
@@ -2827,7 +2832,7 @@ const PW_CONFIG = {
     const nRep = all.filter((p) => dueNow(p).overall !== 'done').length, nReach = all.filter((p) => !inTouch(p.id, wk)).length;
     const list = (f === 'report' ? all.filter((p) => dueNow(p).overall !== 'done') : f === 'reach' ? all.filter((p) => !inTouch(p.id, wk)) : all).filter(sexOk);
     const seg = `<div class="a2seg" role="group" aria-label="Show">${[['all', 'All ' + all.length, 0], ['report', 'Report', nRep], ['reach', 'To reach', nReach]].map(([k, t, n]) => `<button type="button" class="${f === k ? 'on' : ''}" data-act="a2filter" data-gid="${esc(gid)}" data-v="${k}">${t}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>`;
-    const rows = list.map((p) => a2row(a2ava(p.name, inTouch(p.id, wk)), esc(p.name), `${p.tier ? 'Tier ' + esc(p.tier) + ' · ' : ''}${p.coach ? 'Coach ' + esc(p.coach) : 'No coach'}`, a2status(p), goAttr({ view: 'player', pid: p.id }))).join('');
+    const rows = list.map((p) => a2row(a2ava(p.name, inTouch(p.id, wk)), esc(p.name), `${p.tier ? esc(tierText(p)) + ' · ' : ''}${p.coach ? 'Coach ' + esc(p.coach) : 'No coach'}`, a2status(p), goAttr({ view: 'player', pid: p.id }))).join('');
     return `${notice()}${a2nav('Players', { view: 'home' }, '')}${a2title(g.label + '.', `${all.length} ${all.length === 1 ? 'player' : 'players'} · ${esc(q)} 3-month report`)}${seg}${sexBar(all, true)}${rows ? `<div class="a2card">${rows}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? (all.length ? 'Nobody here' : 'No players of yours in this group') : 'Loading…'}</b></span></div></div>`}`;
   }
   /* ── the player ── */
@@ -3020,9 +3025,9 @@ const PW_CONFIG = {
         <ul class="sub lines"><li><b class="n">${WEB.isDirector ? act.length : mineP.length}</b> active ${(WEB.isDirector ? act.length : mineP.length) === 1 ? 'player' : 'players'}</li>${WEB.isDirector ? `<li><b class="n">${qd}</b> of ${qt} ${esc(q)} 3-month reports done</li>` : ''}</ul></div></div>`;
       if (EDITION === 'web' && !WEB.isDirector) {
         const rows = mineP.filter(sexOk).sort((a, b) => a.name.localeCompare(b.name)).map((p) => `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}><div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}</div><small>${esc(group(p.group).label)}${p.tier ? ' · Tier ' + esc(p.tier) : ''}</small></div></div><div class="chips">${contactChip(p)}${statusBubble(p)}</div></button>`).join('');
-        return `${notice()}${head}${sexBar(mineP)}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? mineP.length ? 'Nobody under ' + (sexPick() === 'm' ? 'Boys' : 'Girls') + ' yet.' : 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
+        return `${notice()}${head}${homeTryouts()}${sexBar(mineP)}${rows ? `<div class="list">${rows}</div>` : `<div class="empty">${S.loaded.players ? mineP.length ? 'Nobody under ' + (sexPick() === 'm' ? 'Boys' : 'Girls') + ' yet.' : 'No players are on your name yet. A director puts your name on a player’s record.' : 'Loading…'}</div>`}`;
       }
-      return `${notice()}${head}${empty}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
+      return `${notice()}${head}${homeTryouts()}${empty}${EDITION === 'web' ? syncStrip() + notPlacedPanel() : ''}
         <div class="sect"><h2>Groups</h2><span class="muted">${groups().length} groups · ${act.length} active players</span></div>
         <div class="groups">${cards}</div>
         <div class="sect" style="margin-top:28px"><h2>The numbers</h2></div>
@@ -3058,7 +3063,7 @@ const PW_CONFIG = {
     const head = FRESH && web && !WEB.isDirector ? '' : `<div class="head"><div><div class="lbl">${day}</div><h1 class="title">Remind<em>ers.</em></h1></div></div>`;
     const freshTop = FRESH && web && !WEB.isDirector ? freshHome({ day, chats: msgUnread(), wk: wkList, ck: S.loaded.checks ? ckList : 0, nRep: S.loaded.assess ? nRep : 0, nStarted, nOpen, q, total: mineP.length }) : '';
     const logN = S.assess.filter((a) => WEB.isDirector || mineIds.has(a.playerId)).length;
-    return `${notice()}${head}${freshTop || needsCard}${coachCard}${today}${pushCard()}
+    return `${notice()}${head}${homeTryouts()}${freshTop || needsCard}${coachCard}${today}${pushCard()}
       ${foldBox('log', 'Log of activity', logN ? logN + ' on file' : '', log ? `<div class="list">${log}</div>` : `<div class="empty">${S.loaded.assess || S.dbState === 'none' ? 'Nothing logged yet.' : 'Loading…'}</div>`)}`;
   }
   /* The fresh look (Nov 14, 2026 — Antonio: "incredible, new, modern, fresh"): a trial on two screens, Reminders and a player's page, first a trial
@@ -3228,7 +3233,7 @@ const PW_CONFIG = {
     const shown = list.filter((p) => (fc === null ? true : (p.coach || '') === fc)).filter(sexOk).sort((a, b) => a.name.localeCompare(b.name));
     const rows = shown.map((p) => {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
-        <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? 'Tier ' + esc(p.tier) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
+        <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? esc(tierText(p)) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
       // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
       if (!mine(p)) return `<div class="rowb locked" title="${esc(p.coach ? 'Coach ' + p.coach + '’s player' : 'No coach yet — ask a director')}">${who}<div class="chips"><span class="chip">${esc(p.coach ? 'with ' + p.coach : 'no coach')}</span></div></div>`;
       return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${p.pbpNote && /^Added/.test(p.pbpNote) ? '<span class="chip st-working" title="' + esc(p.pbpNote) + '">new · Play by Point</span>' : p.pbpNote && /^Not in/.test(p.pbpNote) ? '<span class="chip st-missing" title="' + esc(p.pbpNote) + '">' + (/Fall 2026/.test(p.pbpNote) ? 'not on the Fall list' : 'not in Play by Point') + '</span>' : ''}${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? checkChip(p) + contactChip(p) + statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
@@ -3274,7 +3279,11 @@ const PW_CONFIG = {
     return `<div class="panel sexsorter"><div class="sexhead"><b>${todo.length} to sort</b><span class="muted">One tap each. It is saved at once.</span><button class="btn sm ghost" type="button" data-act="sex-sort">Done</button></div>${todo.map((p) => `<div class="sexline"><span>${esc(p.name)}${p.coach ? ` <small class="muted">· ${esc(p.coach)}</small>` : ''}</span><span class="sexbtns"><button class="fchip sm" type="button" data-act="set-sex" data-pid="${esc(p.id)}" data-v="m">Boy</button><button class="fchip sm" type="button" data-act="set-sex" data-pid="${esc(p.id)}" data-v="f">Girl</button></span></div>`).join('')}</div>`;
   }
   /* Coaches who have no player yet still have to be on the list to be given one (Nov 18, 2026: Petr joined). A coach who left (RETIRED) is not offered any more. */
-  const NEW_COACHES = ['Petr'];
+  const NEW_COACHES = ['Petr', 'Livia', 'Xavier'];   // Petr Pavlu, Livia Pett, Xavier Proulx (Nov 18, 2026)
+  /* Tiers: A, B, C everywhere but the 10 & Under, who go by the colour of the ball (Nov 18, 2026). */
+  const BALLS = ['Red', 'Orange', 'Green', 'Yellow'];
+  const tiersOf = (gid) => (gid === 'u10' ? BALLS : ['A', 'B', 'C']);
+  const tierText = (p) => (!p || !p.tier ? '' : BALLS.includes(p.tier) ? p.tier + ' ball' : 'Tier ' + p.tier);
   function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2), S.players.map((p) => p.coach3), NEW_COACHES).filter(Boolean))).filter((c) => !retired(c)).sort(); }
   function addPlayerPanel(gid) {
     const web = EDITION === 'web';
@@ -3282,7 +3291,7 @@ const PW_CONFIG = {
       ${web ? `<div class="field"><label for="ap_first">First name</label><input id="ap_first" name="first" type="text" required autocomplete="off"></div>
       <div class="field"><label for="ap_last">Last name</label><input id="ap_last" name="last" type="text" autocomplete="off"></div>`
     : '<div class="field"><label for="ap_name">Player name</label><input id="ap_name" name="name" type="text" required autocomplete="off" placeholder="First and last name"></div>'}
-      <div class="field"><label for="ap_tier">Tier</label><select id="ap_tier" name="tier"><option value="">—</option><option>A</option><option>B</option><option>C</option></select></div>
+      <div class="field"><label for="ap_tier">Tier</label><select id="ap_tier" name="tier"><option value="">—</option>${gid === 'u10' ? BALLS.map((b) => `<option value="${b}">${b} ball</option>`).join('') + '<option hidden>' : '<option>A</option><option>B</option><option>C'}</option></select></div>
       <div class="field"><label for="ap_coach">Primary coach</label><input id="ap_coach" name="coach" type="text" list="coachlist" autocomplete="off"></div>
       <div class="field"><label for="ap_coach2">Secondary coach</label><input id="ap_coach2" name="coach2" type="text" list="coachlist" autocomplete="off"></div>
       ${web ? '<div class="field" style="grid-column:1/-1"><label for="ap_note">Note for the front desk <span class="muted">(optional)</span></label><input id="ap_note" name="note" type="text" maxlength="400" autocomplete="off" placeholder="e.g. trial on Tuesday, sibling of…, parent asked about mornings"></div>' : ''}</div>
@@ -3330,7 +3339,7 @@ const PW_CONFIG = {
       <div class="field"><label for="ep_name">Player name</label><input id="ep_name" name="name" type="text" required value="${esc(p.name)}"></div>
       <div class="field"><label for="ep_group">Group</label><select id="ep_group" name="group">${groups().map((g) => `<option value="${esc(g.id)}" ${g.id === p.group ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div>
       <div class="field"><label for="ep_sex">Boys or girls</label><select id="ep_sex" name="sex"><option value="">Not set</option><option value="m" ${p.sex === 'm' ? 'selected' : ''}>Boys</option><option value="f" ${p.sex === 'f' ? 'selected' : ''}>Girls</option></select></div>
-      <div class="field"><label for="ep_tier">Tier</label><select id="ep_tier" name="tier"><option value="">—</option>${['A', 'B', 'C'].map((t) => sel(p.tier, t)).join('')}</select></div>
+      <div class="field"><label for="ep_tier">Tier</label><select id="ep_tier" name="tier"><option value="">—</option>${tiersOf(p.group).concat(p.tier && !tiersOf(p.group).includes(p.tier) ? [p.tier] : []).map((t) => sel(p.tier, t)).join('')}</select></div>
       <div class="field"><label for="ep_coach">Primary coach</label><input id="ep_coach" name="coach" type="text" list="coachlist2" value="${esc(p.coach || '')}"></div>
       <div class="field"><label for="ep_coach2">Secondary coach</label><input id="ep_coach2" name="coach2" type="text" list="coachlist2" value="${esc(p.coach2 || '')}"></div>
       <div class="field"><label for="ep_coach3">Third coach <span class="muted">(optional)</span></label><input id="ep_coach3" name="coach3" type="text" list="coachlist2" value="${esc(p.coach3 || '')}"></div>
@@ -4459,15 +4468,20 @@ const PW_CONFIG = {
      A try-out is a child who is not on the roster yet. The front desk or a director books it; the coaches see it on the
      home screen the moment they open the portal: who, when, which group, who runs it, and what is still missing. Every
      step before and after the session is a tick with a name and a date on it, so nothing depends on memory. */
+  /* The steps of a try-out (Nov 18, 2026, agreed by management and the directors): a try-out is the first priority of the academy
+     that day. The admin team writes first; the director of the program calls, says who will be on court with the player and is
+     there to greet the family; afterwards the coach tells the director how it went and the director goes back to the family.
+     The ids are the old ones where a step only changed its words, so what was ticked stays ticked. */
   const TRY_CHECKS = [
-    { id: 'contacted', label: 'Parents contacted', hint: 'First conversation done: who they are, what they are looking for, current level.' },
-    { id: 'confirmed', label: 'Date and time confirmed with the family', hint: 'They have the day, the time, where to park and what to bring.' },
-    { id: 'director', label: 'Introduced to the director', hint: 'The family knows who runs the group and has spoken to them.' },
+    { id: 'confirmed', label: 'Welcome e-mail and text sent', hint: 'The admin team: we look forward to seeing you, the day, the time, where to park, what to bring.' },
+    { id: 'contacted', label: 'The director called the family', hint: 'The director of the program makes the first call: who they are, what they are looking for, the level. Say which coach the player will be with.' },
     { id: 'forms', label: 'Registration form and waiver received', hint: 'Signed waiver, medical notes, emergency contact.' },
-    { id: 'coach', label: 'Coach assigned and briefed', hint: 'Who runs the session, and what to look at.' },
+    { id: 'coach', label: 'Coach assigned and briefed', hint: 'Who is on court with the player, what we know about the family, what to look at.' },
+    { id: 'director', label: 'The director is free to greet the family', hint: 'Five to ten minutes with the parents on site. Another coach sets the courts that day.' },
   ];
   const TRY_AFTER = [
-    { id: 'feedback', label: 'Feedback given to the family', hint: 'Same day if possible: what we saw, what we recommend.' },
+    { id: 'report', label: 'The coach told the director how it went', hint: 'The same day, in a few lines: level, attitude, where the player fits.' },
+    { id: 'feedback', label: 'The director followed up with the family', hint: 'Same day if possible: what we saw, what we recommend. The family knows the director is the person to write to.' },
     { id: 'decision', label: 'Decision communicated', hint: 'A place offered, waitlist, or not the right fit — and the next step.' },
   ];
   const TRY_INFO = [['name', 'player name'], ['born', 'birth year'], ['group', 'group'], ['date', 'date'], ['time', 'time'], ['parent', 'parent name'], ['phone', 'phone']];
@@ -4505,7 +4519,7 @@ const PW_CONFIG = {
     if (st === 'came' && tryCheck(t, 'decision')) out.push(`<span class="chip sent">${(TRY_OUTCOMES.find((o) => o[0] === t.outcome) || ['', 'Done'])[1]}</span>`);
     if (st === 'planned') {
       const miss = tryMissing(t); if (miss.length) out.push(`<span class="chip warn">Missing: ${esc(miss.slice(0, 2).join(', '))}${miss.length > 2 ? ` +${miss.length - 2}` : ''}</span>`);
-      const open = tryOpen(t); const short = { contacted: 'Parents not contacted', confirmed: 'Not confirmed', director: 'Meet the director', forms: 'Forms missing', coach: 'No coach' };
+      const open = tryOpen(t); const short = { contacted: 'Director to call', confirmed: 'Welcome not sent', director: 'Director to greet', forms: 'Forms missing', coach: 'No coach' };
       open.forEach((c) => out.push(`<span class="chip warn">${short[c.id]}</span>`));
       if (!miss.length && !open.length) out.push('<span class="chip sent">Ready</span>');
     }
@@ -4518,10 +4532,12 @@ const PW_CONFIG = {
   // the block on the home screen: today, the next seven days, and anything waiting for a result
   function homeTryouts() {
     if (!S.loaded.tryouts && S.dbState !== 'none') return '';
-    const ty = tryouts(); const show = ty.today.concat(ty.week, ty.result, ty.followup); const more = ty.later.length;
-    const title = ty.today.length ? `${ty.today.length} today` : ty.week.length ? `${ty.week.length} this week` : ty.result.length + ty.followup.length ? 'waiting for a result' : more ? `${more} coming up` : 'none booked';
-    return `<div class="sect wrapb"><h2>Try-outs · ${esc(title)}</h2><div class="rowx" style="gap:6px">${writable() ? `<button class="btn sm" ${goAttr({ view: 'tryouts', add: 1 })}>Add a try-out</button>` : ''}<button class="btn sm ghost" ${goAttr({ view: 'tryouts' })}>All try-outs</button></div></div>
-      ${show.length ? `<div class="list" style="margin-bottom:34px">${show.map(rowTry).join('')}</div>` : `<div class="empty" style="margin-bottom:34px;padding:16px 20px">${more ? `Nothing in the next seven days. ${more} booked later on.` : 'No try-outs booked. When a family books a session, add it here so every coach sees it.'}</div>`}`;
+    const ty = tryouts(); const show = ty.today.concat(ty.week, ty.later, ty.result, ty.followup);
+    const title = ty.today.length ? `${ty.today.length} today` : ty.week.length ? `${ty.week.length} this week` : ty.result.length + ty.followup.length ? 'waiting for a result' : ty.later.length ? `${ty.later.length} coming up` : 'none booked';
+    return `<div class="sect wrapb"><h2>Try-outs · ${esc(title)}</h2><div class="rowx" style="gap:6px">${writable() ? `<button class="btn sm" data-act="toggle-addtry">Add a try-out</button>` : ''}${ty.done.length ? `<button class="btn sm ghost" ${goAttr({ view: 'tryouts' })}>Finished · ${ty.done.length}</button>` : ''}</div></div>
+      <p class="hint" style="margin:-6px 0 10px">A try-out comes first that day. Open one to tick what happens before and after.</p>
+      <div id="addtry" ${S.ui.addingTry ? '' : 'hidden'}>${S.ui.addingTry ? tryForm(null) : ''}</div>
+      ${show.length ? `<div class="list" style="margin-bottom:34px">${show.map(rowTry).join('')}</div>` : `<div class="empty" style="margin-bottom:34px;padding:16px 20px">No try-outs booked. When a family books a session, add it here so every coach sees it.</div>`}`;
   }
   const tryForm = (t) => {
     const v = (k) => esc((t && t[k]) || ''); const isEdit = !!t;
@@ -4784,6 +4800,13 @@ const PW_CONFIG = {
     return `<div class="sect"><h2>Directors</h2><span class="muted" style="font-size:12px">who directs which group, and the coaches under them there · a coach can sit under two directors in two groups</span></div>
       ${staff.length ? `<div class="ccards dcards">${cards}</div>` : '<p class="hint">Loading the team…</p>'}`;
   }
+  document.addEventListener('click', (ev) => { const b = ev.target.closest && ev.target.closest('[data-board-g]'); if (!b) return; S.ui.boardG = b.getAttribute('data-board-g'); softRender(); });
+  document.addEventListener('change', async (ev) => {
+    const t = ev.target; const k = t.getAttribute && t.getAttribute('data-board-set'); if (!k) return;
+    const p = player(t.getAttribute('data-pid')); if (!p || !(EDITION === 'web' && WEB.isDirector)) return; const v = t.value;
+    try { if (k === 'coach') await boardMove(p, v); else await S.db.doc('players/' + p.id).update({ [k]: v, updatedAt: Date.now() }); toast(`${p.name}: ${k === 'coach' ? (v ? 'Coach ' + v : 'no coach') : k === 'coach2' ? (v ? 'with ' + v : 'no second coach') : k === 'tier' ? (v ? v + ' ball' : 'no ball') : (v ? (groups().find((g) => g.id === v) || {}).label || v : 'no group')}.`); }
+    catch (e) { toast('Not saved: ' + ((e && e.message) || e)); }
+  });
   document.addEventListener('change', async (ev) => {
     const t = ev.target; if (!t.getAttribute || !t.getAttribute('data-dir-act')) return;
     const act = t.getAttribute('data-dir-act'), gid = t.getAttribute('data-gid'), v = t.value; if (!v) return;
@@ -4803,7 +4826,7 @@ const PW_CONFIG = {
       <div class="head"><div><div class="lbl">From the roster · Play by Point is the list</div><h1 class="title">Coach <em>Board.</em></h1>
         <div class="sub">Who coaches whom this week, who still has no coach, and who is coming to try out. ${EDITION === 'web' && WEB.isDirector ? 'Hold a player and drop them on a coach to move them (or on No coach to clear it); their page updates with it.' : 'Set a player’s coach on their page; this board follows.'}</div></div></div>`;
     if (!S.loaded.players) return `${top}<div class="empty" style="margin-bottom:30px">Loading…</div>`;
-    const { act } = boardData();
+    const pick = S.ui.boardG || ''; const { act: actAll } = boardData(); const act = pick ? actAll.filter((p) => (p.group || '') === (pick === '-' ? '' : pick)) : actAll;
     const sortP = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
     const byCoach = new Map(); act.filter((p) => p.coach).forEach((p) => { if (!byCoach.has(p.coach)) byCoach.set(p.coach, []); byCoach.get(p.coach).push(p); });
     NEW_COACHES.forEach((c) => { if (!byCoach.has(c)) byCoach.set(c, []); });   // a new coach has a card to drop the first players on
@@ -4819,7 +4842,17 @@ const PW_CONFIG = {
     const awayNow = S.players.filter((p) => p.status === 'away' && p.pbpNote && /^Not in/.test(p.pbpNote));
     const syncLine = `<p class="hint due-line"><b>The list:</b> the Fall 2026 coach list (Play by Point current players, Oct 24) · ${un.length ? `<span class="chip st-missing">${un.length} with no coach</span>` : '<span class="chip st-done">everyone has a coach</span>'}${newOnes.length ? ` · <span class="chip st-working">${newOnes.length} new, no coach yet</span>` : ''}${awayNow.length ? ` · ${awayNow.length} set to Away for the coaches to decide` : ''}</p>`;
     const undoBar = EDITION === 'web' && WEB.isDirector && BOARD_MOVES.length ? `<div class="undo-bar"><b>Moved just now</b>${BOARD_MOVES.map((mv, i) => `<span class="mv">${esc(mv.name)} <span class="muted">${esc(mv.from || 'no coach')} → ${esc(mv.to || 'no coach')}</span><button type="button" class="lnk" data-undo="${i}">Undo</button></span>`).join('')}</div>` : '';
-    return `${top}${syncLine}${undoBar}${dirSection()}
+    /* One program at a time (Nov 18, 2026): pick the program, then give each of its players a coach, a second coach and a group
+       from one list, without opening every page. Directors only; the drag on the cards below still works. */
+    const progBar = `<div class="chips" role="group" aria-label="Program" style="margin:0 0 14px">${[['', 'All programs']].concat(groups().map((g) => [g.id, g.label]), [['-', 'No group']]).map(([id, l]) => `<button type="button" class="fchip${pick === id ? ' on' : ''}" data-board-g="${esc(id)}" aria-pressed="${pick === id}">${esc(l)} · ${id ? actAll.filter((p) => (p.group || '') === (id === '-' ? '' : id)).length : actAll.length}</button>`).join('')}</div>`;
+    const allC = coachList(); const opt = (list, cur, none) => `<option value="">${none}</option>` + list.map((c) => `<option value="${esc(c.v)}"${c.v === cur ? ' selected' : ''}>${esc(c.t)}</option>`).join('');
+    const assign = pick && canDrag ? `<div class="sect"><h2>${esc(pick === '-' ? 'No group' : gl(pick))} · ${act.length}</h2><span class="muted" style="font-size:12px">coach, second coach, ${pick === 'u10' ? 'ball, ' : ''}group · saved as you choose</span></div>
+      <div class="list" style="margin-bottom:30px">${act.slice().sort(sortP).map((p) => `<div class="rowb brow"><div class="who"><div style="min-width:0"><button type="button" class="lnk nm" ${goAttr({ view: 'player', pid: p.id })}>${esc(p.name)}</button></div></div>
+        <select class="bset" data-board-set="coach" data-pid="${esc(p.id)}" aria-label="Coach of ${esc(p.name)}">${opt(allC.map((c) => ({ v: c, t: c })), p.coach || '', 'No coach')}</select>
+        <select class="bset" data-board-set="coach2" data-pid="${esc(p.id)}" aria-label="Second coach of ${esc(p.name)}">${opt(allC.map((c) => ({ v: c, t: 'with ' + c })), p.coach2 || '', 'No second coach')}</select>
+        ${pick === 'u10' ? `<select class="bset" data-board-set="tier" data-pid="${esc(p.id)}" aria-label="Ball of ${esc(p.name)}">${opt(BALLS.map((b) => ({ v: b, t: b + ' ball' })), p.tier || '', 'Ball')}</select>` : ''}
+        <select class="bset" data-board-set="group" data-pid="${esc(p.id)}" aria-label="Group of ${esc(p.name)}">${opt(groups().map((g) => ({ v: g.id, t: g.label })), p.group || '', 'No group')}</select></div>`).join('') || '<div class="empty">Nobody here.</div>'}</div>` : '';
+    return `${top}${syncLine}${undoBar}${dirSection()}${progBar}${assign}
       <div class="stats"><div class="stat lead"><div class="lbl">Active players</div><b>${act.length}</b></div><div class="stat"><div class="lbl">Coaches</div><b>${coaches.length}</b></div>
         <div class="stat"><div class="lbl">No coach yet</div><b>${un.length}</b></div><div class="stat"><div class="lbl">Try-outs coming</div><b>${tries.length}</b></div></div>
       <div class="sect"><h2>Coaches</h2><span class="muted" style="font-size:12px">primary coach · players with their group</span></div>
