@@ -186,6 +186,7 @@ input[type=checkbox],input[type=radio]{width:auto;height:auto}
 .sec-tab .n{font-weight:700;opacity:.7;font-family:var(--body);font-style:normal;font-size:12px}
 .sec-tab.ok .n::after{content:"";display:inline-block;width:.3em;height:.58em;border:solid currentColor;border-width:0 .15em .15em 0;transform:rotate(45deg);margin:0 .1em .08em .5em}
 .banner{background:var(--pc);color:#000;border:0;border-radius:var(--r);padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow)}
+.secblock{margin-bottom:34px;scroll-margin-top:150px}.secblock+.secblock{padding-top:6px}
 .banner h2{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:34px;line-height:.92;margin:0}
 .banner p{margin:8px 0 0;font-size:13px;opacity:.8}
 .fields{display:grid;gap:16px;max-width:860px}
@@ -3441,7 +3442,7 @@ const PW_CONFIG = {
       const st = partState(head, def); let part = parts.find((x) => x.id === want) || null;
       if (!part) { const last = lsGet('pw_part'); part = parts.find((x) => x.id === last && !st.find((y) => y.part.id === x.id).done) || (st.find((y) => !y.done) || st[0]).part; }
       E.part = part.id; E.sec = firstOpenSec(part); S.route.part = part.id; saveRoute(); if (multi(def)) lsSet('pw_part', part.id);
-      loadPrev(head, id).then((pv) => { if (E && E.id === id) { E.prev = pv; if (E.def.sections[E.sec].fields.some((f) => f.t === 'metric') && !busy()) renderSection(false, true); } });
+      loadPrev(head, id).then((pv) => { if (E && E.id === id) { E.prev = pv; if (partIdx(curPart()).some((si) => E.def.sections[si].fields.some((f) => f.t === 'metric')) && !busy()) renderSection(false, true); } });
       renderEditor();
       try { E.unsub = S.db.doc(`assessments/${id}/body/values`).onSnapshot(onBody, () => {}); } catch (e) { /* live merge is a nicety */ }
     } catch (e) { dbFail(e); m.innerHTML = '<div class="wrap"><div class="empty">Couldn’t open this assessment.</div></div>'; }
@@ -3494,7 +3495,7 @@ const PW_CONFIG = {
     const el = $('#sectabs'); if (!el || !E) return; const idxs = partIdx(curPart());
     el.hidden = idxs.length < 2; if (el.hidden) { el.innerHTML = ''; el.removeAttribute('data-part'); return; }
     if (el.getAttribute('data-part') !== E.part || el.children.length !== idxs.length) { el.setAttribute('data-part', E.part); el.innerHTML = idxs.map((i) => `<button class="sec-tab" role="tab" style="--pc:${PILLAR[E.def.sections[i].pillar]}" data-act="sec" data-i="${i}">${esc(E.def.sections[i].label)} <span class="n"></span></button>`).join(''); }
-    idxs.forEach((i, k) => { const b = el.children[k], [a, n] = secCount(E.def.sections[i], E.values); b.setAttribute('aria-selected', String(i === E.sec)); b.classList.toggle('ok', a === n); $('.n', b).textContent = `${a}/${n}`; });
+    idxs.forEach((i, k) => { const b = el.children[k], [a, n] = secCount(E.def.sections[i], E.values); b.setAttribute('aria-selected', 'false'); b.setAttribute('data-jump', '1'); b.classList.toggle('ok', a === n); $('.n', b).textContent = `${a}/${n}`; });
   }
 
   const MIC = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>';
@@ -3582,26 +3583,33 @@ const PW_CONFIG = {
     const voice = texty ? `<div class="kbhint"><b>Voice</b>${S.voice === 'native' ? 'press Dictate on a box and talk, then Stop' : 'press Dictate on a box, then start your device’s dictation — it types into the box'}${S.sample ? ' · spelling, grammar and speech slips are tidied up by themselves when you leave a box, with Undo' : ''} · a note that would land as negative on a family gets a red flag: reword it${S.sample ? ', or press “Reword it for me”' : ''}</div>` : '';
     return kb + voice;
   }
+  /* One page (Antonio, Nov 18, 2026: "goals, tennis, fitness… all on one page, no need to toggle through them"): every section of
+     the part is on the screen, one under the other, with a sticky strip of section names that jumps down the page. */
   function renderSection(focus, keepFocus) {
-    if (!E) return; paintTabs(); const sec = E.def.sections[E.sec], pc = PILLAR[sec.pillar]; const lock = isLocked(); const part = curPart(); const info = partInfo(part.id);
+    if (!E) return; paintTabs(); const lock = isLocked(); const part = curPart(); const info = partInfo(part.id);
     const ae = keepFocus && document.activeElement && document.activeElement.closest ? document.activeElement.closest('[data-stop]') : null; const keepId = ae && ae.getAttribute('data-stop');
-    const scores = sec.fields.filter((f) => f.t === 'score'); const colorOf = { sc_tennis: 'var(--lime)', sc_fitness: 'var(--mint)', sc_mental: 'var(--cyan)', sc_overall: 'var(--pink)' };
-    let html = ''; let scoresDone = false;
-    sec.fields.forEach((f) => {
-      if (f.t === 'score') { if (scoresDone) return; scoresDone = true;
-        html += `<div class="scores">${scores.map((s) => `<div class="scorebox${E.flag && !lock && !filled(s, E.values) ? ' missing' : ''}" ${lock ? '' : `data-stop="${s.id}"`} style="background:${colorOf[s.id] || pc}"><label for="f_${s.id}">${esc(s.label)}</label><input id="f_${s.id}" data-f="${s.id}" type="number" min="0" max="100" inputmode="numeric" value="${esc(E.values[s.id] == null ? '' : E.values[s.id])}"${lock ? ' disabled' : ''}><small>${esc(s.hint || '')} · / 100</small></div>`).join('')}</div>
-          ${E.def.scoreFrom && !lock ? '<div><button class="btn sm" data-act="suggest">Suggest from ratings</button></div>' : ''}`; return; }
-      html += fieldHtml(f, lock);
-    });
-    const idxs = partIdx(part), pos = idxs.indexOf(E.sec), last = pos === idxs.length - 1;
+    const colorOf = { sc_tennis: 'var(--lime)', sc_fitness: 'var(--mint)', sc_mental: 'var(--cyan)', sc_overall: 'var(--pink)' };
+    const idxs = partIdx(part); const firstPart = part.id === partsOf(E.def)[0].id;
     const lockbar = lock ? `<div class="lockbar"><div><b class="ck">${esc(part.label)} part complete</b><div class="hint">${info.by ? 'Completed by ' + esc(info.by) : 'Completed'}${info.at ? ' · ' + esc(fmtDate(info.at)) : ''}. It’s locked so nobody changes it by accident.</div></div><button class="btn sm" data-act="reopen-part">Reopen this part</button></div>` : '';
-    const ntAll = !lock && sec.fields.some((f) => f.t === 'metric') ? '<div><button class="btn sm ghost" data-act="nt-all">Mark every blank test as not tested</button></div>' : '';
-    const nav = `<div class="nextprev">${idxs.length > 1 ? `<button class="btn ghost" data-act="sec" data-i="${idxs[pos - 1]}" ${pos === 0 ? 'disabled' : ''}>Previous section</button>` : '<span></span>'}${!last ? `<button class="btn" data-act="sec" data-i="${idxs[pos + 1]}">Next section</button>` : (lock ? '' : `<button class="btn pri" data-act="primary">${esc(primaryLabel())}</button>`)}</div>`;
-    $('#secbody').innerHTML = `<div style="--pc:${pc}" class="${lock ? 'locked' : ''}"><div class="banner"><h2>${esc(sec.label)}</h2>${sec.sub ? `<p>${esc(sec.sub)}</p>` : ''}</div>
-      ${lockbar}${hintFor(sec, lock)}
-      ${pos === 0 && E.def.about && part.id === partsOf(E.def)[0].id ? `<div class="fnote" style="margin-bottom:16px">${esc(E.def.about)}</div>` : ''}
-      <div class="fields">${html}${ntAll}</div>${nav}</div>`;
-    sec.fields.forEach((f) => { if (f.id && E.tone[f.id]) paintTone(f.id); });   // the tone flags survive a repaint of the section
+    const blocks = idxs.map((si, pos) => {
+      const sec = E.def.sections[si], pc = PILLAR[sec.pillar]; const scores = sec.fields.filter((f) => f.t === 'score');
+      let html = ''; let scoresDone = false;
+      sec.fields.forEach((f) => {
+        if (f.t === 'score') { if (scoresDone) return; scoresDone = true;
+          html += `<div class="scores">${scores.map((s) => `<div class="scorebox${E.flag && !lock && !filled(s, E.values) ? ' missing' : ''}" ${lock ? '' : `data-stop="${s.id}"`} style="background:${colorOf[s.id] || pc}"><label for="f_${s.id}">${esc(s.label)}</label><input id="f_${s.id}" data-f="${s.id}" type="number" min="0" max="100" inputmode="numeric" value="${esc(E.values[s.id] == null ? '' : E.values[s.id])}"${lock ? ' disabled' : ''}></div>`).join('')}</div>
+            ${E.def.scoreFrom && !lock ? '<div><button class="btn sm" data-act="suggest">Suggest from ratings</button></div>' : ''}`; return; }
+        html += fieldHtml(f, lock);
+      });
+      const ntAll = !lock && sec.fields.some((f) => f.t === 'metric') ? '<div><button class="btn sm ghost" data-act="nt-all">Mark every blank test as not tested</button></div>' : '';
+      return `<section class="secblock" id="sec_${si}" style="--pc:${pc}"><div class="banner"><h2>${esc(sec.label)}</h2>${sec.sub ? `<p>${esc(sec.sub)}</p>` : ''}</div>
+        ${pos === 0 ? lockbar : ''}${hintFor(sec, lock)}
+        ${pos === 0 && E.def.about && firstPart ? `<div class="fnote" style="margin-bottom:16px">${esc(E.def.about)}</div>` : ''}
+        <div class="fields">${html}${ntAll}</div></section>`;
+    }).join('');
+    const nav = lock ? '' : `<div class="nextprev"><span></span><button class="btn pri" data-act="primary">${esc(primaryLabel())}</button></div>`;
+    $('#secbody').innerHTML = `<div class="${lock ? 'locked' : ''} onepage">${blocks}${nav}</div>`;
+    E.sec = idxs[idxs.length - 1];   // everything is on the page: the keyboard walk ends at the primary button
+    idxs.forEach((si) => E.def.sections[si].fields.forEach((f) => { if (f.id && E.tone[f.id]) paintTone(f.id); }));   // the tone flags survive a repaint
     if (keepId) { const again = $(`#secbody [data-stop="${keepId}"]`); if (again) focusStop(again, true); }
     else if (focus) focusFirstOpen();
   }
@@ -4268,12 +4276,12 @@ const PW_CONFIG = {
       const pid = b.getAttribute('data-pid'), part = b.getAttribute('data-part'); const back = { view: 'group', gid: S.route.gid }; const a = quarterlyFor(pid, curQ());
       if (a && a.status !== 'final' && multi(defOf(a))) { S.ui.back = back; saveUi(); go({ view: 'edit', id: a.id, part }); } else startAssessment(pid, group(S.route.gid).form, part, back);
     }
-    else if (act === 'sec' && E) gotoSec(+b.getAttribute('data-i'), false);
+    else if (act === 'sec' && E) { const blk = $('#sec_' + b.getAttribute('data-i')); if (blk) { try { blk.scrollIntoView({ block: 'start' }); window.scrollBy(0, -140); } catch (e) { /* noop */ } } else gotoSec(+b.getAttribute('data-i'), false); }
     else if (act === 'part' && E) switchPart(b.getAttribute('data-part'));
     else if (act === 'pick' && E) { const grp = b.closest('[data-grp]'); if (grp) { pick(grp, $$('[data-v]', grp).indexOf(b) + 1, true); try { grp.focus({ preventScroll: true }); } catch (e) { /* noop */ } } }
     else if (act === 'note') { const fid = b.getAttribute('data-f'); const box = $('#n_' + fid); if (box) { if (box.hidden) openNote(fid); else { box.hidden = true; b.setAttribute('aria-expanded', 'false'); } } }
     else if (act === 'nt' && E) { const fid = b.getAttribute('data-f'); const on = !isNT(E.values[fid]); setVal(fid, on ? NT : null); paintField(fid); const i = $('#f_' + fid); if (i) i.value = on ? NT : ''; paintTabs(); paintParts(); }
-    else if (act === 'nt-all' && E) { let n = 0; E.def.sections[E.sec].fields.forEach((f) => { if (f.t === 'metric' && !has(E.values[f.id])) { setVal(f.id, NT); paintField(f.id); n++; } }); paintTabs(); paintParts(); toast(n ? `${n} test${n === 1 ? '' : 's'} marked not tested. They stay off the parent PDF.` : 'No blank tests left in this section.'); }
+    else if (act === 'nt-all' && E) { let n = 0; partIdx(curPart()).flatMap((si) => E.def.sections[si].fields).forEach((f) => { if (f.t === 'metric' && !has(E.values[f.id])) { setVal(f.id, NT); paintField(f.id); n++; } }); paintTabs(); paintParts(); toast(n ? `${n} test${n === 1 ? '' : 's'} marked not tested. They stay off the parent PDF.` : 'No blank tests left in this section.'); }
     else if (act === 'suggest' && E) suggestScores();
     else if (act === 'reword' && E) rewordField(b.getAttribute('data-f'), b);
     else if (act === 'tone-ok' && E) { const fid = b.getAttribute('data-f'); setTone(fid, { level: 'ok', okText: String(E.values[fid] || '').trim() }); }
