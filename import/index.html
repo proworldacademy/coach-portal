@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Play by Point import · PROWORLD</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/shared/brand.css">
+<link rel="stylesheet" href="/shared/design.css">
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="/shared/pages.js"></script>
+<script src="/shared/pwauth.js"></script>
+<script src="/shared/design.js"></script>
+<style>
+/* PROWORLD — the move from Play by Point (Nov 17, 2026). Owners only. What Play by Point's program lists say is put in the box
+   (one row per child); "Check" shows what would change and writes nothing; "Apply" writes the players and their contact cards
+   (functions/lib/pbpimport.js). No card, no charge, nobody removed. */
+main{max-width:980px;margin:0 auto;padding:18px 16px 120px}
+h1{font:italic 800 44px/.95 var(--display);text-transform:uppercase;margin:10px 0 6px}
+.lead{color:var(--ink-2);font-size:15px;line-height:1.45;margin:0 0 16px;max-width:640px}
+.box{background:var(--pw-sf,#fff);border:1px solid var(--line);border-radius:22px;padding:18px;margin:0 0 16px}
+textarea{width:100%;min-height:90px;border-radius:14px;border:1px solid var(--line);background:transparent;color:inherit;padding:12px;font:12px/1.4 ui-monospace,Menlo,monospace;box-sizing:border-box}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+button.b{height:48px;padding:0 22px;border-radius:24px;border:1px solid var(--ink);background:var(--ink);color:var(--lime);font:700 15px var(--body);cursor:pointer}
+button.b.line{background:none;color:var(--ink)}button.b:disabled{opacity:.4;cursor:default}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 14px}
+.nums div{border:1px solid var(--line);border-radius:16px;padding:12px}.nums b{display:block;font:italic 800 34px/1 var(--display)}.nums span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+h2{font:italic 800 24px/1 var(--display);text-transform:uppercase;margin:18px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}td,th{text-align:left;padding:8px 8px 8px 0;border-top:1px solid var(--line);vertical-align:top}th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-top:0}
+.t{overflow-x:auto}.muted{color:var(--muted)}.ok{font-weight:700}
+#msg{font-size:14px;margin-left:4px}
+</style>
+</head>
+<body class="pwd">
+<main id="app"><p class="lead">Loading…</p></main>
+<script>
+try { window.PWDesign.mount({ skin: "desk", title: "Play by Point import" }); } catch (e) { /* the page works without the bar */ }
+(() => {
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const $ = (id) => document.getElementById(id); let last = null;
+  async function api(path, body) {
+    const a = window.PWAuth.auth(); const tok = await a.currentUser.getIdToken();
+    const r = await fetch("/api/admin/pbp/" + path, { method: "POST", headers: { authorization: "Bearer " + tok, "content-type": "application/json" }, body: JSON.stringify(body) });
+    let j = null; try { j = await r.json(); } catch (e) { j = null; }
+    if (!r.ok) throw new Error((j && j.message) || ("Error " + r.status)); return j;
+  }
+  const rows = () => { let v; try { v = JSON.parse($("data").value || "[]"); } catch (e) { throw new Error("The box does not hold a readable list."); } if (!Array.isArray(v) || !v.length) throw new Error("The box is empty."); return v; };
+  const tbl = (list, cols) => list.length ? '<div class="t"><table><tr>' + cols.map((c) => "<th>" + c[0] + "</th>").join("") + "</tr>" + list.map((x) => "<tr>" + cols.map((c) => "<td>" + c[1](x) + "</td>").join("") + "</tr>").join("") + "</table></div>" : '<p class="muted">None.</p>';
+  function show(p) {
+    last = p; const ch = p.update.filter((u) => u.changes.length);
+    $("out").innerHTML = '<div class="nums"><div><b>' + p.rows + "</b><span>children in Play by Point</span></div><div><b>" + p.update.length + "</b><span>already in the app</span></div><div><b>" + p.create.length + "</b><span>to add</span></div><div><b>" + p.unsure.length + "</b><span>not sure, left alone</span></div><div><b>" + p.notInPbp.length + "</b><span>in the app, not in Play by Point</span></div></div>" +
+      "<h2>To add · " + p.create.length + "</h2>" + tbl(p.create, [["Child", (x) => esc(x.child)], ["Program", (x) => esc(x.program)], ["Days", (x) => x.bySession ? '<span class="muted">by the session</span>' : esc(x.days)], ["Plan", (x) => esc(x.plan)], ["Parent", (x) => esc(x.parent) + (x.hasEmail ? "" : ' <span class="muted">· no e-mail</span>')]]) +
+      "<h2>Changes to players already here · " + ch.length + "</h2>" + tbl(ch, [["Player", (x) => esc(x.name)], ["Found by", (x) => esc(x.how)], ["Program", (x) => esc(x.program)], ["What changes", (x) => esc(x.changes.join(" · "))]]) +
+      "<h2>Not sure · " + p.unsure.length + "</h2>" + tbl(p.unsure, [["Child", (x) => esc(x.child)], ["Program", (x) => esc(x.program)], ["Why", (x) => esc(x.why)]]) +
+      "<h2>Active in the app, not in Play by Point · " + p.notInPbp.length + '</h2><p class="muted">Nobody is removed. Look at these by hand.</p>' + tbl(p.notInPbp, [["Player", (x) => esc(x.name)], ["Group", (x) => esc(x.group)]]);
+    $("apply").disabled = false;
+  }
+  function start() {
+    $("app").innerHTML = '<h1>Play by Point import</h1><p class="lead">Check shows what would change and writes nothing. Apply sets each child\'s program, training days and parent contact. No card, no charge, nobody removed.</p>' +
+      '<div class="box"><textarea id="data" spellcheck="false" placeholder="The list read from Play by Point goes here."></textarea><div class="row"><button class="b line" id="check" type="button">Check</button><button class="b" id="apply" type="button" disabled>Apply</button><span id="msg" role="status"></span></div></div><div id="out"></div>';
+    const say = (t) => { $("msg").textContent = t; };
+    $("check").onclick = async () => { say("Checking…"); try { show(await api("preview", { rows: rows() })); say("Nothing written yet."); } catch (e) { say(e.message); } };
+    $("apply").onclick = async () => { const b = $("apply"); if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Press again to apply"; return; } b.disabled = true; say("Writing…");
+      try { const o = await api("apply", { rows: rows() }); say("Done: " + o.updated + " updated, " + o.created + " added, " + o.contacts + " contact cards."); b.textContent = "Applied"; show(await api("preview", { rows: rows() })); $("apply").disabled = true; } catch (e) { say(e.message); b.disabled = false; b.dataset.sure = ""; b.textContent = "Apply"; } };
+    window.PBPImport = { set: (list) => { $("data").value = JSON.stringify(list); return list.length; }, add: (list) => { const cur = JSON.parse($("data").value || "[]").concat(list); $("data").value = JSON.stringify(cur); return cur.length; } };
+  }
+  window.PWAuth.start({}).then((c) => { if (!c || !c.owner) { $("app").innerHTML = '<h1>Owners only</h1><p class="lead">This page is for the two owners.</p>'; return; } start(); });
+})();
+</script>
+</body>
+</html>
