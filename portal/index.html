@@ -4276,7 +4276,7 @@ const PW_CONFIG = {
       const pid = b.getAttribute('data-pid'), part = b.getAttribute('data-part'); const back = { view: 'group', gid: S.route.gid }; const a = quarterlyFor(pid, curQ());
       if (a && a.status !== 'final' && multi(defOf(a))) { S.ui.back = back; saveUi(); go({ view: 'edit', id: a.id, part }); } else startAssessment(pid, group(S.route.gid).form, part, back);
     }
-    else if (act === 'sec' && E) { const blk = $('#sec_' + b.getAttribute('data-i')); if (blk) { try { blk.scrollIntoView({ block: 'start' }); window.scrollBy(0, -140); } catch (e) { /* noop */ } } else gotoSec(+b.getAttribute('data-i'), false); }
+    else if (act === 'sec' && E) { const blk = $('#sec_' + b.getAttribute('data-i')); if (blk) { try { const bar = $('#sectabs'); const under = bar ? bar.getBoundingClientRect().bottom : 60; window.scrollBy({ top: blk.getBoundingClientRect().top - under - 14, behavior: 'smooth' }); } catch (e) { /* noop */ } } else gotoSec(+b.getAttribute('data-i'), false); }
     else if (act === 'part' && E) switchPart(b.getAttribute('data-part'));
     else if (act === 'pick' && E) { const grp = b.closest('[data-grp]'); if (grp) { pick(grp, $$('[data-v]', grp).indexOf(b) + 1, true); try { grp.focus({ preventScroll: true }); } catch (e) { /* noop */ } } }
     else if (act === 'note') { const fid = b.getAttribute('data-f'); const box = $('#n_' + fid); if (box) { if (box.hidden) openNote(fid); else { box.hidden = true; b.setAttribute('aria-expanded', 'false'); } } }
