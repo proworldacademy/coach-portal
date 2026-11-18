@@ -2832,7 +2832,7 @@ const PW_CONFIG = {
     const nRep = all.filter((p) => dueNow(p).overall !== 'done').length, nReach = all.filter((p) => !inTouch(p.id, wk)).length;
     const list = (f === 'report' ? all.filter((p) => dueNow(p).overall !== 'done') : f === 'reach' ? all.filter((p) => !inTouch(p.id, wk)) : all).filter(sexOk);
     const seg = `<div class="a2seg" role="group" aria-label="Show">${[['all', 'All ' + all.length, 0], ['report', 'Report', nRep], ['reach', 'To reach', nReach]].map(([k, t, n]) => `<button type="button" class="${f === k ? 'on' : ''}" data-act="a2filter" data-gid="${esc(gid)}" data-v="${k}">${t}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>`;
-    const rows = list.map((p) => a2row(a2ava(p.name, inTouch(p.id, wk)), esc(p.name), `${p.tier ? esc(tierText(p)) + ' · ' : ''}${p.coach ? 'Coach ' + esc(p.coach) : 'No coach'}`, a2status(p), goAttr({ view: 'player', pid: p.id }))).join('');
+    const rows = list.map((p) => a2row(a2ava(p.name, inTouch(p.id, wk)), esc(p.name), `${tierText(p) ? esc(tierText(p)) + ' · ' : ''}${p.coach ? 'Coach ' + esc(p.coach) : 'No coach'}`, a2status(p), goAttr({ view: 'player', pid: p.id }))).join('');
     return `${notice()}${a2nav('Players', { view: 'home' }, '')}${a2title(g.label + '.', `${all.length} ${all.length === 1 ? 'player' : 'players'} · ${esc(q)} 3-month report`)}${seg}${sexBar(all, true)}${rows ? `<div class="a2card">${rows}</div>` : `<div class="a2card"><div class="a2row quiet"><span class="a2t"><b>${S.loaded.players ? (all.length ? 'Nobody here' : 'No players of yours in this group') : 'Loading…'}</b></span></div></div>`}`;
   }
   /* ── the player ── */
@@ -3233,7 +3233,7 @@ const PW_CONFIG = {
     const shown = list.filter((p) => (fc === null ? true : (p.coach || '') === fc)).filter(sexOk).sort((a, b) => a.name.localeCompare(b.name));
     const rows = shown.map((p) => {
       const who = `<div class="who"><span class="ava">${esc(initials(p.name))}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${active(p) ? '' : ` <span class="muted">(${esc(statusWord(p).toLowerCase())})</span>`}</div><small>${p.coach ? 'Coach ' + esc(p.coach) : 'No coach assigned'}${p.coach2 ? ' · with ' + esc(p.coach2) : ''}</small></div></div>
-        <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? esc(tierText(p)) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (p.tier ? ' · Tier ' + esc(p.tier) : '')}</div>`;
+        <div class="mid muted" style="font-size:12px">${EDITION === 'web' ? (p.tier ? esc(tierText(p)) : '') : playerAssess(p.id).filter((a) => a.status === 'final').length + ' on file' + (tierText(p) ? ' · ' + esc(tierText(p)) : '')}</div>`;
       // a player's name always opens the profile (Antonio, Oct 21); with a part filter on, a separate button under the row goes straight to that part
       if (!mine(p)) return `<div class="rowb locked" title="${esc(p.coach ? 'Coach ' + p.coach + '’s player' : 'No coach yet — ask a director')}">${who}<div class="chips"><span class="chip">${esc(p.coach ? 'with ' + p.coach : 'no coach')}</span></div></div>`;
       return `<button class="rowb" ${goAttr({ view: 'player', pid: p.id })}>${who}<div class="chips">${p.pbpNote && /^Added/.test(p.pbpNote) ? '<span class="chip st-working" title="' + esc(p.pbpNote) + '">new · Play by Point</span>' : p.pbpNote && /^Not in/.test(p.pbpNote) ? '<span class="chip st-missing" title="' + esc(p.pbpNote) + '">' + (/Fall 2026/.test(p.pbpNote) ? 'not on the Fall list' : 'not in Play by Point') + '</span>' : ''}${EDITION === 'web' ? pendingChips(p) : ''}${active(p) ? checkChip(p) + contactChip(p) + statusBubble(p) : `<span class="chip">${esc(statusWord(p))}</span>`}</div></button>`;
@@ -3283,7 +3283,7 @@ const PW_CONFIG = {
   /* Tiers: A, B, C everywhere but the 10 & Under, who go by the colour of the ball (Nov 18, 2026). */
   const BALLS = ['Red', 'Orange', 'Green', 'Yellow'];
   const tiersOf = (gid) => (gid === 'u10' ? BALLS : ['A', 'B', 'C']);
-  const tierText = (p) => (!p || !p.tier ? '' : BALLS.includes(p.tier) ? p.tier + ' ball' : 'Tier ' + p.tier);
+  const tierText = (p) => (!p || !p.tier ? '' : BALLS.includes(p.tier) ? p.tier + ' ball' : p.group === 'u10' ? '' : 'Tier ' + p.tier);   // a 10 & Under with an old A/B/C shows nothing until someone picks the ball
   function coachList() { return Array.from(new Set(S.players.map((p) => p.coach).concat(S.players.map((p) => p.coach2), S.players.map((p) => p.coach3), NEW_COACHES).filter(Boolean))).filter((c) => !retired(c)).sort(); }
   function addPlayerPanel(gid) {
     const web = EDITION === 'web';
@@ -3339,7 +3339,7 @@ const PW_CONFIG = {
       <div class="field"><label for="ep_name">Player name</label><input id="ep_name" name="name" type="text" required value="${esc(p.name)}"></div>
       <div class="field"><label for="ep_group">Group</label><select id="ep_group" name="group">${groups().map((g) => `<option value="${esc(g.id)}" ${g.id === p.group ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}</select></div>
       <div class="field"><label for="ep_sex">Boys or girls</label><select id="ep_sex" name="sex"><option value="">Not set</option><option value="m" ${p.sex === 'm' ? 'selected' : ''}>Boys</option><option value="f" ${p.sex === 'f' ? 'selected' : ''}>Girls</option></select></div>
-      <div class="field"><label for="ep_tier">Tier</label><select id="ep_tier" name="tier"><option value="">—</option>${tiersOf(p.group).concat(p.tier && !tiersOf(p.group).includes(p.tier) ? [p.tier] : []).map((t) => sel(p.tier, t)).join('')}</select></div>
+      <div class="field"><label for="ep_tier">Tier</label><select id="ep_tier" name="tier"><option value="">—</option>${tiersOf(p.group).concat(p.tier && p.group !== 'u10' && !tiersOf(p.group).includes(p.tier) ? [p.tier] : []).map((t) => sel(p.tier, t)).join('')}</select></div>
       <div class="field"><label for="ep_coach">Primary coach</label><input id="ep_coach" name="coach" type="text" list="coachlist2" value="${esc(p.coach || '')}"></div>
       <div class="field"><label for="ep_coach2">Secondary coach</label><input id="ep_coach2" name="coach2" type="text" list="coachlist2" value="${esc(p.coach2 || '')}"></div>
       <div class="field"><label for="ep_coach3">Third coach <span class="muted">(optional)</span></label><input id="ep_coach3" name="coach3" type="text" list="coachlist2" value="${esc(p.coach3 || '')}"></div>
