@@ -171,7 +171,8 @@ test('only a confirmed e-mail sign-in gets in', async () => {
 function seedClient() {
   const db = fakeDb(Object.assign(seedRoster(), {
     'staff/kam@example.com': { name: 'Kamryn Taub', role: 'coach', active: true, justcallNumber: '+15615550900' },
-    'staff/lee@example.com': { name: 'Lee Coach', role: 'coach', active: true }
+    'staff/lee@example.com': { name: 'Lee Coach', role: 'coach', active: true },
+    'staff/dir@example.com': { name: 'Dana Director', role: 'director', active: true }
   }));
   return db;
 }
@@ -185,6 +186,10 @@ test('two weeks away go on the schedule as one day per training day; a make-up d
   assert.ok(out.dates.length >= 2 && out.dates.every((d) => ['Tue', 'Thu'].includes(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(d + 'T12:00:00Z').getUTCDay()])));
   assert.equal(out.dates[0], '2026-11-17');
   assert.ok(sent.some((x) => /desk/.test(x.url) && /Away/.test(JSON.stringify(x.body)) && /Mia Rivera/.test(JSON.stringify(x.body))));
+  // the director of the group hears it in the Locker Room (no director on the group: every director)
+  const dm = (await db.collection('teamChats').get()).docs.map((d) => d.data()).filter((c) => c.bot && c.members.includes('dir@example.com'));
+  assert.equal(dm.length, 1); assert.match(dm[0].last.text, /Mia Rivera.*cannot make it/);
+  assert.equal((await db.collection('teamChats').get()).docs.some((d) => (d.data().members || []).includes('kam@example.com')), false);
   let me = await FAMILY.me(db, null, who, { today }); let mia = me.players.find((p) => p.id === 'as-mia-r');
   assert.equal(mia.days.filter((d) => d.kind === 'away').length, out.dates.length);
   assert.equal(mia.makeupsLeft, out.dates.length);

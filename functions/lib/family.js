@@ -174,6 +174,21 @@ async function daysOf(db, pid, today) {
 }
 function makeupsLeft(days, missed) { return Math.max(0, days.filter((d) => d.kind === 'away').length + (missed || 0) - days.filter((d) => d.kind === 'makeup').length); }
 const sayDay = (d) => { const p = CAL.parts(d); return `${CAL.MONTHS[p.m].slice(0, 3)} ${p.d}`; };
+/* The director of the player's group hears it at once (Nov 17, 2026 — Antonio: "the moment I hit 'she cannot make it', a notification
+   goes to the director of the group"): a line from ProWorld in the director's Locker Room, with the push that goes with it. The
+   group's director is groups/<id>.director (a name, or several); a group with none on file tells every director. No family
+   contact details in the line. */
+async function tellDirector(db, p, text) {
+  try {
+    const CONTACTS = require('./contacts'); const TEAM = require('./team');
+    let g = {}; try { const x = await db.doc('groups/' + (p.group || '-')).get(); g = x.exists ? (x.data() || {}) : {}; } catch (e) { g = {}; }
+    const staff = await CONTACTS.staffIndex(db); const to = new Set();
+    String(g.director || '').split(/,|&|\/|\band\b/i).map((n) => n.trim()).filter(Boolean).forEach((n) => { const st = CONTACTS.staffFor(staff, n); if (st && st.email) to.add(st.email); });
+    if (!to.size) { const all = await db.collection('staff').get(); all.docs.forEach((d) => { const x = d.data() || {}; if (x.active !== false && String(x.role || '').toLowerCase() === 'director') to.add(d.id.toLowerCase()); }); }
+    for (const e of to) await TEAM.direct(db, e, text);
+    return [...to];
+  } catch (e) { console.error('family tellDirector error', e.message); return []; }
+}
 async function days(db, who, body, players, opts) {
   opts = opts || {}; body = body || {}; const today = opts.today || CAL.todayET();
   const p = (players || []).find((x) => x.id === S.clean(body.player, 60));
@@ -196,12 +211,15 @@ async function days(db, who, body, players, opts) {
     if (!hit.length) throw S.err(400, 'none', `${ROSTER.shortName(p.name)} has no training on ${r.from === r.to ? 'that day' : 'those days'}.`);
     for (const d of hit) await ref(d).set(Object.assign({ date: d, kind: 'away' }, base));
     await NOTIFY.slack(db, 'desk', `*Away* — ${p.name}`, [r.from === r.to ? sayDay(r.from) : `${sayDay(r.from)} to ${sayDay(r.to)} · ${hit.length} session${hit.length === 1 ? '' : 's'}`, `Marked by the family (${who.email}) in the client account. The attendance board already has it.`, S.clean(body.note, 300)].filter(Boolean));
+    const grp = p.enroll && (p.enroll.programShort || p.enroll.programName) ? ` (${p.enroll.programShort || p.enroll.programName})` : '';
+    await tellDirector(db, p, `*${p.name}*${grp} cannot make it: ${r.from === r.to || hit.length === 1 ? dowOf(hit[0]) + ' ' + sayDay(hit[0]) : `${sayDay(hit[0])} to ${sayDay(hit[hit.length - 1])}, ${hit.length} sessions`}. The family marked it in the app. The attendance shows the player greyed out.`);
     return { ok: true, action, dates: hit };
   }
   if (action === 'back') {
     const r = range(); const hit = have.filter((x) => x.kind === 'away' && x.date >= r.from && x.date <= r.to).map((x) => x.date);
     for (const d of hit) await ref(d).delete();
     if (hit.length) await NOTIFY.slack(db, 'desk', `*Coming after all* — ${p.name}`, [hit.length === 1 ? sayDay(hit[0]) : `${sayDay(hit[0])} to ${sayDay(hit[hit.length - 1])} · ${hit.length} sessions`, `Changed by the family (${who.email}) in the client account.`]);
+    if (hit.length) await tellDirector(db, p, `*${p.name}* is coming after all: ${hit.length === 1 ? dowOf(hit[0]) + ' ' + sayDay(hit[0]) : `${sayDay(hit[0])} to ${sayDay(hit[hit.length - 1])}`}. The family changed it in the app.`);
     return { ok: true, action, dates: hit };
   }
   if (action === 'makeup') {
@@ -216,6 +234,7 @@ async function days(db, who, body, players, opts) {
     if (makeupsLeft(have, att[p.id].missed) < 1) throw S.err(400, 'credit', 'A make-up day goes with a day missed. Mark the day away first, or write to Admin.');
     await ref(d).set(Object.assign({ date: d, kind: 'makeup' }, base));
     await NOTIFY.slack(db, 'desk', `*Make-up day* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)}`, `Picked by the family (${who.email}) in the client account. The attendance board expects the player that day. Not possible? Tell the family.`]);
+    await tellDirector(db, p, `*${p.name}* comes for a make-up day: ${dowOf(d)} ${sayDay(d)}. The family picked it in the app. The attendance expects the player that day.`);
     return { ok: true, action, dates: [d] };
   }
   if (action === 'nomakeup') {
