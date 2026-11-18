@@ -70,7 +70,7 @@ async function phoneBook(db) {
 /* ---- the staff list: a JustCall agent's e-mail → the coach ---- */
 async function staffIndex(db) {
   const snap = await db.collection('staff').where('active', '==', true).get(); const byEmail = new Map(); const list = [];
-  for (const d of snap.docs) { const r = d.data() || {}; const rec = { email: String(d.id).toLowerCase(), name: r.name || d.id, short: r.coachAs || first(r.name) || first(d.id), role: r.role || 'coach', slackId: r.slackId || '', phone: r.phone || '', justcallNumber: r.justcallNumber || '', keys: [r.coachAs, first(r.name)].map(fold).filter(Boolean) }; byEmail.set(rec.email, rec); list.push(rec); }
+  for (const d of snap.docs) { const r = d.data() || {}; const rec = { email: String(d.id).toLowerCase(), name: r.name || d.id, short: r.coachAs || first(r.name) || first(d.id), role: r.role || 'coach', slackId: r.slackId || '', whatsapp: r.whatsapp || '', phone: r.phone || '', justcallNumber: r.justcallNumber || '', keys: [r.coachAs, first(r.name)].map(fold).filter(Boolean) }; byEmail.set(rec.email, rec); list.push(rec); }
   return { byEmail, list };
 }
 const staffFor = (idx, coachName) => { const want = fold(first(coachName)); return want ? idx.list.find((s) => s.keys.includes(want)) || null : null; };

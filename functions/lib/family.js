@@ -320,6 +320,28 @@ async function message(db, who, body, players) {
   return { ok: true, to: t.conv, reached: out.sent.length, passed: out.missing.length };
 }
 
+/* ── how to reach each coach and Admin from the family's own phone (Nov 18, 2026 — management: "they're using their own phone…
+   add the options to text message, WhatsApp, or e-mail") ──
+   A coach: the coach's own academy number (the JustCall number the coach texts from, so the text lands in the coach's Contact)
+   and the coach's e-mail. A coach with no number of their own: the academy line. Admin: the academy line and info@. WhatsApp only
+   shows where a WhatsApp number is on file (settings/contact.whatsapp for Admin, staff/<e-mail>.whatsapp for a coach): a link to
+   a number that is not on WhatsApp opens an error. */
+const ACADEMY_LINE = '+15614030008'; const ACADEMY_MAIL = 'info@proworldacademy.com';
+async function waysOf(db, players) {
+  const out = { admin: { sms: ACADEMY_LINE, email: ACADEMY_MAIL, whatsapp: '' }, coaches: {} };
+  try {
+    try { const x = await db.doc('settings/contact').get(); const c = x.exists ? (x.data() || {}) : {}; if (c.whatsapp) out.admin.whatsapp = String(c.whatsapp).replace(/[^\d+]/g, ''); if (c.sms) out.admin.sms = String(c.sms).replace(/[^\d+]/g, ''); if (c.email) out.admin.email = String(c.email); } catch (e) { /* the defaults */ }
+    const CONTACTS = require('./contacts'); const COACHTEXT = require('./coachtext'); const staff = await CONTACTS.staffIndex(db);
+    for (const p of players) for (const c of coachesOf(p)) {
+      if (out.coaches[c.key]) continue;
+      const st = CONTACTS.staffFor(staff, c.full || c.name);
+      let own = ''; try { own = st ? await COACHTEXT.ownLine(db, { email: st.email, justcallNumber: st.justcallNumber }) : ''; } catch (e) { own = ''; }
+      out.coaches[c.key] = { sms: own || ACADEMY_LINE, own: !!own, email: st ? st.email : '', whatsapp: st && st.whatsapp ? String(st.whatsapp).replace(/[^\d+]/g, '') : '' };
+    }
+  } catch (e) { console.error('family waysOf error', e.message); }
+  return out;
+}
+
 /* ── more people on a player's messages (Nov 18, 2026 — management: "let's say my wife's number is not added and I want to include
    her… or a fitness trainer outside… give me the option to add numbers") ──
    The parent adds a name and a mobile number to the player's contact card (private/contact.extra, four at most). The coaches see
@@ -341,6 +363,9 @@ async function people(db, who, body, players) {
     if (extra.some((e) => String(e.phone).replace(/\D+/g, '') === digits)) throw S.err(400, 'dup', 'That number is already on the list.');
     if (extra.length >= 4) throw S.err(400, 'full', 'Four extra numbers is the most. Remove one first.');
     extra.push({ name, phone: '+' + digits, by: who.email, at: Date.now() });
+    // one text of consent to the new number (Nov 18, 2026 — management: "the other person should just get a text of consent"): who added them, for which player, and how to stop
+    let told = false; try { told = await NOTIFY.text(db, '+' + digits, `${who.name || 'A parent'} added you to ${ROSTER.shortName(p.name)}'s messages at ProWorld Academy. The coaches may text you about ${ROSTER.shortName(p.name)}'s training. Reply STOP if you do not want these texts.`); } catch (e) { told = false; }
+    extra[extra.length - 1].told = told;
     await NOTIFY.slack(db, 'desk', `*New number on a player's messages* — ${p.name}`, [`${name} · number ending ${digits.slice(-4)}`, `Added by the family (${who.email}) in the client account. The coaches see it in Contact.`]);
   }
   await ref.set({ extra, updatedAt: Date.now() }, { merge: true });
@@ -397,7 +422,7 @@ async function me(db, stripe, who, opts) {
   const bill = await billing(stripe, customers, today);
   let requests = [];
   try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
-  return { today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
+  return { ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
 /* ── the family's Stripe account page (card, invoices, receipts) ── */
