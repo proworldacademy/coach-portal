@@ -178,13 +178,18 @@ const sayDay = (d) => { const p = CAL.parts(d); return `${CAL.MONTHS[p.m].slice(
    goes to the director of the group"): a line from ProWorld in the director's Locker Room, with the push that goes with it. The
    group's director is groups/<id>.director (a name, or several); a group with none on file tells every director. No family
    contact details in the line. */
+/* Who directs which group, as management gave it on Nov 17, 2026. Campers: nobody yet (they have their own groups). A group not listed here tells every director. */
+const GROUP_DIRECTORS = { ft: ['Tonio', 'Nico'], as: ['Nico', 'Kamryn'], u10: ['Kamryn'], tour: ['Nico', 'Tonio'], camp: [] };
 async function tellDirector(db, p, text) {
   try {
     const CONTACTS = require('./contacts'); const TEAM = require('./team');
     let g = {}; try { const x = await db.doc('groups/' + (p.group || '-')).get(); g = x.exists ? (x.data() || {}) : {}; } catch (e) { g = {}; }
     const staff = await CONTACTS.staffIndex(db); const to = new Set();
-    String(g.director || '').split(/,|&|\/|\band\b/i).map((n) => n.trim()).filter(Boolean).forEach((n) => { const st = CONTACTS.staffFor(staff, n); if (st && st.email) to.add(st.email); });
-    if (!to.size) { const all = await db.collection('staff').get(); all.docs.forEach((d) => { const x = d.data() || {}; if (x.active !== false && String(x.role || '').toLowerCase() === 'director') to.add(d.id.toLowerCase()); }); }
+    // groups/<id>.notify: the directors' sign-ins, when management sets them there; otherwise GROUP_DIRECTORS below. (`director` on the group is only the label the portal shows.)
+    const listed = Array.isArray(g.notify); (listed ? g.notify : []).forEach((e) => { e = String(e || '').toLowerCase(); if (e.includes('@')) to.add(e); });
+    if (!listed) (GROUP_DIRECTORS[p.group] || []).forEach((n) => { const st = CONTACTS.staffFor(staff, n); if (st && st.email) to.add(st.email); });
+    const known = listed || Object.prototype.hasOwnProperty.call(GROUP_DIRECTORS, p.group || '');
+    if (!to.size && !known) { const all = await db.collection('staff').get(); all.docs.forEach((d) => { const x = d.data() || {}; if (x.active !== false && String(x.role || '').toLowerCase() === 'director') to.add(d.id.toLowerCase()); }); }
     for (const e of to) await TEAM.direct(db, e, text);
     return [...to];
   } catch (e) { console.error('family tellDirector error', e.message); return []; }
