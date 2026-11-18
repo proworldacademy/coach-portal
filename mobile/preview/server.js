@@ -15,7 +15,7 @@ const PARENT = { email: 'maria.rivera@example.com', name: 'Maria Rivera' };
 const FAMDB = fakeDb({
   'players/ft-liam-r': { name: 'Liam Rivera', shortName: 'Liam R.', group: 'ft', coach: 'Kim Coach', status: 'active', source: 'monday', createdAt: 1 },
   'players/ft-liam-r/private/contact': { guardian: 'Maria Rivera', email: PARENT.email, phone: '5615550102', source: 'monday' },
-  'players/as-mia-r': { name: 'Mia Rivera', shortName: 'Mia R.', group: 'as', coach: 'Lee Coach', coach2: 'Kim Coach', status: 'active', source: 'coach', createdAt: 2, enroll: { programName: 'Afterschool', programShort: 'Afterschool', days: ['Tue', 'Thu'], subscription: 'sub_preview' } },   // training days, so the client home has a next session to show
+  'players/as-mia-r': { name: 'Mia Rivera', shortName: 'Mia R.', group: 'as', coach: 'Lee Coach', coach2: 'Kim Coach', status: 'active', source: 'coach', createdAt: 2, enroll: { programName: 'Afterschool | Fall 2026', programShort: 'Afterschool', days: ['Tue', 'Thu'], pbp: { plan: '2 Days per week | Monthly', bySession: false } } },   // training days, so the client home has a next session to show
   'players/as-mia-r/private/contact': { guardian: 'Maria Rivera', email: PARENT.email, phone: '5615550102' },
   'staff/lee@example.test': { name: 'Lee Coach', role: 'coach', coachAs: 'Lee', active: true },   // Coach Lee has a sign-in, Coach Kim does not: both ways a client's message can go
   'smsLog/seed-1': { kind: 'reply', at: Date.now() - 26 * 3600e3, phone: '+15615550102', body: 'Hi Coach, Mia loved the serve work this week.', players: ['as-mia-r'], by: 'family', status: 'reply', via: 'app', forCoach: 'lee@example.test', fromEmail: PARENT.email, appConv: 'lee', line: '' },
