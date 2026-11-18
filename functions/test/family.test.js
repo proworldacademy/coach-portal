@@ -277,3 +277,11 @@ test('a by-the-session player books sessions of a day; a monthly player cannot; 
   assert.deepEqual((await FAMILY.me(db, null, who, { today })).players.find((p) => p.id === 'as-mia-r').people, [{ name: 'Dad', tail: '0177' }]);
   assert.deepEqual((await FAMILY.people(db, who, { player: 'as-mia-r', remove: '0177', name: 'Dad' }, players)).people, []);
 });
+
+test('each coach and Admin can be reached from the family\'s own phone: the coach\'s academy number and e-mail, the academy line for Admin', async () => {
+  wire(); const db = seedClient(); require('../lib/coachtext')._seats({});
+  const me = await FAMILY.me(db, null, { email: 'maria.rivera@example.com', name: 'Maria Rivera' }, { today: '2026-11-18' });
+  assert.deepEqual(me.ways.admin, { sms: '+15614030008', email: 'info@proworldacademy.com', whatsapp: '' });
+  assert.deepEqual(me.ways.coaches.kamryn, { sms: '+15615550900', own: true, email: 'kam@example.com', whatsapp: '' });
+  assert.equal(me.ways.coaches.eric.sms, '+15614030008'); assert.equal(me.ways.coaches.eric.own, false);   // no sign-in yet: the academy line
+});

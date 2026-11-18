@@ -420,9 +420,13 @@ async function appThread(db, p, email, t) {
   t.coaches.forEach((c) => { const s = CONTACTS.staffFor(staff, c.full || c.name); if (s) emails.set(s.email, c.name); });
   const phone = await appPhone(db, p.id, email);
   let ins = []; try { ins = (await db.collection('smsLog').where('fromEmail', '==', String(email).toLowerCase()).get()).docs.map((d) => d.data() || {}).filter((l) => l.via === 'app' && Array.isArray(l.players) && l.players.includes(p.id) && (l.appConv || '') === t.conv); } catch (e) { ins = []; }
-  const seen = new Set(); const lines = [];
+  const seen = new Set(); const lines = []; const lines2 = lines;
   ins.forEach((l) => { const k = l.at + '|' + l.body; if (seen.has(k)) return; seen.add(k); lines.push({ at: l.at || 0, dir: 'me', body: String(l.body || '') }); });   // one message to two coaches is one line here
   if (phone && emails.size) {
+    // what the family texted from its own phone to these coaches' numbers shows too, so the chat reads whole (Nov 18, 2026)
+    try { const lines = new Set(); for (const e of emails.keys()) { const st = staff.byEmail.get(e); const l = await ownLine(db, { email: e, justcallNumber: st && st.justcallNumber }); if (l) lines.add(l); }
+      if (lines.size) (await db.collection('smsLog').where('by', '==', 'family').get()).docs.map((d) => d.data() || {}).filter((l) => l.kind === 'reply' && l.via !== 'app' && l.phone === phone && lines.has(l.line) && Array.isArray(l.players) && l.players.includes(p.id)).forEach((l) => lines2.push({ at: l.at || 0, dir: 'me', body: String(l.body || ''), tag: 'by text' }));
+    } catch (e) { /* the app's own lines still show */ }
     let outs = []; try { outs = (await db.collection('smsLog').where('player', '==', p.id).get()).docs.map((d) => d.data() || {}); } catch (e) { outs = []; }
     outs.filter((l) => !l.kind && l.phone === phone && emails.has(l.by) && l.status !== 'failed' && l.status !== 'skipped' && l.from === 'portal')
       .forEach((l) => lines.push({ at: l.at || 0, dir: 'them', body: String(l.body || '').replace(/\n- [^\n]*$/, '').trim(), by: 'Coach ' + emails.get(l.by) }));
