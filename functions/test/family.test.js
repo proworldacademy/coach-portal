@@ -238,3 +238,16 @@ test('a message to a coach lands in that coach\'s chat and nobody else\'s; the a
   assert.equal(a.title, 'Admin'); assert.equal(a.lines[0].body, 'Can we move the payment date?');
   assert.ok(sent.some((x) => /Registration and billing/.test(JSON.stringify(x.body))));
 });
+
+test('a player brought over from Play by Point shows the calendar and a Renew card; a plan we do not sell online goes to Admin', async () => {
+  wire(); const db = seedClient(); const who = { email: 'maria.rivera@example.com', name: 'Maria Rivera' };
+  await db.doc('players/as-mia-r').set({ enroll: { programName: 'Afterschool | Fall 2026', programShort: 'Afterschool', days: ['Tue', 'Thu'], pbp: { plan: '2 Days per week | Monthly', bySession: false } } }, { merge: true });
+  await db.doc('players/ft-liam-r').set({ enroll: { programName: 'Afterschool | Fall 2026', programShort: 'Afterschool', days: ['Wed'], pbp: { plan: '1 Day / week', bySession: false } } }, { merge: true });
+  const me = await FAMILY.me(db, null, who, { today: '2026-11-18' });
+  const mia = me.players.find((p) => p.id === 'as-mia-r'); const liam = me.players.find((p) => p.id === 'ft-liam-r');
+  assert.deepEqual(mia.enroll.days, ['Tue', 'Thu']);
+  assert.deepEqual([mia.renew.online, mia.renew.program, mia.renew.plan, mia.renew.start, mia.renew.month, mia.renew.days.join(',')], [true, 'afterschool', '2', '2026-12-01', 'December', 'Tue,Thu']);
+  assert.equal(liam.renew.online, false);
+  await db.doc('players/as-mia-r').set({ enroll: { subscription: 'sub_1' } }, { merge: true });
+  assert.equal((await FAMILY.me(db, null, who, { today: '2026-11-18' })).players.find((p) => p.id === 'as-mia-r').renew, null);
+});

@@ -142,6 +142,8 @@ const moving=params.get('switch')==='1';
 const nextFirstLocal=()=>{const d=new Date(),n=new Date(d.getFullYear(),d.getMonth()+1,1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01'};
 const e={program:params.get('p')||null,kind:null,plan:params.get('plan')||null,option:null,days:(params.get('days')||'').split(',').map(s=>s.trim()).filter(Boolean),start:params.get('start')||(moving?nextFirstLocal():todayLocal()),camp:params.get('camp')||null,campOption:null,
   player:{first:params.get('first')||'',last:params.get('last')||'',dob:params.get('dob')||''},parent:{name:params.get('parent')||'',email:params.get('email')||'',phone:params.get('phone')||''},agree:false,authorize:false,smsOptIn:false,summaryOpen:false,by:params.get('by')||'enroll'};
+/* A renewal from the client account (Nov 18, 2026): the names come in this tab's own storage, not in the link; good for ten minutes. */
+try{const rn=JSON.parse(sessionStorage.getItem('pw-renew')||'null');if(moving&&rn&&Date.now()-rn.at<6e5){if(!e.player.first)e.player.first=rn.first||'';if(!e.player.last)e.player.last=rn.last||'';if(!e.parent.name)e.parent.name=rn.parent||'';if(!e.parent.email)e.parent.email=rn.email||''}}catch(x){/* an empty form */}
 if(e.program&&e.plan)e.kind='monthly';
 
 function load(){

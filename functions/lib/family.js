@@ -295,6 +295,28 @@ async function message(db, who, body, players) {
   return { ok: true, to: t.conv, reached: out.sent.length, passed: out.missing.length };
 }
 
+/* ── renewing here (Nov 18, 2026 — management: "now that we have the clients in the programs they're in, we renew them through our
+   app… December 1st") ──
+   A player brought over from Play by Point with no plan here yet gets a "Renew" card: the program and the days-a-week plan read
+   from Play by Point, the days the child is booked on, billing from the next 1st. A plan our catalog does not sell online (one
+   day a week, four days, a pack of sessions, a drop-in) says so, and the card sends the parent to Admin. */
+function renewOf(p, today) {
+  const en = p.enroll || {}; if (!en.pbp || en.subscription) return null;
+  const nm = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const prog = CAT.PROGRAMS.find((x) => nm(x.name) === nm(en.programName));
+  const plan = String(en.pbp.plan || ''); const first = CAL.parts(today); const start = `${first.m === 11 ? first.y + 1 : first.y}-${String(first.m === 11 ? 1 : first.m + 2).padStart(2, '0')}-01`;
+  const month = CAL.MONTHS_LONG[first.m === 11 ? 0 : first.m + 1];
+  const base = { month, start, programName: en.programName || '', planName: plan };
+  if (!prog || en.pbp.bySession) return Object.assign(base, { online: false });
+  let pick = null;
+  if (prog.id === 'fulltime') pick = /intensive/i.test(plan) ? 'intensive' : /core/i.test(plan) && /month/i.test(plan) ? 'core' : null;
+  else { const m = plan.match(/(\d)\s*days?/i); const n = m ? Number(m[1]) : 0; const pl = (prog.plans || []).find((x) => !x.every && Number(x.days) === n); pick = pl ? pl.id : null; }
+  const pl = pick ? CAT.plan(prog.id, pick) : null;
+  if (!pl) return Object.assign(base, { online: false });
+  const days = trainDays(p); const fit = days.length === Number(pl.days) || Number(pl.days) >= (prog.days || []).length;
+  return Object.assign(base, { online: true, program: prog.id, plan: pl.id, monthly: pl.monthly || null, days: fit ? (Number(pl.days) >= (prog.days || []).length ? prog.days : days) : [] });
+}
+
 /* ── the whole picture for one signed-in parent ── */
 async function me(db, stripe, who, opts) {
   opts = opts || {};
@@ -310,7 +332,9 @@ async function me(db, stripe, who, opts) {
     out.push({
       id: p.id, name: p.name, shortName: ROSTER.shortName(p.name), group: p.group || '', groupLabel: ROSTER.GROUP_LABEL[p.group] || (p.sport === 'soccer' ? 'Soccer' : p.sport === 'fitness' ? 'Fitness' : ''),
       coach: firstName(p.coach), coach2: firstName(p.coach2), coaches: coachesOf(p).map((c) => ({ key: c.key, name: c.name })), status: p.status || 'active', source: p.source || '',
-      enroll: en.program || en.subscription ? { program: en.program || '', programName: en.programName || (prog ? prog.name : ''), programShort: en.programShort || (prog ? prog.short : ''), plan: en.plan || '', planLabel: en.planLabel || '', days: Array.isArray(en.days) ? en.days : [], start: en.start || '', monthly: en.monthly || null, status: en.status || '', hold: !!en.hold, holdReason: en.holdReason || '', endsOn: en.endsOn || null, next: en.next || null, subscription: en.subscription || '' } : null,
+      renew: renewOf(p, today),
+      enroll: en.program || en.subscription || en.programName || (Array.isArray(en.days) && en.days.length) ? {   // a player brought over from Play by Point has days and a program name, no plan here yet
+        program: en.program || '', programName: en.programName || (prog ? prog.name : ''), programShort: en.programShort || (prog ? prog.short : ''), plan: en.plan || '', planLabel: en.planLabel || '', days: Array.isArray(en.days) ? en.days : [], start: en.start || '', monthly: en.monthly || null, status: en.status || '', hold: !!en.hold, holdReason: en.holdReason || '', endsOn: en.endsOn || null, next: en.next || null, subscription: en.subscription || '' } : null,
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
       days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed), openDays: openDays(p), closed,
