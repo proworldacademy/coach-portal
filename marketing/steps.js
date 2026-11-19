@@ -53,7 +53,7 @@
   move(sMore, cardOf("home-week")); move(sMore, cardOf("home-score-when")); move(sMore, cardOf("home-adplan"));
   move(sMore, labelled("What the competitors are running <span class=\"small muted\">· the Monday read, full table</span>", $("ad-watch")));
   move(sMore, labelled("The ads in the account <span class=\"small muted\">· live now</span>", $("ads-live")));
-  const asg = $("tab-assignments"); if (asg) Array.from(asg.querySelectorAll(":scope > .card, :scope > .grid-2, :scope > div")).forEach((el) => move(sMore, el));
+  const asg = $("tab-assignments"); if (asg) Array.from(asg.querySelectorAll(":scope > .card, :scope > .grid-2, :scope > div")).forEach((el, i) => { if (!i) el.id = el.id || "asg-top"; move(sMore, el); });
   move(sMore, labelled("The season <span class=\"small muted\">· posts from · ads from</span>", $("ad-cal")));
   move(sMore, labelled("Every report <span class=\"small muted\">· newest first</span>", $("reports-list")));
   move(sMore, labelled("How the engine runs", $("pipeline")));
@@ -71,7 +71,12 @@
   document.querySelectorAll(".seg [data-step], .appbar [data-step]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.step)));
   if (lib) lib.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   const MAP = { home: "sreport", reports: "smore", aireplies: "sreport", fortnight: "screate", assignments: "smore", workflow: "smore", ads: "smore", report: "sreport", create: "screate", execute: "sexecute", more: "smore" };
-  const fromHash = () => { const h = String(location.hash || "").replace(/^#/, ""); if (!h) return openTab("sreport"); if (MAP[h]) return openTab(MAP[h]); if ($("tab-" + h)) return openTab(h); openTab("sreport"); };
+  /* Nov 19, 2026 (management: "I press one menu item and it takes me somewhere else"): Ads, Coach assignments and AI replies are parts
+     of a longer step. The menu link now lands on the part itself, not on the top of the step it lives in. */
+  const SPOT = { ads: "ads-live", assignments: "asg-top", aireplies: "ai-replies", reports: "reports-list", workflow: "pipeline" };
+  const land = (h, n) => { const el = SPOT[h] && $(SPOT[h]); if (!el) { if (SPOT[h] && (n || 0) < 12) setTimeout(() => land(h, (n || 0) + 1), 250); return; }
+    const box = el.closest(".card") || el.parentElement || el; const top = box.getBoundingClientRect().top + window.scrollY - 96; window.scrollTo(0, Math.max(0, top)); };
+  const fromHash = () => { const h = String(location.hash || "").replace(/^#/, ""); if (!h) return openTab("sreport"); if (MAP[h]) { openTab(MAP[h]); if (SPOT[h]) setTimeout(() => land(h), 60); return; } if ($("tab-" + h)) return openTab(h); openTab("sreport"); };
   window.addEventListener("hashchange", fromHash);
   setTimeout(fromHash, 0);
   window.openWeek = function (ws) { openTab("screate"); if (window.PW && PW.showWeek) PW.showWeek(ws); };
