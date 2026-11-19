@@ -239,6 +239,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       // who hold no Coach Portal (the same engine as /api/coach/push/*). Anyone active on the staff list.
       const who = await ADMIN.requireTeam(req); const b = req.body || {};
       if (route === 'GET /team/people') return send(res, 200, await TEAM.people(ctx.db));
+      if (route === 'POST /team/here') return send(res, 200, await TEAM.here(ctx.db, who));
       if (route === 'GET /team/ice') return send(res, 200, await TEAM.ice(ctx.db));
       if (route === 'POST /team/ring') { const out = await TEAM.ring(ctx.db, who, b); logger.info('team call', { by: who.email, to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }
       if (route === 'POST /team/notify') { const out = await TEAM.notify(ctx.db, who, b); logger.info('team message', { by: who.email, chat: S.clean(b.chat, 80), to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }

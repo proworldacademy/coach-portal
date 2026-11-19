@@ -25,6 +25,16 @@ async function people(db) {
   return { people: out };
 }
 
+/* Who is here now (Nov 19, 2026): a phone or a computer with the Locker Room open says so once a minute; the answer is everyone seen in
+   the last quarter of an hour. One record (teamState/here), written by the engine only, so no one's reading list is opened to the others. */
+async function here(db, who) {
+  const now = CLOCK(); const me = String((who && who.email) || '').toLowerCase(); const ref = db.doc('teamState/here');
+  let at = {}; try { const s = await ref.get(); at = (s.exists && (s.data() || {}).at) || {}; } catch (e) { at = {}; }
+  if (me) { at[me] = now; await ref.set({ at: { [me]: now } }, { merge: true }); }
+  const out = {}; Object.keys(at).forEach((e) => { const t = Number(at[e] || 0); if (now - t < 15 * 60000) out[e] = now - t; });
+  return { here: out };
+}
+
 /* Who hears about a message: the others in the chat, minus whoever muted it. A mention or @channel gets through a mute. */
 let CLOCK = () => Date.now();   // the tests set the hour
 async function listeners(db, chat, chatId, fromEmail, msg) {
@@ -137,4 +147,4 @@ async function ring(db, who, body) {
 }
 function _useFetch(f) { fetchImpl = f || ((...a) => fetch(...a)); }
 
-module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
+module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, here, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
