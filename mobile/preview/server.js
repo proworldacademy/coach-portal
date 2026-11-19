@@ -13,6 +13,8 @@ const { fakeStripe } = require(REPO + '/functions/test/fake-stripe'); const { fa
 const PRICES = []; for (const p of CAT.PROGRAMS) for (const pl of p.plans) PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: 'month', interval_count: 1 }, unit_amount: pl.monthly * 100, product: p.product });
 const PARENT = { email: 'maria.rivera@example.com', name: 'Maria Rivera' };
 const FAMDB = fakeDb({
+  // an invented private, so the client's calendar shows its mark (Nov 19, 2026)
+  'backend/state': { privates: [{ id: 'pv-demo', pid: 'as-mia-r', date: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10), start: 15.5, dur: 1, court: 4, coach: 'Lee' }] },
   'players/ft-liam-r': { name: 'Liam Rivera', shortName: 'Liam R.', group: 'ft', coach: 'Kim Coach', status: 'active', source: 'monday', createdAt: 1, enroll: { programName: 'Full Time Program | Fall 2026', programShort: 'Full Time', pbp: { plan: '10 FLEX Sessions | Tennis Only', bySession: true } } },   // by the session: books his own sessions
   'players/ft-liam-r/private/contact': { guardian: 'Maria Rivera', email: PARENT.email, phone: '5615550102', source: 'monday' },
   'players/as-mia-r': { name: 'Mia Rivera', shortName: 'Mia R.', group: 'as', coach: 'Lee Coach', coach2: 'Kim Coach', status: 'active', source: 'coach', createdAt: 2, enroll: { programName: 'Afterschool | Fall 2026', programShort: 'Afterschool', days: ['Tue', 'Thu'], pbp: { plan: '2 Days per week | Monthly', bySession: false } } },   // training days, so the client home has a next session to show

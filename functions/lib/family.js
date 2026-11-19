@@ -22,7 +22,7 @@ const KEEP_REPORTS = 12;
 const REQUEST_KINDS = { court: 'Court reservation', private: 'Private lesson', change: 'Plan change', message: 'Message',
   // the client home (Nov 17, 2026): a parent says a player cannot make a session, asks for a make-up day, or writes to the coach
   absence: 'Cannot make a session', makeup: 'Make-up day', coach: 'Message for the coach',
-  admin: 'Registration and billing' };
+  admin: 'Registration and billing', invoice: 'Invoice' };
 
 /* ── who is asking ── */
 async function requireFamily(req, opts) {
@@ -157,7 +157,11 @@ async function billing(stripe, customers, today) {
       for await (const inv of stripe.invoices.list({ customer: c.id, status: 'open', limit: 20 })) openInvoices.push({ id: inv.id, customer: c.id, created: CAL.dateOfUnixET(inv.created), amountDue: inv.amount_due, description: inv.description || (inv.lines && inv.lines.data && inv.lines.data[0] && inv.lines.data[0].description) || 'Invoice', url: inv.hosted_invoice_url || null, kind: (inv.metadata || {}).kind || (S.invoiceSubscription(inv) ? 'tuition' : 'one-off') });
     } catch (e) { /* no invoices */ }
   }
-  return { customers: customers.map((c) => ({ id: c.id, name: c.name, email: c.email, hasCard: !!c.hasCard })), subscriptions, openInvoices };
+  /* the last invoices paid (Nov 19, 2026): parents ask for one for a scholarship or their accountant; Stripe keeps the PDF */
+  const paid = [];
+  for (const c of customers) { try { let n = 0; for await (const inv of stripe.invoices.list({ customer: c.id, status: 'paid', limit: 12 })) { if (n++ >= 12) break; paid.push({ id: inv.id, date: CAL.dateOfUnixET(inv.created), cents: inv.amount_paid, description: inv.description || (inv.lines && inv.lines.data && inv.lines.data[0] && inv.lines.data[0].description) || 'Invoice', pdf: inv.invoice_pdf || inv.hosted_invoice_url || '' }); } } catch (e) { /* none */ } }
+  paid.sort((a, b) => CAL.cmp(b.date, a.date));
+  return { customers: customers.map((c) => ({ id: c.id, name: c.name, email: c.email, hasCard: !!c.hasCard })), subscriptions, openInvoices, paidInvoices: paid.slice(0, 12) };
 }
 
 /* ── the schedule (Nov 17, 2026 — Antonio: "my daughter is not going to come in for 2 weeks: I can put that on the schedule,
@@ -190,7 +194,14 @@ async function daysOf(db, pid, today) {
   const from = CAL.addDays(today, -BACK);
   return docs.filter((d) => isDate(d.date) && d.date >= from && (d.kind === 'away' || d.kind === 'makeup' || d.kind === 'book')).map((d) => Object.assign({ date: d.date, kind: d.kind }, d.kind === 'book' ? { sessions: Array.isArray(d.sessions) ? d.sessions : [] } : {})).sort((a, b) => CAL.cmp(a.date, b.date));
 }
-function makeupsLeft(days, missed) { return Math.max(0, days.filter((d) => d.kind === 'away').length + (missed || 0) - days.filter((d) => d.kind === 'makeup').length); }
+/* The make-up rule (Nov 19, 2026, management): a session missed is made up in the same month. A day away in November is used on
+   another day in November, or it waits on the account until the month ends; it does not roll into December. An exception (a
+   week of illness) is decided by the admin team, case by case, not here. `month` is 'YYYY-MM'; the days missed without notice
+   (`missed`) are this month's and count only for the current month. */
+function makeupsLeft(days, missed, month) {
+  const inM = (d) => !month || String(d.date).slice(0, 7) === month;
+  return Math.max(0, days.filter((d) => d.kind === 'away' && inM(d)).length + (missed || 0) - days.filter((d) => d.kind === 'makeup' && inM(d)).length);
+}
 const sayDay = (d) => { const p = CAL.parts(d); return `${CAL.MONTHS[p.m].slice(0, 3)} ${p.d}`; };
 /* The director of the player's group hears it at once (Nov 17, 2026 — Antonio: "the moment I hit 'she cannot make it', a notification
    goes to the director of the group"): a line from ProWorld in the director's Locker Room, with the push that goes with it. The
@@ -255,7 +266,8 @@ async function days(db, who, body, players, opts) {
     if (!openDays(p).includes(dowOf(d)) || !isOpen(d)) throw S.err(400, 'closed', 'There is no session of this program that day.');
     if (have.some((x) => x.date === d && x.kind === 'makeup')) return { ok: true, action, dates: [d] };
     const att = await attendance(db, [p], today);
-    if (makeupsLeft(have, att[p.id].missed) < 1) throw S.err(400, 'credit', 'A make-up day goes with a day missed. Mark the day away first, or write to Admin.');
+    const mth = d.slice(0, 7); const thisMonth = mth === today.slice(0, 7);
+    if (makeupsLeft(have, thisMonth ? att[p.id].missed : 0, mth) < 1) throw S.err(400, 'credit', have.some((x) => x.kind === 'away') ? 'A make-up day is used in the same month as the day missed. Pick a day in that month, or write to Admin.' : 'A make-up day goes with a day missed. Mark the day away first, or write to Admin.');
     await ref(d).set(Object.assign({ date: d, kind: 'makeup' }, base));
     await NOTIFY.slack(db, 'desk', `*Make-up day* — ${p.name}`, [`${dowOf(d)} ${sayDay(d)}`, `Picked by the family (${who.email}) in the client account. The attendance board expects the player that day. Not possible? Tell the family.`]);
     await tellDirector(db, p, `*${p.name}* comes for a make-up day: ${dowOf(d)} ${sayDay(d)}. The family picked it in the app. The attendance expects the player that day.`);
@@ -490,6 +502,12 @@ async function me(db, stripe, who, opts) {
   const today = opts.today || CAL.todayET();
   const { players, customers } = await findPlayers(db, stripe, who.email);
   const att = await attendance(db, players, today);
+  /* the privates booked for these players, from today on (Nov 19, 2026): the calendar marks them, the schedule lists them */
+  const tp = CAL.parts(today); const monthEnd = CAL.addDays(`${tp.m === 11 ? tp.y + 1 : tp.y}-${String(((tp.m + 1) % 12) + 1).padStart(2, '0')}-01`, -1);   // the last day a make-up of this month can be used
+  let privates = [];
+  try { const st = (await db.doc('backend/state').get()); const list = st.exists ? ((st.data() || {}).privates || []) : []; const mine = new Set(players.map((p) => p.id));
+    const hm = (v) => { const h = Math.floor(Number(v)); const m = Math.round((Number(v) - h) * 60); return `${((h + 11) % 12) + 1}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'AM' : 'PM'}`; };
+    privates = (Array.isArray(list) ? list : []).filter((x) => x && mine.has(x.pid) && isDate(x.date) && x.date >= today).map((x) => ({ pid: x.pid, date: x.date, time: Number.isFinite(Number(x.start)) ? hm(x.start) : '', coach: firstName(x.coach) })).sort((a, b) => CAL.cmp(a.date, b.date)); } catch (e) { privates = []; }
   const out = [];
   const closed = []; for (let d = today, i = 0; i <= AHEAD; i++, d = CAL.addDays(d, 1)) { const w = CAL.dow(d); if (w && w < 6 && !isOpen(d)) closed.push(d); }   // weekdays with no training (a break): the calendar greys them
   for (const p of players) {
@@ -505,14 +523,14 @@ async function me(db, stripe, who, opts) {
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
       flex: isFlex(p), sessions: menuOf(p), people: await peopleOf(db, p.id),
-      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed), openDays: openDays(p), closed,
+      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach })), openDays: openDays(p), closed,
       reports: await reports(db, p.id)
     });
   }
   const bill = await billing(stripe, customers, today);
   let requests = [];
   try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
-  return { account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
+  return { camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
 /* ── the family's Stripe account page (card, invoices, receipts) ── */

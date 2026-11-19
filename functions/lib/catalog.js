@@ -67,33 +67,33 @@ const PROGRAMS = [
 ];
 
 const CAMPS = [
-  { id: 'tg13', name: '13+ | Thanksgiving Camp 2026', product: 'prod_VSwh6EJ8SieFMo', dates: 'Nov 23–27 · no camp Thu Nov 26', ages: 'Ages 13+', blurb: 'Half day 9–12, full day 9–3: athletic development, tennis, match analysis.',
+  { id: 'tg13', from: '2026-11-23', to: '2026-11-27', name: '13+ | Thanksgiving Camp 2026', product: 'prod_VSwh6EJ8SieFMo', dates: 'Nov 23–27 · no camp Thu Nov 26', ages: 'Ages 13+', blurb: 'Half day 9–12, full day 9–3: athletic development, tennis, match analysis.',
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 175, lookup: 'tg26_13plus_half_dropin' }, { id: 'full', label: 'FULL DAY', price: 275, lookup: 'tg26_13plus_full_dropin' },
       { id: 'half3', label: '3 HALF DAYS', price: 450, lookup: 'tg26_13plus_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 550, lookup: 'tg26_13plus_half4' },
       { id: 'full3', label: '3 FULL DAYS', price: 715, lookup: 'tg26_13plus_full3' }, { id: 'full4', label: '4 FULL DAYS', price: 895, lookup: 'tg26_13plus_full4' }] },
-  { id: 'tgu13', name: 'U-13 | Thanksgiving Camp 2026', product: 'prod_VSwi9IRjxaAEH7', dates: 'Nov 23–27 · no camp Thu Nov 26', ages: 'Ages 10–12', blurb: 'Half day 9–12, full day 9–3.',
+  { id: 'tgu13', from: '2026-11-23', to: '2026-11-27', name: 'U-13 | Thanksgiving Camp 2026', product: 'prod_VSwi9IRjxaAEH7', dates: 'Nov 23–27 · no camp Thu Nov 26', ages: 'Ages 10–12', blurb: 'Half day 9–12, full day 9–3.',
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 150, lookup: 'tg26_u13_half_dropin' }, { id: 'full', label: 'FULL DAY', price: 250, lookup: 'tg26_u13_full_dropin' },
       { id: 'half3', label: '3 HALF DAYS', price: 350, lookup: 'tg26_u13_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 400, lookup: 'tg26_u13_half4' },
       { id: 'full3', label: '3 FULL DAYS', price: 650, lookup: 'tg26_u13_full3' }, { id: 'full4', label: '4 FULL DAYS', price: 795, lookup: 'tg26_u13_full4' }] },
-  { id: 'tgu10', name: 'U-10 | Thanksgiving Camp 2026', product: 'prod_VSwjnorEwHU1r8', dates: 'Nov 23–27', ages: '10 & under', blurb: 'Half days, full days and a Saturday drop-in.',
+  { id: 'tgu10', from: '2026-11-23', to: '2026-11-28', name: 'U-10 | Thanksgiving Camp 2026', product: 'prod_VSwjnorEwHU1r8', dates: 'Nov 23–27', ages: '10 & under', blurb: 'Half days, full days and a Saturday drop-in.',
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 125, lookup: 'tg26_u10_half_dropin' }, { id: 'half3', label: '3 HALF DAYS', price: 255, lookup: 'tg26_u10_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 340, lookup: 'tg26_u10_half4' },
       { id: 'full', label: 'FULL DAY – DROP IN', price: 175, lookup: 'tg26_u10_full_dropin' }, { id: 'full3', label: '3 FULL DAYS', price: 450, lookup: 'tg26_u10_full3' }, { id: 'full4', label: '4 FULL DAYS', price: 575, lookup: 'tg26_u10_full4' },
       { id: 'sat', label: 'SATURDAY DROP IN', price: 60, lookup: 'tg26_u10_saturday_dropin' }] },
   /* Winter 2026 — Dec 21–31, Mon–Thu; closed Fri Dec 25 and Fri Jan 1; Thu Dec 24 and Thu Dec 31 are half days only. WEEKLY = one Mon–Thu week. */
-  { id: 'wi13', name: '13+ | Winter Camp 2026', product: 'prod_VUkyUXYiRwnVcY', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: 'Ages 13–25', blurb: 'Half day: morning tennis + fitness. Full day adds 2–4 PM tennis (Mon–Wed). Dec 24 and 31 half days only.',
+  { id: 'wi13', from: '2026-12-21', to: '2026-12-31', name: '13+ | Winter Camp 2026', product: 'prod_VUkyUXYiRwnVcY', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: 'Ages 13–25', blurb: 'Half day: morning tennis + fitness. Full day adds 2–4 PM tennis (Mon–Wed). Dec 24 and 31 half days only.',
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 175, lookup: 'wi26_13plus_half_dropin' }, { id: 'full', label: 'FULL DAY', price: 275, lookup: 'wi26_13plus_full_dropin' },
       { id: 'half3', label: '3 HALF DAYS', price: 450, lookup: 'wi26_13plus_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 550, lookup: 'wi26_13plus_half4' },
       { id: 'full3', label: '3 FULL DAYS', price: 715, lookup: 'wi26_13plus_full3' }, { id: 'week', label: 'WEEKLY (Mon–Thu)', price: 795, lookup: 'wi26_13plus_week' }] },
-  { id: 'wiu13', name: 'U-13 | Winter Camp 2026', product: 'prod_VUkyFDuTo7pXai', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: 'Ages 10–12', blurb: 'Half day 9–12, full day 9–3 (Mon–Wed): athletic development, tennis, mental and match analysis. Dec 24 and 31 half days only.',
+  { id: 'wiu13', from: '2026-12-21', to: '2026-12-31', name: 'U-13 | Winter Camp 2026', product: 'prod_VUkyFDuTo7pXai', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: 'Ages 10–12', blurb: 'Half day 9–12, full day 9–3 (Mon–Wed): athletic development, tennis, mental and match analysis. Dec 24 and 31 half days only.',
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 150, lookup: 'wi26_u13_half_dropin' }, { id: 'full', label: 'FULL DAY', price: 250, lookup: 'wi26_u13_full_dropin' },
       { id: 'half3', label: '3 HALF DAYS', price: 350, lookup: 'wi26_u13_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 400, lookup: 'wi26_u13_half4' },
       { id: 'full3', label: '3 FULL DAYS', price: 650, lookup: 'wi26_u13_full3' }, { id: 'week', label: 'WEEKLY (Mon–Thu)', price: 720, lookup: 'wi26_u13_week' }] },
-  { id: 'wiu10', name: 'U-10 | Winter Camp 2026', product: 'prod_VUkzheU15PadgU', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: '10 & under', blurb: 'Half day 9–12, full day 9–3 (Mon–Wed): athletic development, tennis, afternoon adventures. Dec 24 and 31 half days only.',
+  { id: 'wiu10', from: '2026-12-21', to: '2026-12-31', name: 'U-10 | Winter Camp 2026', product: 'prod_VUkzheU15PadgU', dates: 'Dec 21–31 · Mon–Thu · closed Dec 25 & Jan 1', ages: '10 & under', blurb: 'Half day 9–12, full day 9–3 (Mon–Wed): athletic development, tennis, afternoon adventures. Dec 24 and 31 half days only.',
     options: [
       { id: 'half', label: 'HALF DAY – DROP IN', price: 125, lookup: 'wi26_u10_half_dropin' }, { id: 'half3', label: '3 HALF DAYS', price: 255, lookup: 'wi26_u10_half3' }, { id: 'half4', label: '4 HALF DAYS', price: 340, lookup: 'wi26_u10_half4' },
       { id: 'full', label: 'FULL DAY – DROP IN', price: 175, lookup: 'wi26_u10_full_dropin' }, { id: 'full3', label: '3 FULL DAYS', price: 450, lookup: 'wi26_u10_full3' }, { id: 'week', label: 'WEEKLY (Mon–Thu)', price: 515, lookup: 'wi26_u10_week' }] }
@@ -163,4 +163,10 @@ function publicCatalog() {
     lessonPackages: LESSON_PACKAGES.map(({ id, label, hours, price }) => ({ id, label, hours, price })), pros: PROS, tiers: Object.fromEntries(Object.entries(LESSON_TIERS).map(([k, v]) => [k, { 1: v[1], 2: v[2], 3: v[3], 4: v[4] }])) };
 }
 
-module.exports = { PROGRAMS, CAMPS, LESSON_PACKAGES, LESSON_TIERS, PROS, COURTS, MEMBERSHIP, oneTimeLines, program, plan, publicCatalog, cycleOf, cycleWord };
+/* The camps still to come, one line per camp (the three age groups of one camp are one announcement), the nearest first. */
+function campsComing(today) {
+  const by = new Map();
+  for (const c of CAMPS) { if (!c.to || c.to < today) continue; const title = String(c.name).split('|').pop().trim(); const g = by.get(title) || { title, from: c.from, to: c.to, dates: String(c.dates || '').split('·')[0].trim(), ids: [] }; g.ids.push(c.id); if (c.from < g.from) g.from = c.from; by.set(title, g); }
+  return Array.from(by.values()).sort((a, b) => (a.from < b.from ? -1 : 1));
+}
+module.exports = { campsComing, PROGRAMS, CAMPS, LESSON_PACKAGES, LESSON_TIERS, PROS, COURTS, MEMBERSHIP, oneTimeLines, program, plan, publicCatalog, cycleOf, cycleWord };
