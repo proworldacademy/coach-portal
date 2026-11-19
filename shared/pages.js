@@ -94,7 +94,7 @@
     { id: "admin", name: "Admin", href: "/backend", page: ["backend"], items: [
       { name: "Front desk", href: "/backend#desk" }, { name: "Attendance", href: "/backend#attendance" }, { name: "Players & billing", href: "/backend#players" },
       { name: "Courts", href: "/backend#courts" }, { name: "Privates", href: "/backend#privates" }, { name: "Messages", href: "/backend#messages" },
-      { name: "Enroll · the link", href: "/backend#enroll" },
+      { name: "Enroll · the link", href: "/backend#enroll" }, { name: "Parent news", href: "/backend#news" },
       { name: "Clients · enrolled online, requests", href: "/clients", page: "clients" }, { name: "Look up an account", href: "/backend#account" } ] },
     { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal"], items: [   // the front desk reaches Try-outs from Admin
       { name: "Reminders", href: "/portal", page: "coach-portal" }, { name: "Players", href: "/portal#/players", page: "coach-portal" },
@@ -102,7 +102,7 @@
       { name: "Calendar", href: "/portal#/calendar", page: "coach-portal" },   // Nov 19, 2026: each coach's week — academy hours, privates, open times
       // for directors and owners (shared/design.js keeps these from a coach)
       { name: "Coach Board", href: "/portal#/board", page: "coach-portal" },
-      { name: "Attendance", href: "/backend#attendance", page: "backend" } ] },   // Nov 19, 2026: Text a group lives inside Contact ("New message → A group"), no longer a page of its own   // Nov 17: the group text (a whole group, or who trains that day) is back in the directors' menu
+      { name: "Attendance", href: "/backend#attendance", page: "backend" }, { name: "Parent news", href: "/backend#news", page: "backend" } ] },   // Nov 19, 2026: Text a group lives inside Contact ("New message → A group"), no longer a page of its own   // Nov 17: the group text (a whole group, or who trains that day) is back in the directors' menu
     { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [
       { name: "Report", href: "/marketing#home" }, { name: "Create · the 2-week plan", href: "/marketing#fortnight" }, { name: "Execute", href: "/marketing#execute" },
       { name: "Ads", href: "/marketing#ads" }, { name: "Coach assignments", href: "/marketing#assignments" }, { name: "AI replies", href: "/marketing#aireplies" } ] },

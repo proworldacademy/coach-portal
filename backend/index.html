@@ -553,7 +553,8 @@ function nextChargeText(price,from){const nr=nextRenewal(from);const y=nr.getFul
    · the attendance lists — sheets/<date>_<session>, one document each
    This browser keeps only its own view, role, dates and filters. */
 const KEY='pw-backend-v3';
-const PREFS=['view','role','roleChosen','enroll','courtsDate','attDate','attSession','courtsMode','courtsFilter','member','summaryOpen','accountPid','playersFilter','playersQ'];
+const PREFS=['view',   /* Nov 19, 2026: the preview role is not kept between visits any more — a role chosen once in "View as" made the menu's links go nowhere on the next visit */
+  'enroll','courtsDate','attDate','attSession','courtsMode','courtsFilter','member','summaryOpen','accountPid','playersFilter','playersQ'];
 const DEFAULT_TAGS=[{id:'academy',label:'Academy',color:'#A9F3F7'},{id:'tournament',label:'Tournament',color:'#E286E4'},{id:'private',label:'Private lesson',color:'#94FCB1'},{id:'rental',label:'Family rental',color:'#E2FE78'},{id:'outside',label:'Outside rental',color:'#111111'},{id:'maintenance',label:'Maintenance',color:'#D9D9D4'}];
 const SHARED=['blocks','exceptions','bookings','privates','charges','notifications','overrides','nextId','courtTags'];
 let state;
@@ -616,7 +617,7 @@ function notify(channel,to,subject,opts){state.notifications.unshift({channel,to
   if(channel==='Slack')liveApi('/api/admin/announce',{which:/coach/.test(to)?'coaches':'desk',text:subject,lines:opts&&opts.lines||null}).catch(()=>{});
   if(channel==='SMS'&&opts&&opts.phone)liveApi('/api/admin/text',{phone:opts.phone,body:subject}).catch(()=>{})}
 
-const ROLES={owner:{label:'Owner (everything)',tabs:['desk','enroll','courts','attendance','players','messages','privates','news','books','account']},director:{label:'Tennis director',tabs:['attendance','messages','courts','privates','news']},desk:{label:'Front desk',tabs:['desk','players','attendance','courts','enroll','news','books']},coach:{label:'Coach',tabs:['attendance','courts','privates']},parent:{label:'Parent',tabs:['account','enroll','courts']}};   // Antonio, Oct 24: Messages and Courts for directors; coaches see attendance, players & billing, privates
+const ROLES={owner:{label:'Owner (everything)',tabs:['desk','enroll','courts','attendance','players','messages','privates','news','books','account']},director:{label:'Tennis director',tabs:['attendance','messages','courts','privates','news']},desk:{label:'Front desk',tabs:['desk','players','attendance','courts','privates','messages','enroll','news','account']},coach:{label:'Coach',tabs:['attendance','courts','privates']},parent:{label:'Parent',tabs:['account','enroll','courts']}};   // Antonio, Oct 24: Messages and Courts for directors; coaches see attendance, players & billing, privates
 const TABS={desk:'Front desk',enroll:'Enroll',courts:'Courts',attendance:'Attendance',players:'Players & billing',messages:'Messages',privates:'Privates',news:'Parent news',books:'Books',account:'My account'};
 (function initRole(){const h=location.hash.replace('#','');if(ROLES[h]&&!TABS[h])state.role=h;if(!ROLES[state.role])state.role='owner';if(TABS[h]){if(!ROLES[state.role].tabs.includes(h))state.role='owner';state.view=h}if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0]})();
 
@@ -697,18 +698,23 @@ function postSheet(sheet,sess){
 function setRole(r){if(!ROLES[r])return;state.role=r;state.roleChosen=true;location.hash=r;if(window.PWCTX)pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(state.view))state.view=ROLES[state.role].tabs[0];save();render()}   // never above what the staff record allows
 function setView(v){if(window.PWCTX){pickRole(window.PWCTX);if(!ROLES[state.role].tabs.includes(v))return}state.view=v;if(v==='enroll'&&state.enroll.done)state.enroll=emptyEnroll();if(parse(state.courtsDate)<TODAY)state.courtsDate=iso(TODAY);closeModal();save();render();window.scrollTo({top:0,behavior:'auto'})}
 // the menu links are /backend#courts, #messages, #privates…: a hash change on this page switches the view (Antonio, Oct 25: 'Courts does not even click' on the phone)
-window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(TABS[h]&&ROLES[state.role].tabs.includes(h)){if(h!==state.view)setView(h)}else if(ROLES[h]&&!TABS[h]&&h!==state.role)setRole(h);else if(TABS[h]&&h!==state.view)setView(h)});   // a page name wins over a role name ("desk" is both)
+function maxRole(ctx){const r=String(ctx&&ctx.rec&&ctx.rec.role||'').toLowerCase();return (ctx&&(ctx.owner||ctx.admin))?'owner':(ctx&&ctx.director)||r==='director'?'director':r==='desk'?'desk':'coach'}
+/* Nov 19, 2026 (management: "I press Privates and it takes me to Attendance"): a link from a menu names a page of this screen. If the
+   role being previewed does not have that page, the click used to be dropped and the screen stayed where it was. Now the page asked
+   for always opens, as the person's own role, whenever that person may open it at all. */
+function goTab(h){const max=window.PWCTX?maxRole(window.PWCTX):'owner';if(!ROLES[state.role].tabs.includes(h)&&ROLES[max].tabs.includes(h)){state.role=max;state.roleChosen=false}if(!ROLES[state.role].tabs.includes(h))return false;if(h!==state.view)setView(h);else render();return true}
+window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(TABS[h])goTab(h);else if(ROLES[h]&&h!==state.role)setRole(h)});   // a page name wins over a role name ("desk" is both)
 function render(){const sel=$('#role');sel.innerHTML=Object.keys(ROLES).map(k=>`<option value="${k}" ${k===state.role?'selected':''}>${ROLES[k].label}</option>`).join('');sel.onchange=()=>setRole(sel.value);const nav=$('#modes');const coachSide=state.role==='coach'||state.role==='director';
   /* Nov 19, 2026 (management: "sometimes I click one menu item and it opens a different bar, and that bar takes me to the old menu"):
      for a coach or a director this row is the Coach Portal's own strip, item for item and in the same order — Reminders · Players ·
      Contact · Locker Room · Privates, and for a director Attendance · Text a group · Coach Board · Staff & access. The pages that
      live here are tabs; the others are links back to the portal. */
   const dirSide=!!(window.PWCTX&&(window.PWCTX.director||window.PWCTX.admin||window.PWCTX.owner))||state.role==='director';
-  const coachRow=!coachSide?null:[['/portal','Reminders'],['/portal#/players','Players'],['/portal#/messages','Contact'],['/team','Locker Room'],['privates','Privates']].concat(dirSide?[['attendance','Attendance'],['/portal#/board','Coach Board'],['/portal#/staff','Staff & access']]:[]);
+  const coachRow=!coachSide?null:[['/portal','Reminders'],['/portal#/players','Players'],['/portal#/messages','Contact'],['/team','Locker Room'],['privates','Privates'],['/portal#/calendar','Calendar']].concat(dirSide?[['attendance','Attendance'],['/portal#/board','Coach Board'],['news','Parent news'],['/portal#/staff','Staff & access']]:[]);
   const portalRow=[];const tailRow=[];
   const order=coachSide?[]:ROLES[state.role].tabs;
   const ra=$('#role');if(ra&&ra.parentElement)ra.parentElement.style.display=coachSide?'none':'';   // the View as selector is the owners' preview tool
-  nav.innerHTML=(coachRow||[]).map(([h,l])=>h[0]==='/'?`<a href="${h}">${l}</a>`:ROLES[state.role].tabs.includes(h)?`<button data-view="${h}" aria-current="${h===state.view?'page':'false'}">${l}</button>`:'').join('')+portalRow.map(([h,l])=>`<a href="${h}">${l}</a>`).join('')+order.filter(t=>ROLES[state.role].tabs.includes(t)).map(t=>`<button data-view="${t}" aria-current="${t===state.view?'page':'false'}">${TABS[t]}</button>`).join('')+tailRow.map(([h,l])=>`<a href="${h}">${l}</a>`).join('');nav.classList.remove('pw-cstrip');if(coachSide&&!window.PWCoachStrip&&(window.__csTry=(window.__csTry||0)+1)<30)setTimeout(render,300);if(coachSide&&window.PWCoachStrip)window.PWCoachStrip(nav,{director:dirSide,active:state.view,tabs:['privates','attendance'].filter(t=>ROLES[state.role].tabs.includes(t))});nav.querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.view));({desk:renderDesk,enroll:renderEnroll,courts:renderCourts,attendance:renderAttendance,players:renderPlayers,messages:renderMessages,privates:renderPrivates,news:renderNews,books:renderBooks,account:renderAccount})[state.view]($('#app'))}
+  nav.innerHTML=(coachRow||[]).map(([h,l])=>h[0]==='/'?`<a href="${h}">${l}</a>`:ROLES[state.role].tabs.includes(h)?`<button data-view="${h}" aria-current="${h===state.view?'page':'false'}">${l}</button>`:'').join('')+portalRow.map(([h,l])=>`<a href="${h}">${l}</a>`).join('')+order.filter(t=>ROLES[state.role].tabs.includes(t)).map(t=>`<button data-view="${t}" aria-current="${t===state.view?'page':'false'}">${TABS[t]}</button>`).join('')+tailRow.map(([h,l])=>`<a href="${h}">${l}</a>`).join('');nav.classList.remove('pw-cstrip');if(coachSide&&!window.PWCoachStrip&&(window.__csTry=(window.__csTry||0)+1)<30)setTimeout(render,300);if(coachSide&&window.PWCoachStrip)window.PWCoachStrip(nav,{director:dirSide,active:state.view,tabs:['privates','attendance','news'].filter(t=>ROLES[state.role].tabs.includes(t))});nav.querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.view));({desk:renderDesk,enroll:renderEnroll,courts:renderCourts,attendance:renderAttendance,players:renderPlayers,messages:renderMessages,privates:renderPrivates,news:renderNews,books:renderBooks,account:renderAccount})[state.view]($('#app'))}
 function openModal(inner){$('#modal').innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${inner}</div></div>`;$('#scrim').onclick=ev=>{if(ev.target.id==='scrim')closeModal()};const c=$('#m-close');if(c)c.onclick=closeModal}
 function closeModal(){$('#modal').innerHTML=''}
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeModal()});
@@ -1511,8 +1517,8 @@ async function smsPlayerBlock(pid){const el=$('#ps-sms');if(!el)return;try{const
 /* ====================== SIGN-IN + THE DATABASE (the site's one PROWORLD sign-in) ====================== */
 function pickRole(ctx){
   // the most this person may see, from their staff record (the database rules decide what they can read; this decides the tabs)
-  const r=String(ctx&&ctx.rec&&ctx.rec.role||'').toLowerCase();
-  const max=(ctx&&(ctx.owner||ctx.admin))?'owner':(ctx&&ctx.director)||r==='director'?'director':r==='desk'?'desk':'coach';
+  const max=maxRole(ctx);const hv=location.hash.replace('#','');
+  if(TABS[hv]&&ROLES[state.role]&&!ROLES[state.role].tabs.includes(hv)&&ROLES[max].tabs.includes(hv))state.role=max;
   const rank={coach:1,parent:1,desk:2,director:3,owner:4};
   const asked=ROLES[location.hash.replace('#','')]||TABS[location.hash.replace('#','')]||state.roleChosen;
   if(!asked||!ROLES[state.role]||rank[state.role]>rank[max])state.role=max;

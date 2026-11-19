@@ -49,8 +49,8 @@
     try {
       opts = opts || {}; if (!el) return false;
       if (!document.getElementById('pw-cstrip-css')) { const st = document.createElement('style'); st.id = 'pw-cstrip-css'; st.textContent = SCSS; document.head.appendChild(st); }
-      const items = [['home', 'Reminders', '/portal/#/', I.bell], ['players', 'Players', '/portal/#/players', I.people], ['contact', 'Contact', '/portal/#/messages', I.chat], ['team', 'Locker Room', '/team', I.team], ['privates', 'Privates', '/backend#privates', I.cal]]
-        .concat(opts.director ? [['attendance', 'Attendance', '/backend#attendance', MORE.check], ['board', 'Coach Board', '/portal/#/board', I.people], ['staff', 'Staff & access', '/portal/#/staff', MORE.doc]] : []);
+      const items = [['home', 'Reminders', '/portal/#/', I.bell], ['players', 'Players', '/portal/#/players', I.people], ['contact', 'Contact', '/portal/#/messages', I.chat], ['team', 'Locker Room', '/team', I.team], ['privates', 'Privates', '/backend#privates', I.cal], ['calendar', 'Calendar', '/portal/#/calendar', I.cal]]
+        .concat(opts.director ? [['attendance', 'Attendance', '/backend#attendance', MORE.check], ['board', 'Coach Board', '/portal/#/board', I.people], ['news', 'Parent news', '/backend#news', MORE.doc], ['staff', 'Staff & access', '/portal/#/staff', MORE.doc]] : []);
       const tabs = opts.tabs || [];
       el.classList.add('pw-cstrip'); el.setAttribute('aria-label', 'Coach Portal');
       el.innerHTML = items.map(([k, label, href, ic]) => tabs.includes(k)
