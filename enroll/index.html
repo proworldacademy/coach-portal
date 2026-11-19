@@ -26,6 +26,12 @@ main{position:relative;padding:0 0 140px}
 /* each step is a glass card */
 .step{background:var(--card);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px);box-shadow:0 14px 34px -22px rgba(0,0,0,.28);padding:22px 22px 24px;margin-bottom:14px;animation:pwd-up .7s var(--ease) both}
 @media (max-width:560px){.step{padding:16px 14px 18px}}
+.step.done{padding:12px 18px;animation:none;box-shadow:none}
+.done-row{display:flex;align-items:center;gap:12px}.done-row .tick{flex:none;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--lime);color:#0b0b0b;font-weight:800;font-size:14px}
+.done-row>span:nth-child(2){display:flex;flex-direction:column;min-width:0;flex:1}.done-row small{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#6b6b66)}.done-row b{font-size:15.5px;overflow-wrap:anywhere}
+.done-row .chg{flex:none;border:1px solid var(--line-2,#cfd0c9);background:transparent;color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.done-row .chg:hover{border-color:var(--ink)}
+.step-of{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#6b6b66);margin-bottom:8px}
+.hero.small{padding:18px 0 0}.hero.small h1{font-size:clamp(34px,5vw,54px)}.hero.small p{display:none}
 .step-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
 .step-num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--pw-inkbg,var(--ink));color:var(--lime);font-family:var(--display);font-style:italic;font-weight:800;font-size:17px;line-height:1;flex:none;transform:translateY(-3px)}
 .step-head h2{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:clamp(30px,4.6vw,42px);line-height:.92}
@@ -141,10 +147,11 @@ const params=new URLSearchParams(location.search);
 const moving=params.get('switch')==='1';
 const nextFirstLocal=()=>{const d=new Date(),n=new Date(d.getFullYear(),d.getMonth()+1,1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01'};
 const e={program:params.get('p')||null,kind:null,plan:params.get('plan')||null,option:null,days:(params.get('days')||'').split(',').map(s=>s.trim()).filter(Boolean),start:params.get('start')||(moving?nextFirstLocal():todayLocal()),camp:params.get('camp')||null,campOption:null,
-  player:{first:params.get('first')||'',last:params.get('last')||'',dob:params.get('dob')||''},parent:{name:params.get('parent')||'',email:params.get('email')||'',phone:params.get('phone')||''},agree:false,authorize:false,smsOptIn:false,summaryOpen:false,by:params.get('by')||'enroll'};
+  player:{first:params.get('first')||'',last:params.get('last')||'',dob:params.get('dob')||''},parent:{name:params.get('parent')||'',email:params.get('email')||'',phone:params.get('phone')||''},agree:false,authorize:false,sameMonth:false,at:null,daysOk:false,smsOptIn:false,summaryOpen:false,by:params.get('by')||'enroll'};
 /* A renewal from the client account (Nov 18, 2026): the names come in this tab's own storage, not in the link; good for ten minutes. */
 try{const rn=JSON.parse(sessionStorage.getItem('pw-renew')||'null');if(moving&&rn&&Date.now()-rn.at<6e5){if(!e.player.first)e.player.first=rn.first||'';if(!e.player.last)e.player.last=rn.last||'';if(!e.parent.name)e.parent.name=rn.parent||'';if(!e.parent.email)e.parent.email=rn.email||''}}catch(x){/* an empty form */}
 if(e.program&&e.plan)e.kind='monthly';
+if(e.kind==='monthly'&&e.days.length)e.daysOk=true;   // a renewal arrives with its days: it lands on the details
 
 function load(){
   fetch('/api/catalog',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('catalog '+r.status);return r.json()}).then(c=>{CAT=c;if(e.program&&!PROG(e.program)){e.program=null;e.kind=null;e.plan=null}if(e.kind==='monthly'){const P=PROG(e.program);const pl=P&&P.plans.find(x=>x.id===e.plan);if(!pl){e.kind=null;e.plan=null}else if(pl.days>=P.days.length)e.days=P.days.slice();else e.days=e.days.filter(d=>P.days.includes(d)).slice(0,pl.days)}if(e.camp&&!CAMP(e.camp))e.camp=null;else if(e.camp)e.kind='camp';render();if(e.kind==='monthly')refreshQuote();if(e.camp)setTimeout(()=>reveal('s-camp'),150)})
@@ -193,12 +200,41 @@ function render(){
     else if(e.kind&&e.kind!=='monthly')html+=peopleStep(num(),false);
   }
   html+=`</div>`+summaryHTML()+`</div><footer class="foot"><span><b>ProWorld Academy</b> · 651 Egret Cir, Delray Beach, FL 33444 · (561) 403-0008 · info@proworldacademy.com</span><span>Payments by Stripe. Your card details never reach us.</span></footer>`;
-  $('#app').innerHTML=html;bind();
+  $('#app').innerHTML=html;wizard();bind();
+}
+/* One step on the screen (Nov 19, 2026 — management: "it is a long menu list, I am afraid they get lost… choose your program, then
+   monthly or weekly, then the days, then the agreement, then the payment"). The page still builds every step it knows; this
+   keeps only the one being answered. The steps already answered fold to one line each with "Change"; the ones not reached yet
+   are not shown. The last step sends the family to Stripe's page for the card. */
+function wizard(){
+  const app=$('#app');const secs=Array.from(app.querySelectorAll('section.step'));if(!secs.length)return;
+  const P=e.program?PROG(e.program):null;const C=e.camp?CAMP(e.camp):null;const plan=P&&e.plan?P.plans.find(x=>x.id===e.plan):null;
+  let ids=secs.map(x=>x.id);
+  // the days wait for "Continue": the first day is chosen on the same step
+  if(ids.includes('s-days')&&ids.includes('s-player')&&!e.daysOk)ids=ids.filter(x=>x!=='s-player');
+  let cur=e.at&&ids.includes(e.at)?e.at:ids[ids.length-1];const ci=ids.indexOf(cur);
+  const said={'s-program':()=>P?P.name:C?C.name:'','s-camp':()=>{const o=C&&C.options.find(x=>x.id===e.campOption);return o?o.label:''},'s-plan':()=>plan?plan.label:'',
+    's-billing':()=>e.kind==='monthly'?(plan&&cyc(plan)?plan.label:'Monthly'):e.kind==='weekly'?((P.weekly||[]).find(x=>x.id===e.option)||{}).label||'Weekly':e.kind==='pack'?((P.packs||[]).find(x=>x.id===e.option)||{}).label||'Sessions':e.kind==='dropin'?'Drop-in':e.kind==='trial'?'Free trial':'',
+    's-days':()=>e.days.join(' · ')+(e.start&&!moving?' · from '+dayLabel(e.start):'')};
+  const names={'s-program':'Program','s-camp':'Option','s-plan':'How often','s-billing':'How you pay','s-days':'Days','s-player':'Details'};
+  secs.forEach(sec=>{const i=ids.indexOf(sec.id);
+    if(i<0||i>ci){sec.remove();return}
+    if(i<ci){const v=(said[sec.id]||(()=>''))();sec.className='step done';sec.innerHTML=`<div class="done-row"><span class="tick" aria-hidden="true">✓</span><span><small>${esc(names[sec.id]||'')}</small><b>${esc(v||'Chosen')}</b></span><button type="button" class="chg" data-goto="${sec.id}">Change</button></div>`;return}
+    const total=Math.max(ids.length,sec.id==='s-player'?ids.length:ids.length+1);const h=sec.querySelector('.step-head');
+    if(h)h.insertAdjacentHTML('beforebegin',`<div class="step-of">Step ${i+1}${sec.id==='s-player'?' of '+ids.length+' · then the card, on Stripe':''}</div>`);
+    if(sec.id==='s-days'&&plan&&e.days.length===plan.days)sec.insertAdjacentHTML('beforeend','<div class="actions"><button type="button" class="btn lime" data-days-ok>Continue</button></div>');
+    void total});
+  const hero=app.querySelector('.hero');if(hero&&ci>0)hero.classList.add('small');
+  app.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{e.at=b.dataset.goto;if(e.at==='s-days')e.daysOk=false;render();reveal(e.at)});
+  const ok=app.querySelector('[data-days-ok]');if(ok)ok.onclick=()=>{e.daysOk=true;e.at=null;render();reveal('s-player')};
+  // answering the open step moves on, even when the answer is the one already chosen
+  const open=app.querySelector('#'+cur);if(open&&cur!=='s-days'&&cur!=='s-player')open.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>{const was=e.at;e.at=null;if(was)setTimeout(()=>{render();const now=Array.from($('#app').querySelectorAll('section.step:not(.done)')).pop();if(now)reveal(now.id)},0)}));
+  if(cur==='s-days')open.querySelectorAll('[data-act="day"]').forEach(b=>b.addEventListener('click',()=>{e.daysOk=false},true));
 }
 function peopleStep(n,monthly){
   const p=e.player,g=e.parent;const late=CAT.rules.late;const P0=e.program?PROG(e.program):null;const pl0=P0&&e.plan?P0.plans.find(x=>x.id===e.plan):null;const cy=monthly?cyc(pl0):null;
-  return `<section class="step" id="s-player"><div class="step-head"><span class="step-num">${n}</span><h2>Player & parent</h2></div><div class="form"><div class="field"><label for="f-first">Player first name</label><input id="f-first" data-f="player.first" value="${esc(p.first)}" autocomplete="off"></div><div class="field"><label for="f-last">Player last name</label><input id="f-last" data-f="player.last" value="${esc(p.last)}" autocomplete="off"></div><div class="field"><label for="f-dob">Player date of birth</label><input id="f-dob" data-f="player.dob" type="date" value="${esc(p.dob)}"></div><div class="field"><label for="f-parent">Parent or guardian</label><input id="f-parent" data-f="parent.name" value="${esc(g.name)}" autocomplete="name"></div><div class="field"><label for="f-email">Email</label><input id="f-email" data-f="parent.email" type="email" value="${esc(g.email)}" autocomplete="email"><span class="hint">Receipts and renewal reminders go here.</span></div><div class="field"><label for="f-phone">Mobile</label><input id="f-phone" data-f="parent.phone" type="tel" value="${esc(g.phone)}" autocomplete="tel"><span class="hint">Text alerts for schedule changes and weather.</span></div></div>
-  <p class="subhead">Agreements</p><label class="check"><input type="checkbox" data-f="agree" ${e.agree?'checked':''}><span>I've read and accept the <a href="/enroll/agreement" target="_blank" rel="noopener">ProWorld Academy Program Policies & Enrollment Agreement</a>, including the attendance, rescheduling and weather policies.</span></label>${monthly?`<label class="check"><input type="checkbox" data-f="authorize" ${e.authorize?'checked':''}><span>${cy?`I authorize ProWorld Academy to charge my card today and then ${esc(cy.word)} until I cancel.`:`I authorize ProWorld Academy to charge my card on the 1st of each month until I cancel (less in months with a school break, prorated by training days). If a payment is not received by the ${ordinal(late.grace_until_day)}, a ${money(late.late_fee_usd)} late fee applies; training pauses on the ${ordinal(late.suspend_day)} and the spot is released on the ${ordinal(late.remove_day)} if still unpaid.`}</span></label>`:''}<label class="check"><input type="checkbox" data-f="smsOptIn" ${e.smsOptIn?'checked':''}><span>Yes, text me schedule, weather and program updates from Proworld. Msg & data rates may apply. Reply STOP to opt out.</span></label>
+  return `<section class="step" id="s-player"><div class="step-head"><span class="step-num">${n}</span><h2>Details & agreement</h2></div><div class="form"><div class="field"><label for="f-first">Player first name</label><input id="f-first" data-f="player.first" value="${esc(p.first)}" autocomplete="off"></div><div class="field"><label for="f-last">Player last name</label><input id="f-last" data-f="player.last" value="${esc(p.last)}" autocomplete="off"></div><div class="field"><label for="f-dob">Player date of birth</label><input id="f-dob" data-f="player.dob" type="date" value="${esc(p.dob)}"></div><div class="field"><label for="f-parent">Parent or guardian</label><input id="f-parent" data-f="parent.name" value="${esc(g.name)}" autocomplete="name"></div><div class="field"><label for="f-email">Email</label><input id="f-email" data-f="parent.email" type="email" value="${esc(g.email)}" autocomplete="email"><span class="hint">Receipts and renewal reminders go here.</span></div><div class="field"><label for="f-phone">Mobile</label><input id="f-phone" data-f="parent.phone" type="tel" value="${esc(g.phone)}" autocomplete="tel"><span class="hint">Text alerts for schedule changes and weather.</span></div></div>
+  <p class="subhead">Agreements</p><label class="check"><input type="checkbox" data-f="agree" ${e.agree?'checked':''}><span>I've read and accept the <a href="/enroll/agreement" target="_blank" rel="noopener">ProWorld Academy Program Policies & Enrollment Agreement</a>, including the attendance, rescheduling and weather policies.</span></label>${monthly?`<label class="check"><input type="checkbox" data-f="authorize" ${e.authorize?'checked':''}><span>${cy?`I authorize ProWorld Academy to charge my card today and then ${esc(cy.word)} until I cancel.`:`I authorize ProWorld Academy to charge my card on the 1st of each month until I cancel (less in months with a school break, prorated by training days). If a payment is not received by the ${ordinal(late.grace_until_day)}, a ${money(late.late_fee_usd)} late fee applies; training pauses on the ${ordinal(late.suspend_day)} and the spot is released on the ${ordinal(late.remove_day)} if still unpaid.`}</span></label>`:''}${monthly?`<label class="check"><input type="checkbox" data-f="sameMonth" ${e.sameMonth?'checked':''}><span>I understand that a session missed is made up in the same month. Sessions do not carry into the next month.</span></label>`:''}<label class="check"><input type="checkbox" data-f="smsOptIn" ${e.smsOptIn?'checked':''}><span>Yes, text me schedule, weather and program updates from Proworld. Msg & data rates may apply. Reply STOP to opt out.</span></label>
   <div class="actions"><button class="btn lime" id="go" data-act="pay">${e.kind==='trial'?'Reserve the free session':'Continue to secure payment'}</button><span class="stripe-note">${e.kind==='trial'?'No payment today.':'Card entered on Stripe\'s secure page, saved on file for your account.'}</span></div></section>`;
 }
 function summaryHTML(){
@@ -224,7 +260,7 @@ function bind(){
     if(act==='campopt')el.onclick=()=>{e.campOption=id;render();reveal('s-player')};
     if(act==='plan')el.onclick=()=>{e.plan=id;e.days=[];e.kind=null;e.option=null;quote=null;render();reveal('s-billing')};
     if(act==='billing')el.onclick=()=>{const [k,opt]=id.split('|');e.kind=k;e.option=opt||null;e.days=[];quote=null;if(k==='monthly'){const P=PROG(e.program);const pl=P.plans.find(x=>x.id===e.plan);if(pl.days>=P.days.length)e.days=P.days.slice()}render();if(k==='monthly'){refreshQuote();reveal('s-days')}else reveal('s-player')};
-    if(act==='day')el.onclick=()=>{const i=e.days.indexOf(id);if(i>=0)e.days.splice(i,1);else e.days.push(id);const P=PROG(e.program);e.days.sort((a,b)=>P.days.indexOf(a)-P.days.indexOf(b));const pl=P.plans.find(x=>x.id===e.plan);render();refreshQuote();if(e.days.length===pl.days)reveal('s-player')};
+    if(act==='day')el.onclick=()=>{const i=e.days.indexOf(id);if(i>=0)e.days.splice(i,1);else e.days.push(id);const P=PROG(e.program);e.days.sort((a,b)=>P.days.indexOf(a)-P.days.indexOf(b));const pl=P.plans.find(x=>x.id===e.plan);e.daysOk=false;render();refreshQuote()};
     if(act==='toggle')el.onclick=()=>{e.summaryOpen=!e.summaryOpen;refreshSummary()};
     if(act==='pay')el.onclick=()=>pay(el);
   });
@@ -234,7 +270,7 @@ function bind(){
 function validate(){const app=$('#app');let ok=true;const fields={'player.first':e.player.first,'player.last':e.player.last,'player.dob':e.player.dob,'parent.name':e.parent.name,'parent.email':e.parent.email,'parent.phone':e.parent.phone};
   for(const f in fields){const v=fields[f];const i=app.querySelector(`[data-f="${f}"]`);const bad=!v||(f==='parent.email'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))||(f==='parent.phone'&&v.replace(/\D/g,'').length<10);if(i)i.classList.toggle('err',bad);if(bad)ok=false}
   if(!ok){toast('Fill in the highlighted fields to continue.');return false}
-  if(!e.agree||(e.kind==='monthly'&&!e.authorize)){toast(e.kind==='monthly'?'Accept the agreement and authorize the monthly charge.':'Accept the enrollment agreement to continue.');return false}
+  if(!e.agree||(e.kind==='monthly'&&(!e.authorize||!e.sameMonth))){toast(e.kind==='monthly'?'Tick the three boxes: the agreement, the monthly charge, and the same-month rule.':'Accept the enrollment agreement to continue.');return false}
   return true}
 function pay(btn){
   if(busy||!validate())return;
