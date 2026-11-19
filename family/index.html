@@ -96,6 +96,14 @@ html.dark .ch-ses button{background:#161616;border-color:#343434;color:#F4F4F0}h
 .ch-cal button.past{opacity:.45}
 .ch-cal button.today{box-shadow:0 0 0 2px #0A0A0A}
 .ch-cal button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78;border-color:#0A0A0A;text-decoration:none}
+.ch-cal button u.pv{position:absolute;right:5px;bottom:5px;width:8px;height:8px;border-radius:50%;background:#E286E4;border:1.5px solid #0A0A0A;text-decoration:none}
+.ch-key i.pv{width:10px;height:10px;border-radius:50%;background:#E286E4;border:1.5px solid #0A0A0A}
+.ch-soon{list-style:none;margin:0;padding:0}.ch-soon li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #E6E7E1;font-size:14.5px}.ch-soon li:first-child{border-top:0}.ch-soon b{min-width:96px}.ch-soon span{color:#2F312C}
+.ch-soon i{flex:none;width:10px;height:10px;border-radius:3px;background:#E2FE78;border:1px solid rgba(10,10,10,.35)}.ch-soon i.pv,.ch-soon i.makeup{background:#E286E4}.ch-soon i.pv{border-radius:50%}
+.ch-move{display:flex;flex-direction:column;gap:8px}.ch-move>b{font-size:14px}.ch-move>div{display:flex;gap:6px;flex-wrap:wrap}.ch-move button{height:38px;padding:0 14px;border-radius:19px;border:1.5px solid #0A0A0A;background:#fff;color:#0A0A0A;font-weight:700;font-size:13.5px;font-family:inherit;cursor:pointer}.ch-move button:hover{background:#E2FE78}
+.ch-camp{display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:22px;padding:14px 18px;background:#E286E4;color:#0A0A0A;text-decoration:none}.ch-camp span{display:flex;flex-direction:column;gap:1px;min-width:0}.ch-camp small{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.ch-camp b{font:italic 800 28px/.95 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase}.ch-camp em{font-style:normal;font-size:13px}.ch-camp>i{flex:none;display:inline-flex;align-items:center;gap:6px;font-style:normal;font-weight:700;font-size:13.5px;background:#0A0A0A;color:#F4F4F0;border-radius:20px;padding:9px 14px;white-space:nowrap}.ch-camp>i svg{width:16px;height:16px}
+.ch-pay.ch-renew{padding:14px 18px;border-radius:22px}.ch-pay.ch-renew b{font-size:26px}
+html.dark .ch-soon li{border-color:#343434}html.dark .ch-soon span{color:#C9C9C4}html.dark .ch-move button{background:#161616;color:#F4F4F0;border-color:#F4F4F0}
 .ch-key{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#2F312C}.ch-key span{display:flex;align-items:center;gap:6px}.ch-key i{width:14px;height:14px;border-radius:5px;border:1px solid rgba(10,10,10,.3);background:#E2FE78;box-sizing:border-box}.ch-key i.away{background:#fff;border:1.5px dashed #0A0A0A}.ch-key i.makeup{background:#E286E4}
 .ch-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-radius:20px;background:#F1F2EC;padding:12px 14px;font-size:14.5px}.ch-pick b{display:block}.ch-pick span{color:#2F312C;font-size:13px}
 .ch-pick .ch-btn{height:44px;padding:0 18px;flex:none}
@@ -134,14 +142,14 @@ html.dark .ch-b{background:#161616;border-color:#343434;color:#F4F4F0}html.dark 
 .ch-hello{margin:-10px 0 0;font:italic 800 clamp(52px,15vw,84px)/.88 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.01em;color:#0A0A0A}
 .ch-hello span{display:block}.ch-hello em{font-style:italic;color:#fff;-webkit-text-stroke:2px #0A0A0A}
 .ch-who{display:flex;gap:8px;flex-wrap:wrap}.ch-who button{height:44px;padding:0 18px;border-radius:22px;border:1.5px solid #0A0A0A;background:#fff;color:#0A0A0A;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer}.ch-who button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78}
-.ch-hero{border-radius:30px;background:#E2FE78;color:#0A0A0A;padding:22px;display:flex;flex-direction:column;gap:14px}
+.ch-hero{border-radius:26px;background:#E2FE78;color:#0A0A0A;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
 .ch-hero.out{background:#fff;border:1.5px dashed #0A0A0A}
 .ch-hl{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}.ch-hl b{letter-spacing:0;text-transform:none;font-size:12.5px;background:#0A0A0A;color:#F4F4F0;border-radius:12px;padding:6px 10px}
-.ch-when{font:italic 800 clamp(64px,19vw,96px)/.84 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.02em}
-.ch-what{display:flex;flex-direction:column;gap:3px;font-size:16px}
-.ch-tg{display:flex;gap:6px;background:rgba(10,10,10,.12);border-radius:29px;padding:4px}.ch-tg button{flex:1;height:50px;border-radius:25px;border:0;background:none;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer}.ch-tg button[aria-pressed="true"]{background:#0A0A0A;color:#F4F4F0}.ch-tg button:disabled{cursor:default}
+.ch-when{font:italic 800 clamp(40px,11vw,54px)/.86 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.02em}
+.ch-what{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:15px}
+.ch-tg{display:flex;gap:6px;background:rgba(10,10,10,.12);border-radius:29px;padding:4px}.ch-tg button{flex:1;height:42px;border-radius:21px;border:0;background:none;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer}.ch-tg button[aria-pressed="true"]{background:#0A0A0A;color:#F4F4F0}.ch-tg button:disabled{cursor:default}
 .ch-n{font-size:13px;line-height:1.4;color:#1E201C}
-.ch-acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ch-acts button,.ch-acts a{min-height:112px;border-radius:24px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;text-align:left;font-weight:700;font-size:15px;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
+.ch-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media(max-width:560px){.ch-acts{grid-template-columns:1fr 1fr}}.ch-acts button,.ch-acts a{min-height:96px;border-radius:24px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;text-align:left;font-weight:700;font-size:15px;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
 .ch-i{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:#0A0A0A;color:#E2FE78}
 .ch-card{border-radius:30px;background:#fff;border:1px solid #DADCD5;padding:22px;display:flex;flex-direction:column;gap:14px;color:#0A0A0A}
 .ch-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.ch-h h2{margin:0;font:italic 800 34px/.9 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase}.ch-h span{font-size:13px;color:#4A4C46}.ch-h span b{color:#0A0A0A}
@@ -287,6 +295,10 @@ function billingBlock(){
   return `<section class="sec" id="billing"><div class="sec-h"><h2>Billing</h2><small>${inv.length?inv.length+' to pay':onCycle?'renews '+esc(onCycle):'the 1st of each month'}</small></div>
     ${subs.length?`<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>Player</th><th>Plan</th><th>Status</th><th class="r">Next charge</th></tr></thead><tbody>${rows}</tbody></table></div><p class="fine">${onCycle?'This plan renews '+esc(onCycle)+' on the card on file until it is cancelled.':'Tuition bills on the 1st of each month for that month\'s training days; school breaks are taken off before the charge. Late policy: a $50 late fee on the 6th, the spot goes on hold on the 10th.'} <a href="/enroll/agreement">Program policies</a>.</p></div>`:`<div class="card"><p class="hint">No monthly plan through this account yet. <a href="/enroll">Enroll a player</a> — nothing is charged until the start month, and your card is kept on file for everything after.</p></div>`}
     ${inv.length?`<div class="card"><h3>Open invoices</h3><div class="scroll"><table class="tbl"><tbody>${open}</tbody></table></div></div>`:''}
+    ${(function(){const p=(me.players||[]).find(x=>x.id===SEL);if(!p)return '';const en=p.enroll;const days=en&&en.days&&en.days.length?en.days.join(' · '):'';
+      return `<div class="card"><h3>${esc(p.shortName||p.name)} is enrolled in</h3><p style="margin:6px 0 0"><b>${esc((en&&(en.programName||en.programShort))||p.groupLabel||'No program on file yet')}</b>${en&&en.planLabel?' · '+esc(en.planLabel):''}${days?'<br><span class="hint">'+esc(days)+'</span>':''}</p></div>`})()}
+    ${(b.paidInvoices||[]).length?`<div class="card"><h3>Invoices paid</h3><div class="scroll"><table class="tbl"><tbody>${b.paidInvoices.map(i=>`<tr><td>${esc(i.description)}<br><span class="hint">${esc(nice(i.date))}</span></td><td class="r">${cents(i.cents)}</td><td class="r">${i.pdf?`<a class="btn sm" href="${esc(i.pdf)}" target="_blank" rel="noopener">Download</a>`:''}</td></tr>`).join('')}</tbody></table></div></div>`:''}
+    <div class="rowx"><button class="btn ghost sm" type="button" data-ask="invoice">Ask for an invoice</button><span class="hint">For a scholarship, your accountant or your records. The admin team sends it to your e-mail.</span></div>
     ${b.customers.length?`<div class="rowx"><button class="btn" id="portal">Manage card, invoices &amp; receipts <span class="ar">→</span></button><span class="hint">Opens your secure Stripe account page.</span></div>`:''}</section>`;
 }
 function requestsBlock(){
@@ -294,7 +306,7 @@ function requestsBlock(){
   const list=me.requests.map(r=>`<tr><td>${esc(r.kindLabel)}${r.player?' · '+esc(r.player):''}<br><span class="hint">${esc(r.text)}</span>${r.reply?`<br><b>Front desk:</b> ${esc(r.reply)}`:''}</td><td class="r">${r.state==='open'?'<span class="pill lime">Open</span>':'<span class="pill mint">Done</span>'}<br><span class="hint">${esc(new Date(r.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></td></tr>`).join('');
   return `<section class="sec" id="requests"><div class="sec-h"><h2>Ask the front desk</h2><small>a court, a private, a change</small></div>
     <div class="card"><form class="form one" id="req">
-      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="message">Something else</option></select></div>
+      <div class="form"><div class="field"><label for="kind">What do you need?</label><select id="kind"><option value="court">A court</option><option value="private">A private lesson</option><option value="change">A change to our plan or days</option><option value="invoice">An invoice</option><option value="message">Something else</option></select></div>
       <div class="field"><label for="player">Player</label><select id="player">${players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="">— not about one player —</option></select></div></div>
       <div class="form"><div class="field"><label for="when">When (if it matters)</label><input id="when" placeholder="e.g. Saturday 9 AM, or next week"></div><div class="field"><label for="phone">Best number to reach you</label><input id="phone" placeholder="(561) 555-0000" autocomplete="tel"></div></div>
       <div class="field"><label for="text">Details</label><textarea id="text" required placeholder="Tell us what you need — the front desk reads this and gets back to you by text."></textarea></div>
@@ -324,9 +336,10 @@ function dayInfo(p,iso){const dt=new Date(iso+'T12:00:00');const w=d3(dt);const 
   const kind=k||(tr.includes(w)&&!closed?'train':'');const open=(p.openDays||[]).map(x=>String(x).toLowerCase()).includes(w)&&!closed;
   return{iso,dt,kind,past:iso<me.today,open,pick:iso>=me.today&&(!!kind||open),noDays:!tr.length,flex:!!p.flex&&(p.sessions||[]).length>0}}
 function scheduleC(p,nm){
+  const pvs=p.privates||[];const pvOn=new Set(pvs.map(x=>x.date));
   const t=new Date(String(me.today)+'T12:00:00');const start=new Date(t.getTime()-((t.getDay()+6)%7)*864e5);const cells=[];
   for(let i=0;i<35;i++){const dt=new Date(start.getTime()+i*864e5);const iso=ymd(dt);const x=dayInfo(p,iso);
-    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${x.pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${i===0||dt.getDate()===1?`<small>${dt.toLocaleDateString('en-US',{month:'short'})}</small>`:''}${dt.getDate()}</button>`)}
+    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${x.pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${i===0||dt.getDate()===1?`<small>${dt.toLocaleDateString('en-US',{month:'short'})}</small>`:''}${dt.getDate()}${pvOn.has(iso)?'<u class="pv" aria-label="private lesson"></u>':''}</button>`)}
   let pick='';
   if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));
     const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
@@ -336,19 +349,25 @@ function scheduleC(p,nm){
       :x.kind==='train'||x.noDays?row(x.noDays?'':'A training day.',`<button type="button" class="ch-btn" data-day-do="away">Mark away</button>`)
       :left>0?row(`Not a training day. ${left} make-up day${left===1?'':'s'} to use.`,`<button type="button" class="ch-btn" data-day-do="makeup">Make up here</button>`)
       :row('Not a training day. A make-up day goes with a day missed: mark the day away first.')}
-  const left=p.makeupsLeft||0;const flex=!!p.flex&&(p.sessions||[]).length>0;const open=flex||!!CALOPEN[p.id];
-  const key=flex?`<div class="ch-key"><span><i></i>Booked</span></div>`:`<div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span></div>`;
-  const body=!open?'':`<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${key}${pick}
+  const left=p.makeupsLeft||0;const flex=!!p.flex&&(p.sessions||[]).length>0;const open=flex||CALOPEN[p.id]!==false;   // Nov 19: the calendar shows from the start; Close folds it
+  /* What is coming (Nov 19, 2026): the next training days and the privates, one line each, so a parent reads the plan at a glance */
+  const soon=[];for(let i=0;i<21&&soon.length<12;i++){const dt=new Date(t.getTime()+i*864e5);const iso=ymd(dt);const x=dayInfo(p,iso);
+    if(x.kind==='train'||x.kind==='makeup'||x.kind==='book')soon.push({iso,what:x.kind==='makeup'?'Make-up day':(p.enroll&&(p.enroll.programShort||p.enroll.programName))||p.groupLabel||'Training',k:x.kind});
+    pvs.filter(v=>v.date===iso).forEach(v=>soon.push({iso,what:'Private'+(v.coach?' with Coach '+v.coach:''),time:v.time,k:'pv'}))}
+  const list=soon.length?`<p class="ch-sub">Coming up</p><ul class="ch-soon">${soon.slice(0,6).map(x=>`<li><i class="${x.k}"></i><b>${esc(x.iso===me.today?'Today':new Date(x.iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</b><span>${esc(x.what)}${x.time?' · '+esc(x.time):''}</span></li>`).join('')}</ul>`:'';
+  const pvKey='<span><i class="pv"></i>Private</span>';const key=flex?`<div class="ch-key"><span><i></i>Booked</span>${pvKey}</div>`:`<div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span>${pvKey}</div>`;
+  const body=!open?'':`<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${key}${pick}${list}
     ${flex?'':`<p class="ch-sub">Away for longer</p>
     <form class="ch-rng" id="rng"><label>From<input type="date" id="rfrom" min="${esc(me.today)}" required></label><label>To<input type="date" id="rto" min="${esc(me.today)}" required></label><button class="ch-btn line" type="submit">Mark ${nm} away for these days</button></form>`}`;
   /* By the session: the calendar is open and the family books its own sessions. A monthly plan: the calendar stays folded
      away until it is needed, which is rare: a day away, a make-up day (Nov 18, 2026). */
-  return `<section class="ch-card" id="schedule" aria-label="Schedule"><div class="ch-h"><h2>Schedule</h2>${flex?'':`<button type="button" class="ch-sm" data-cal-open aria-expanded="${open}">${open?'Close':left?`Open · ${left} make-up day${left===1?'':'s'}`:'Mark a day away'}</button>`}</div>
-    <p class="ch-s">${flex?`Tap a day and pick the sessions ${nm} is coming to. The academy sees it right away.`:open?`Tap a day to mark ${nm} away or to add a make-up day. The academy sees it right away.`:`${nm} is counted in on every training day. Open this only when a day changes.`}</p>${body}</section>`;
+  return `<section class="ch-card" id="schedule" aria-label="Schedule"><div class="ch-h"><h2>Schedule</h2>${flex?'':`<button type="button" class="ch-sm" data-cal-open aria-expanded="${open}">${open?'Close':'Open'}</button>`}</div>
+    <p class="ch-s">${flex?`Tap a day and pick the sessions ${nm} is coming to. The academy sees it right away.`:open?`Tap a day to mark ${nm} away or to add a make-up day. The academy sees it right away.${left?` <b>${left} session${left===1?'':'s'} to make up</b>, by ${esc(nice(p.makeupsUntil||''))}. It does not carry into the next month.`:''}`:`${nm} is counted in on every training day.`}</p>${body}</section>`;
 }
 /* Messages (Nov 17, 2026): the coaches linked to each player, and Admin for registration, billing and the account. */
 function messagesC(active,sel){
-  const rows=[];active.forEach(p=>{const cs=p.coaches||[];const who=esc(p.shortName||p.name.split(' ')[0]);
+  const rows=[];(sel?[sel]:active).forEach(p=>{const cs=p.coaches||[];   // Nov 19, 2026: one player at a time, nothing of a brother or sister
+const who=esc(p.shortName||p.name.split(' ')[0]);
     cs.forEach(c=>rows.push(`<button type="button" data-chat="${esc(c.key)}" data-chat-p="${esc(p.id)}" data-chat-t="Coach ${esc(c.name)}" data-chat-s="${who}'s coach"><span class="ch-i">${ico('chat')}</span><span><b>Coach ${esc(c.name)}</b><small>${who}'s coach</small></span><em>${ico('arrow')}</em></button>`));
     if(cs.length>1)rows.push(`<button type="button" data-chat="all" data-chat-p="${esc(p.id)}" data-chat-t="${who}'s coaches" data-chat-s="${cs.map(c=>'Coach '+esc(c.name)).join(' and ')}"><span class="ch-i">${ico('chat')}</span><span><b>${who}'s coaches together</b><small>One message to ${cs.map(c=>'Coach '+esc(c.name)).join(' and ')}</small></span><em>${ico('arrow')}</em></button>`)});
   rows.push(`<button type="button" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account"><span class="ch-i lime">${ico('card')}</span><span><b>Admin</b><small>Registration, billing, payments and your account. Write here and the admin team takes care of it.</small></span><em>${ico('arrow')}</em></button>`);
@@ -398,6 +417,17 @@ function accountC(){
     <div class="ch-acg"><h3>Card</h3><ul class="ch-acl"><li><span><b>${a.card?'A card is saved':'No card saved yet'}</b><small>Kept by Stripe, our payment company. The academy never sees the number.</small></span>${ro?'':`<span class="ch-acb"><button type="button" class="ch-sm" data-acc-card>${a.card?'Change card':'Save a card'}</button></span>`}</li></ul></div>
     <p class="ch-s">To change the name or the number the academy has on file, write to Admin in Messages.</p></section>`;
 }
+/* Cannot make it → where does the session go (Nov 19, 2026): the open days left this month, one tap each; or it waits on the
+   account until the month ends. It never rolls into the next month. */
+function moveC(p,nm,date){
+  const made=(p.days||[]).some(d=>d.kind==='makeup'&&d.date.slice(0,7)===date.slice(0,7)&&d.date>date);const left=p.makeupsLeft||0;const until=p.makeupsUntil||'';
+  if(!left)return `<span class="ch-n">You told the academy ${nm} cannot make it.${made?' The make-up day is on the schedule.':''}</span>`;
+  const opts=[];const t=new Date(String(me.today)+'T12:00:00');for(let i=0;i<31&&opts.length<6;i++){const dt=new Date(t.getTime()+i*864e5);const iso=ymd(dt);if(until&&iso>until)break;if(iso.slice(0,7)!==String(me.today).slice(0,7))break;const x=dayInfo(p,iso);if(!x.kind&&x.open&&iso>=me.today)opts.push(iso)}
+  return `<div class="ch-move"><b>Move this session to another day</b><div>${opts.map(iso=>`<button type="button" data-move="${iso}">${esc(new Date(iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</button>`).join('')||'<span>No other open day is left this month.</span>'}</div>
+    <span class="ch-n">Not sure yet? The session stays on ${nm}'s account. Use it by ${esc(nice(until))}; it does not carry into the next month.</span></div>`;
+}
+/* The camp that is coming (Nov 19, 2026): one slim line, the nearest camp first. */
+function campC(){const c=(me.camps||[])[0];if(!c)return '';return `<a class="ch-camp" href="/enroll?camp=${encodeURIComponent(c.ids[0])}"><span><small>Coming up</small><b>${esc(c.title)}</b><em>${esc(c.dates)} · half days and full days</em></span><i>Sign up ${ico('arrow')}</i></a>`}
 function homeC(first,active){
   const h=new Date().getHours();const hello=h<12?'Good morning,':h<18?'Good afternoon,':'Good evening,';
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
@@ -410,8 +440,8 @@ function homeC(first,active){
     <div class="ch-when">${ns?esc(ns.word):esc(prog)}</div>
     <div class="ch-what">${ns?`<b>${esc(prog)}</b>`:''}${coaches.length?`<span>With Coach ${coaches.map(esc).join(' and Coach ')}</span>`:''}</div>
     ${ns?`<div class="ch-tg" role="group" aria-label="Is ${nm} coming"><button type="button" aria-pressed="${!out}" ${out?`data-back="${esc(ns.date)}"`:'disabled'}>${nm} is coming</button><button type="button" aria-pressed="${!!out}" data-absent="${esc(ns.date)}" ${out?'disabled':''}>Cannot make it</button></div>
-    <span class="ch-n">${out?`You told the academy ${nm} cannot make it. Changed your mind? Tap "${nm} is coming".`:`${nm} is counted in unless you say otherwise. The academy is told right away.`}</span>`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
-  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['#messages','chat','Messages'],['#billing','card','Pay or see bills']].map(([k,i,l])=>k[0]!=='#'?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="${k}"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
+    ${out?moveC(p,nm,ns.date):`<span class="ch-n">${nm} is counted in unless you say otherwise.</span>`}`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
+  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['/enroll','plus','Book a program'],['#messages','chat','Messages'],['#billing','card','Bills and invoices'],['#account','chat','Your account']].map(([k,i,l])=>k[0]!=='#'&&k[0]!=='/'?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="${k}"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
   const rp=(p.reports||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
   const report=`<section class="ch-card" aria-label="The report"><div class="ch-h"><h2>${nm}'s report</h2>${rp?`<span>${esc(rp.period||'')}</span>`:''}</div><p class="ch-s">${rp?'The goals for the next three months, then tennis, fitness, mental and competition, with a note from the coach.':'The coach shares the 3-month report here. The first one appears once it is sent.'}</p>${rp?'<a class="ch-btn" href="#reports">Read the report</a>':''}</section>`;
   const at=p.attendance||{days:[],present:0,missed:0};const tot=(at.present||0)+(at.missed||0);
@@ -421,7 +451,7 @@ function homeC(first,active){
   /* Renew here (Nov 18, 2026): a child brought over from Play by Point, not yet on a plan in the app. The names go to the
      enrollment page in this tab's own storage, never in the link. */
   const rn=p.renew;const renew=!rn?'':`<div class="ch-pay ch-renew" role="group" aria-label="Renew"><span><small>Renew for ${esc(rn.month)}</small><b>${esc((rn.programName||'Program').split('|')[0].trim())}</b><small>${rn.online?`${esc(rn.planName)}${rn.monthly?' · '+usd(rn.monthly*100)+' a month':''} · billing here starts ${esc(nice(rn.start))}`:`${esc(rn.planName||'Your plan')} · this plan is renewed with the admin team`}</small>${rn.online?`<button type="button" class="ch-rb" data-renew="${esc(p.id)}">Renew ${nm}</button>`:`<button type="button" class="ch-rb" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account">Write to Admin</button>`}</span></div>`;
-  return `<div class="ch">${top}${chips}${hero}${renew}${acts}${scheduleC(p,nm)}${messagesC(active,p)}${report}${att}${pay}${accountC()}</div>`;
+  return `<div class="ch">${top}${chips}${campC()}${hero}${scheduleC(p,nm)}${acts}${renew}${messagesC(active,p)}${report}${att}${pay}${accountC()}</div>`;
 }
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
@@ -435,16 +465,17 @@ function render(){
   }
   const reports=[];me.players.forEach(p=>p.reports.forEach(r=>reports.push([p,r])));
   reports.sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date)));
+  const repSel=reports.filter(([p])=>me.players.filter(x=>x.status!=='finished').length<2||!SEL||p.id===SEL);   // Nov 19: only the player on screen
   const active=me.players.filter(p=>p.status!=='finished');const finished=me.players.filter(p=>p.status==='finished');
   const attended=active.reduce((n,p)=>n+((p.attendance&&p.attendance.present)||0),0);
   app.innerHTML=`
     ${homeC(first,active)}
-    <section class="sec" id="players"><div class="sec-h"><h2>Players</h2><small>${active.length} on the roster</small></div>
-    ${active.map(playerCard).join('')||'<div class="card"><p class="hint">No active players under this e-mail.</p></div>'}
+    <section class="sec" id="players"><div class="sec-h"><h2>${active.length>1&&SEL?esc((active.find(p=>p.id===SEL)||{}).shortName||'Player'):'Players'}</h2><small>${active.length>1?'switch player at the top':'on the roster'}</small></div>
+    ${active.filter(p=>active.length<2||!SEL||p.id===SEL).map(playerCard).join('')||'<div class="card"><p class="hint">No active players under this e-mail.</p></div>'}
     ${finished.length?`<details class="past"><summary>Past players (${finished.length})</summary>${finished.map(playerCard).join('')}</details>`:''}
     <div class="rowx"><a class="btn ghost sm" href="/enroll">Enroll another player</a></div></section>
     <section class="sec" id="reports"><div class="sec-h"><h2>Reports</h2><small>from the coaches</small></div>
-    ${reports.length?reports.map(([p,r])=>reportCard(p,r)).join(''):'<div class="card"><p class="hint">The coaches share reports here after each assessment — the first one appears once it is marked as sent.</p></div>'}</section>
+    ${repSel.length?repSel.map(([p,r])=>reportCard(p,r)).join(''):'<div class="card"><p class="hint">The coaches share reports here after each assessment — the first one appears once it is marked as sent.</p></div>'}</section>
     ${billingBlock()}
     ${requestsBlock()}
     ${footer()}`;
@@ -453,8 +484,9 @@ function render(){
   const daysDo=async(body,ok)=>{if(busy)return;busy=true;try{await api('days',Object.assign({player:SEL},body));toast(ok);me=await api('me')}catch(x){toast(x.message,true)}busy=false;render()};
   app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
     daysDo({action:'away',date:b.dataset.absent},'Told the academy. Thank you.')});
+  app.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{b.disabled=true;daysDo({action:'makeup',date:b.dataset.move},'Moved. The academy knows.')});
   app.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{b.disabled=true;daysDo({action:'back',date:b.dataset.back},'Counted in again.')});
-  app.querySelectorAll('[data-cal-open]').forEach(b=>b.onclick=()=>{CALOPEN[SEL]=!CALOPEN[SEL];CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-cal-open]').forEach(b=>b.onclick=()=>{CALOPEN[SEL]=CALOPEN[SEL]===false;CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-ses]').forEach(b=>b.onclick=()=>{PICK=PICK||[];const id=b.dataset.ses;PICK=PICK.includes(id)?PICK.filter(x=>x!==id):PICK.concat(id);const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-people-add]').forEach(b=>b.onclick=()=>{ADDP=true;const y=window.scrollY;render();window.scrollTo(0,y);const n=document.getElementById('ap-name');if(n)n.focus()});
   const peopleDo=async(body,ok)=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('people',Object.assign({player:SEL},body));toast(ok);ADDP=false;me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)};

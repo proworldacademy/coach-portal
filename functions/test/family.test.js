@@ -197,11 +197,13 @@ test('two weeks away go on the schedule as one day per training day; a make-up d
   assert.equal(mia.makeupsLeft, out.dates.length);
   await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-03' }, players, { today }), /already trains/);
   await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-05' }, players, { today }), /no session/);   // a Saturday
-  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-02' }, players, { today });
+  // Nov 19: a day missed in November is made up in November; it does not roll into December
+  await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-12-02' }, players, { today }), /same month/);
+  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'makeup', date: '2026-11-18' }, players, { today });
   me = await FAMILY.me(db, null, who, { today }); mia = me.players.find((p) => p.id === 'as-mia-r');
   assert.equal(mia.days.filter((d) => d.kind === 'makeup').length, 1); assert.equal(mia.makeupsLeft, out.dates.length - 1);
   await FAMILY.days(db, who, { player: 'as-mia-r', action: 'back', date: '2026-11-17' }, players, { today });
-  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'nomakeup', date: '2026-12-02' }, players, { today });
+  await FAMILY.days(db, who, { player: 'as-mia-r', action: 'nomakeup', date: '2026-11-18' }, players, { today });
   me = await FAMILY.me(db, null, who, { today }); mia = me.players.find((p) => p.id === 'as-mia-r');
   assert.equal(mia.days.some((d) => d.date === '2026-11-17'), false); assert.equal(mia.days.some((d) => d.kind === 'makeup'), false);
   await assert.rejects(() => FAMILY.days(db, who, { player: 'as-mia-r', action: 'away', date: '2026-11-10' }, players, { today }), /passed/);
