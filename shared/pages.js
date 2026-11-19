@@ -99,6 +99,7 @@
     { id: "coaches", name: "Coaches", href: "/portal", page: ["coach-portal"], items: [   // the front desk reaches Try-outs from Admin
       { name: "Reminders", href: "/portal", page: "coach-portal" }, { name: "Players", href: "/portal#/players", page: "coach-portal" },
       { name: "Contact", href: "/portal#/messages", page: "coach-portal" }, { name: "Privates", href: "/backend#privates", page: "backend" },
+      { name: "Calendar", href: "/portal#/calendar", page: "coach-portal" },   // Nov 19, 2026: each coach's week — academy hours, privates, open times
       // for directors and owners (shared/design.js keeps these from a coach)
       { name: "Coach Board", href: "/portal#/board", page: "coach-portal" },
       { name: "Attendance", href: "/backend#attendance", page: "backend" } ] },   // Nov 19, 2026: Text a group lives inside Contact ("New message → A group"), no longer a page of its own   // Nov 17: the group text (a whole group, or who trains that day) is back in the directors' menu

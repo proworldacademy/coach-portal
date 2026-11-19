@@ -77,6 +77,15 @@ details.past summary:hover{color:var(--ink)}
 .ch-mon{display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px}.ch-mon b{font-size:15px}.ch-mon button{width:36px;height:36px;border-radius:50%;border:1px solid rgba(10,10,10,.18);background:#fff;font-size:20px;line-height:1;cursor:pointer}.ch-mon button:disabled{opacity:.3;cursor:default}
 .ch-cal span{display:block}
 .ch-book{margin-top:8px}
+.ch-bk{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px;max-width:640px;width:100%;margin:0 auto}
+.ch-bk h3{margin:0 0 6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#6B6B68}
+.ch-bk .opts{display:flex;flex-wrap:wrap;gap:8px}.ch-bk .opts button{border:1px solid #DADCD5;background:#fff;border-radius:16px;padding:10px 14px;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;color:#0A0A0A;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:44px;justify-content:center}.ch-bk .opts button small{font-weight:500;font-size:11.5px;color:#6B6B68}
+.ch-bk .opts button[aria-pressed="true"]{background:#0A0A0A;color:#fff;border-color:#0A0A0A}.ch-bk .opts button[aria-pressed="true"] small{color:#E2FE78}
+.ch-bk input[type=date]{border:1px solid #DADCD5;border-radius:14px;padding:11px 14px;font:inherit;font-size:16px;background:#fff;width:100%;max-width:240px}
+.ch-bk .go{position:sticky;bottom:0;background:#F4F4F0;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px))}.ch-bk .go button{width:100%}
+.ch-bk .n{color:#6B6B68;font-size:13.5px;margin:0}
+.ch-news{display:flex;flex-direction:column;gap:8px}.ch-nw{display:flex;gap:12px;align-items:flex-start;border-radius:20px;padding:13px 16px;background:#fff;border:1px solid #E4E5DF;color:#0A0A0A;text-decoration:none}.ch-nw>i{flex:none;min-width:52px;text-align:center;border-radius:12px;background:#E2FE78;padding:6px 6px;font-style:normal;font-weight:800;font-size:12px;line-height:1.15;text-transform:uppercase}.ch-nw>i.news{background:#EFEFEA}.ch-nw>i.camp{background:#E286E4}.ch-nw span{display:flex;flex-direction:column;gap:2px;min-width:0}.ch-nw b{font-size:15px}.ch-nw small{font-size:13px;color:#4A4A47}
+.ch-bell{align-self:flex-start;border:1px solid #DADCD5;background:#fff;border-radius:999px;padding:8px 14px;font:700 13px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;color:#0A0A0A}
 .ch-back{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:40;display:none;align-items:center;gap:6px;border:0;border-radius:999px;background:#0A0A0A;color:#fff;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:11px 16px;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}.ch-back.on{display:inline-flex}@media(min-width:900px){.ch-back{bottom:24px}}
 .ch-cal b{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5E605A;text-align:center;font-weight:700;padding-bottom:2px}
 .ch-cal button{position:relative;aspect-ratio:1/1;min-height:40px;border-radius:14px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -350,7 +359,7 @@ function scheduleC(p,nm){
   if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));const ptime=p.enroll&&p.enroll.time?' · '+esc(p.enroll.time):'';
     const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
     const bk=(p.days||[]).find(d=>d.date===CALSEL&&d.kind==='book');if(x.flex&&x.pick&&!PICK)PICK=(bk&&bk.sessions||[]).slice();
-    const dayPv=pvs.filter(v=>v.date===CALSEL).map(v=>`<div class="ch-pick"><div><b>Private${v.coach?' with Coach '+esc(v.coach):''}</b><span>${esc(v.time||'')}</span></div></div>`).join('');
+    const dayPv=pvs.filter(v=>v.date===CALSEL).map(v=>`<div class="ch-pick"><div><b>${v.kind==='fitness'?'Fitness private':v.kind==='mental'?'Mental private':'Private'}${v.coach?' with Coach '+esc(v.coach):''}</b><span>${esc(v.time||'')}</span></div>${v.id?`<button type="button" class="ch-btn line" data-pv-x="${esc(v.id)}">Cancel</button>`:''}</div>`).join('');
     const core=x.flex&&x.pick?`<div class="ch-pick col" role="group" aria-label="Sessions"><div><b>${day}</b><span>Pick the session${(p.sessions||[]).length>1?'s':''} ${nm} is coming to.</span></div><div class="ch-ses">${(p.sessions||[]).map(m=>`<button type="button" data-ses="${esc(m.id)}" aria-pressed="${(PICK||[]).includes(m.id)}"><b>${esc(m.time)}</b>${esc(m.label)}</button>`).join('')}</div><button type="button" class="ch-btn" data-day-do="book">${bk?((PICK||[]).length?'Save the change':'Take this day off'):'Book'}</button></div>`
       :x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
       :x.kind==='makeup'?row('A make-up day.',`<button type="button" class="ch-btn line" data-day-do="nomakeup">Remove</button>`)
@@ -441,6 +450,57 @@ function moveC(p,nm,date){
 }
 /* The camp that is coming (Nov 19, 2026): one slim line, the nearest camp first. */
 function campC(){const c=(me.camps||[])[0];if(!c)return '';return `<a class="ch-camp" href="/enroll?camp=${encodeURIComponent(c.ids[0])}"><span><small>Coming up</small><b>${esc(c.title)}</b><em>${esc(c.dates)} · half days and full days</em></span><i>Sign up ${ico('arrow')}</i></a>`}
+/* What is coming (Nov 19, 2026): the academy's events and news (Parent news on the admin side), then the nearest camp. */
+function newsC(){const n=me.news||[];const day=(x)=>{if(!x.date)return x.kindLabel;const d=new Date(x.date+'T12:00:00');return d.toLocaleDateString('en-US',{month:'short'})+'<br>'+d.getDate()};
+  const rows=n.map(x=>{const inner=`<i class="${esc(x.kind)}">${day(x)}</i><span><b>${esc(x.title)}</b>${x.body?`<small>${esc(x.body)}</small>`:''}${x.date&&x.end&&x.end!==x.date?`<small>until ${esc(nice(x.end))}</small>`:''}</span>`;return x.link?`<a class="ch-nw" href="${esc(x.link)}">${inner}</a>`:`<div class="ch-nw">${inner}</div>`}).join('');
+  const bell=bellC();return rows||bell?`<div class="ch-news" aria-label="Coming up">${rows}${bell}</div>`:''}
+/* Notifications on this phone (Nov 19, 2026): the app's own (Apple) inside the App Store app, the browser's elsewhere. Asked once. */
+const BELL={on:null,busy:false,app:null};
+const pushPlug=()=>(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.PushNotifications)||null;
+const webPushCan=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+function bellC(){if(me.viewing)return '';if(BELL.on===true)return '';if(!pushPlug()&&!webPushCan())return '';if(BELL.on===null){bellCheck();return ''}return `<button type="button" class="ch-bell" data-bell ${BELL.busy?'disabled':''}>${BELL.busy?'Turning on…':'Turn on notifications for news and events'}</button>`}
+function bellCheck(){const P=pushPlug();if(P){if(!BELL.app){BELL.app=true;P.addListener('registration',(t)=>{const token=t&&t.value;if(!token)return;api('push/apns',{token,ua:navigator.userAgent.slice(0,180)}).then(()=>{BELL.on=true;BELL.busy=false;render()},()=>{BELL.busy=false;render()})});P.addListener('registrationError',()=>{BELL.busy=false;BELL.on=false;render()})}
+    P.checkPermissions().then((r)=>{if(r&&r.receive==='granted'){BELL.on=true;P.register()}else BELL.on=false;render()},()=>{BELL.on=false;render()});return}
+  navigator.serviceWorker.ready.then((reg)=>reg.pushManager.getSubscription()).then((sub)=>{BELL.on=!!sub&&Notification.permission==='granted';if(sub&&BELL.on)api('push/subscribe',{subscription:sub.toJSON(),ua:navigator.userAgent.slice(0,200)}).catch(()=>{});render()}).catch(()=>{BELL.on=false;render()});setTimeout(()=>{if(BELL.on===null){BELL.on=false;render()}},2500)}
+async function bellOn(){if(BELL.busy)return;BELL.busy=true;render();const P=pushPlug();
+  try{if(P){const r=await P.requestPermissions();if(r&&r.receive==='granted'){await P.register();return}toast('Notifications were not turned on.',true);BELL.busy=false;render();return}
+    const perm=await Notification.requestPermission();if(perm!=='granted'){toast(perm==='denied'?'Notifications are blocked on this device.':'Not turned on.',true);BELL.busy=false;render();return}
+    const {key}=await api('push/key');const pad='='.repeat((4-key.length%4)%4);const raw=atob((key+pad).replace(/-/g,'+').replace(/_/g,'/'));const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+    const reg=await navigator.serviceWorker.ready;const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+    await api('push/subscribe',{subscription:sub.toJSON(),ua:navigator.userAgent.slice(0,200)});BELL.on=true;toast('Notifications are on for this phone.')}catch(e){toast('Could not turn notifications on.',true)}
+  BELL.busy=false;render()}
+/* Book a private (Nov 19, 2026): the kind, the day, the coach, then that coach's open times, straight from the coach's calendar. */
+let BK=null;
+function bkPaint(){
+  let el=document.getElementById('bk');if(!BK){if(el)el.remove();if(!CHAT)document.documentElement.style.overflow='';return}
+  if(!el){el=document.createElement('div');el.id='bk';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  document.documentElement.style.overflow='hidden';const pl=(me.players||[]).find(x=>x.id===BK.player)||{};const nm=esc(pl.shortName||String(pl.name||'').split(' ')[0]);
+  const kinds=[['tennis','Tennis'],['fitness','Fitness'],['mental','Mental']];const maxD=ymd(new Date(new Date(String(me.today)+'T12:00:00').getTime()+365*864e5));
+  const cs=BK.coaches||[];const slots=BK.slots||[];
+  el.innerHTML=`<header><button type="button" id="bk-x" aria-label="Back">${ico('arrow')}</button><div><h2>Book a private</h2><p>For ${nm}</p></div></header>
+    <div class="ch-bk">
+      <div><h3>What</h3><div class="opts">${kinds.map(([k,l])=>`<button type="button" data-bk-kind="${k}" aria-pressed="${BK.kind===k}">${l} private</button>`).join('')}</div></div>
+      <div><h3>Day</h3><input type="date" id="bk-date" min="${esc(me.today)}" max="${maxD}" value="${esc(BK.date)}"></div>
+      <div><h3>Coach</h3>${BK.load&&!cs.length?'<p class="n"><span class="spin"></span></p>':`<div class="opts">${cs.map(c=>`<button type="button" data-bk-coach="${esc(c.key)}" aria-pressed="${BK.coach===c.key}">Coach ${esc(c.name)}${c.mine?`<small>${nm}'s coach</small>`:''}</button>`).join('')||'<p class="n">No coach gives this lesson yet. Write to Admin in Messages.</p>'}</div>`}</div>
+      ${BK.coach?`<div><h3>Open times · ${esc(nice(BK.date))}</h3>${BK.load?'<p class="n"><span class="spin"></span></p>':slots.length?`<div class="opts">${slots.map(x=>`<button type="button" data-bk-slot="${x.start}" aria-pressed="${BK.start===x.start}">${esc(x.label)}</button>`).join('')}</div>`:'<p class="n">No open time that day. Try another day or another coach.</p>'}</div>`:''}
+      ${BK.err?`<p class="n" style="color:#8A1F8C">${esc(BK.err)}</p>`:''}
+      <p class="n">One hour. The admin team confirms the court and the rate. To change it inside 24 hours, write to Admin.</p>
+      <div class="go"><button type="button" class="ch-btn" id="bk-go" ${BK.coach&&BK.start!=null&&!BK.busy?'':'disabled'}>${BK.busy?'Booking…':BK.start!=null?'Book '+esc((slots.find(x=>x.start===BK.start)||{}).label||''):'Pick a time'}</button></div>
+    </div>`;
+  document.getElementById('bk-x').onclick=()=>{BK=null;bkPaint()};
+  el.querySelectorAll('[data-bk-kind]').forEach(b=>b.onclick=()=>{BK.kind=b.dataset.bkKind;BK.coach='';BK.coaches=[];BK.slots=[];BK.start=null;bkLoad()});
+  document.getElementById('bk-date').onchange=(e)=>{if(!e.target.value)return;BK.date=e.target.value;BK.start=null;bkLoad()};
+  el.querySelectorAll('[data-bk-coach]').forEach(b=>b.onclick=()=>{BK.coach=b.dataset.bkCoach;BK.start=null;bkLoad()});
+  el.querySelectorAll('[data-bk-slot]').forEach(b=>b.onclick=()=>{BK.start=Number(b.dataset.bkSlot);BK.err='';bkPaint()});
+  document.getElementById('bk-go').onclick=async()=>{if(BK.busy||BK.start==null)return;BK.busy=true;BK.err='';bkPaint();
+    try{const o=await api('private/book',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,start:BK.start,dur:60});const d=BK.date;BK=null;bkPaint();toast('Booked: Coach '+o.coach+', '+nice(d)+' at '+o.time+'.');CALMON=d.slice(0,7);CALSEL=d;me=await api('me');render()}
+    catch(x){BK.busy=false;BK.err=x.message;BK.start=null;bkPaint();bkLoad()}};
+}
+async function bkLoad(){if(!BK)return;BK.load=true;BK.err='';bkPaint();const mine=BK;
+  try{const o=await api('private/slots',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,dur:60});if(BK!==mine)return;BK.coaches=o.coaches;BK.slots=o.slots;if(!BK.coach){const c=o.coaches.filter(x=>x.mine);if(c.length===1||o.coaches.length===1){BK.coach=(c[0]||o.coaches[0]).key;BK.load=false;return bkLoad()}}}
+  catch(x){if(BK===mine)BK.err=x.message}
+  if(BK===mine){BK.load=false;bkPaint()}}
+function bkOpen(kind,date){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}BK={player:SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,load:false,busy:false,err:''};bkLoad()}
 function homeC(first,active){
   const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
@@ -463,7 +523,7 @@ function homeC(first,active){
   /* Renew here (Nov 18, 2026): a child brought over from Play by Point, not yet on a plan in the app. The names go to the
      enrollment page in this tab's own storage, never in the link. */
   const rn=p.renew;const renew=!rn?'':`<div class="ch-pay ch-renew" role="group" aria-label="Renew"><span><small>Renew for ${esc(rn.month)}</small><b>${esc((rn.programName||'Program').split('|')[0].trim())}</b><small>${rn.online?`${esc(rn.planName)}${rn.monthly?' · '+usd(rn.monthly*100)+' a month':''} · billing here starts ${esc(nice(rn.start))}`:`${esc(rn.planName||'Your plan')} · this plan is renewed with the admin team`}</small>${rn.online?`<button type="button" class="ch-rb" data-renew="${esc(p.id)}">Renew ${nm}</button>`:`<button type="button" class="ch-rb" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account">Write to Admin</button>`}</span></div>`;
-  return `<div class="ch">${top}${chips}${campC()}${hero}${scheduleC(p,nm)}${acts}${renew}${messagesC(active,p)}${att}${accountC()}</div>`;   // Nov 19: one of each — the report and billing live in their sections, reached from the tiles; the account is last
+  return `<div class="ch">${top}${chips}${newsC()}${campC()}${hero}${scheduleC(p,nm)}${acts}${renew}${messagesC(active,p)}${att}${accountC()}</div>`;   // Nov 19: one of each — the report and billing live in their sections, reached from the tiles; the account is last
 }
 /* Back (Nov 19, 2026 — Antonio: "a back button that is easier to find"): a floating button at the bottom left once the page is past the top; it goes back to the previous spot when the parent came by a tile, else to the top. */
 (function(){const b=document.createElement('button');b.type='button';b.className='ch-back';b.innerHTML='<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>Back';document.body.appendChild(b);
@@ -497,7 +557,7 @@ function render(){
     ${requestsBlock()}
     ${footer()}`;
   app.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{SEL=b.dataset.sel;render()});
-  app.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{const k=document.getElementById('kind'),pl=document.getElementById('player');if(k)k.value=b.dataset.ask;if(pl&&SEL)pl.value=SEL;const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});const tx=document.getElementById('text');if(tx)setTimeout(()=>tx.focus({preventScroll:true}),450)});
+  app.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{if(b.dataset.ask==='private'){bkOpen('tennis',CALSEL||me.today);return}const k=document.getElementById('kind'),pl=document.getElementById('player');if(k)k.value=b.dataset.ask;if(pl&&SEL)pl.value=SEL;const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});const tx=document.getElementById('text');if(tx)setTimeout(()=>tx.focus({preventScroll:true}),450)});
   const daysDo=async(body,ok)=>{if(busy)return;busy=true;try{await api('days',Object.assign({player:SEL},body));toast(ok);me=await api('me')}catch(x){toast(x.message,true)}busy=false;render()};
   app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
     daysDo({action:'away',date:b.dataset.absent},'Told the academy. Thank you.')});
@@ -513,7 +573,9 @@ function render(){
   app.querySelectorAll('[data-day-do]').forEach(b=>b.onclick=()=>{const a=b.dataset.dayDo;const d=CALSEL;b.disabled=true;const y=window.scrollY;
     daysDo(a==='book'?{action:a,date:d,sessions:PICK||[]}:{action:a,date:d},a==='book'?((PICK||[]).length?'Booked. The academy knows.':'Taken off.'):a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
   app.querySelectorAll('[data-mon]').forEach(b=>b.onclick=()=>{const [y0,m0]=CALMON.split('-').map(Number);const d=new Date(y0,m0-1+Number(b.dataset.mon),1,12);CALMON=ymd(d).slice(0,7);CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
-  app.querySelectorAll('[data-book]').forEach(b=>b.onclick=()=>{const k=document.getElementById('kind'),pl=document.getElementById('player'),w=document.getElementById('when'),tx=document.getElementById('text');if(k)k.value='private';if(pl&&SEL)pl.value=SEL;if(w)w.value=nice(b.dataset.bookDay);if(tx&&!tx.value)tx.value=(b.dataset.book==='tennis'?'A tennis private':b.dataset.book==='fitness'?'A fitness private with Tara':'A mental performance private with Tonio')+' on '+nice(b.dataset.bookDay)+'. Preferred time: ';const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});if(tx)setTimeout(()=>{tx.focus({preventScroll:true});tx.selectionStart=tx.selectionEnd=tx.value.length},450)});
+  app.querySelectorAll('[data-book]').forEach(b=>b.onclick=()=>bkOpen(b.dataset.book,b.dataset.bookDay));
+  app.querySelectorAll('[data-bell]').forEach(b=>b.onclick=()=>bellOn());
+  app.querySelectorAll('[data-pv-x]').forEach(b=>b.onclick=()=>twice(b,'',async()=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('private/cancel',{id:b.dataset.pvX});toast('Canceled. The coach and the academy know.');me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)}));
   const accDo=async(body,ok)=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('account',body);toast(ok);ACCADD=false;me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)};
   const keepY=(f)=>{const y=window.scrollY;f();render();window.scrollTo(0,y)};
   app.querySelectorAll('[data-acc-open]').forEach(b=>b.onclick=()=>keepY(()=>{ACCOPEN=!ACCOPEN;ACCED=null;ACCADD=false}));

@@ -38,6 +38,8 @@ const SIGNIN = require('./lib/signin');
 const MAIL = require('./lib/mail');
 const USERS = require('./lib/users');
 const TEAM = require('./lib/team');
+const COACHCAL = require('./lib/coachcal');
+const NEWS = require('./lib/news');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -154,6 +156,18 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         if (route !== 'POST /family/chat') logger.info('family ' + route.slice(13), { by: who.email, player: S.clean(b.player, 60), action: out.action || out.to || '' });
         return send(res, 200, out);
       }
+      /* privates from the client's calendar (Nov 19, 2026): the coaches of a kind, a coach's open times on a day, book one, cancel one */
+      if (route === 'POST /family/private/slots' || route === 'POST /family/private/book' || route === 'POST /family/private/cancel') {
+        const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
+        const deps = { tellCoach: (name, text) => LESSONS.tellCoach(ctx.db, name, text), tellDesk: (text) => NOTIFY.slack(ctx.db, 'desk', '*Private* — booked in the app', [text]) };
+        const out = route.endsWith('/slots') ? await COACHCAL.familySlots(ctx.db, who, b, players) : route.endsWith('/book') ? await COACHCAL.familyBook(ctx.db, who, b, players, deps) : await COACHCAL.familyCancel(ctx.db, who, b, players, deps);
+        if (!route.endsWith('/slots')) logger.info('family private ' + route.slice(21), { by: who.email, id: out.id || S.clean(b.id, 80) });
+        return send(res, 200, out);
+      }
+      // notifications on a parent's phone (Nov 19, 2026): the same subscriptions the team has, kept under the parent's e-mail
+      if (route === 'GET /family/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
+      if (route === 'POST /family/push/subscribe') { const out = await PUSH.subscribe(ctx.db, who, b); logger.info('family push on', { by: who.email }); return send(res, 200, out); }
+      if (route === 'POST /family/push/apns') { const out = await PUSH.registerApns(ctx.db, who, b); logger.info('family push on (app)', { by: who.email }); return send(res, 200, out); }
       throw S.err(404, 'route', 'No such family route.');
     }
 
@@ -179,6 +193,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
         if (route === 'GET /coach/groups') return send(res, 200, await COACHTEXT.groups(ctx.db, who));
         if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
+        if (route === 'POST /coach/calendar') return send(res, 200, await COACHCAL.week(ctx.db, who, b));
         if (route === 'POST /coach/read') return send(res, 200, { ok: true, viewing: true });
         throw S.err(403, 'viewing', `You are looking at the portal as ${who.firstName || 'this person'}. Go back to your own view to send or change anything.`);
       }
@@ -193,6 +208,9 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /coach/push/apns') { const out = await PUSH.registerApns(ctx.db, who, b); logger.info('push on (app)', { by: who.email }); return send(res, 200, out); }
       if (route === 'POST /coach/push/apns/off') return send(res, 200, await PUSH.unregisterApns(ctx.db, who, b));
       if (route === 'POST /coach/push/test') return send(res, 200, await PUSH.send(ctx.db, [who.email], { title: 'PROWORLD', body: 'Notifications are on for this phone.', url: '/portal', tag: 'test' }));
+      // the coach's calendar (Nov 19, 2026): a week of academy hours, privates and open times; time off
+      if (route === 'POST /coach/calendar') return send(res, 200, await COACHCAL.week(ctx.db, who, b));
+      if (route === 'POST /coach/calendar/off') { const out = await COACHCAL.setOff(ctx.db, who, b); logger.info('coach calendar off', { by: who.email, date: S.clean(b.date, 12), remove: !!b.remove }); return send(res, 200, out); }
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
       if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
       throw S.err(404, 'route', 'No such coach route.');
@@ -294,6 +312,16 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /admin/contacts/sync') { if (!who.director) throw S.err(403, 'director', 'Directors and owners only.'); const out = await CONTACTS.sync(ctx.db, { log }); logger.info('contacts sync', Object.assign({ by: who.email }, out)); return send(res, 200, out); }
       if (route === 'POST /admin/contacts/nudge') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await CONTACTS.nudge(ctx.db, { dry: b.dry === true })); }
       if (route === 'GET /admin/contacts/justcall') { if (!who.director) throw S.err(403, 'director', 'Directors and owners only.'); return send(res, 200, await CONTACTS.justcallUsers(ctx.db)); }
+      // what families booked from their calendar and is not on a court yet; parent news (Nov 19, 2026)
+      if (route === 'GET /admin/family-privates') return send(res, 200, await COACHCAL.deskList(ctx.db));
+      if (route === 'POST /admin/family-privates/mark') return send(res, 200, await COACHCAL.deskMark(ctx.db, who, b));
+      if (route === 'GET /admin/news') return send(res, 200, await NEWS.list(ctx.db));
+      if (route === 'POST /admin/news' || route === 'POST /admin/news/remove') {
+        if (!(who.owner || who.admin || who.director || who.role === 'desk')) throw S.err(403, 'news', 'Parent news is posted by the owners, the directors and the front desk.');
+        const out = route === 'POST /admin/news' ? await NEWS.add(ctx.db, who, b) : await NEWS.remove(ctx.db, who, b);
+        logger.info('parent news ' + (route.endsWith('/remove') ? 'removed' : 'added'), { by: who.email, id: out.id || S.clean(b.id, 60), told: out.told || null });
+        return send(res, 200, out);
+      }
       if (route === 'POST /admin/lesson/booked') return send(res, 200, await LESSONS.booked(ctx.db, who, b));        // a private was booked: the coach hears it
       if (route === 'POST /admin/lesson/cancelled') return send(res, 200, await LESSONS.cancelled(ctx.db, who, b));
       if (route === 'GET /admin/backup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BACKUP.status()); }                 // the nightly copies of the database

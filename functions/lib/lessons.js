@@ -104,4 +104,4 @@ async function linkSlack(db) {
   for (const d of snap.docs) { const r = d.data() || {}; const u = await NOTIFY.slackUserByEmail(db, d.id); if (u) { await d.ref.set({ slackId: u.id, slackName: u.name }, { merge: true }); out.linked.push({ email: d.id, name: r.name || d.id, slack: u.name }); } else out.missing.push({ email: d.id, name: r.name || d.id }); }
   return out;
 }
-module.exports = { booked, cancelled, remind, etEpoch, linkSlack };
+module.exports = { booked, cancelled, remind, etEpoch, linkSlack, tellCoach };

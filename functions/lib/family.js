@@ -535,8 +535,9 @@ async function me(db, stripe, who, opts) {
   let privates = [];
   try { const st = (await db.doc('backend/state').get()); const list = st.exists ? ((st.data() || {}).privates || []) : []; const mine = new Set(players.map((p) => p.id));
     const hm = (v) => { const h = Math.floor(Number(v)); const m = Math.round((Number(v) - h) * 60); return `${((h + 11) % 12) + 1}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'AM' : 'PM'}`; };
-    privates = (Array.isArray(list) ? list : []).filter((x) => x && mine.has(x.pid) && isDate(x.date) && x.date >= today).map((x) => ({ pid: x.pid, date: x.date, time: Number.isFinite(Number(x.start)) ? hm(x.start) : '', coach: firstName(x.coach) })).sort((a, b) => CAL.cmp(a.date, b.date)); } catch (e) { privates = []; }
+    privates = (Array.isArray(list) ? list : []).filter((x) => x && mine.has(x.pid) && isDate(x.date) && x.date >= today).map((x) => ({ pid: x.pid, date: x.date, start: Number(x.start), time: Number.isFinite(Number(x.start)) ? hm(x.start) : '', coach: firstName(x.coach) })).sort((a, b) => CAL.cmp(a.date, b.date)); } catch (e) { privates = []; }
   const out = [];
+  try { const own = await require('./coachcal').familyList(db, players.map((p) => p.id), today); own.forEach((o) => { if (!privates.some((x) => x.pid === o.pid && x.date === o.date && x.start === o.start)) privates.push(o); }); } catch (e) { /* the desk's privates still show */ }
   const closed = []; for (let d = today, i = 0; i <= AHEAD; i++, d = CAL.addDays(d, 1)) { const w = CAL.dow(d); if (w && w < 6 && !isOpen(d)) closed.push(d); }   // weekdays with no training (a break): the calendar greys them
   for (const p of players) {
     const en = p.enroll || {};
@@ -551,14 +552,15 @@ async function me(db, stripe, who, opts) {
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
       flex: isFlex(p), sessions: menuOf(p), people: await peopleOf(db, p.id),
-      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach })), openDays: openDays(p), closed,
+      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach, id: x.own ? x.id : '', kind: x.kind || '' })).sort((a, b) => String(a.date).localeCompare(String(b.date))), openDays: openDays(p), closed,
       reports: await reports(db, p.id)
     });
   }
   const bill = await billing(stripe, customers, today);
   let requests = [];
   try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
-  return { camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
+  let news = []; try { news = await require('./news').forFamily(db, players.map((p) => p.group), today); } catch (e) { news = []; }
+  return { news, camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
 /* ── the family's Stripe account page (card, invoices, receipts) ── */
