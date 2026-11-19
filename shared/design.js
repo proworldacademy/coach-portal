@@ -20,6 +20,23 @@
     add("meta", { name: "apple-mobile-web-app-capable", content: "yes" }); add("meta", { name: "mobile-web-app-capable", content: "yes" });
     add("meta", { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" }); add("meta", { name: "apple-mobile-web-app-title", content: "PROWORLD" });
     add("link", { rel: "apple-touch-icon", href: "/app/apple-touch-icon.png" });
+    /* The page fits the phone, every phone (Nov 19, 2026 — management's screenshots: the page wider than the screen, the chat header under
+       the clock). The cause: an iPhone zooms in when a box with small text is tapped, and inside the app that zoom never goes back, so
+       every page after it is cut off on the right. Three guards, on every page: (1) the page may not be scaled past 1, (2) on a touch
+       screen every box you type in is 16px, the size at which the phone does not zoom, (3) nothing may push the page sideways. If a
+       zoom still sticks (an older phone), it is snapped back when the keyboard closes. */
+    try {
+      const vp = document.querySelector('meta[name="viewport"]');
+      const fit = () => { if (!vp) return; let c = vp.getAttribute("content") || ""; c = c.replace(/,?\s*maximum-scale=[^,]*/g, "").replace(/,?\s*user-scalable=[^,]*/g, ""); vp.setAttribute("content", c + ",maximum-scale=1"); };
+      fit();
+      const st = document.createElement("style"); st.setAttribute("data-fit", "1");
+      st.textContent = "html{-webkit-text-size-adjust:100%;text-size-adjust:100%;max-width:100%;overflow-x:hidden;overflow-x:clip}body{max-width:100%;overflow-x:clip}@media(pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}}img,video{max-width:100%}";
+      document.head.appendChild(st);
+      const vv = window.visualViewport;
+      const snap = () => { if (vv && vv.scale > 1.01 && vp) { const c = vp.getAttribute("content"); vp.setAttribute("content", "width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,viewport-fit=cover"); setTimeout(() => { vp.setAttribute("content", c); }, 60); } if (window.scrollX) window.scrollTo(0, window.scrollY); };
+      document.addEventListener("focusout", () => setTimeout(snap, 120), true);
+      window.addEventListener("pageshow", () => setTimeout(snap, 50)); window.addEventListener("orientationchange", () => setTimeout(snap, 300));
+    } catch (e) { /* the page still shows */ }
     // the App look on every page (Nov 13): one layer, loaded last so it sits on top of each page's own styles
     /* Light and dark (Nov 14, 2026 — Antonio: "dark and light depending on the time of the day, like everything else"): Auto follows the phone or
        computer (which switches at sunset when set to Automatic); the person can pin Light or Dark from their account menu. html.dark carries it,
