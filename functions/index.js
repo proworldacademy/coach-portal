@@ -146,6 +146,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       }
       /* the schedule and the messages of the client account (Nov 17, 2026): days away and make-up days; a chat with the player's
          coaches or with Admin */
+      if (route === 'POST /family/account') { const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email); const out = await FAMILY.account(ctx.db, who, b, players); logger.info('family account', { by: who.email, action: S.clean(b.action, 20) }); return send(res, 200, out); }
       if (route === 'POST /family/people') { const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email); const out = await FAMILY.people(ctx.db, who, b, players); logger.info('family people', { by: who.email, player: S.clean(b.player, 60), n: out.people.length }); return send(res, 200, out); }
       if (route === 'POST /family/days' || route === 'POST /family/chat' || route === 'POST /family/message') {
         const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
