@@ -295,8 +295,13 @@ test('a by-the-session player books sessions of a day; a monthly player cannot; 
   await FAMILY.account(db, who, { action: 'email-main', email: who.email }, players);
   await FAMILY.account(db, who, { action: 'email-remove', email: 'dad.rivera@example.test' }, players);
   assert.equal((await FAMILY.findPlayers(db, null, dad.email)).players.length, 0, 'a removed e-mail no longer reaches the players');
-  await FAMILY.account(db, who, { action: 'phone-remove', tail: '0188' }, players);
-  assert.ok(!(await FAMILY.me(db, null, who, { today })).account.phones.some((x) => x.tail === '0188'));
+  // the family keeps its own profile: a new name and a new number land on every player's contact
+  await FAMILY.account(db, who, { action: 'name', name: 'Maria R. Lopez' }, players);
+  await FAMILY.account(db, who, { action: 'phone-change', tail: '0188', phone: '(561) 555-0199' }, players);
+  for (const p of players) { const c = (await db.doc(`players/${p.id}/private/contact`).get()).data(); assert.equal(c.guardian, 'Maria R. Lopez'); assert.ok(c.extra.some((x) => x.phone === '+15615550199')); }
+  await assert.rejects(() => FAMILY.account(db, who, { action: 'phone-change', tail: '9999', phone: '5615550100' }, players), /not on this account/);
+  await FAMILY.account(db, who, { action: 'phone-remove', tail: '0199' }, players);
+  assert.ok(!(await FAMILY.me(db, null, who, { today })).account.phones.some((x) => x.tail === '0199'));
 });
 
 test('each coach and Admin can be reached from the family\'s own phone: the coach\'s academy number and e-mail, the academy line for Admin', async () => {
