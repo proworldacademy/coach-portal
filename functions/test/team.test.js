@@ -124,3 +124,12 @@ test('quiet at night: a channel waits for the morning, a mention still gets thro
   r = await TEAM.notify(w.db, KIM, { chat: 'general', id: 'm1' }); assert.equal(r.sent, 1);
   TEAM._clock(null); PUSH._useSender(null);
 });
+
+test('here now: whoever asks is noted, and the answer is everyone seen in the last quarter of an hour', async () => {
+  const { db } = await world(); let now = 1000000000000; TEAM._clock(() => now);
+  try {
+    let r = await TEAM.here(db, { email: 'Kim@Example.test' }); assert.deepEqual(r.here, { 'kim@example.test': 0 });
+    now += 2 * 60000; r = await TEAM.here(db, { email: 'lee@example.test' }); assert.deepEqual(r.here, { 'kim@example.test': 120000, 'lee@example.test': 0 });
+    now += 14 * 60000; r = await TEAM.here(db, { email: 'dee@example.test' }); assert.deepEqual(Object.keys(r.here).sort(), ['dee@example.test', 'lee@example.test'], 'sixteen minutes without a word and Kim is no longer listed');
+  } finally { TEAM._clock(null); }
+});

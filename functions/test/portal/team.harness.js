@@ -68,7 +68,7 @@ function serve(port, seedOf) {
     if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(''); return; }
     if (p.startsWith('/api/team/')) { let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
       calls.push([req.method + ' ' + p, body]);
-      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/ice' ? { iceServers: [], relay: false } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? { here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) } : p === '/api/team/ice' ? { iceServers: [], relay: false } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
     if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"message":"not here"}'); return; }
     if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
     const f = path.join(REPO, p); if (!f.startsWith(REPO) || !fs.existsSync(f)) { res.writeHead(404); res.end('no'); return; }
@@ -88,6 +88,11 @@ if (require.main !== module) return;
   const browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--allow-loopback-in-peer-connection'] }); const fails = []; const ok = (cond, what) => { console.log((cond ? 'ok   ' : 'FAIL ') + what); if (!cond) fails.push(what); };
   const open = async (w, h, look, hashPath) => { const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: w < 500 ? 2 : 1, colorScheme: look, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message)); await page.goto(base + '/team/' + (hashPath || '')); await page.waitForSelector('.tc-row', { timeout: 15000, state: 'attached' }); await page.waitForTimeout(700); return { page, ctx, errs }; };
   const shot = (page, name) => page.screenshot({ path: path.join(SHOTS, name + '.png') });
+  // a finger on the glass: down at the first point (held if asked), through the others, up
+  const touch = async (page, pts, holdMs) => { const cdp = await page.context().newCDPSession(page); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: pts[0][0], y: pts[0][1] }] }); if (holdMs) await page.waitForTimeout(holdMs);
+    for (const q of pts.slice(1)) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: q[0], y: q[1] }] }); await page.waitForTimeout(25); } await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.waitForTimeout(520); await cdp.detach(); };
+  const slide = async (page, sel, dx, holdMs, dy) => { const b = await page.locator(sel).first().boundingBox(); const y = b.y + b.height / 2, x = dx < 0 ? b.x + b.width - 60 : b.x + 60; const pts = [[x, y]]; for (let i = 1; i <= 8; i++) pts.push([x + (dx * i) / 8, y + ((dy || 0) * i) / 8]); await touch(page, pts, holdMs); };
+  const pwHash = (s) => { let a = 5381, b = 52711; for (let i = 0; i < s.length; i++) { const ch = s.charCodeAt(i); a = (a * 33) ^ ch; b = (b * 33) ^ ch; } return (a >>> 0).toString(36) + (b >>> 0).toString(36); };
   const docs = (page) => page.evaluate(() => window.__fsDocs);
 
   // ── desktop, as a director ──
@@ -168,6 +173,23 @@ if (require.main !== module) return;
     ok(await page.locator('#tcq').isVisible(), 'phone ' + look + ': Search opens the find box'); await page.tap('[data-act="find"]'); await page.waitForTimeout(150);
     await page.tap('[data-flt="mentions"]'); await page.waitForTimeout(150); ok(await page.locator('.tc-hero').count() === 0 && await page.locator('.tc-card .tc-row, .tc-none').count() >= 1, 'phone ' + look + ': Mentions shows only what calls for you');
     await page.tap('[data-flt="calls"]'); await page.waitForTimeout(150); ok(await page.locator('.tc-none, .tc-card .tc-row').count() >= 1, 'phone ' + look + ': Calls shows the calls that are on'); await page.tap('[data-flt="all"]'); await page.waitForTimeout(150);
+    if (look === 'light') {   // the list as text messages (Nov 19): newest first, a number when unread, here now, a row's options behind a slide, pinned chats, Your people chosen
+      ok(await page.locator('.tc-card .tc-row[data-open]').first().getAttribute('data-open') === 'general', 'phone: the channel written in last is on top');
+      ok(/^\d+$/.test((await page.locator('.tc-row[data-open="general"] .dot.n').first().textContent()).trim()), 'phone: an unread chat shows how many lines wait');
+      ok(await page.locator('.tc-ppls .pa i').count() >= 1, 'phone: a lime dot on whoever has the Locker Room open now');
+      await page.evaluate(() => { document.querySelector('.tc-row[data-open="tennis-core"]').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(150);
+      await slide(page, '.tc-row[data-open="tennis-core"]', -190); ok(await page.locator('.tc-swp .tc-swa [data-sa="top"]').isVisible(), 'phone: sliding a chat to the left shows Pin, Mute and Read'); await shot(page, 'team-phone-slide');
+      await page.tap('.tc-swa [data-sa="top"]'); await page.waitForTimeout(250); let d0 = await docs(page); ok(JSON.stringify(d0['teamReads/' + P.dee].top) === '["tennis-core"]' && await page.locator('.tc-topc .tc-row[data-open="tennis-core"]').count() === 1, 'phone: Pin puts the chat in Pinned, on top');
+      await page.evaluate(() => { document.querySelector('.tc-row[data-open="announcements"]').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(150);
+      await slide(page, '.tc-row[data-open="announcements"]', 0, 600); ok(await page.locator('.tc-swp .tc-swa').isVisible(), 'phone: holding a chat shows the same options'); await page.tap('.tc-swa [data-sa="top"]'); await page.waitForTimeout(250);
+      await page.evaluate(() => { document.querySelector('.tc-topc').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(150); await shot(page, 'team-phone-pinned');
+      await slide(page, '.tc-topc .tc-row[data-open="tennis-core"]', 0, 600, 80); d0 = await docs(page); ok(JSON.stringify(d0['teamReads/' + P.dee].top) === '["announcements","tennis-core"]', 'phone: holding a pinned chat and moving it down changes the order');
+      await page.evaluate(() => { document.querySelector('.tc-card:not(.tc-topc) .tc-row[data-open="general"]').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(150);
+      await slide(page, '.tc-card .tc-row[data-open="general"]', 150); ok(await page.locator('.tc-card .tc-row[data-open="general"] .dot').count() === 0, 'phone: sliding an unread chat to the right marks it read');
+      await page.evaluate(() => { document.querySelector('.tc-card .tc-row[data-open="general"]').scrollIntoView({ block: 'center' }); }); await slide(page, '.tc-card .tc-row[data-open="general"]', 150); ok(await page.locator('.tc-card .tc-row[data-open="general"] .dot').count() === 1, 'phone: and again marks it unread');
+      await page.tap('[data-act="ppl-edit"]'); await page.waitForTimeout(150); await page.check('.tc-sheet input[value="' + P.rob + '"]'); await page.click('.tc-sheet button[type=submit]'); await page.waitForTimeout(250); d0 = await docs(page);
+      ok(JSON.stringify(d0['teamReads/' + P.dee].people) === JSON.stringify([P.rob]) && await page.locator('.tc-ppls button').count() === 1, 'phone: Your people is who you tick');
+      await page.evaluate((me) => firebase.firestore().doc('teamReads/' + me).set({ top: [], people: [] }, { merge: true }), P.dee); await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('.tc-list').scrollTop = 0; }); await page.waitForTimeout(250); }
     if (look === 'light') { await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 560; }); await page.waitForTimeout(150); await shot(page, 'team-phone-list2'); await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 99999; }); await page.waitForTimeout(150); await shot(page, 'team-phone-list3');
       ok(await page.locator('.tc-quiet i.sw').isVisible(), 'phone: Quiet at night is a switch'); await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 0; }); }
     ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'phone ' + look + ': the list does not run off the side');
@@ -175,6 +197,9 @@ if (require.main !== module) return;
     ok(await page.locator('.tc-main').isVisible() && !(await page.locator('.tc-side').isVisible()), 'phone ' + look + ': a chat opens full screen');
     const box = await page.locator('.tc-comp').boundingBox(); ok(box && box.y + box.height <= 844 + 1 && box.y > 600, 'phone ' + look + ': the box to write in sits at the bottom of the screen');
     ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'phone ' + look + ': nothing runs off the side');
+    ok(await page.locator('.tc-in .tc-mic').isVisible(), 'phone ' + look + ': the microphone sits inside the box to write in');
+    if (look === 'light') { await page.evaluate((o) => firebase.firestore().doc('teamChats/general').update({ ['seen.' + o.k]: Date.now() + 1e7, ['seen.' + o.r]: Date.now() + 1e7 }), { k: pwHash(P.kim), r: pwHash(P.rob) }); await page.waitForTimeout(300);
+      ok(/Read by \d/.test(await page.locator('.tc-rdby').first().textContent().catch(() => '')), 'phone: under your last line, how many have read it'); ok(/people · \d+ here now/.test(await page.locator('.tc-mh .ti small').first().textContent()), 'phone: the chat says how many are here now'); }
     await shot(page, 'team-phone-chat-' + look);
     await page.tap('.tc-m[data-m="a7"] .bd'); await page.waitForTimeout(150); ok(await page.locator('.tc-m[data-m="a7"].act .tc-acts').isVisible(), 'phone ' + look + ': tapping a message shows React and Reply');
     if (look === 'light') await shot(page, 'team-phone-actions');
