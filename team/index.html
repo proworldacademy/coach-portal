@@ -25,6 +25,7 @@
 .wrap{max-width:1320px;padding-block:0 0}
 body.tc{overflow:hidden}
 .tc-app{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;height:calc(var(--tc-h,100dvh) - 72px - env(safe-area-inset-top,0px) - 16px)}
+#cstrip{margin:0 auto 12px}@media(min-width:861px){body.has-cstrip .tc-app{height:calc(var(--tc-h,100dvh) - 72px - env(safe-area-inset-top,0px) - 16px - 58px)}}
 .tc-app.thread{grid-template-columns:300px minmax(0,1fr) 360px}
 .tc-side,.tc-main,.tc-thr{background:var(--card-2);border:1px solid var(--line);border-radius:20px;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 .tc-side h1{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:34px;line-height:.95;margin:0;color:var(--ink)}
@@ -226,6 +227,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
 <body class="skin-coach tc">
 <div class="wrap">
   <div class="pwd-top" id="pwd-top"></div>
+  <nav id="cstrip" hidden></nav>
   <div class="tc-app" id="app" aria-live="off"></div>
 </div>
 <div id="sheet"></div>
@@ -755,6 +757,10 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   /* ── start ── */
   $("app").innerHTML = '<aside class="tc-side"><div class="tc-sh"><h1>Locker Room</h1></div></aside><section class="tc-main"><div class="tc-empty"><b>One moment</b>Checking who you are…</div></section>';
   window.PWAuth.start({}).then((c) => {
+    /* Nov 19, 2026: the Coach Portal's strip shows here too, so the Locker Room is one of the same row of pages and not a page apart */
+    (function strip(n) { try { const cs = document.getElementById("cstrip"); const role = String((c.rec && c.rec.role) || "").toLowerCase(); const ok = c.owner || c.admin || role === "director" || role === "coach";
+      if (!cs || !ok) return; if (!window.PWCoachStrip) { if (n < 30) setTimeout(() => strip(n + 1), 300); return; }
+      cs.hidden = false; window.PWCoachStrip(cs, { director: !!(c.owner || c.admin || role === "director"), active: "team" }); document.body.classList.add("has-cstrip"); } catch (e) { /* the page works without it */ } })(0);
     S.ctx = c; S.me = String(c.email || "").toLowerCase(); S.name = c.name || S.me; S.fs = window.PWAuth.fs();
     S.people[S.me] = { email: S.me, name: S.name, role: c.owner ? "owner" : (c.rec && c.rec.role) || "team" }; S.peopleList = [S.people[S.me]];
     api("people").then((r) => { (r.people || []).forEach((p) => { S.people[p.email] = p; }); if (!r.people.some((p) => p.email === S.me)) r.people.push(S.people[S.me]); S.peopleList = Object.keys(S.people).map((e) => S.people[e]).sort((a, b) => a.name.localeCompare(b.name)); render(true); }).catch(() => {});

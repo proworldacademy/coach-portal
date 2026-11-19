@@ -33,6 +33,32 @@
   }
   const setOn = (k) => document.querySelectorAll('.pw-coachbar a').forEach((a) => { const on = a.dataset.k === k; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
 
+  /* The Coach Portal's strip, on the pages outside it (Nov 19, 2026 — management: "I click one menu item and it opens a different bar,
+     and that bar takes me to the old menu… it should always be consistent"). The same items, in the same order, with the same look as
+     the strip in the Coach Portal: Reminders · Players · Contact · Locker Room · Privates, and for a director or an owner Attendance ·
+     Text a group · Coach Board · Staff & access. A desktop row; a phone has the bottom bar. `tabs` names the items that are tabs of the
+     page itself (the Admin page): they come out as buttons with data-view, the rest as links. */
+  const UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+  const SCSS = 'nav.pw-cstrip{display:flex!important;background:rgba(233,233,228,.62)!important;border-radius:999px!important;padding:4px!important;gap:2px!important;width:max-content!important;max-width:100%;overflow-x:auto;scrollbar-width:none;margin:10px auto 22px!important;border:0!important;box-shadow:none!important;flex-wrap:nowrap!important}nav.pw-cstrip::-webkit-scrollbar{display:none}' +
+    'nav.pw-cstrip a,nav.pw-cstrip button{display:inline-flex!important;align-items:center;position:relative;border:0!important;background:transparent!important;padding:9px 16px!important;border-radius:999px!important;font:700 13px "Aeonik Pro","Helvetica Neue",Arial,sans-serif!important;letter-spacing:0!important;text-transform:none!important;color:#6b6d66!important;white-space:nowrap;text-decoration:none!important;box-shadow:none!important;flex:0 0 auto;cursor:pointer;transform:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}' +
+    'nav.pw-cstrip a:hover,nav.pw-cstrip button:hover{color:#0A0A0A!important}nav.pw-cstrip .on,nav.pw-cstrip [aria-current="page"]{background:#0A0A0A!important;color:#fff!important}nav.pw-cstrip i{display:inline-grid;width:15px;height:15px;margin-right:7px}nav.pw-cstrip i svg{width:15px;height:15px}' +
+    'nav.pw-cstrip [data-team-dot][data-has="1"]::after{position:static!important;display:inline-block;margin-left:7px;width:8px;height:8px;box-shadow:none!important}' +
+    '@media(max-width:1500px){nav.pw-cstrip a,nav.pw-cstrip button{padding-left:13px!important;padding-right:13px!important;font-size:13.5px!important}}@media(max-width:860px){nav.pw-cstrip{display:none!important}}' +
+    'html.dark nav.pw-cstrip{background:rgba(30,30,30,.92)!important}html.dark nav.pw-cstrip a,html.dark nav.pw-cstrip button{color:#C9C9C4!important}html.dark nav.pw-cstrip .on,html.dark nav.pw-cstrip [aria-current="page"]{background:#E2FE78!important;color:#0A0A0A!important}';
+  window.PWCoachStrip = function (el, opts) {
+    try {
+      opts = opts || {}; if (!el) return false;
+      if (!document.getElementById('pw-cstrip-css')) { const st = document.createElement('style'); st.id = 'pw-cstrip-css'; st.textContent = SCSS; document.head.appendChild(st); }
+      const items = [['home', 'Reminders', '/portal/#/', I.bell], ['players', 'Players', '/portal/#/players', I.people], ['contact', 'Contact', '/portal/#/messages', I.chat], ['team', 'Locker Room', '/team', I.team], ['privates', 'Privates', '/backend#privates', I.cal]]
+        .concat(opts.director ? [['attendance', 'Attendance', '/backend#attendance', MORE.check], ['messages', 'Text a group', '/backend#messages', UP], ['board', 'Coach Board', '/portal/#/board', I.people], ['staff', 'Staff & access', '/portal/#/staff', MORE.doc]] : []);
+      const tabs = opts.tabs || [];
+      el.classList.add('pw-cstrip'); el.setAttribute('aria-label', 'Coach Portal');
+      el.innerHTML = items.map(([k, label, href, ic]) => tabs.includes(k)
+        ? '<button type="button" data-view="' + k + '"' + (k === opts.active ? ' aria-current="page"' : ' aria-current="false"') + '><i>' + ic + '</i>' + label + '</button>'
+        : '<a href="' + href + '"' + (k === opts.active ? ' class="on" aria-current="page"' : '') + (k === 'team' ? ' data-team-dot' + (window.PWTeamUnread ? ' data-has="1"' : '') : '') + '><i>' + ic + '</i>' + label + '</a>').join('');
+      return true;
+    } catch (e) { return false; }
+  };
   /* The coaches' four, outside the Coach Portal */
   window.PWCoachBar = function (ctx, active) {
     try {

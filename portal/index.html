@@ -2548,7 +2548,7 @@ const PW_CONFIG = {
       WEB.core.push(S.db.doc('syncCfg/main').onSnapshot((d) => { S.syncCfg = d.exists ? d.data() : null; changed(); }, () => {}));
     }
     WEB.core.push(S.db.collection('tryouts').onSnapshot((s) => { S.tryouts = rowsOf(s); S.loaded.tryouts = true; changed(); }, () => {}));
-    S.route = parseHash(); if (S.route.view === 'staff' && !WEB.isAdmin) S.route = { view: 'home' };
+    S.route = parseHash(); if (S.route.view === 'staff' && !WEB.isAdmin && !WEB.isDirector) S.route = { view: 'home' };   // Nov 19: the menu gives Staff & access to the directors; the page sent them back to Reminders
     if (WEB.tryoutsOnly && S.route.view !== 'tryouts' && S.route.view !== 'tryout') S.route = { view: 'tryouts' };
     fitBar(); onRoute(false);
   }
