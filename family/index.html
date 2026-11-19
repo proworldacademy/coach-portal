@@ -72,7 +72,7 @@ details.past summary:hover{color:var(--ink)}
 /* the client home, "C · Your mix" (Nov 17, 2026) */
 .ch{display:flex;flex-direction:column;gap:18px;margin:6px 0 30px;max-width:none}
 /* the schedule and the messages of the client home (Nov 17, 2026) */
-.ch-card[id]{scroll-margin-top:84px}
+.ch-card[id],#billing,#schedule,#messages{scroll-margin-top:84px}   /* Nov 19: Billing from the bottom bar landed with its title under the top bar */
 .ch-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .ch-mon{display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px}.ch-mon b{font-size:15px}.ch-mon button{width:36px;height:36px;border-radius:50%;border:1px solid rgba(10,10,10,.18);background:#fff;font-size:20px;line-height:1;cursor:pointer}.ch-mon button:disabled{opacity:.3;cursor:default}
 .ch-cal span{display:block}
