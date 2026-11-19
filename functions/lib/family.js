@@ -49,9 +49,16 @@ async function findPlayers(db, stripe, email) {
     if (!feed.players.some(same)) feed = await FEED.roster(db, { fresh: true });
     for (const p of feed.players) if (same(p)) ids.add(p.id);
   } catch (e) { /* the Stripe route below still finds enrolled families */ }
+  /* Another parent the family added in its account (Nov 19, 2026): familyLogins/<e-mail> = { players: [...] }, written by the
+     engine only. That e-mail signs in and sees the same players, and the bills kept under the family's main e-mail. */
+  const billEmails = new Set([email]);
+  try {
+    const l = await db.doc('familyLogins/' + email).get(); const lp = l.exists ? ((l.data() || {}).players || []) : [];
+    for (const id of lp) { ids.add(id); try { const c = await db.doc(`players/${id}/private/contact`).get(); const m = String((c.exists && (c.data() || {}).email) || '').trim().toLowerCase(); if (m) billEmails.add(m); } catch (e) { /* no contact */ } }
+  } catch (e) { /* no added sign-ins */ }
   if (stripe && stripe.customers && stripe.customers.list) {
     try {
-      for await (const c of stripe.customers.list({ email, limit: 20 })) {
+      for (const em of billEmails) for await (const c of stripe.customers.list({ email: em, limit: 20 })) {
         customers.push({ id: c.id, name: c.name || '', email: c.email || '', phone: c.phone || '', hasCard: !!(c.invoice_settings && c.invoice_settings.default_payment_method) });
         try { for (const d of (await db.collection('enrollments').where('customer', '==', c.id).get()).docs) { const l = d.data() || {}; if (l.player) ids.add(l.player); } } catch (e) { /* no ledger */ }
       }
@@ -373,6 +380,88 @@ async function people(db, who, body, players) {
   return { ok: true, people: extra.map((e) => ({ name: e.name, tail: tail4(e.phone) })) };
 }
 
+/* ── the account (Nov 19, 2026 — management: "a client in their portal has account information: change e-mails, add a parent,
+   add phone numbers, add a different e-mail, save a card") ──
+   What the family sees: the e-mails that can sign in (the main one is where the academy writes), the phone numbers on file, and
+   whether a card is saved. What it can do: add a parent or a contact (a name with an e-mail, a mobile, or both), make another
+   e-mail the main one, remove what it added. The card itself is kept by Stripe, on Stripe's own page; nothing of it is here.
+   players/<id>/private/contact.logins = [{ email, name, by, at }] and familyLogins/<e-mail>.players mirror each other. */
+const isEmail = (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v || ''));
+const low = (v) => String(v || '').trim().toLowerCase();
+async function contactOf(db, pid) { try { const x = await db.doc(`players/${pid}/private/contact`).get(); return x.exists ? (x.data() || {}) : {}; } catch (e) { return {}; } }
+async function accountOf(db, who, players, customers) {
+  const emails = new Map(); const phones = new Map();
+  for (const p of players || []) {
+    const c = await contactOf(db, p.id);
+    const main = low(c.email); if (main) emails.set(main, Object.assign(emails.get(main) || {}, { email: main, name: String(c.guardian || ''), main: true }));
+    for (const l of (Array.isArray(c.logins) ? c.logins : [])) { const e = low(l.email); if (e && !emails.has(e)) emails.set(e, { email: e, name: String(l.name || ''), main: false }); }
+    [[c.phone, 'On file'], [c.phone2, 'On file']].forEach(([ph, w]) => { const t = tail4(ph); if (t && !phones.has(t)) phones.set(t, { tail: t, name: w, fixed: true }); });
+    for (const x of (Array.isArray(c.extra) ? c.extra : [])) { const t = tail4(x.phone); if (t && !phones.has(t)) phones.set(t, { tail: t, name: String(x.name || ''), fixed: false }); }
+  }
+  if (!emails.has(who.email)) emails.set(who.email, { email: who.email, name: who.name || '', main: !Array.from(emails.values()).some((e) => e.main) });
+  return { email: who.email, emails: Array.from(emails.values()).map((e) => Object.assign(e, { me: e.email === who.email })).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0) || a.email.localeCompare(b.email)),
+    phones: Array.from(phones.values()), card: (customers || []).some((c) => c.hasCard), hasBilling: (customers || []).length > 0 };
+}
+async function account(db, who, body, players) {
+  body = body || {}; players = players || []; if (!players.length) throw S.err(404, 'player', 'There is no player on this account yet.');
+  const act = S.clean(body.action, 20); const short = players.map((p) => ROSTER.shortName(p.name)).join(' and ');
+  const setLogin = async (email, add) => {
+    const ref = db.doc('familyLogins/' + email); const snap = await ref.get(); const cur = new Set(snap.exists ? ((snap.data() || {}).players || []) : []);
+    players.forEach((p) => (add ? cur.add(p.id) : cur.delete(p.id)));
+    await ref.set({ players: Array.from(cur), by: who.email, updatedAt: Date.now() }, { merge: true });
+  };
+  if (act === 'add') {
+    const name = S.clean(body.name, 60); const email = low(S.clean(body.email, 120)); let digits = String(body.phone || '').replace(/\D+/g, ''); if (digits.length === 10) digits = '1' + digits;
+    if (!name) throw S.err(400, 'name', 'What is their name?');
+    if (!email && !digits) throw S.err(400, 'what', 'Add an e-mail, a mobile number, or both.');
+    if (email && !isEmail(email)) throw S.err(400, 'email', 'That e-mail does not look right.');
+    if (digits && (digits.length < 11 || digits.length > 15)) throw S.err(400, 'phone', 'That does not look like a mobile number. Include the area code.');
+    let addedEmail = false, addedPhone = false, told = false;
+    for (const p of players) {
+      const ref = db.doc(`players/${p.id}/private/contact`); const c = await contactOf(db, p.id); const patch = {};
+      if (email && low(c.email) !== email) { const logins = Array.isArray(c.logins) ? c.logins.slice() : []; if (!logins.some((l) => low(l.email) === email)) { if (logins.length >= 4) throw S.err(400, 'full', 'Four extra e-mails is the most. Remove one first.'); logins.push({ email, name, by: who.email, at: Date.now() }); patch.logins = logins; addedEmail = true; } }
+      if (digits) { const extra = Array.isArray(c.extra) ? c.extra.slice() : []; const on = [c.phone, c.phone2].concat(extra.map((e) => e.phone)).some((x) => String(x || '').replace(/\D+/g, '').slice(-10) === digits.slice(-10));
+        if (!on) { if (extra.length >= 4) throw S.err(400, 'full', 'Four extra numbers is the most. Remove one first.'); extra.push({ name, phone: '+' + digits, by: who.email, at: Date.now() }); patch.extra = extra; addedPhone = true; } }
+      if (Object.keys(patch).length) await ref.set(Object.assign(patch, { updatedAt: Date.now() }), { merge: true });
+    }
+    if (email) await setLogin(email, true);
+    if (!addedEmail && !addedPhone) throw S.err(400, 'dup', 'That is already on your account.');
+    if (addedPhone) { try { told = await NOTIFY.text(db, '+' + digits, `${who.name || 'A parent'} added you to ${short}'s account at ProWorld Academy. The coaches may text you about training. Reply STOP if you do not want these texts.`); } catch (e) { told = false; } }
+    try { await NOTIFY.slack(db, 'desk', `*A family added a contact to its account* — ${players.map((p) => p.name).join(', ')}`, [`${name}${addedEmail ? ' · an e-mail that can now sign in' : ''}${addedPhone ? ' · a number ending ' + digits.slice(-4) : ''}`, `Added by the family (${who.email}) in the client account.`]); } catch (e) { /* a notice only */ }
+    return { ok: true, addedEmail, addedPhone, told };
+  }
+  if (act === 'email-remove') {
+    const email = low(body.email); if (!email) throw S.err(400, 'email', 'Which e-mail?');
+    if (email === who.email) throw S.err(400, 'self', 'That is the e-mail you are signed in with. Sign in with another one to remove it.');
+    for (const p of players) { const c = await contactOf(db, p.id); if (low(c.email) === email) throw S.err(400, 'main', 'That is the main e-mail. Make another one the main e-mail first.');
+      const logins = (Array.isArray(c.logins) ? c.logins : []).filter((l) => low(l.email) !== email); await db.doc(`players/${p.id}/private/contact`).set({ logins, updatedAt: Date.now() }, { merge: true }); }
+    await setLogin(email, false); return { ok: true };
+  }
+  if (act === 'email-main') {
+    const email = low(body.email); if (!isEmail(email)) throw S.err(400, 'email', 'Which e-mail?');
+    for (const p of players) {
+      const c = await contactOf(db, p.id); const old = low(c.email); if (old === email) continue;
+      let logins = Array.isArray(c.logins) ? c.logins.slice() : []; const mine = logins.find((l) => low(l.email) === email);
+      if (!mine && email !== who.email) throw S.err(400, 'unknown', 'Add that e-mail to the account first.');
+      logins = logins.filter((l) => low(l.email) !== email);
+      if (old && !logins.some((l) => low(l.email) === old)) logins.push({ email: old, name: String(c.guardian || ''), by: who.email, at: Date.now() });   // the old one still signs in, until the family removes it
+      await db.doc(`players/${p.id}/private/contact`).set({ email, logins, updatedAt: Date.now() }, { merge: true });
+      if (old) { const ref = db.doc('familyLogins/' + old); const sn = await ref.get(); const cur = new Set(sn.exists ? ((sn.data() || {}).players || []) : []); cur.add(p.id); await ref.set({ players: Array.from(cur), by: who.email, updatedAt: Date.now() }, { merge: true }); }
+    }
+    await setLogin(email, true);
+    try { await NOTIFY.slack(db, 'desk', `*A family changed its main e-mail* — ${players.map((p) => p.name).join(', ')}`, [`Changed by the family (${who.email}) in the client account. The old e-mail still signs in until they remove it.`]); } catch (e) { /* a notice only */ }
+    try { FEED.forget && FEED.forget(); } catch (e) { /* the feed refreshes within a minute */ }
+    return { ok: true };
+  }
+  if (act === 'phone-remove') {
+    const t = tail4(body.tail); if (!t) throw S.err(400, 'phone', 'Which number?');
+    let n = 0; for (const p of players) { const c = await contactOf(db, p.id); const extra = Array.isArray(c.extra) ? c.extra : []; const keep = extra.filter((e) => tail4(e.phone) !== t); if (keep.length !== extra.length) { n++; await db.doc(`players/${p.id}/private/contact`).set({ extra: keep, updatedAt: Date.now() }, { merge: true }); } }
+    if (!n) throw S.err(400, 'fixed', 'That number is the one on file with the academy. Write to Admin to change it.');
+    return { ok: true };
+  }
+  throw S.err(400, 'action', 'Unknown action.');
+}
+
 /* ── renewing here (Nov 18, 2026 — management: "now that we have the clients in the programs they're in, we renew them through our
    app… December 1st") ──
    A player brought over from Play by Point with no plan here yet gets a "Renew" card: the program and the days-a-week plan read
@@ -423,13 +512,16 @@ async function me(db, stripe, who, opts) {
   const bill = await billing(stripe, customers, today);
   let requests = [];
   try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
-  return { ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
+  return { account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
 /* ── the family's Stripe account page (card, invoices, receipts) ── */
 async function portal(stripe, who, db) {
-  const { customers } = await findPlayers(db, stripe, who.email);
-  const c = customers[0];
+  const { customers, players } = await findPlayers(db, stripe, who.email);
+  let c = customers[0];
+  /* Nov 19, 2026: a family brought over from Play by Point has no payment account here yet. Saving a card makes one (a name and
+     an e-mail at Stripe; nothing is charged), so the card is there when the family renews. */
+  if (!c && stripe && players.length) { const made = await S.findOrCreateCustomer(stripe, { email: who.email, name: who.name || '', by: 'client-account' }); c = made && { id: made.id }; }
   if (!c) throw S.err(404, 'customer', 'We do not have a payment account under this e-mail yet. Enroll a player first, or text the front desk at ' + NOTIFY.FRONT_DESK + '.');
   return { url: await S.portalUrl(stripe, c.id, ROSTER.SITE + '/family') };
 }
@@ -449,4 +541,4 @@ async function request(db, who, body, players) {
   return { ok: true, id: ref.id, kind, kindLabel: REQUEST_KINDS[kind] };
 }
 
-module.exports = { people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, chat, message, coachesOf, REQUEST_KINDS, TITLES };
+module.exports = { account, accountOf, people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, chat, message, coachesOf, REQUEST_KINDS, TITLES };

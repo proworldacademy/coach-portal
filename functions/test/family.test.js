@@ -276,6 +276,25 @@ test('a by-the-session player books sessions of a day; a monthly player cannot; 
   assert.ok(nums.numbers.some((n) => n.phone === '+15615550177' && n.name === 'Dad'));
   assert.deepEqual((await FAMILY.me(db, null, who, { today })).players.find((p) => p.id === 'as-mia-r').people, [{ name: 'Dad', tail: '0177' }]);
   assert.deepEqual((await FAMILY.people(db, who, { player: 'as-mia-r', remove: '0177', name: 'Dad' }, players)).people, []);
+  // the account (Nov 19): add a parent with an e-mail and a mobile; that e-mail signs in and sees the same players
+  await assert.rejects(() => FAMILY.account(db, who, { action: 'add', name: 'Dad' }, players), /e-mail, a mobile/);
+  const add = await FAMILY.account(db, who, { action: 'add', name: 'Dad Rivera', email: 'Dad.Rivera@Example.test', phone: '561 555 0188' }, players);
+  assert.equal(add.addedEmail, true); assert.equal(add.addedPhone, true);
+  const dad = { uid: 'd', email: 'dad.rivera@example.test', name: 'Dad Rivera' };
+  assert.deepEqual((await FAMILY.findPlayers(db, null, dad.email)).players.map((p) => p.id).sort(), players.map((p) => p.id).sort());
+  let acc = (await FAMILY.me(db, null, who, { today })).account;
+  assert.deepEqual(acc.emails.map((e) => e.email + (e.main ? '*' : '')), [who.email + '*', 'dad.rivera@example.test']);
+  assert.ok(acc.phones.some((x) => x.tail === '0188' && !x.fixed));
+  await assert.rejects(() => FAMILY.account(db, who, { action: 'email-remove', email: who.email }, players), /signed in with/);
+  await FAMILY.account(db, who, { action: 'email-main', email: 'dad.rivera@example.test' }, players);
+  acc = (await FAMILY.me(db, null, who, { today })).account;
+  assert.deepEqual(acc.emails.filter((e) => e.main).map((e) => e.email), ['dad.rivera@example.test']);
+  assert.ok((await FAMILY.findPlayers(db, null, who.email)).players.length === players.length, 'the old main e-mail still signs in');
+  await FAMILY.account(db, who, { action: 'email-main', email: who.email }, players);
+  await FAMILY.account(db, who, { action: 'email-remove', email: 'dad.rivera@example.test' }, players);
+  assert.equal((await FAMILY.findPlayers(db, null, dad.email)).players.length, 0, 'a removed e-mail no longer reaches the players');
+  await FAMILY.account(db, who, { action: 'phone-remove', tail: '0188' }, players);
+  assert.ok(!(await FAMILY.me(db, null, who, { today })).account.phones.some((x) => x.tail === '0188'));
 });
 
 test('each coach and Admin can be reached from the family\'s own phone: the coach\'s academy number and e-mail, the academy line for Admin', async () => {
