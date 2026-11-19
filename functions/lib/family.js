@@ -465,6 +465,34 @@ async function account(db, who, body, players) {
     try { FEED.forget && FEED.forget(); } catch (e) { /* the feed refreshes within a minute */ }
     return { ok: true };
   }
+  /* The family keeps its own profile (Nov 19, 2026 — management: "they should be able to change their profile themselves, and any
+     change updates the player's profile"): the parent's name and the numbers on file. The change is written on every player of
+     the family, so the coaches' Contact and the player's page show it at once. The front desk is told. */
+  if (act === 'name') {
+    const name = S.clean(body.name, 80); if (!name || name.length < 2) throw S.err(400, 'name', 'What is your name?');
+    for (const p of players) { const c = await contactOf(db, p.id); const patch = {};
+      if (!low(c.email) || low(c.email) === who.email) patch.guardian = name;
+      else { const logins = (Array.isArray(c.logins) ? c.logins : []).map((l) => (low(l.email) === who.email ? Object.assign({}, l, { name }) : l)); patch.logins = logins; }
+      await db.doc(`players/${p.id}/private/contact`).set(Object.assign(patch, { updatedAt: Date.now() }), { merge: true }); }
+    try { await NOTIFY.slack(db, 'desk', `*A family changed the name on its account* — ${players.map((p) => p.name).join(', ')}`, [`Now: ${name}`, `Changed by the family (${who.email}) in the client account.`]); } catch (e) { /* a notice only */ }
+    try { FEED.forget && FEED.forget(); } catch (e) { /* refreshes within a minute */ }
+    return { ok: true };
+  }
+  if (act === 'phone-change') {
+    const t = tail4(body.tail); let digits = String(body.phone || '').replace(/\D+/g, ''); if (digits.length === 10) digits = '1' + digits;
+    if (!t) throw S.err(400, 'phone', 'Which number?');
+    if (digits.length < 11 || digits.length > 15) throw S.err(400, 'phone', 'That does not look like a mobile number. Include the area code.');
+    const next = '+' + digits; let n = 0;
+    for (const p of players) { const c = await contactOf(db, p.id); const patch = {};
+      if (tail4(c.phone) === t) patch.phone = next; else if (tail4(c.phone2) === t) patch.phone2 = next;
+      else if ((Array.isArray(c.extra) ? c.extra : []).some((x) => tail4(x.phone) === t)) patch.extra = c.extra.map((x) => (tail4(x.phone) === t ? Object.assign({}, x, { phone: next, by: who.email, at: Date.now() }) : x));
+      if (Object.keys(patch).length) { n++; await db.doc(`players/${p.id}/private/contact`).set(Object.assign(patch, { updatedAt: Date.now() }), { merge: true }); } }
+    if (!n) throw S.err(404, 'phone', 'That number is not on this account.');
+    let told = false; try { told = await NOTIFY.text(db, next, `This number is now on file for ${short} at ProWorld Academy. The coaches may text you about training. Reply STOP if you do not want these texts.`); } catch (e) { told = false; }
+    try { await NOTIFY.slack(db, 'desk', `*A family changed a phone number on its account* — ${players.map((p) => p.name).join(', ')}`, [`The number ending ${t} is now one ending ${digits.slice(-4)}.`, `Changed by the family (${who.email}) in the client account. The coaches' Contact uses the new number.`]); } catch (e) { /* a notice only */ }
+    try { FEED.forget && FEED.forget(); } catch (e) { /* refreshes within a minute */ }
+    return { ok: true, told };
+  }
   if (act === 'phone-remove') {
     const t = tail4(body.tail); if (!t) throw S.err(400, 'phone', 'Which number?');
     let n = 0; for (const p of players) { const c = await contactOf(db, p.id); const extra = Array.isArray(c.extra) ? c.extra : []; const keep = extra.filter((e) => tail4(e.phone) !== t); if (keep.length !== extra.length) { n++; await db.doc(`players/${p.id}/private/contact`).set({ extra: keep, updatedAt: Date.now() }, { merge: true }); } }
