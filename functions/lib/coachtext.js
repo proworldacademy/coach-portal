@@ -215,7 +215,7 @@ async function text(db, who, body) {
     if (i) await pace(PACE_MS);
     let r = null, err = '';
     try { r = await SMS.justcallSend({ key: s.justcallKey, secret: s.justcallSecret }, fromNum, to.phone, full); } catch (e) { err = String(e.message || e).slice(0, 200); }
-    const line = { batch: batchRef.id, at: at + i, by: who.email, byName: who.name || who.email, player: p.id, playerName: p.name || p.id, group: p.group || '', program: '', coach: p.coach || '', phone: to.phone, to: to.slot || '', toName: to.name || '', conv: key, body: full, status: r ? 'sent' : 'failed', reason: '', attempts: 1, justcallId: r ? r.id : '', delivery: '', error: r ? '' : err, from: 'portal', line: fromNum, team };
+    const line = { batch: batchRef.id, at: at + i, by: who.email, byName: who.name || who.email, player: p.id, playerName: p.name || p.id, group: p.group || '', program: '', coach: p.coach || '', phone: to.phone, to: to.slot || '', toName: to.name || '', conv: key, body: full, status: r ? 'sent' : 'failed', reason: '', attempts: 1, justcallId: r ? r.id : '', delivery: '', error: r ? '' : err, from: 'portal', line: fromNum, team, group: clean(body.group, 40) || '' };
     if (r) { line.sentAt = Date.now(); sent++; } else { line.failedAt = Date.now(); failed++; lastErr = err; if (optedOutError(err)) { try { await SMS.setOptIn(db, p.id, false, { source: 'justcall', by: 'justcall', phone: to.phone }); } catch (e) { /* the line says failed */ } } }
     lines.push(Object.assign({ id: lineRef.id }, line)); await lineRef.set(line);
   }
@@ -473,4 +473,32 @@ async function appThread(db, p, email, t) {
   return lines;
 }
 
-module.exports = { teamOf, teamKeys, fromApp, appThread, text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };
+/* ── one message to many families (Nov 19, 2026 — management: "one messaging app for the coaches and the directors: text a group
+   lives inside Contact") ──
+   The same text to each family of a list of players, sent the way a single text is (from the sender's own number, on the family's
+   own chat, the player's team in it by default), so every answer comes back to that family's chat. The page sends the list a few
+   players at a time (`players`, six at most a call) under one id; coachGroups/<id> keeps what it was: who sent it, to which
+   list, the words, who got it and who was skipped and why. A coach reaches only their own players; a director any player. */
+const GROUP_CHUNK = 6;
+async function group(db, who, body, opts) {
+  body = body || {}; opts = opts || {}; const gid = clean(body.gid, 40).replace(/[^A-Za-z0-9_-]/g, ''); if (gid.length < 8) throw S.err(400, 'gid', 'The message has no id.');
+  const msg = SMS.gsmSafe(clean(body.body, MAX_BODY)); if (!msg) throw S.err(400, 'body', 'Write the message first.');
+  const ids = (Array.isArray(body.players) ? body.players : []).map((x) => clean(x, 60)).filter(Boolean).slice(0, GROUP_CHUNK); if (!ids.length) throw S.err(400, 'players', 'Pick at least one player.');
+  const ref = db.doc('coachGroups/' + gid); const snap = await ref.get(); const g = snap.exists ? (snap.data() || {}) : { by: who.email, byName: shortName(who), at: Date.now(), label: clean(body.label, 80) || 'A group', body: msg, total: Math.max(ids.length, Math.min(400, parseInt(body.total, 10) || ids.length)), got: [], skipped: [] };
+  if (g.by !== who.email) throw S.err(403, 'own', 'That message is someone else\'s.');
+  for (const pid of ids) {
+    if ((g.got || []).some((x) => x.id === pid) || (g.skipped || []).some((x) => x.id === pid)) continue;
+    let name = pid;
+    try { const ps = await db.doc('players/' + pid).get(); if (ps.exists) name = (ps.data() || {}).name || pid; const nums = (await numbersOf(db, pid)).numbers || []; if (!nums.length) throw S.err(400, 'nonumber', 'No number on file.');
+      const out = await text(db, who, { player: pid, to: nums[0].phone, body: msg, team: body.team, dry: opts.dry === true, group: gid });   // one text a family: the first number on the player's page
+      if (out.sent > 0) g.got.push({ id: pid, name, n: out.sent }); else g.skipped.push({ id: pid, name, why: 'The text did not go through.' }); }
+    catch (e) { g.skipped.push({ id: pid, name, why: clean((e && e.message) || 'Not sent.', 160) }); }
+  }
+  g.updatedAt = Date.now(); await ref.set(g);
+  return { ok: true, gid, sent: g.got.length, skipped: g.skipped.length, total: g.total, done: g.got.length + g.skipped.length >= g.total };
+}
+async function groups(db, who) {
+  let docs = []; try { docs = (await db.collection('coachGroups').where('by', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})); } catch (e) { docs = []; }
+  return { groups: docs.sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 30).map((g) => ({ id: g.id, at: g.at, label: g.label || 'A group', body: g.body || '', total: g.total || 0, got: (g.got || []).map((x) => ({ id: x.id, name: x.name })), skipped: (g.skipped || []).map((x) => ({ id: x.id, name: x.name, why: x.why })) })) };
+}
+module.exports = { group, groups, teamOf, teamKeys, fromApp, appThread, text, thread, inbox, markRead, onReply, numbersOf, signature, own, convKey, titleOf, scopeLines, ownLine, MAX_BODY, _seats: (m) => { SEATS.byEmail = new Map(Object.entries(m || {})); SEATS.at = Date.now(); }, _usePace: (fn) => { pace = fn || sleep; } };

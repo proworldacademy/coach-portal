@@ -318,3 +318,13 @@ test('a text is a team text by default (Nov 18): the other coach on the player r
   // a coach who is not on the player is never added, whatever the page asks for
   assert.deepEqual(COACHTEXT.teamOf({ coach: 'Kim', coach2: 'Lee' }, KIM, ['Lee', 'Zed']), ['lee']);
 });
+
+test('one message to many families (Nov 19): each family gets it on its own chat, the record says who got it and who was skipped', async () => {
+  const db = fakeDb(Object.assign({}, SEED)); wire(db);
+  const out = await COACHTEXT.group(db, KIM, { gid: 'grp-test-0001', label: 'My players', total: 2, players: ['ft-bo-k', 'nope-x'], body: 'No training Thursday.' }, { dry: true });
+  assert.equal(out.sent, 1); assert.equal(out.skipped, 1); assert.equal(out.done, true);
+  const g = (await COACHTEXT.groups(db, KIM)).groups; assert.equal(g.length, 1); assert.deepEqual(g[0].got.map((x) => x.id), ['ft-bo-k']); assert.equal(g[0].skipped[0].id, 'nope-x');
+  const t = await COACHTEXT.thread(db, KIM, 'ft-bo-k', { markRead: false }); assert.ok(t.lines.some((l) => /No training Thursday/.test(l.body)), 'the text is on the family\'s own chat');
+  await assert.rejects(() => COACHTEXT.group(db, LEE, { gid: 'grp-test-0001', players: ['ft-bo-k'], body: 'x' }, { dry: true }), /someone else/);
+  assert.equal((await COACHTEXT.groups(db, LEE)).groups.length, 0, 'a coach sees only the group messages they sent');
+});

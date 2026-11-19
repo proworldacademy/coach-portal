@@ -30,7 +30,7 @@ if (require.main === module) (async () => {
       log(/Guardian · Aunt/.test(await text(m, '.a2k-p .a2card')) && await m.locator('.a2row.a2f').count() === 4, n + ' player: a new number shows as a family line right away');
       await m.locator('[data-act="a2numbers"]').click(); await m.waitForTimeout(200);
       await m.locator('.a2fam[data-tail="0109"]').click(); await m.waitForTimeout(700);
-      log(await m.locator('#msgcard .ck-sw[data-act="msg-to"][aria-pressed="true"]', { hasText: 'Father' }).count() === 1, n + ' player: tapping the father opens his chat');
+      log(/To\s+Father/i.test((await m.locator('#msgcard .ck-sum').innerText()).replace(/\s+/g, ' ')), n + ' player: tapping the father opens his chat');
       // Call stays in the app: the JustCall dialer opens in a sheet, the number handed to it (Nov 13)
       await m.locator('.a2qa a[data-jc]').click(); await m.waitForTimeout(400);
       log(await m.evaluate(() => { const el = document.querySelector('#jcs'); const f = el && el.querySelector('iframe'); return !!el && !el.hidden && !!f && f.src === 'https://app.justcall.io/dialer' && /microphone/.test(f.allow) && /Bo Kessler/.test(el.querySelector('.jcs-t').textContent) && /justcall:\/\/app\/call\?number=%2B1561555/.test(el.querySelector('.jcs-app').getAttribute('href')); }), n + ' call: the dialer opens inside the portal, with the way out to the JustCall app');
