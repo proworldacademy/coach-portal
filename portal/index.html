@@ -55,6 +55,12 @@ b,strong{font-weight:700}
 /* Coach Board as lines, on every screen (Antonio, Oct 25): one player per line, like the group lists */
 .bps{display:flex;flex-direction:column;gap:0}.bps .bp{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;border:0;border-top:1px solid var(--line);border-radius:0;padding:9px 4px;background:transparent}.bps .bp:first-child{border-top:0}.bps .bp small{text-align:right;white-space:nowrap;flex:none}.bps .bp .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bps .bp:hover{background:var(--pw-sf2,#F6F6F2);border-color:var(--line)}
+.bps{min-width:0}.bps .bpw{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);min-width:0;width:100%;max-width:100%;overflow:hidden;padding-right:2px}.bps .bpw:first-child{border-top:0}
+.bps .bpw .bp{border-top:0!important;flex:1 1 0;min-width:0;width:auto}.bps .bpw .bp .pn{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.bps.flat .bpw:first-child{border-top:1px solid var(--line)}
+.bpw{display:inline-flex;align-items:center;gap:6px;max-width:100%}
+.bpg{flex:0 0 auto;width:124px!important;max-width:44%;text-overflow:ellipsis;font-size:11.5px;padding:4px 22px 4px 9px;border-radius:999px;color:var(--ink-2,#444);background-color:var(--pw-sf2,#F3F3EE);border:1px solid transparent;min-height:0}
+.bpg:hover,.bpg:focus{border-color:var(--ink)}
 .bp[draggable]{cursor:grab;-webkit-user-drag:element}.bp.dragging{opacity:.4}
 .dz.over{outline:2px dashed var(--ink);outline-offset:4px;border-radius:10px;background:#F6FFD6}
 .undo-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--pw-sf,#fff);border-radius:14px;padding:10px 14px;margin:-4px 0 18px;font-size:13px;box-shadow:var(--shadow)}
@@ -4914,7 +4920,12 @@ const PW_CONFIG = {
     const gl = (gid) => { const g = groups().find((x) => x.id === gid); return g ? g.label : (gid || 'No group'); };
     const GIDS = groups().map((g) => g.id).concat(['']);
     const canDrag = EDITION === 'web' && WEB.isDirector;
-    const bp = (p, extra) => `<button class="bp" data-pid="${esc(p.id)}"${canDrag ? ' draggable="true"' : ''} ${goAttr({ view: 'player', pid: p.id })}><span class="pn">${esc(p.name)}</span>${[gl(p.group)].concat(extra || []).filter(Boolean).length ? `<small>${esc([gl(p.group)].concat(extra || []).filter(Boolean).join(' · '))}</small>` : ''}</button>`;
+    /* Nov 19, 2026 (management): the group is changed right next to the player. For a director the group on each line is a small
+       menu; pick another group and it is saved. Everyone else reads the group as text, as before. */
+    const gsel = (p) => `<select class="bpg" data-board-set="group" data-pid="${esc(p.id)}" aria-label="Group of ${esc(p.name)}"><option value="">No group</option>${groups().map((g) => `<option value="${esc(g.id)}"${g.id === (p.group || '') ? ' selected' : ''}>${esc(g.label)}</option>`).join('')}</select>`;
+    const bp = (p, extra) => { const ex = (extra || []).filter(Boolean); const small = (canDrag ? ex : [gl(p.group)].concat(ex)).filter(Boolean);
+      const btn = `<button class="bp" data-pid="${esc(p.id)}"${canDrag ? ' draggable="true"' : ''} ${goAttr({ view: 'player', pid: p.id })}><span class="pn">${esc(p.name)}</span>${small.length ? `<small>${esc(small.join(' · '))}</small>` : ''}</button>`;
+      return canDrag ? `<div class="bpw">${btn}${gsel(p)}</div>` : btn; };
     const T = tryouts(); const tries = T.today.concat(T.week, T.later);
     const today = todayISO();
     const newOnes = act.filter((p) => p.pbpNote && /^Added/.test(p.pbpNote));
