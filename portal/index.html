@@ -2688,13 +2688,16 @@ const PW_CONFIG = {
     const on = EDITION === 'web' ? WEB.stage === 'in' : !!S.db; el.hidden = !on; if (!on) { el.innerHTML = ''; const f = $('#fupill'); if (f) f.hidden = true; return; }
     const v = S.route.view; const sec = v === 'tryouts' || v === 'tryout' ? 'tryouts' : v === 'board' ? 'board' : v === 'calendar' ? 'calendar' : v === 'contact' || v === 'messages' ? 'contact' : v === 'staff' ? 'staff' : v === 'commit' ? 'commit' : v === 'players' || v === 'group' || v === 'player' || v === 'report' || v === 'edit' ? 'players' : 'home';
     const nOpen = S.db ? openCount() : 0;
-    const items = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
+    /* Nov 19, 2026: Privates, Attendance and Parent news live on the Admin page. Someone who was not given that page is not shown a link that would only refuse them. */
+    const hasBk = EDITION !== 'web' || WEB.isOwner || WEB.isAdmin || ((WEB.staff && WEB.staff.pages) || []).some((x) => ['backend', 'be-owner', 'be-desk', 'be-coach', 'be-parent'].includes(x));
+    const items0 = (EDITION === 'web' && WEB.tryoutsOnly) ? [['tryouts', 'Try-outs', { view: 'tryouts' }]]
       : [['home', 'Reminders', { view: 'home' }], ['players', 'Players', { view: 'players' }]]
         // the four a coach has (Antonio and Lorenzo, Nov 13, the whiteboard): Reminders · Players · Contact (texts and calls) · Privates (the booking page).
         // Try-outs, the Coach Board, Attendance, Courts and Staff & access left this row: they open from the Dashboard menu (Coaches), for directors and owners.
         .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['team', 'Locker Room', '/team'], ['privates', 'Privates', '/backend#privates'], ['calendar', 'Calendar', { view: 'calendar' }]] : [])
         // Nov 18, 2026 (management): the strip carries the whole Coaches menu, so nothing is two taps away. A director's has it all.
         .concat(EDITION === 'web' && WEB.isDirector ? [['attendance', 'Attendance', '/backend#attendance'], ['board', 'Coach Board', { view: 'board' }], ['news', 'Parent news', '/backend#news'], ['staff', 'Staff & access', { view: 'staff' }]] : []);   // Team (Nov 15): the team's own messaging, /team
+    const items = items0.filter((x) => hasBk || !(typeof x[2] === 'string' && x[2].indexOf('/backend') === 0));
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
     const TI = { home: 'bell', players: 'users', contact: 'msg', team: 'team', privates: 'cal', calendar: 'cal', attendance: 'check', grouptext: 'send', board: 'users', news: 'file', staff: 'file' }; const ti = (k) => (TI[k] ? a2i(TI[k], 'ti') : '');

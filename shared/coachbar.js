@@ -64,7 +64,7 @@
     try {
       const role = String((ctx && ctx.rec && ctx.rec.role) || '').toLowerCase();
       if (!ctx || ctx.owner || !ctx.has || !ctx.has('coach-portal') || !(role === 'coach' || role === 'director')) { draw(null); return false; }
-      draw([['Reminders', '/portal/#/', I.bell, 'home'], ['Players', '/portal/#/players', I.people, 'players'], ['Contact', '/portal/#/messages', I.chat, 'contact'], ['Locker Room', '/team', I.team, 'team'], ['Privates', '/backend#privates', I.cal, 'privates']], active, 'Coach Portal'); return true;
+      draw([['Reminders', '/portal/#/', I.bell, 'home'], ['Players', '/portal/#/players', I.people, 'players'], ['Contact', '/portal/#/messages', I.chat, 'contact'], ['Locker Room', '/team', I.team, 'team']].concat(ctx.has('backend') ? [['Privates', '/backend#privates', I.cal, 'privates']] : [['Calendar', '/portal/#/calendar', I.cal, 'calendar']]), active, 'Coach Portal'); return true;   // Nov 19: Privates only for who holds the Admin page
     } catch (e) { return false; }
   };
   /* Every side has a bar on a phone (Nov 14, 2026 — "yes, bottom bar"). The page calls PWSideBar(ctx, where) once it knows who is in:
