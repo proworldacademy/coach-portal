@@ -74,6 +74,10 @@ details.past summary:hover{color:var(--ink)}
 /* the schedule and the messages of the client home (Nov 17, 2026) */
 .ch-card[id]{scroll-margin-top:84px}
 .ch-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.ch-mon{display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px}.ch-mon b{font-size:15px}.ch-mon button{width:36px;height:36px;border-radius:50%;border:1px solid rgba(10,10,10,.18);background:#fff;font-size:20px;line-height:1;cursor:pointer}.ch-mon button:disabled{opacity:.3;cursor:default}
+.ch-cal span{display:block}
+.ch-book{margin-top:8px}
+.ch-back{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:40;display:none;align-items:center;gap:6px;border:0;border-radius:999px;background:#0A0A0A;color:#fff;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;padding:11px 16px;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}.ch-back.on{display:inline-flex}@media(min-width:900px){.ch-back{bottom:24px}}
 .ch-cal b{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5E605A;text-align:center;font-weight:700;padding-bottom:2px}
 .ch-cal button{position:relative;aspect-ratio:1/1;min-height:40px;border-radius:14px;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;font-weight:700;font-size:15px;font-family:inherit;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ch-cal button small{position:absolute;top:3px;left:0;right:0;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;line-height:1;opacity:.75}
@@ -272,7 +276,6 @@ function playerCard(p){
       ${plan?`<dt>Program</dt><dd>${plan}${en.start?`<span class="hint"> · since ${esc(short(en.start))}</span>`:''}</dd>`:'<dt>Program</dt><dd class="hint">On the roster — billing not through this account yet.</dd>'}
       ${next?`<dt>Next charge</dt><dd>${next}</dd>`:''}
       <dt>${esc(a.month||'This month')}</dt><dd>${a.present||a.missed?`<b>${a.present}</b> session${a.present===1?'':'s'} attended${a.missed?` · <b>${a.missed}</b> missed`:''}`:'<span class="hint">No posted sessions yet this month.</span>'}${days?`<div class="days">${days}</div>`:''}</dd>
-      ${p.reports.length?`<dt>Reports</dt><dd><a href="#reports">${p.reports.length} report${p.reports.length===1?'':'s'} from the coaches</a></dd>`:''}
       ${p.purchases.length?`<dt>Purchases</dt><dd>${p.purchases.slice(0,4).map(x=>esc(x.label)+' · '+cents(x.cents)).join('<br>')}</dd>`:''}
     </dl>
   </div>`;
@@ -295,8 +298,6 @@ function billingBlock(){
   return `<section class="sec" id="billing"><div class="sec-h"><h2>Billing</h2><small>${inv.length?inv.length+' to pay':onCycle?'renews '+esc(onCycle):'the 1st of each month'}</small></div>
     ${subs.length?`<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>Player</th><th>Plan</th><th>Status</th><th class="r">Next charge</th></tr></thead><tbody>${rows}</tbody></table></div><p class="fine">${onCycle?'This plan renews '+esc(onCycle)+' on the card on file until it is cancelled.':'Tuition bills on the 1st of each month for that month\'s training days; school breaks are taken off before the charge. Late policy: a $50 late fee on the 6th, the spot goes on hold on the 10th.'} <a href="/enroll/agreement">Program policies</a>.</p></div>`:`<div class="card"><p class="hint">No monthly plan through this account yet. <a href="/enroll">Enroll a player</a> — nothing is charged until the start month, and your card is kept on file for everything after.</p></div>`}
     ${inv.length?`<div class="card"><h3>Open invoices</h3><div class="scroll"><table class="tbl"><tbody>${open}</tbody></table></div></div>`:''}
-    ${(function(){const p=(me.players||[]).find(x=>x.id===SEL);if(!p)return '';const en=p.enroll;const days=en&&en.days&&en.days.length?en.days.join(' · '):'';
-      return `<div class="card"><h3>${esc(p.shortName||p.name)} is enrolled in</h3><p style="margin:6px 0 0"><b>${esc((en&&(en.programName||en.programShort))||p.groupLabel||'No program on file yet')}</b>${en&&en.planLabel?' · '+esc(en.planLabel):''}${days?'<br><span class="hint">'+esc(days)+'</span>':''}</p></div>`})()}
     ${(b.paidInvoices||[]).length?`<div class="card"><h3>Invoices paid</h3><div class="scroll"><table class="tbl"><tbody>${b.paidInvoices.map(i=>`<tr><td>${esc(i.description)}<br><span class="hint">${esc(nice(i.date))}</span></td><td class="r">${cents(i.cents)}</td><td class="r">${i.pdf?`<a class="btn sm" href="${esc(i.pdf)}" target="_blank" rel="noopener">Download</a>`:''}</td></tr>`).join('')}</tbody></table></div></div>`:''}
     <div class="rowx"><button class="btn ghost sm" type="button" data-ask="invoice">Ask for an invoice</button><span class="hint">For a scholarship, your accountant or your records. The admin team sends it to your e-mail.</span></div>
     ${b.customers.length?`<div class="rowx"><button class="btn" id="portal">Manage card, invoices &amp; receipts <span class="ar">→</span></button><span class="hint">Opens your secure Stripe account page.</span></div>`:''}</section>`;
@@ -335,34 +336,41 @@ function trainSet(p){return ((p.enroll&&p.enroll.days)||[]).map(d=>String(d).sli
 function dayInfo(p,iso){const dt=new Date(iso+'T12:00:00');const w=d3(dt);const closed=(p.closed||[]).includes(iso);const tr=trainSet(p);const k=dayKind(p,iso);
   const kind=k||(tr.includes(w)&&!closed?'train':'');const open=(p.openDays||[]).map(x=>String(x).toLowerCase()).includes(w)&&!closed;
   return{iso,dt,kind,past:iso<me.today,open,pick:iso>=me.today&&(!!kind||open),noDays:!tr.length,flex:!!p.flex&&(p.sessions||[]).length>0}}
+let CALMON='';   // the month on screen, YYYY-MM (Nov 19, 2026: "make sure the calendar has more months")
 function scheduleC(p,nm){
   const pvs=p.privates||[];const pvOn=new Set(pvs.map(x=>x.date));
-  const t=new Date(String(me.today)+'T12:00:00');const start=new Date(t.getTime()-((t.getDay()+6)%7)*864e5);const cells=[];
-  for(let i=0;i<35;i++){const dt=new Date(start.getTime()+i*864e5);const iso=ymd(dt);const x=dayInfo(p,iso);
-    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${x.pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${i===0||dt.getDate()===1?`<small>${dt.toLocaleDateString('en-US',{month:'short'})}</small>`:''}${dt.getDate()}${pvOn.has(iso)?'<u class="pv" aria-label="private lesson"></u>':''}</button>`)}
+  const t=new Date(String(me.today)+'T12:00:00');if(!CALMON)CALMON=String(me.today).slice(0,7);
+  const [my,mm]=CALMON.split('-').map(Number);const first=new Date(my,mm-1,1,12);const lead=(first.getDay()+6)%7;const nDays=new Date(my,mm,0).getDate();
+  const maxMon=ymd(new Date(t.getFullYear(),t.getMonth()+12,1,12)).slice(0,7);const minMon=String(me.today).slice(0,7);
+  const cells=[];for(let i=0;i<lead;i++)cells.push('<span></span>');
+  for(let d=1;d<=nDays;d++){const dt=new Date(my,mm-1,d,12);const iso=ymd(dt);const x=dayInfo(p,iso);const pick=iso>=me.today;   // any day from today can be tapped: a training day, a day off, or a day to book a private
+    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${d}${pvOn.has(iso)?'<u class="pv" aria-label="private lesson"></u>':''}</button>`)}
+  const monNav=`<div class="ch-mon"><button type="button" data-mon="-1" ${CALMON>minMon?'':'disabled'} aria-label="Previous month">‹</button><b>${esc(first.toLocaleDateString('en-US',{month:'long',year:'numeric'}))}</b><button type="button" data-mon="1" ${CALMON<maxMon?'':'disabled'} aria-label="Next month">›</button></div>`;
   let pick='';
-  if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));
+  if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));const ptime=p.enroll&&p.enroll.time?' · '+esc(p.enroll.time):'';
     const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
     const bk=(p.days||[]).find(d=>d.date===CALSEL&&d.kind==='book');if(x.flex&&x.pick&&!PICK)PICK=(bk&&bk.sessions||[]).slice();
-    pick=!x.pick?'':x.flex?`<div class="ch-pick col" role="group" aria-label="Sessions"><div><b>${day}</b><span>Pick the session${(p.sessions||[]).length>1?'s':''} ${nm} is coming to.</span></div><div class="ch-ses">${(p.sessions||[]).map(m=>`<button type="button" data-ses="${esc(m.id)}" aria-pressed="${(PICK||[]).includes(m.id)}"><b>${esc(m.time)}</b>${esc(m.label)}</button>`).join('')}</div><button type="button" class="ch-btn" data-day-do="book">${bk?((PICK||[]).length?'Save the change':'Take this day off'):'Book'}</button></div>`:x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
+    const dayPv=pvs.filter(v=>v.date===CALSEL).map(v=>`<div class="ch-pick"><div><b>Private${v.coach?' with Coach '+esc(v.coach):''}</b><span>${esc(v.time||'')}</span></div></div>`).join('');
+    const core=x.flex&&x.pick?`<div class="ch-pick col" role="group" aria-label="Sessions"><div><b>${day}</b><span>Pick the session${(p.sessions||[]).length>1?'s':''} ${nm} is coming to.</span></div><div class="ch-ses">${(p.sessions||[]).map(m=>`<button type="button" data-ses="${esc(m.id)}" aria-pressed="${(PICK||[]).includes(m.id)}"><b>${esc(m.time)}</b>${esc(m.label)}</button>`).join('')}</div><button type="button" class="ch-btn" data-day-do="book">${bk?((PICK||[]).length?'Save the change':'Take this day off'):'Book'}</button></div>`
+      :x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
       :x.kind==='makeup'?row('A make-up day.',`<button type="button" class="ch-btn line" data-day-do="nomakeup">Remove</button>`)
-      :x.kind==='train'||x.noDays?row(x.noDays?'':'A training day.',`<button type="button" class="ch-btn" data-day-do="away">Mark away</button>`)
-      :left>0?row(`Not a training day. ${left} make-up day${left===1?'':'s'} to use.`,`<button type="button" class="ch-btn" data-day-do="makeup">Make up here</button>`)
-      :row('Not a training day. A make-up day goes with a day missed: mark the day away first.')}
+      :x.kind==='train'?row(`Training day${ptime}. ${nm} is coming.`,`<button type="button" class="ch-btn line" data-day-do="away">Not coming</button>`)
+      :x.noDays&&x.pick?row('',`<button type="button" class="ch-btn line" data-day-do="away">Not coming</button>`)
+      :left>0&&x.pick&&x.open?row(`Not a training day. ${left} make-up day${left===1?'':'s'} to use.`,`<button type="button" class="ch-btn" data-day-do="makeup">Make up here</button>`)
+      :'';
+    /* Book from the day (Nov 19, 2026): a tennis, fitness or mental private on any day, in or out of the program */
+    const book=`<div class="ch-pick col ch-book"><div><b>${core?'Also that day':day}</b><span>Book a private with a coach.</span></div><div class="ch-ses">${[['tennis','Tennis private'],['fitness','Fitness private'],['mental','Mental private']].map(([k,l])=>`<button type="button" data-book="${k}" data-book-day="${esc(CALSEL)}"><b>${l}</b>${k==='tennis'?'With a tennis coach':k==='fitness'?'With Tara':'With Tonio'}</button>`).join('')}</div></div>`;
+    pick=dayPv+core+book}
   const left=p.makeupsLeft||0;const flex=!!p.flex&&(p.sessions||[]).length>0;const open=flex||CALOPEN[p.id]!==false;   // Nov 19: the calendar shows from the start; Close folds it
-  /* What is coming (Nov 19, 2026): the next training days and the privates, one line each, so a parent reads the plan at a glance */
+  /* What is coming (Nov 19, 2026): the next training days and the privates, one line each with the time, so a parent reads the plan at a glance */
   const soon=[];for(let i=0;i<21&&soon.length<12;i++){const dt=new Date(t.getTime()+i*864e5);const iso=ymd(dt);const x=dayInfo(p,iso);
-    if(x.kind==='train'||x.kind==='makeup'||x.kind==='book')soon.push({iso,what:x.kind==='makeup'?'Make-up day':(p.enroll&&(p.enroll.programShort||p.enroll.programName))||p.groupLabel||'Training',k:x.kind});
+    if(x.kind==='train'||x.kind==='makeup'||x.kind==='book')soon.push({iso,what:x.kind==='makeup'?'Make-up day':(p.enroll&&(p.enroll.programShort||p.enroll.programName))||p.groupLabel||'Training',time:x.kind==='book'?(((p.days||[]).find(d=>d.date===iso)||{}).sessions||[]).map(id=>((p.sessions||[]).find(m=>m.id===id)||{}).time).filter(Boolean).join(', '):(p.enroll&&p.enroll.time)||'',k:x.kind});
     pvs.filter(v=>v.date===iso).forEach(v=>soon.push({iso,what:'Private'+(v.coach?' with Coach '+v.coach:''),time:v.time,k:'pv'}))}
   const list=soon.length?`<p class="ch-sub">Coming up</p><ul class="ch-soon">${soon.slice(0,6).map(x=>`<li><i class="${x.k}"></i><b>${esc(x.iso===me.today?'Today':new Date(x.iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</b><span>${esc(x.what)}${x.time?' · '+esc(x.time):''}</span></li>`).join('')}</ul>`:'';
   const pvKey='<span><i class="pv"></i>Private</span>';const key=flex?`<div class="ch-key"><span><i></i>Booked</span>${pvKey}</div>`:`<div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span>${pvKey}</div>`;
-  const body=!open?'':`<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${key}${pick}${list}
-    ${flex?'':`<p class="ch-sub">Away for longer</p>
-    <form class="ch-rng" id="rng"><label>From<input type="date" id="rfrom" min="${esc(me.today)}" required></label><label>To<input type="date" id="rto" min="${esc(me.today)}" required></label><button class="ch-btn line" type="submit">Mark ${nm} away for these days</button></form>`}`;
-  /* By the session: the calendar is open and the family books its own sessions. A monthly plan: the calendar stays folded
-     away until it is needed, which is rare: a day away, a make-up day (Nov 18, 2026). */
+  const body=!open?'':`${monNav}<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${key}${pick}${list}`;
   return `<section class="ch-card" id="schedule" aria-label="Schedule"><div class="ch-h"><h2>Schedule</h2>${flex?'':`<button type="button" class="ch-sm" data-cal-open aria-expanded="${open}">${open?'Close':'Open'}</button>`}</div>
-    <p class="ch-s">${flex?`Tap a day and pick the sessions ${nm} is coming to. The academy sees it right away.`:open?`Tap a day to mark ${nm} away or to add a make-up day. The academy sees it right away.${left?` <b>${left} session${left===1?'':'s'} to make up</b>, by ${esc(nice(p.makeupsUntil||''))}. It does not carry into the next month.`:''}`:`${nm} is counted in on every training day.`}</p>${body}</section>`;
+    <p class="ch-s">${flex?`Tap a day and pick the sessions ${nm} is coming to, or book a private. The academy sees it right away.`:open?`Tap a day: say ${nm} is not coming, add a make-up day, or book a private.${left?` <b>${left} session${left===1?'':'s'} to make up</b>, by ${esc(nice(p.makeupsUntil||''))}. It does not carry into the next month.`:''}`:`${nm} is counted in on every training day.`}</p>${body}</section>`;
 }
 /* Messages (Nov 17, 2026): the coaches linked to each player, and Admin for registration, billing and the account. */
 function messagesC(active,sel){
@@ -434,7 +442,7 @@ function moveC(p,nm,date){
 /* The camp that is coming (Nov 19, 2026): one slim line, the nearest camp first. */
 function campC(){const c=(me.camps||[])[0];if(!c)return '';return `<a class="ch-camp" href="/enroll?camp=${encodeURIComponent(c.ids[0])}"><span><small>Coming up</small><b>${esc(c.title)}</b><em>${esc(c.dates)} · half days and full days</em></span><i>Sign up ${ico('arrow')}</i></a>`}
 function homeC(first,active){
-  const h=new Date().getHours();const hello=h<12?'Good morning,':h<18?'Good afternoon,':'Good evening,';
+  const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   if(!active.find(p=>p.id===SEL))SEL=active.length?active[0].id:'';const p=active.find(x=>x.id===SEL)||null;
   const top=`<div class="ch-day">${esc(day)}</div><h1 class="ch-hello"><span>${hello}</span> <em>${esc(first)}.</em></h1>`;
@@ -443,10 +451,9 @@ function homeC(first,active){
   const ns=nextSession(p);const out=ns&&isOut(p,ns.date);const coaches=[p.coach,p.coach2].filter(Boolean);const prog=(p.enroll&&(p.enroll.programShort||p.enroll.programName))||p.groupLabel||'Training';
   const hero=`<section class="ch-hero${out?' out':''}" aria-label="Next session"><div class="ch-hl"><span>Next session</span>${ns?`<b>${esc(ns.long)}</b>`:''}</div>
     <div class="ch-when">${ns?esc(ns.word):esc(prog)}</div>
-    <div class="ch-what">${ns?`<b>${esc(prog)}</b>`:''}${coaches.length?`<span>With Coach ${coaches.map(esc).join(' and Coach ')}</span>`:''}</div>
-    ${ns?`<div class="ch-tg" role="group" aria-label="Is ${nm} coming"><button type="button" aria-pressed="${!out}" ${out?`data-back="${esc(ns.date)}"`:'disabled'}>${nm} is coming</button><button type="button" aria-pressed="${!!out}" data-absent="${esc(ns.date)}" ${out?'disabled':''}>Cannot make it</button></div>
-    ${out?moveC(p,nm,ns.date):`<span class="ch-n">${nm} is counted in unless you say otherwise.</span>`}`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
-  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['/enroll','plus','Book a program'],['#messages','chat','Messages'],['#billing','card','Bills and invoices'],['#account','chat','Your account']].map(([k,i,l])=>k[0]!=='#'&&k[0]!=='/'?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="${k}"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
+    <div class="ch-what">${ns?`<b>${esc(prog)}${p.enroll&&p.enroll.time?' · '+esc(p.enroll.time):''}</b>`:''}${coaches.length?`<span>With Coach ${coaches.map(esc).join(' and Coach ')}</span>`:''}</div>
+    ${ns?`<span class="ch-n">${out?`${nm} is marked away that day.`:`${nm} is counted in.`} ${out?'':'Cannot make it? '}Tap the day on the schedule${out?' to change it':''}.</span>`:`<span class="ch-n">The training days are not on file yet. The front desk can add them.</span>`}</section>`;
+  const acts=`<div class="ch-acts">${[['private','plus','Book a private'],['court','court','Reserve a court'],['/enroll','plus','Add a program'],['#reports','card',nm+"'s report"],['#billing','card','Billing'],['#messages','chat','Messages']].map(([k,i,l])=>k[0]!=='#'&&k[0]!=='/'?`<button type="button" data-ask="${k}"><span class="ch-i">${ico(i)}</span>${l}</button>`:`<a href="${k}"><span class="ch-i">${ico(i)}</span>${l}</a>`).join('')}</div>`;
   const rp=(p.reports||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
   const report=`<section class="ch-card" aria-label="The report"><div class="ch-h"><h2>${nm}'s report</h2>${rp?`<span>${esc(rp.period||'')}</span>`:''}</div><p class="ch-s">${rp?'The goals for the next three months, then tennis, fitness, mental and competition, with a note from the coach.':'The coach shares the 3-month report here. The first one appears once it is sent.'}</p>${rp?'<a class="ch-btn" href="#reports">Read the report</a>':''}</section>`;
   const at=p.attendance||{days:[],present:0,missed:0};const tot=(at.present||0)+(at.missed||0);
@@ -456,8 +463,13 @@ function homeC(first,active){
   /* Renew here (Nov 18, 2026): a child brought over from Play by Point, not yet on a plan in the app. The names go to the
      enrollment page in this tab's own storage, never in the link. */
   const rn=p.renew;const renew=!rn?'':`<div class="ch-pay ch-renew" role="group" aria-label="Renew"><span><small>Renew for ${esc(rn.month)}</small><b>${esc((rn.programName||'Program').split('|')[0].trim())}</b><small>${rn.online?`${esc(rn.planName)}${rn.monthly?' · '+usd(rn.monthly*100)+' a month':''} · billing here starts ${esc(nice(rn.start))}`:`${esc(rn.planName||'Your plan')} · this plan is renewed with the admin team`}</small>${rn.online?`<button type="button" class="ch-rb" data-renew="${esc(p.id)}">Renew ${nm}</button>`:`<button type="button" class="ch-rb" data-chat="admin" data-chat-p="" data-chat-t="Admin" data-chat-s="Registration, billing and your account">Write to Admin</button>`}</span></div>`;
-  return `<div class="ch">${top}${chips}${campC()}${hero}${scheduleC(p,nm)}${acts}${renew}${messagesC(active,p)}${report}${att}${pay}${accountC()}</div>`;
+  return `<div class="ch">${top}${chips}${campC()}${hero}${scheduleC(p,nm)}${acts}${renew}${messagesC(active,p)}${att}${accountC()}</div>`;   // Nov 19: one of each — the report and billing live in their sections, reached from the tiles; the account is last
 }
+/* Back (Nov 19, 2026 — Antonio: "a back button that is easier to find"): a floating button at the bottom left once the page is past the top; it goes back to the previous spot when the parent came by a tile, else to the top. */
+(function(){const b=document.createElement('button');b.type='button';b.className='ch-back';b.innerHTML='<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>Back';document.body.appendChild(b);
+  let from=0;document.addEventListener('click',(e)=>{const a=e.target.closest&&e.target.closest('a[href^="#"]');if(a)from=window.scrollY},true);
+  b.onclick=()=>{const y=from;from=0;if(location.hash){history.replaceState(null,'',location.pathname)}window.scrollTo({top:y,behavior:'smooth'})};
+  const paint=()=>{b.classList.toggle('on',window.scrollY>360&&!document.getElementById('chat'))};window.addEventListener('scroll',paint,{passive:true});setInterval(paint,600)})();
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
   topline.innerHTML=me.viewing?'':`<span class="who"><a href="#account" style="color:inherit;text-decoration:none"><span>${esc(me.email)}</span></a><button id="signout" type="button">Sign out</button></span>`;
@@ -500,8 +512,8 @@ function render(){
   app.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{PICK=null;CALSEL=CALSEL===b.dataset.day?'':b.dataset.day;const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-day-do]').forEach(b=>b.onclick=()=>{const a=b.dataset.dayDo;const d=CALSEL;b.disabled=true;const y=window.scrollY;
     daysDo(a==='book'?{action:a,date:d,sessions:PICK||[]}:{action:a,date:d},a==='book'?((PICK||[]).length?'Booked. The academy knows.':'Taken off.'):a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
-  const rng=document.getElementById('rng');if(rng)rng.onsubmit=(e)=>{e.preventDefault();const f=document.getElementById('rfrom').value,t=document.getElementById('rto').value;if(!f||!t)return;if(t<f){toast('The last day is before the first.',true);return}const y=window.scrollY;
-    daysDo({action:'away',from:f,to:t},'Marked away. The academy knows.').then(()=>window.scrollTo(0,y))};
+  app.querySelectorAll('[data-mon]').forEach(b=>b.onclick=()=>{const [y0,m0]=CALMON.split('-').map(Number);const d=new Date(y0,m0-1+Number(b.dataset.mon),1,12);CALMON=ymd(d).slice(0,7);CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-book]').forEach(b=>b.onclick=()=>{const k=document.getElementById('kind'),pl=document.getElementById('player'),w=document.getElementById('when'),tx=document.getElementById('text');if(k)k.value='private';if(pl&&SEL)pl.value=SEL;if(w)w.value=nice(b.dataset.bookDay);if(tx&&!tx.value)tx.value=(b.dataset.book==='tennis'?'A tennis private':b.dataset.book==='fitness'?'A fitness private with Tara':'A mental performance private with Tonio')+' on '+nice(b.dataset.bookDay)+'. Preferred time: ';const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});if(tx)setTimeout(()=>{tx.focus({preventScroll:true});tx.selectionStart=tx.selectionEnd=tx.value.length},450)});
   const accDo=async(body,ok)=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('account',body);toast(ok);ACCADD=false;me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)};
   const keepY=(f)=>{const y=window.scrollY;f();render();window.scrollTo(0,y)};
   app.querySelectorAll('[data-acc-open]').forEach(b=>b.onclick=()=>keepY(()=>{ACCOPEN=!ACCOPEN;ACCED=null;ACCADD=false}));
