@@ -194,6 +194,19 @@ input[type=checkbox],input[type=radio]{width:auto;height:auto}
 .secblock{margin-bottom:34px;scroll-margin-top:150px}.secblock+.secblock{padding-top:6px}
 .banner h2{font-family:var(--display);font-style:italic;font-weight:800;text-transform:uppercase;font-size:34px;line-height:.92;margin:0}
 .banner p{margin:8px 0 0;font-size:13px;opacity:.8}
+/* One report, one flow (Nov 19, 2026 — "the report still has the goals, the tennis and the fitness separated"): the sections read
+   as one form. A section is a small heading with a colour mark, not a card of its own; the typing tips show once, at the top;
+   the strip of names is a quiet line that says everything is on this page. */
+.onepage .secblock{margin-bottom:22px}.onepage .secblock+.secblock{padding-top:20px;border-top:1px solid var(--line)}
+.onepage .banner{background:transparent!important;box-shadow:none;border-radius:0;padding:0 0 0 14px;margin-bottom:12px;border-left:6px solid var(--pc);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.onepage .banner h2{font-size:26px}.onepage .banner p{margin:0;font-size:13.5px;color:var(--muted);opacity:1}
+.onepage .kbhint{margin-bottom:6px}
+#sectabs[data-part]{box-shadow:none!important;border:0!important;border-bottom:1px solid var(--line)!important;padding:9px 0!important;gap:4px 14px!important;align-items:center}
+#sectabs[data-part]::before{flex:none;white-space:nowrap}
+@media(max-width:640px){#sectabs[data-part]::before{display:none}}
+#sectabs[data-part]::before{content:'All on this page';font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+#sectabs[data-part] .sec-tab{background:transparent!important;box-shadow:none!important;border:0!important;padding:2px 0!important;font-size:13px!important;color:var(--muted)}
+#sectabs[data-part] .sec-tab.ok{color:var(--ink)}
 .fields{display:grid;gap:16px;max-width:860px}
 .fields>.field{padding:8px 10px;margin-inline:-10px}
 .fhead{display:flex;flex-direction:column;gap:6px;border-left:4px solid var(--pc);background:var(--card);padding:10px 14px;border-radius:0 12px 12px 0;margin-top:10px}
@@ -3674,7 +3687,7 @@ const PW_CONFIG = {
       });
       const ntAll = !lock && sec.fields.some((f) => f.t === 'metric') ? '<div><button class="btn sm ghost" data-act="nt-all">Mark every blank test as not tested</button></div>' : '';
       return `<section class="secblock" id="sec_${si}" style="--pc:${pc}"><div class="banner"><h2>${esc(sec.label)}</h2>${sec.sub ? `<p>${esc(sec.sub)}</p>` : ''}</div>
-        ${pos === 0 ? lockbar : ''}${hintFor(sec, lock)}
+        ${pos === 0 ? lockbar : ''}${pos === 0 ? hintFor(sec, lock) : ''}
         ${pos === 0 && E.def.about && firstPart ? `<div class="fnote" style="margin-bottom:16px">${esc(E.def.about)}</div>` : ''}
         <div class="fields">${html}${ntAll}</div></section>`;
     }).join('');
