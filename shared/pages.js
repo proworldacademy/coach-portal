@@ -101,8 +101,7 @@
       { name: "Contact", href: "/portal#/messages", page: "coach-portal" }, { name: "Privates", href: "/backend#privates", page: "backend" },
       // for directors and owners (shared/design.js keeps these from a coach)
       { name: "Coach Board", href: "/portal#/board", page: "coach-portal" },
-      { name: "Attendance", href: "/backend#attendance", page: "backend" },
-      { name: "Text a group", href: "/backend#messages", page: "backend" } ] },   // Nov 17: the group text (a whole group, or who trains that day) is back in the directors' menu
+      { name: "Attendance", href: "/backend#attendance", page: "backend" } ] },   // Nov 19, 2026: Text a group lives inside Contact ("New message → A group"), no longer a page of its own   // Nov 17: the group text (a whole group, or who trains that day) is back in the directors' menu
     { id: "marketing", name: "Marketing", href: "/marketing", page: ["mkt"], items: [
       { name: "Report", href: "/marketing#home" }, { name: "Create · the 2-week plan", href: "/marketing#fortnight" }, { name: "Execute", href: "/marketing#execute" },
       { name: "Ads", href: "/marketing#ads" }, { name: "Coach assignments", href: "/marketing#assignments" }, { name: "AI replies", href: "/marketing#aireplies" } ] },

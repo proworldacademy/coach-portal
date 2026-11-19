@@ -71,6 +71,8 @@ async function engine(method, p, q, body) {
     if (method === 'GET' && p === '/api/coach/inbox') return [200, await COACHTEXT.inbox(db, DIR)];
     if (method === 'GET' && p === '/api/coach/thread') return [200, await COACHTEXT.thread(db, DIR, q.get('player'), { conv: q.get('conv') || '', markRead: q.get('peek') !== '1' })];
     if (method === 'POST' && p === '/api/coach/text') return [200, await COACHTEXT.text(db, DIR, body)];
+    if (method === 'POST' && p === '/api/coach/group') return [200, await COACHTEXT.group(db, DIR, body, { dry: true })];
+    if (method === 'GET' && p === '/api/coach/groups') return [200, await COACHTEXT.groups(db, DIR)];
     if (method === 'POST' && p === '/api/coach/read') return [200, await COACHTEXT.markRead(db, DIR, body)];
     return [404, { error: 'route', message: 'no route' }];
   } catch (e) { return [e.status || 500, { error: e.code || 'error', message: e.message }]; }
@@ -82,6 +84,8 @@ async function reply(pid, phone, text) {
 }
 
 /* ── the page side ── */
+/* Nov 19: who a text goes to is one line with Change; the checks open the switches first */
+const openWho = async (pg, root) => { const b = pg.locator(root + ' .ck-sum [data-act="msg-who"]'); if (await b.count()) { await b.first().click(); await pg.waitForTimeout(150); } };
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.ttf': 'font/ttf' };
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
@@ -117,7 +121,7 @@ if (require.main === module) (async () => {
   try {
     /* ── desktop ── */
     const d = await page(browser, 1280, 900);
-    await d.goto('http://localhost:4173/portal/#/p/ft-bo-k'); try { await d.waitForSelector('#msgcard .ck-who', { timeout: 15000 }); } catch (e) { console.log('MAIN:', (await text(d, 'main')).slice(0, 600)); throw e; }
+    await d.goto('http://localhost:4173/portal/#/p/ft-bo-k'); try { await d.waitForSelector('#msgcard .ck-sum, #msgcard .ck-who', { timeout: 15000 }); await openWho(d, '#msgcard'); } catch (e) { console.log('MAIN:', (await text(d, 'main')).slice(0, 600)); throw e; }
     await d.waitForTimeout(300);
     const SW = '#msgcard .ck-sw[data-act="msg-to"]'; const sw = (pg, word, root) => pg.locator((root || '#msgcard') + ' .ck-sw[data-act="msg-to"]', { hasText: word }).first();
     const chips = await d.locator(SW).allInnerTexts();
@@ -186,7 +190,7 @@ if (require.main === module) (async () => {
     await d.fill('.mpane textarea', 'Pat, one more thing about Saturday'); await d.click('.mpane button[type="submit"]'); await d.waitForTimeout(600);
     log((await count(d, '.mpane .bub')) === 3 && /Pat, one more thing/.test(await text(d, '.mlist .msgrow.on')), 'sent from the pane; the row preview updates');
     await d.locator('.mlist .msgrow.quiet', { hasText: 'Cy Lane' }).click(); await d.waitForTimeout(400);
-    log(/Cy Lane/.test(await text(d, '.mhead .mwho b')) && /Nothing yet/.test(await text(d, '.mpane')) && (await count(d, '.mpane .ck-sw[data-act="msg-to"]')) === 1, 'a family with no texts opens with its one chat (the mother\'s), ready to write');
+    log(/Cy Lane/.test(await text(d, '.mhead .mwho b')) && /Nothing yet/.test(await text(d, '.mpane')) && /^To /i.test(await text(d, '.mpane .ck-sum')), 'a family with no texts opens with its one chat (the mother\'s), ready to write');
     await shot(d, 'desktop-messages-quiet');
     await d.context().close();
 
@@ -207,10 +211,11 @@ if (require.main === module) (async () => {
     log(await m.locator('.mback').isVisible(), '‹ Chats back button is there');
     log((await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'no sideways scroll in the chat');
     await shot(m, 'phone-messages-chat');
+    await openWho(m, '.mpane');
     log((await count(m, '.mpane .ck-sw[data-act="msg-team"]')) === 3 && (await count(m, '.mpane .ck-sw[data-act="msg-team"][aria-pressed="true"]')) === 3, 'the team row: the other coaches on the player, all on from the start');
     await m.locator('.mback').tap(); await m.waitForTimeout(400);
     log(/^#\/messages$/.test(await m.evaluate(() => location.hash)) && await m.locator('.mlist').isVisible(), 'Back returns to the list');
-    await m.goto('http://localhost:4173/portal/#/p/ft-bo-k'); await m.waitForSelector('#msgcard .ck-who', { timeout: 15000 }); await m.waitForTimeout(400);
+    await m.goto('http://localhost:4173/portal/#/p/ft-bo-k'); await m.waitForSelector('#msgcard .ck-sum, #msgcard .ck-who', { timeout: 15000 }); await openWho(m, '#msgcard'); await m.waitForTimeout(400);
     log((await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)), 'no sideways scroll on the player page');
     const card = await m.locator('#msgcard').boundingBox(); await m.evaluate((y) => window.scrollTo(0, y - 10), card.y);
     await m.screenshot({ path: path.join(SHOTS, 'phone-player-card.png'), fullPage: false });

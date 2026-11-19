@@ -599,6 +599,18 @@ button.notice.remind.wk .wkn{margin-right:2px}
 @media(max-width:560px){.bub{max-width:92%}.bubs{max-height:300px}}
 /* the chats (Nov 4 evening): one per number, group chats — the switcher, the picker, the Messages view as two panes */
 .ckp{display:grid;gap:14px}
+.ck-sum{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:14px;background:var(--pw-sf2,#F6F6F2);border:1px solid var(--line);font-size:14px}
+.ck-sum small{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.ck-sum i{font-style:normal;color:var(--muted);margin:0 4px}.ck-sum span{min-width:0}
+.nm-top{display:grid;gap:8px}.nm-top .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:999px;width:100%}.nm-top .btn .a2i{width:18px;height:18px}
+.ava.grp{background:var(--lime);color:#0b0b0b;display:grid;place-items:center}.ava.grp .a2i{width:18px;height:18px}
+.nm-two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}.nm-two button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:20px;border-radius:20px;border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:inherit;font:inherit;cursor:pointer;min-height:150px}
+.nm-two button:hover{border-color:var(--ink)}.nm-two .a2i{width:40px;height:40px;border-radius:50%;background:var(--pw-inkbg,var(--ink));color:var(--lime);display:grid;place-items:center;padding:10px;box-sizing:border-box;margin-bottom:8px}.nm-two b{font-size:18px}.nm-two span{font-size:13.5px;color:var(--muted);line-height:1.35}
+.nm-g .chips{justify-content:flex-start}.nm-two .a2i svg{width:20px;height:20px}.nm-g{margin-top:16px}.nm-g h3{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.nm-names{display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow:auto;padding:2px}.nm-names button{border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:inherit;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.nm-names button.off{opacity:.45;text-decoration:line-through;background:transparent}
+.nm-list{max-height:52vh;overflow:auto}
+.nm-prog{display:grid;gap:8px;padding:30px 6px}.nm-prog b{font-family:var(--display);font-style:italic;font-size:44px;line-height:1}.nm-prog span{color:var(--muted);font-size:14px}.nm-prog .bar{height:8px;border-radius:999px;background:var(--pw-sf2,#EDEDE8);overflow:hidden}.nm-prog .bar i{display:block;height:100%;background:var(--lime)}
+@media(max-width:640px){.nm-two{grid-template-columns:1fr}.nm-two button{min-height:0}}
 .ck-who{display:grid;gap:10px;padding:14px 16px;border-radius:18px;background:var(--pw-sf2,#F6F6F2);border:1px solid var(--line)}
 .ck-row{display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:start}
 .ck-l{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:11px}
@@ -1824,7 +1836,7 @@ const PW_CONFIG = {
     checks: {},   // the contact check: contactCheck/{pid} — the numbers on file and the four slots (mother · father · guardian · player)
     board: null, syncLogs: [], outbox: [], syncCfg: null,   // the Monday sync: the Coach Board, the change log, changes waiting for Monday, owner settings
     route: { view: 'home' },
-    ui: { msgTeamOff: {}, msgVia: {}, sex: (function () { try { return sessionStorage.getItem('cp-sex') || ''; } catch (e) { return ''; } })(), sexSort: false, showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
+    ui: { msgTeamOff: {}, msgVia: {}, msgWho: {}, msgNew: null, msgGroup: '', sex: (function () { try { return sessionStorage.getItem('cp-sex') || ''; } catch (e) { return ''; } })(), sexSort: false, showInactive: false, compare: [], vfCat: '', vfQ: '', q: null, partFilter: null, partFilterGroup: null, back: null, addingTry: false, editingTry: null, contactCoach: null, slotOpen: null, msgConv: {}, msgPick: null, msgPickSel: {}, msgDraft: {}, msgFocus: null, msgFind: '' },
     psubs: [], pdata: { pid: null, videos: [], journal: [], goals: null, contacts: [] },
     pendingRender: false, voice: 'none',
   };
@@ -2092,6 +2104,7 @@ const PW_CONFIG = {
     if (EDITION !== 'web' || WEB.stage !== 'in' || S.msg.busy.inbox) return; if (!force && Date.now() - S.msg.at < 45000) return;
     S.msg.busy.inbox = true; const before = msgUnread();
     try { S.msg.inbox = Object.assign(await api('inbox'), { error: '' }); } catch (e) { S.msg.inbox = Object.assign(S.msg.inbox || { unread: 0, rows: [], quiet: [] }, { error: e.message || String(e) }); }
+    try { S.msg.groups = (await api('groups')).groups || []; } catch (e) { S.msg.groups = S.msg.groups || []; }
     S.msg.at = Date.now(); delete S.msg.busy.inbox;
     paintViewTabs(); if (S.route.view === 'messages' || (S.route.view === 'home' && msgUnread() !== before)) render();
   }
@@ -2178,7 +2191,13 @@ const PW_CONFIG = {
     const to = nums.map((n) => `<button type="button" class="ck-sw${inChat.has(n.tail) ? ' on' : ''}" data-act="msg-to" data-pid="${esc(p.id)}" data-tail="${esc(n.tail)}" data-in="${inMessages ? 1 : 0}" aria-pressed="${inChat.has(n.tail)}">${CK_TICK}<span><b>${esc(n.slot ? n.word : n.name || 'On file')}</b><small>${esc(n.slot && n.name ? n.name + ' · ' : '')}…${esc(n.tail)}</small></span>${dot(n) ? '<i class="dot" aria-label="new reply"></i>' : ''}</button>`).join('');
     const others = teamOthers(t); const off = S.ui.msgTeamOff[p.id] || {}; const can = writable() && mine(p) && !S.msgAs;
     const team = others.length ? `<div class="ck-row"><span class="ck-l">Team</span><div class="ck-sws"><span class="ck-sw on me" aria-label="You">${CK_TICK}<span><b>You</b></span></span>${others.map((m) => `<button type="button" class="ck-sw${off[m.key] ? '' : ' on'}" data-act="msg-team" data-pid="${esc(p.id)}" data-key="${esc(m.key)}" aria-pressed="${!off[m.key]}" ${can ? '' : 'disabled'}>${CK_TICK}<span><b>Coach ${esc(m.name)}</b>${m.signIn ? '' : '<small>no sign-in yet</small>'}</span></button>`).join('')}</div></div>` : '';
-    return `<div class="ck-who"><div class="ck-row"><span class="ck-l">To</span><div class="ck-sws">${to}</div></div>${team}</div>`;
+    /* Nov 19, 2026 (management: "I am not a fan of how you choose who to text"): one line says who gets it; Change opens the switches */
+    if (!S.ui.msgWho[p.id]) {
+      const names = (l) => l.length < 2 ? (l[0] || '') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1];
+      const toN = nums.filter((n) => inChat.has(n.tail)).map((n) => (n.slot ? n.word : n.name || 'On file')); const tm = others.filter((m) => !off[m.key]).map((m) => m.name);
+      return `<div class="ck-sum"><span><small>To</small> <b>${esc(names(toN) || 'nobody yet')}</b>${others.length ? ` <i>·</i> <small>Team</small> <b>${esc(tm.length ? names(tm) : 'only you')}</b>` : ''}</span>${nums.length > 1 || others.length ? `<button type="button" class="fchip sm" data-act="msg-who" data-pid="${esc(p.id)}">Change</button>` : ''}</div>`;
+    }
+    return `<div class="ck-who"><div class="ck-row"><span class="ck-l">To</span><div class="ck-sws">${to}</div></div>${team}<div class="ck-row"><span class="ck-l"></span><div><button type="button" class="fchip sm" data-act="msg-who" data-pid="${esc(p.id)}">Done</button></div></div></div>`;
   }
   const ckVia = (pid) => S.ui.msgVia[pid] || 'text';
   function chatPane(p, t, sel, inMessages) {
@@ -2193,6 +2212,40 @@ const PW_CONFIG = {
     return `<div class="panel msgcard" id="msgcard">${head(c && c.count ? convTitle(c) : (t.lines || []).length ? 'The chats with the family' : 'Write to the family from here')}${chatPane(p, t, sel, false)}</div>`;
   }
   /* ───────────── view: messages (the inbox, like a messages app: the chats on the left, the open one on the right) ───────────── */
+  /* One messaging page (Nov 19, 2026 — management: "it should not be two separate ones… the text group should be inside the messaging
+     app… efficient, simple, clean"). "New message" asks one thing first: one family, or a group. A group message goes to each
+     family as its own text on its own chat, so every answer lands in that family's chat; the list keeps it as one line with how
+     many got it and how many answered. */
+  const newGid = () => 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  function msgNewPane() {
+    const st = S.ui.msgNew; const mineP = S.players.filter((p) => active(p) && mine(p)).sort((a, b) => a.name.localeCompare(b.name));
+    const head = (t, sub) => `<div class="mhead"><button class="btn sm ghost mback" type="button" data-act="msg-new-x" aria-label="Back to the chats">‹ Chats</button><div class="mwho"><b>${t}</b><small>${sub}</small></div><div class="rowx"><button class="fchip sm" data-act="msg-new-x">Close</button></div></div>`;
+    if (st.mode === 'pick') return `<section class="panel mpane" id="mpane">${head('New message', 'Who is it for?')}<div class="nm-two"><button type="button" data-act="msg-new-mode" data-mode="one">${a2i('msg')}<b>One family</b><span>A text to the parents of one player.</span></button><button type="button" data-act="msg-new-mode" data-mode="group">${a2i('users')}<b>A group</b><span>The same text to many families. Each one gets it as their own text.</span></button></div></section>`;
+    if (st.mode === 'one') { const q = fold(st.find || '');
+      return `<section class="panel mpane" id="mpane">${head('One family', 'Pick the player')}<div class="mfind"><input type="search" id="nmfind" placeholder="Type a name…" value="${esc(st.find || '')}" autocomplete="off" aria-label="Find a player"></div><div class="list nm-list">${mineP.filter((p) => !q || fold(p.name).includes(q)).slice(0, 60).map((p) => `<button class="rowb" data-act="msg-new-open" data-pid="${esc(p.id)}"><span class="ava">${esc(initials(p.name))}</span><div class="who"><div><span class="nm">${esc(p.name)}</span><div class="sub">${esc(group(p.group).label)}${p.coach ? ' · Coach ' + esc(p.coach) : ''}</div></div></div></button>`).join('') || '<div class="empty">Nobody by that name.</div>'}</div></section>`; }
+    // a group
+    const gids = groups().filter((g) => mineP.some((p) => p.group === g.id)); const coaches = Array.from(new Set(mineP.map((p) => p.coach).filter(Boolean))).sort();
+    const inSet = mineP.filter((p) => (!st.prog || p.group === st.prog) && (!st.coach || p.coach === st.coach || p.coach2 === st.coach || p.coach3 === st.coach));
+    const on = inSet.filter((p) => !st.off[p.id]); const label = [st.prog ? group(st.prog).label : (WEB.isDirector ? 'All players' : 'My players'), st.coach ? 'Coach ' + st.coach : ''].filter(Boolean).join(' · ');
+    if (st.sending) return `<section class="panel mpane" id="mpane">${head('Sending…', esc(label))}<div class="nm-prog"><b>${st.sending.done} of ${st.sending.total}</b><span>Keep this page open until it finishes.</span><div class="bar"><i style="width:${Math.round(100 * st.sending.done / Math.max(1, st.sending.total))}%"></i></div></div></section>`;
+    const chip = (act, val, txt, cur) => `<button type="button" class="fchip${cur ? ' on' : ''}" data-act="${act}" data-val="${esc(val)}" aria-pressed="${cur}">${esc(txt)}</button>`;
+    return `<section class="panel mpane" id="mpane">${head('A group', 'The same text to many families')}
+      <div class="nm-g"><h3>1 · Who</h3><div class="chips">${chip('msg-new-prog', '', WEB.isDirector ? 'All players' : 'My players', !st.prog)}${gids.map((g) => chip('msg-new-prog', g.id, g.label, st.prog === g.id)).join('')}</div>
+        ${WEB.isDirector && coaches.length > 1 ? `<div class="chips" style="margin-top:8px">${chip('msg-new-coach', '', 'Any coach', !st.coach)}${coaches.map((c) => chip('msg-new-coach', c, 'Coach ' + c, st.coach === c)).join('')}</div>` : ''}
+        <p class="hint" style="margin:10px 0 6px"><b>${on.length}</b> ${on.length === 1 ? 'family' : 'families'}${inSet.length !== on.length ? ` · ${inSet.length - on.length} taken out` : ''}. Tap a name to take it out or put it back.</p>
+        <div class="nm-names">${inSet.map((p) => `<button type="button" class="${st.off[p.id] ? 'off' : 'on'}" data-act="msg-new-tog" data-pid="${esc(p.id)}" aria-pressed="${!st.off[p.id]}">${esc(p.name)}</button>`).join('') || '<span class="hint">Nobody here.</span>'}</div></div>
+      <div class="nm-g"><h3>2 · The message</h3><form class="msgform ck-form" data-form="msg-group"><textarea name="body" rows="4" maxlength="${MSG_MAX}" placeholder="Write it once…" aria-label="Message" required>${esc(st.text || '')}</textarea><div class="msgfoot"><span class="hint">Each family gets it as their own text and answers on their own chat. The player's other coaches are in, as with any text.</span><span class="ck-send"><button class="btn pri sendbtn" type="submit" ${on.length ? '' : 'disabled'}>Send to ${on.length} ${on.length === 1 ? 'family' : 'families'}</button></span></div></form></div></section>`;
+  }
+  function msgGroupPane(g) {
+    const rows = (S.msg.inbox && S.msg.inbox.rows) || []; const ans = (id) => rows.some((r) => r.id === id && r.last && r.last.dir === 'in' && (r.last.at || 0) > (g.at || 0));
+    const got = g.got || [], sk = g.skipped || []; const nAns = got.filter((x) => ans(x.id)).length;
+    return `<section class="panel mpane" id="mpane"><div class="mhead"><button class="btn sm ghost mback" type="button" data-act="msg-group-x" aria-label="Back to the chats">‹ Chats</button><div class="mwho"><b>${esc(g.label)}</b><small>Group message · ${esc(msgWhen(g.at))}</small></div><div class="rowx"><button class="fchip sm" data-act="msg-group-x">Close</button></div></div>
+      <div class="bubs" style="max-height:none"><div class="bub b-out"><div class="bt">${esc(g.body).replace(/\n/g, '<br>')}</div></div></div>
+      <ul class="sub lines" style="margin:14px 0"><li><b class="n on">${got.length}</b> got it</li><li><b class="n${nAns ? ' on' : ''}">${nAns}</b> answered</li>${sk.length ? `<li><b class="n off">${sk.length}</b> not sent</li>` : ''}</ul>
+      ${sk.length ? `<div class="sect"><h2>Not sent</h2></div><div class="list" style="margin-bottom:18px">${sk.map((x) => `<div class="rowb" style="cursor:default"><div class="who"><div><span class="nm">${esc(x.name)}</span><div class="sub">${esc(x.why || '')}</div></div></div></div>`).join('')}</div>` : ''}
+      <div class="sect"><h2>Families</h2><span class="muted" style="font-size:12px">tap one to open its chat</span></div>
+      <div class="list">${got.map((x) => `<button class="rowb" data-act="msg-new-open" data-pid="${esc(x.id)}"><span class="ava">${esc(initials(x.name))}</span><div class="who"><div><span class="nm">${esc(x.name)}</span></div></div>${ans(x.id) ? '<span class="chip st-done">answered</span>' : '<span class="muted" style="font-size:12px">no answer yet</span>'}</button>`).join('')}</div></section>`;
+  }
   function viewMessages() {
     const ib = S.msg.inbox; if (EDITION === 'web' && (!ib || Date.now() - S.msg.at > 10000)) loadInbox(true);   // fresh on arrival; the tick keeps it so
     const chats = ib ? ib.rows.slice().sort((a, b) => (Number(b.unread) - Number(a.unread)) || (((b.last && b.last.at) || 0) - ((a.last && a.last.at) || 0)) || a.name.localeCompare(b.name)) : [];
@@ -2200,7 +2253,7 @@ const PW_CONFIG = {
     const n = ib ? ib.unread : 0; const families = ib ? (ib.families || new Set(chats.map((r) => r.id).concat(quiet.map((q) => q.id))).size) : 0;
     // on a computer the newest chat is open beside the list from the start, like a messages app; on the phone the list comes first
     const first = chats.find((r) => player(r.id) && mine(player(r.id)));   // the most recent chat that is this person's to open
-    if (!S.route.pid && window.innerWidth > 900 && first) { S.route = { view: 'messages', pid: first.id, conv: first.conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
+    if (!S.route.pid && window.innerWidth > 900 && first && !S.ui.msgNew && !S.ui.msgGroup) { S.route = { view: 'messages', pid: first.id, conv: first.conv || undefined }; saveRoute(); try { history.replaceState(null, '', toHash(S.route)); } catch (e) { /* noop */ } }
     const openPid = S.route.pid && player(S.route.pid) && mine(player(S.route.pid)) ? S.route.pid : '';
     const openKey = openPid ? curConv(openPid, S.route.conv) : '';
     const q = fold(S.ui.msgFind || '');
@@ -2210,10 +2263,15 @@ const PW_CONFIG = {
         <div class="msglast">${r.last ? `<span class="${r.last.dir === 'in' ? 'them' : 'me'}">${r.last.dir === 'in' ? '' : (r.last.by ? esc(r.last.by) : 'You') + ': '}${esc(r.last.body)}</span>` : '<span class="muted">No texts yet</span>'}</div></div>${r.unread ? '<i class="dot" aria-label="new"></i>' : ''}</button>`; };
     const qrow = (r) => `<button class="rowb msgrow quiet${openPid === r.id ? ' on' : ''}" ${goAttr({ view: 'messages', pid: r.id })} aria-current="${openPid === r.id ? 'true' : 'false'}" data-find="${esc(fold(r.name + ' ' + group(r.group).label + ' ' + (r.coach || '')))}"><span class="ava">${esc(initials(r.name))}</span><div class="mtxt"><div class="nm"><span class="pname">${esc(r.name)}</span></div><div class="msglast"><span class="muted">${esc(group(r.group).label)}${r.coach ? ' · Coach ' + esc(r.coach) : ''} · no texts yet</span></div></div></button>`;
     const shown = chats.filter(hit).map(row).join('') + quiet.filter(hit).map(qrow).join('');
-    const list = `<div class="list mlist" id="mlist"><div class="mfind"><input type="search" id="mfind" placeholder="Find a family…" value="${esc(S.ui.msgFind || '')}" autocomplete="off" aria-label="Find a family"></div>
-      ${shown || `<div class="empty">${!ib ? 'Loading…' : q ? 'No family matches that.' : 'No players of yours are active.'}</div>`}</div>`;
-    let pane = '';
-    if (openPid) {
+    const gl = (S.msg.groups || []).slice(0, q ? 0 : 6); const rowsAll = (ib && ib.rows) || [];
+    const grows = gl.map((g) => { const nA = (g.got || []).filter((x) => rowsAll.some((r) => r.id === x.id && r.last && r.last.dir === 'in' && (r.last.at || 0) > (g.at || 0))).length;
+      return `<button class="rowb msgrow grp${S.ui.msgGroup === g.id ? ' on' : ''}" data-act="msg-group" data-id="${esc(g.id)}"><span class="ava grp">${a2i('users')}</span><div class="mtxt"><div class="nm"><span class="pname">${esc(g.label)}</span><span class="cw">· ${(g.got || []).length} ${(g.got || []).length === 1 ? 'family' : 'families'}</span><time>${esc(msgAgo(g.at))}</time></div><div class="msglast"><span class="me">${esc(g.body)}</span></div><div class="msglast"><span class="muted">${nA} answered${(g.skipped || []).length ? ' · ' + g.skipped.length + ' not sent' : ''}</span></div></div></button>`; }).join('');
+    const list = `<div class="list mlist" id="mlist"><div class="mfind nm-top"><button type="button" class="btn pri" data-act="msg-new">${a2i('plus')}New message</button><input type="search" id="mfind" placeholder="Find a family…" value="${esc(S.ui.msgFind || '')}" autocomplete="off" aria-label="Find a family"></div>
+      ${grows}${shown || `<div class="empty">${!ib ? 'Loading…' : q ? 'No family matches that.' : 'No players of yours are active.'}</div>`}</div>`;
+    let pane = ''; const gOpen = S.ui.msgGroup ? (S.msg.groups || []).find((g) => g.id === S.ui.msgGroup) : null;
+    if (S.ui.msgNew) pane = msgNewPane();
+    else if (gOpen) pane = msgGroupPane(gOpen);
+    else if (openPid) {
       const p = player(openPid); const t = msgThread(openPid); const c = convOf(t, openKey);
       if (!t && !S.msg.busy[openPid]) loadThread(openPid, false, openKey && CONV_OK.test(openKey) ? openKey : '');
       const body = !t ? '<p class="hint">Loading the chat…</p>' : t.error && !(t.lines && t.lines.length) ? `<p class="hint">${esc(t.error)}</p>` : chatPane(p, t, openKey, true);
@@ -2221,11 +2279,11 @@ const PW_CONFIG = {
     }
     return `${notice()}${crumbs([{ t: 'Reminders', r: { view: 'home' } }, { t: 'Messages' }])}
       <div class="head"><div><div class="lbl">Texts with the families · through JustCall</div><h1 class="title">Mess<em>ages.</em></h1>
-        <div class="sub">Open a family, pick who you write to, and write. The other coaches on the player are in the chat unless you switch them off.</div>
+        <div class="sub">Every text with the families, in one place: one family or a whole group.</div>
         <ul class="sub lines">${n ? `<li><b class="n off">${n}</b> ${n === 1 ? 'chat has' : 'chats have'} a new reply</li>` : '<li><b class="n on">✓</b> nothing waiting for you</li>'}<li><b class="n">${families}</b> ${families === 1 ? 'family' : 'families'}</li></ul></div></div>
       ${msgDirBar()}
       ${ib && ib.error ? `<p class="hint due-line"><b>Could not refresh:</b> ${esc(ib.error)}</p>` : ''}
-      <div class="mbox${openPid ? ' open' : ''}">${list}${pane}</div>`;
+      <div class="mbox${openPid || S.ui.msgNew || gOpen ? ' open' : ''}">${list}${pane}</div>`;
   }
 
   /* ───────────── routing ───────────── */
@@ -2630,7 +2688,7 @@ const PW_CONFIG = {
         // Try-outs, the Coach Board, Attendance, Courts and Staff & access left this row: they open from the Dashboard menu (Coaches), for directors and owners.
         .concat(EDITION === 'web' ? [['contact', 'Contact', { view: 'messages' }], ['team', 'Locker Room', '/team'], ['privates', 'Privates', '/backend#privates']] : [])
         // Nov 18, 2026 (management): the strip carries the whole Coaches menu, so nothing is two taps away. A director's has it all.
-        .concat(EDITION === 'web' && WEB.isDirector ? [['attendance', 'Attendance', '/backend#attendance'], ['grouptext', 'Text a group', '/backend#messages'], ['board', 'Coach Board', { view: 'board' }], ['staff', 'Staff & access', { view: 'staff' }]] : []);   // Team (Nov 15): the team's own messaging, /team
+        .concat(EDITION === 'web' && WEB.isDirector ? [['attendance', 'Attendance', '/backend#attendance'], ['board', 'Coach Board', { view: 'board' }], ['staff', 'Staff & access', { view: 'staff' }]] : []);   // Team (Nov 15): the team's own messaging, /team
     // Follow-up (#/followup) and Standard & commit (#/commit) stay reachable by link for the owners — from the Dashboard, not from this row (Antonio, Oct 23)
     const wkLeft = S.db && S.loaded.contacts ? contactTally(WEB.isDirector ? S.players.filter(active) : myPlayers()).left : 0;   // families still to reach this week (mine, or everyone's for a director)
     const TI = { home: 'bell', players: 'users', contact: 'msg', team: 'team', privates: 'cal', attendance: 'check', grouptext: 'send', board: 'users', staff: 'file' }; const ti = (k) => (TI[k] ? a2i(TI[k], 'ti') : '');
@@ -2950,7 +3008,7 @@ const PW_CONFIG = {
   function msgDirBar() {
     if (WEB.isDirector && EDITION === 'web' && !(WEB.staffList && WEB.staffList.length) && !WEB.staffAsked && WEB.fs) { WEB.staffAsked = true; WEB.fs.collection('staff').get().then((x) => { if (!(WEB.staffList && WEB.staffList.length)) WEB.staffList = rowsOf(x); if (S.route.view === 'messages') softRender(); }).catch(() => {}); }   // the team list is otherwise read on Staff & access only
     const coaches = WEB.isDirector ? (WEB.staffList || []).filter((r) => r.active === true && r.owner !== true && r.role !== 'admin' && r.role !== 'director' && r.role !== 'desk' && (!Array.isArray(r.pages) || r.pages.includes('coach-portal')) && r.id !== WEB.email).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id))) : [];
-    return WEB.isDirector && EDITION === 'web' ? `<div class="a2dir"><label class="a2dirw"><span>Chats</span><select data-act="msg-as" aria-label="Whose chats to read"><option value="">My chats</option>${coaches.map((c) => `<option value="${esc(c.id)}"${S.msgAs && S.msgAs.email === c.id ? ' selected' : ''}>${esc(c.name || c.id)}</option>`).join('')}</select></label><a class="a2dirg" href="/backend#messages">Text a group</a></div>${S.msgAs ? `<p class="a2hint" style="margin:0 4px 10px">Reading ${esc(S.msgAs.name)}’s chats with their families. Nothing is marked as read for them.</p>` : ''}` : '';
+    return WEB.isDirector && EDITION === 'web' ? `<div class="a2dir"><label class="a2dirw"><span>Chats</span><select data-act="msg-as" aria-label="Whose chats to read"><option value="">My chats</option>${coaches.map((c) => `<option value="${esc(c.id)}"${S.msgAs && S.msgAs.email === c.id ? ' selected' : ''}>${esc(c.name || c.id)}</option>`).join('')}</select></label></div>${S.msgAs ? `<p class="a2hint" style="margin:0 4px 10px">Reading ${esc(S.msgAs.name)}’s chats with their families. Nothing is marked as read for them.</p>` : ''}` : '';
   }
   /* ── Messages: every family, the ones who wrote back first; the chat opens full screen on the phone, beside the list on a computer ── */
   function view2Messages() {
@@ -4344,6 +4402,15 @@ const PW_CONFIG = {
       if (!convOf(t, key)) t.convs = convsOf(t).concat([{ key, members: on.map((n) => ({ slot: n.slot, word: n.word, name: n.name, tail: n.tail })), title: on.map((n) => n.word).join(' & '), count: 0, last: null, unread: false, suggested: false, local: true }]);
       S.ui.msgConv[pid] = key; S.ui.msgFocus = pid;
       if (b.getAttribute('data-in') === '1') go({ view: 'messages', pid, conv: key }); else render(); markReadLocal(pid, key); }
+    else if (act === 'msg-new') { S.ui.msgNew = { mode: 'pick', prog: '', coach: '', off: {}, text: '', find: '' }; S.ui.msgGroup = ''; render(); }
+    else if (act === 'msg-new-x') { S.ui.msgNew = null; render(); }
+    else if (act === 'msg-new-mode') { S.ui.msgNew.mode = b.getAttribute('data-mode'); render(); const f = $('#nmfind'); if (f) f.focus(); }
+    else if (act === 'msg-new-open') { const pid = b.getAttribute('data-pid'); S.ui.msgNew = null; S.ui.msgGroup = ''; S.ui.msgFocus = pid; go({ view: 'messages', pid }); }
+    else if (act === 'msg-new-prog' || act === 'msg-new-coach') { const ta = $('#mpane textarea'); if (ta) S.ui.msgNew.text = ta.value; S.ui.msgNew[act === 'msg-new-prog' ? 'prog' : 'coach'] = b.getAttribute('data-val'); S.ui.msgNew.off = {}; render(); }
+    else if (act === 'msg-new-tog') { const ta = $('#mpane textarea'); if (ta) S.ui.msgNew.text = ta.value; const pid = b.getAttribute('data-pid'); S.ui.msgNew.off[pid] = !S.ui.msgNew.off[pid]; render(); }
+    else if (act === 'msg-group') { S.ui.msgGroup = b.getAttribute('data-id'); S.ui.msgNew = null; render(); }
+    else if (act === 'msg-group-x') { S.ui.msgGroup = ''; render(); }
+    else if (act === 'msg-who') { const pid = b.getAttribute('data-pid'); S.ui.msgWho[pid] = !S.ui.msgWho[pid]; render(); }
     else if (act === 'msg-team') { const pid = b.getAttribute('data-pid'), k = b.getAttribute('data-key'); const off = S.ui.msgTeamOff[pid] || (S.ui.msgTeamOff[pid] = {}); off[k] = !off[k]; render(); }
     else if (act === 'msg-via') { S.ui.msgVia[b.getAttribute('data-pid')] = b.getAttribute('data-via'); render(); const ta = $('.ck-form textarea'); if (ta) ta.focus(); }
     else if (act === 'msg-pick') { const pid = b.getAttribute('data-pid'); S.ui.msgPick = S.ui.msgPick === pid ? null : pid; S.ui.msgPickSel = {}; render(); const f = $('#msgpick input'); if (f) f.focus(); }
@@ -4452,6 +4519,19 @@ const PW_CONFIG = {
         const p = player(f.getAttribute('data-pid')); const sl = f.getAttribute('data-slot'); if (!p || !mine(p)) return;
         const phone = toE164(val('phone')); if (!phone || phone.length < 11) { toast('A phone like (561) 555-0100 is needed.'); return; }
         await setSlot(p, sl, { state: 'ok', phone, name: val('name').slice(0, 80), from: 'coach' }); S.ui.slotOpen = null; toast(`${SLOT_LABEL[sl]}: saved. JustCall will find this family on that number too.`); render();
+      } else if (kind === 'msg-group') {
+        const st = S.ui.msgNew; if (!st || st.sending) return; const body = val('body').slice(0, MSG_MAX); if (!body) return; st.text = body;
+        const set = S.players.filter((p) => active(p) && mine(p) && (!st.prog || p.group === st.prog) && (!st.coach || p.coach === st.coach || p.coach2 === st.coach || p.coach3 === st.coach) && !st.off[p.id]).sort((a, b) => a.name.localeCompare(b.name));
+        if (!set.length) return;
+        const btn = f.querySelector('.sendbtn'); if (btn && btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = `Tap again: send to ${set.length}`; setTimeout(() => { if (btn.isConnected) { btn.dataset.sure = ''; btn.textContent = `Send to ${set.length} ${set.length === 1 ? 'family' : 'families'}`; } }, 4000); return; }
+        const gid = newGid(); const label = [st.prog ? group(st.prog).label : (WEB.isDirector ? 'All players' : 'My players'), st.coach ? 'Coach ' + st.coach : ''].filter(Boolean).join(' · ');
+        st.sending = { done: 0, total: set.length }; render(); let out = null, err = '';
+        for (let i = 0; i < set.length; i += 5) {
+          try { out = await api('group', { gid, label, total: set.length, players: set.slice(i, i + 5).map((p) => p.id), body }); } catch (e) { err = e.message || String(e); break; }
+          st.sending.done = Math.min(set.length, i + 5); if (S.ui.msgNew === st) render();
+        }
+        S.ui.msgNew = null; S.msg.at = 0; await loadInbox(true); if (out) S.ui.msgGroup = gid;
+        toast(err ? `Stopped: ${err}` : `Sent to ${out.sent} ${out.sent === 1 ? 'family' : 'families'}${out.skipped ? ` · ${out.skipped} not sent` : ''}.`); render();
       } else if (kind === 'msg') {
         const p = player(f.getAttribute('data-pid')); if (!p || !mine(p)) return;
         if (ckVia(p.id) !== 'text') return;   // WhatsApp and e-mail leave through their own buttons
@@ -4898,6 +4978,8 @@ const PW_CONFIG = {
     if (a.hasAttribute('data-wa')) { const n = a.getAttribute('data-wa'); if (!n) { ev.preventDefault(); toast('No number for this person.'); return; } a.href = 'https://wa.me/' + n + (words ? '?text=' + encodeURIComponent(words) : ''); }
     else { const cc = a.getAttribute('data-cc'); const q = [cc ? 'cc=' + encodeURIComponent(cc) : '', 'subject=' + encodeURIComponent(a.getAttribute('data-subj') || ''), words ? 'body=' + encodeURIComponent(words) : ''].filter(Boolean).join('&'); a.href = 'mailto:' + a.getAttribute('data-mail') + '?' + q; a.removeAttribute('target'); }
   }, true);
+  document.addEventListener('input', (ev) => { const t = ev.target; if (!t || t.id !== 'nmfind' || !S.ui.msgNew) return; S.ui.msgNew.find = t.value; const q = fold(t.value); document.querySelectorAll('#mpane .nm-list .rowb').forEach((r) => { r.hidden = !!q && !fold(r.textContent).includes(q); }); });
+  document.addEventListener('click', (ev) => { const r = ev.target.closest && ev.target.closest('#mlist .msgrow:not(.grp)'); if (r && (S.ui.msgNew || S.ui.msgGroup)) { S.ui.msgNew = null; S.ui.msgGroup = ''; } }, true);
   document.addEventListener('click', (ev) => { const b = ev.target.closest && ev.target.closest('[data-board-g]'); if (!b) return; S.ui.boardG = b.getAttribute('data-board-g'); softRender(); });
   document.addEventListener('change', async (ev) => {
     const t = ev.target; const k = t.getAttribute && t.getAttribute('data-board-set'); if (!k) return;

@@ -177,12 +177,15 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         // an owner looking at the portal as this person ("View as"): reading only, and nothing is marked as read for them
         if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: false }));
         if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
+        if (route === 'GET /coach/groups') return send(res, 200, await COACHTEXT.groups(ctx.db, who));
         if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
         if (route === 'POST /coach/read') return send(res, 200, { ok: true, viewing: true });
         throw S.err(403, 'viewing', `You are looking at the portal as ${who.firstName || 'this person'}. Go back to your own view to send or change anything.`);
       }
       if (route === 'POST /coach/text') { const out = await COACHTEXT.text(ctx.db, who, b); logger.info('coach text', { by: who.email, player: S.clean(b.player, 60), conv: out.conv, sent: out.sent, failed: out.failed, tick: out.tick }); return send(res, 200, out); }
       if (route === 'GET /coach/thread') return send(res, 200, await COACHTEXT.thread(ctx.db, who, S.clean(req.query.player, 60), { conv: S.clean(req.query.conv, 40), markRead: String(req.query.peek || '') !== '1' }));
+      if (route === 'POST /coach/group') { const out = await COACHTEXT.group(ctx.db, who, b); logger.info('coach group text', { by: who.email, gid: out.gid, sent: out.sent, skipped: out.skipped, total: out.total }); return send(res, 200, out); }
+      if (route === 'GET /coach/groups') return send(res, 200, await COACHTEXT.groups(ctx.db, who));
       // notifications on the phone (Nov 13): the public key, this phone's subscription, a test to yourself
       if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
       if (route === 'POST /coach/push/subscribe') { const out = await PUSH.subscribe(ctx.db, who, b); logger.info('push on', { by: who.email }); return send(res, 200, out); }
