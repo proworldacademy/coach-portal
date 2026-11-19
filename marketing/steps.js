@@ -75,7 +75,8 @@
      of a longer step. The menu link now lands on the part itself, not on the top of the step it lives in. */
   const SPOT = { ads: "ads-live", assignments: "asg-top", aireplies: "ai-replies", reports: "reports-list", workflow: "pipeline" };
   const land = (h, n) => { const el = SPOT[h] && $(SPOT[h]); if (!el) { if (SPOT[h] && (n || 0) < 12) setTimeout(() => land(h, (n || 0) + 1), 250); return; }
-    const box = el.closest(".card") || el.parentElement || el; const top = box.getBoundingClientRect().top + window.scrollY - 96; window.scrollTo(0, Math.max(0, top)); };
+    const box = el.closest(".card") || el.parentElement || el; const lab = box.querySelector(':scope > [aria-expanded="false"]'); if (lab) lab.click();   /* a folded card opens */
+    const top = box.getBoundingClientRect().top + window.scrollY - 96; window.scrollTo(0, Math.max(0, top)); };
   const fromHash = () => { const h = String(location.hash || "").replace(/^#/, ""); if (!h) return openTab("sreport"); if (MAP[h]) { openTab(MAP[h]); if (SPOT[h]) setTimeout(() => land(h), 60); return; } if ($("tab-" + h)) return openTab(h); openTab("sreport"); };
   window.addEventListener("hashchange", fromHash);
   setTimeout(fromHash, 0);
