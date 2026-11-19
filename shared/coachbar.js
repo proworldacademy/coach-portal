@@ -179,5 +179,5 @@ setTimeout(() => { if (!e.defaultPrevented) going(); }, 0);
     window.PWAlive = { reconnect, expect, going };
   })();
 
-  (function wait(n) { let c = null; try { c = window.PWAuth && window.PWAuth.ctx; } catch (e) { c = null; } if (c) { window.PWSideAuto(c); window.PWTeamWatch(c); } else if (n < 120) setTimeout(() => wait(n + 1), 150); })(0);   // this file can load before the sign-in is read
+  (function wait(n) { let c = null; try { c = window.PWAuth && window.PWAuth.ctx; } catch (e) { c = null; } if (c && typeof c.has === 'function') { window.PWSideAuto(c); window.PWTeamWatch(c); } else if (n < 200)   /* Nov 19: wait for the finished sign-in — while it was still being checked, the half-read one drew no bar and the wait ended there, so a phone was sometimes left with no bottom bar */ setTimeout(() => wait(n + 1), 150); })(0);   // this file can load before the sign-in is read
 })();
