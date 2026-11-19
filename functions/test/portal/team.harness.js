@@ -160,6 +160,17 @@ if (require.main !== module) return;
   for (const look of ['light', 'dark']) { const { page, ctx, errs } = await open(390, 844, look);
     ok(await page.locator('.tc-side').isVisible() && !(await page.locator('.tc-main').isVisible()), 'phone ' + look + ': the list comes first');
     await shot(page, 'team-phone-list-' + look);
+    // closer to the mockup (Nov 19): round search and write buttons, the four filters, Your people, a card per section, the switch
+    ok(await page.locator('.tc-hb [data-act="find"]').isVisible() && await page.locator('.tc-hb [data-act="new"]').isVisible() && (await page.locator('.tc-hb').boundingBox()).x + (await page.locator('.tc-hb').boundingBox()).width <= 390, 'phone ' + look + ': a round search and a round write button sit beside the title, on the screen');
+    ok((await page.locator('.tc-flt button').allTextContents()).map((t) => t.replace(/\d+/g, '').trim()).join('|') === 'All|Unread|Mentions|Calls', 'phone ' + look + ': the filters are All, Unread, Mentions, Calls');
+    ok(await page.locator('.tc-ppls button').count() >= 2 && await page.locator('.tc-card .tc-row').count() >= 3, 'phone ' + look + ': Your people, and the chats in a card per section');
+    ok(!(await page.locator('#tcq').isVisible()), 'phone ' + look + ': the find box stays away until Search is tapped'); await page.tap('[data-act="find"]'); await page.waitForTimeout(150);
+    ok(await page.locator('#tcq').isVisible(), 'phone ' + look + ': Search opens the find box'); await page.tap('[data-act="find"]'); await page.waitForTimeout(150);
+    await page.tap('[data-flt="mentions"]'); await page.waitForTimeout(150); ok(await page.locator('.tc-hero').count() === 0 && await page.locator('.tc-card .tc-row, .tc-none').count() >= 1, 'phone ' + look + ': Mentions shows only what calls for you');
+    await page.tap('[data-flt="calls"]'); await page.waitForTimeout(150); ok(await page.locator('.tc-none, .tc-card .tc-row').count() >= 1, 'phone ' + look + ': Calls shows the calls that are on'); await page.tap('[data-flt="all"]'); await page.waitForTimeout(150);
+    if (look === 'light') { await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 560; }); await page.waitForTimeout(150); await shot(page, 'team-phone-list2'); await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 99999; }); await page.waitForTimeout(150); await shot(page, 'team-phone-list3');
+      ok(await page.locator('.tc-quiet i.sw').isVisible(), 'phone: Quiet at night is a switch'); await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 0; }); }
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'phone ' + look + ': the list does not run off the side');
     await page.locator('[data-open="general"]').first().tap(); await page.waitForTimeout(400);
     ok(await page.locator('.tc-main').isVisible() && !(await page.locator('.tc-side').isVisible()), 'phone ' + look + ': a chat opens full screen');
     const box = await page.locator('.tc-comp').boundingBox(); ok(box && box.y + box.height <= 844 + 1 && box.y > 600, 'phone ' + look + ': the box to write in sits at the bottom of the screen');
@@ -180,7 +191,7 @@ if (require.main !== module) return;
     await shot(page, 'team-files-waiting');
     await page.click('[data-send="c:general"] .tc-send'); await page.waitForTimeout(900); let d = await docs(page);
     const fm = Object.keys(d).filter((k) => k.startsWith('teamChats/general/messages/') && Array.isArray(d[k].files)); ok(fm.length === 1 && d[fm[0]].files.length === 2 && d[fm[0]].files[0].type === 'image/jpeg' && d[fm[0]].files[0].w === 64, 'files: the message carries the photo (made a JPEG) and the file');
-    ok(Object.keys(d).filter((k) => k.startsWith('teamChats/general/files/')).length === 2 && d['teamChats/general'].last.text === '📷 Photo', 'files: each is stored once; the list says "Photo"');
+    ok(Object.keys(d).filter((k) => k.startsWith('teamChats/general/files/')).length === 2 && d['teamChats/general'].last.text === 'Photo', 'files: each is stored once; the list says "Photo"');
     ok(await page.locator('.tc-main .tc-img img[src^="data:image/jpeg"]').count() === 1 && await page.locator('.tc-main .tc-file').count() === 1, 'files: the photo shows in the chat, the file as a button');
     await page.click('.tc-main .tc-img'); await page.waitForTimeout(300); ok(await page.locator('.tc-view img[src^="data:image/jpeg"]').count() === 1, 'files: tapping the photo opens it large');
     await shot(page, 'team-files-view'); await page.click('.tc-view [data-act="sheet-x"]');

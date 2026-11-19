@@ -222,6 +222,63 @@ html.dark .tc-row .dot{box-shadow:none}
 html.dark .tc-m.mine .bd{background:var(--lime);border-color:var(--lime);color:#0A0A0A}html.dark .tc-m.mine .bd a{text-decoration-color:#0A0A0A}
 html.dark .tc-row .ic.av,html.dark .tc-m .av{background:#F4F4F0;color:#0A0A0A}html.dark .tc-m .av.bot{background:var(--lime)}
 html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F4F4F0;color:#0A0A0A}
+/* ── closer to the mockup (Nov 19, 2026): on the phone the list sits on the page itself, one white card per section; round search and
+   write buttons; Your people; the time and the lime dot on the right of a row; a switch for Quiet at night; the name and the time above
+   a bubble, yours under it; a call as a card with Join; a round lime arrow to send ── */
+.tc-hb{display:flex;gap:8px;flex:none}
+.tc-rb,.tc-rb.tc-new{width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:var(--pw-sf,#fff);color:var(--ink);display:grid;place-items:center;padding:0;cursor:pointer;flex:none;font-size:0}
+.tc-rb[aria-expanded="true"]{background:var(--pw-inkbg,var(--ink));border-color:var(--pw-inkbg,var(--ink));color:#F4F4F0}
+@media(min-width:761px){.tc-find{display:none}}
+.tc-flt button{height:44px;padding:0 18px;border-radius:22px;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.tc-flt button i{font-style:normal;font-weight:400;color:var(--muted)}.tc-flt button[aria-pressed="true"] i{color:#C9C9C4}
+.tc-row .rt{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px}.tc-row .rt:empty{display:none}
+.tc-row .rt time{font-size:12px;color:var(--muted);white-space:nowrap}.tc-row.on .rt time{color:rgba(255,255,255,.65)}
+.tc-row .lv{font:700 11px var(--body);letter-spacing:.06em;text-transform:uppercase;background:var(--lime);color:#0A0A0A;border-radius:11px;padding:4px 8px}
+.tc-row .ic{width:48px;height:48px;border-radius:16px}.tc-row .tx b{font-size:16.5px}.tc-row.un .tx small{color:var(--ink)}.tc-row.on.un .tx small{color:rgba(255,255,255,.8)}
+.tc-row .ic.av.pk,.tc-ppls .pa.pk,.tc-m .av.pk{background:#E286E4;color:#0A0A0A}
+.tc-ppls{display:flex;gap:16px;overflow-x:auto;padding:2px 12px 6px;scrollbar-width:none}.tc-ppls::-webkit-scrollbar{display:none}
+.tc-ppls button{flex:none;border:0;background:none;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;cursor:pointer;font:400 12px var(--body);min-width:56px}
+.tc-ppls .pa{position:relative;width:56px;height:56px;border-radius:50%;background:var(--pw-inkbg,var(--ink));color:#F4F4F0;display:grid;place-items:center;font:700 17px var(--body)}
+.tc-ppls .pa i{position:absolute;right:0;bottom:0;width:13px;height:13px;border-radius:50%;background:var(--lime);border:2px solid #fff;box-sizing:border-box;box-shadow:0 0 0 1px #0A0A0A}
+.tc-ppls small{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.tc-quiet{background:var(--pw-sf,#fff);border-color:var(--line-2);border-radius:24px;min-height:68px;gap:14px;padding:14px 18px;font-size:13px;color:var(--muted)}.tc-quiet svg{color:var(--ink);flex:none}.tc-quiet b{color:var(--ink);font-size:15px;margin-bottom:2px}
+.tc-quiet i.sw,.tc-quiet.on i.sw{flex:none;width:52px;height:30px;border-radius:15px;border:0;padding:0;background:var(--line-2);position:relative;transition:background .15s}
+.tc-quiet i.sw::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s}
+.tc-quiet.on i.sw{background:var(--lime)}.tc-quiet.on i.sw::after{left:25px;background:#0A0A0A;box-shadow:none}
+.tc-day{justify-content:center;font-size:12px;letter-spacing:.16em;margin:18px 12px 8px}.tc-day::before,.tc-day::after{display:none}
+.tc-m .hd{gap:0;align-items:baseline}.tc-m .hd b{font:700 12px var(--body)}.tc-m .hd time{font-size:12px}.tc-m .hd time::before{content:"\00a0·\00a0"}
+.tc-m.mine .hd{order:9;margin-top:5px}.tc-m.mine .hd time::before{content:""}
+.tc-m .bd{border-radius:22px 22px 22px 6px;padding:12px 15px;margin-top:6px}.tc-m.mine .bd{border-radius:22px 22px 6px 22px}.tc-m.more .bd{margin-top:0}
+.tc-rx{margin-top:6px}.tc-rx button{border-radius:16px}
+.tc-rp{display:flex;width:max-content;text-decoration:none;color:var(--muted);font-size:13px;min-height:32px;margin-top:4px}
+@media(min-width:761px){.tc-hero .big{font-size:44px}}
+.tc-callm,.tc-callm.live{display:flex;width:min(520px,100%);box-sizing:border-box;align-items:center;gap:12px;border-radius:22px;padding:12px 14px;margin-top:6px;background:var(--pw-sf,#fff);border:1px solid var(--line-2);color:var(--ink)}
+.tc-callm .ci{flex:none;width:44px;height:44px;border-radius:50%;background:var(--line);display:grid;place-items:center}.tc-callm.live .ci{background:var(--lime);color:#0A0A0A}
+.tc-callm .ct{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}.tc-callm .ct b{font:700 15px var(--body)}.tc-callm .ct small{font-size:13px;color:var(--muted)}
+.tc-callm button{flex:none;height:44px;padding:0 20px;border-radius:22px;background:#0A0A0A;color:#F4F4F0;font:700 14px var(--body)}
+.tc-pin strong{font-weight:700}.tc-pin small{font-size:13px}
+.tc-clip{border-radius:50%;font-size:0;margin-bottom:4px}
+.tc-comp textarea{border-radius:26px;min-height:52px;padding:14px 18px}
+.tc-send{width:52px;height:52px;min-width:52px;border-radius:50%;padding:0;display:grid;place-items:center;font-size:0}
+@media(max-width:760px){
+  .tc-q.off{display:none}
+  .tc-side,.tc-main,.tc-thr{background:none;border:0;border-radius:0}
+  .tc-sh{padding:6px 2px 14px}.tc-side h1{font-size:clamp(34px,10.8vw,44px);min-width:0}
+  .tc-q{margin:0 0 12px}.tc-list{padding:0 0 110px}
+  .tc-flt{padding:0 0 16px}
+  .tc-hero{margin:0 0 6px;border-radius:30px;padding:22px;gap:14px}.tc-hero .big{font-size:clamp(48px,15.5vw,64px)}.tc-hero .hr{border-radius:20px;min-height:60px;padding:12px 14px}
+  .tc-sec{padding:20px 4px 10px;font-size:12px}
+  .tc-card{background:var(--pw-sf,#fff);border:1px solid var(--line-2);border-radius:30px;padding:8px 18px}
+  .tc-card .tc-row{padding:12px 0;border-radius:0;min-height:72px}.tc-card .tc-row:hover{background:none}
+  .tc-card .tc-row+.tc-row::before{left:0;right:0}
+  .tc-ppls{padding:2px 2px 4px}
+  .tc-quiet{width:100%;margin:22px 0 10px;box-sizing:border-box}
+  .tc-none{margin:0 0 6px;background:var(--pw-sf,#fff);border-radius:24px}.tc-push{margin:0 0 14px;border-radius:22px}
+  .tc-mh{border-bottom:0;padding:8px 2px 12px}.tc-mh .ti b{font-size:32px}
+  .tc-pin{margin:0;width:100%;border-radius:18px;min-height:48px}
+  .tc-msgs{padding:10px 0 6px}.tc-m{padding:7px 2px}.tc-day{margin:18px 0 8px}
+  .tc-comp{border-top:0;padding:12px 2px calc(14px + env(safe-area-inset-bottom,0px))}.tc-joinbar{border-top:0;padding:14px 4px}
+}
 </style>
 </head>
 <body class="skin-coach tc">
@@ -253,7 +310,8 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     clip: '<path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"/>', mark: '<path d="M7 4h10v16l-5-4-5 4z"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', mute: '<path d="M6 16V11a6 6 0 0 1 9-5M18 11v5l1.500 2H9M4 4l16 16"/>',
     arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>', send: '<path d="M5 12h13M12 5l7 7-7 7"/>', back: '<path d="M15 5l-7 7 7 7"/>', cam: '<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7l1.500-3h5L16 7"/>',
     thumb: '<path d="M7 11v9H4v-9zM7 11l4-7a2.500 2.500 0 0 1 2.500 3L13 10h5a2 2 0 0 1 2 2.300l-1 6a2 2 0 0 1-2 1.700H7"/>', heart: '<path d="M12 20s-7-4.500-7-10a4 4 0 0 1 7-2.500A4 4 0 0 1 19 10c0 5.500-7 10-7 10z"/>', smile: '<circle cx="12" cy="12" r="8.500"/><path d="M8.500 14a4 4 0 0 0 7 0M9 10h.010M15 10h.010"/>',
-    star: '<path d="M12 4l2.400 5 5.600.700-4.100 3.800 1.100 5.500L12 16.300 7 19l1.100-5.500L4 9.700 9.600 9z"/>', eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800"/>', hands: '<path d="M12 21V9l-3-5-2 1 2 6-3 4 3 6zM12 21l3-6-3-4"/><path d="M12 9l3-5 2 1-2 6 3 4-3 6"/>', bolt: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>' };
+    star: '<path d="M12 4l2.400 5 5.600.700-4.100 3.800 1.100 5.500L12 16.300 7 19l1.100-5.500L4 9.700 9.600 9z"/>', eye: '<path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800"/>', hands: '<path d="M12 21V9l-3-5-2 1 2 6-3 4 3 6zM12 21l3-6-3-4"/><path d="M12 9l3-5 2 1-2 6 3 4-3 6"/>', bolt: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', pen: '<path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M13 7l4 4"/>', plus: '<path d="M12 5v14M5 12h14"/>', reply: '<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/>', at: '<circle cx="12" cy="12" r="4"/><path d="M16 8v5a2.5 2.5 0 0 0 5 0v-1a9 9 0 1 0-3.5 7"/>' };
   const IC = (k, z) => '<svg aria-hidden="true" width="' + (z || 18) + '" height="' + (z || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + String(ICP[k] || "").replace(/(\d)\.(\d)00\b/g, "$1.$2") + "</svg>";
   const RXI = { "👍": "thumb", "❤️": "heart", "😂": "smile", "🎉": "star", "✅": "check", "👀": "eye", "🙏": "hands", "🔥": "bolt" }; const RXN = { "👍": "Agree", "❤️": "Love", "😂": "Funny", "🎉": "Well done", "✅": "Done", "👀": "Looking", "🙏": "Thanks", "🔥": "Great" };
   const rxi = (e, z) => (RXI[e] ? IC(RXI[e], z || 16) : esc(e));
@@ -261,6 +319,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   const wide = () => window.innerWidth > 760;
   const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
   const nameOf = (email) => (email === BOT ? "ProWorld" : (S.people[email] && S.people[email].name) || String(email || "").split("@")[0]);
+  const tone = (email) => (email && email !== BOT && hash(String(email)).charCodeAt(0) % 3 === 0 ? " pk" : "");
   const firstOf = (email) => nameOf(email).split(/\s+/)[0];
   const chats = () => Object.assign({}, S.open, S.mine);
   const chat = (id) => S.mine[id] || S.open[id] || null;
@@ -313,9 +372,9 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   function sideHtml() {
     const all = chats(); const q = S.q.trim().toLowerCase(); const hit = (c) => !q || titleOf(c).toLowerCase().includes(q) || (c.topic || "").toLowerCase().includes(q);
     const mineIds = Object.keys(S.mine);
-    const row = (id, c) => { const un = unread(id), mu = !!S.reads.mute[id]; const ic = c.kind === "channel" ? IC(c.private ? "lock" : "hash") : esc(c.kind === "dm" ? initials(titleOf(c)) : String((c.members || []).length)); const round = c.kind !== "channel";
+    const row = (id, c) => { const un = unread(id), mu = !!S.reads.mute[id]; const ic = c.kind === "channel" ? IC(c.private ? "lock" : "hash") : esc(c.kind === "dm" ? initials(titleOf(c)) : String((c.members || []).length)); const round = c.kind !== "channel"; const pk = c.kind === "dm" ? tone(others(c)[0]) : "";
       const last = c.last && c.last.text ? (c.kind !== "dm" && c.last.by !== S.me ? (c.last.name || "").split(" ")[0] + ": " : c.last.by === S.me ? "You: " : "") + c.last.text : subOf(c);
-      return '<button type="button" class="tc-row' + (S.cur === id ? " on" : "") + (un ? " un" : "") + '" data-open="' + esc(id) + '"><span class="ic' + (round ? " av" : "") + '">' + ic + '</span><span class="tx"><b>' + esc(titleOf(c)) + "</b><small>" + esc(last) + "</small></span>" + (mu ? '<span class="mu" title="Muted">' + IC("mute", 15) + "</span>" : "") + (un ? '<span class="dot" aria-label="Unread"></span>' : c.last && c.last.at ? '<span class="mu">' + esc(whenShort(c.last.at)) + "</span>" : "") + "</button>"; };
+      return '<button type="button" class="tc-row' + (S.cur === id ? " on" : "") + (un ? " un" : "") + '" data-open="' + esc(id) + '"><span class="ic' + (round ? " av" + pk : "") + '">' + ic + '</span><span class="tx"><b>' + esc(titleOf(c)) + "</b><small>" + esc(last) + "</small></span>" + (mu ? '<span class="mu" title="Muted">' + IC("mute", 15) + "</span>" : "") + '<span class="rt">' + (c.last && c.last.at ? "<time>" + esc(whenShort(c.last.at)) + "</time>" : "") + (callLive(id) ? '<span class="lv">Live</span>' : un ? '<span class="dot" aria-label="Unread"></span>' : "") + "</span></button>"; };
     const chans = mineIds.filter((id) => S.mine[id].kind === "channel" && hit(S.mine[id])).sort((a, b) => titleOf(S.mine[a]).localeCompare(titleOf(S.mine[b])));
     const dms = mineIds.filter((id) => S.mine[id].kind !== "channel" && hit(S.mine[id])).sort((a, b) => ((S.mine[b].last || {}).at || S.mine[b].createdAt || 0) - ((S.mine[a].last || {}).at || S.mine[a].createdAt || 0));
     const more = Object.keys(S.open).filter((id) => !S.mine[id] && hit(S.open[id])).sort((a, b) => titleOf(all[a]).localeCompare(titleOf(all[b])));
@@ -327,26 +386,34 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     const saved = q ? [] : Object.keys(S.reads.saved || {}).map((k) => Object.assign({ id: k }, S.reads.saved[k])).filter((x) => x && x.chat && chat(x.chat)).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
     const oldDms = q ? [] : dms.filter((id) => lastAt(id) < OLD && !unread(id) && id !== S.cur);
     const liveDms = dms.filter((id) => !oldDms.includes(id));
-    const flt = q ? "all" : (S.flt || "all"); const showCh = flt === "all" || flt === "channels", showDm = flt === "all" || flt === "direct";
+    const FL = ["all", "unread", "mentions", "calls"]; const flt = q ? "all" : (FL.includes(S.flt) ? S.flt : "all"); const showCh = flt === "all", showDm = flt === "all";
+    const ment = up.filter((id) => { const l = S.mine[id].last || {}; return l.e === true || (Array.isArray(l.m) && l.m.includes(S.me)); });
+    const live = mineIds.filter((id) => callLive(id)).sort((a, b) => lastAt(b) - lastAt(a));
+    /* Your people: the ones you write with, the latest first, then the rest of the team. A tap opens the chat with that person. */
+    const dmWith = {}; dms.forEach((id) => { const c = S.mine[id]; if (c.kind === "dm" && others(c)[0] && others(c)[0] !== BOT && !(others(c)[0] in dmWith)) dmWith[others(c)[0]] = id; });
+    const people = q || flt !== "all" ? [] : Object.keys(dmWith).map((e) => ({ email: e, name: nameOf(e) })).concat(S.peopleList.filter((x) => x.email !== S.me && !(x.email in dmWith))).slice(0, 14);
+    const card = (rows) => '<section class="tc-card">' + rows + "</section>";
     const pushCard = S.push.can && S.push.on === false ? '<div class="tc-push">Get a notification on this ' + (wide() ? "device" : "phone") + ' when someone writes to you.<br><button type="button" data-act="push-on"' + (S.push.busy ? " disabled" : "") + ">" + (S.push.busy ? "Turning on…" : "Turn on notifications") + "</button></div>" : "";
     const loading = !S.gotMine;
-    return '<div class="tc-sh"><h1>Locker Room</h1><button type="button" class="tc-new" data-act="new" aria-label="New message or channel">+</button></div>' +
-      '<div class="tc-q"><input type="search" id="tcq" placeholder="Find a channel or a person" value="' + esc(S.q) + '" autocomplete="off" aria-label="Find a channel or a person"></div>' +
+    return '<div class="tc-sh"><h1>Locker Room</h1><div class="tc-hb"><button type="button" class="tc-rb tc-find" data-act="find" aria-label="Search" aria-expanded="' + (S.find || q ? "true" : "false") + '">' + IC("search", 20) + '</button><button type="button" class="tc-rb tc-new" data-act="new" aria-label="New message or channel">' + IC("pen", 20) + '</button></div></div>' +
+      '<div class="tc-q' + (S.find || S.q ? "" : " off") + '"><input type="search" id="tcq" placeholder="Find a channel or a person" value="' + esc(S.q) + '" autocomplete="off" aria-label="Find a channel or a person"></div>' +
       '<div class="tc-list">' + pushCard +
-      (q ? "" : '<div class="tc-flt" role="group" aria-label="Show">' + [["all", "All"], ["unread", "Unread" + (up.length ? " · " + up.length : "")], ["channels", "Channels"], ["direct", "Direct"]].map((f) => '<button type="button" data-flt="' + f[0] + '" aria-pressed="' + ((S.flt || "all") === f[0]) + '">' + f[1] + "</button>").join("") + "</div>") +
-      (up.length ? '<section class="tc-hero" aria-label="Catch up"><div class="hh"><span>Catch up</span><button type="button" data-act="read-all">Mark all read</button></div><div class="big">' + up.length + (up.length === 1 ? " needs you" : " need you") + "</div>" +
-        up.slice(0, flt === "unread" ? 30 : 3).map((id, i) => { const c = S.mine[id]; const l = c.last || {}; return '<button type="button" class="hr' + (i ? "" : " first") + '" data-open="' + esc(id) + '"><span class="hi">' + (c.kind === "channel" ? IC(c.private ? "lock" : "hash") : esc(initials(titleOf(c)))) + '</span><span class="tx"><b>' + esc(titleOf(c)) + "</b><small>" + esc((l.by && l.by !== S.me && c.kind !== "dm" ? (l.name || "").split(" ")[0] + ": " : "") + (l.text || "New")) + "</small></span>" + IC("arrow", 16) + "</button>"; }).join("") +
+      (q ? "" : '<div class="tc-flt" role="group" aria-label="Show">' + [["all", "All", 0], ["unread", "Unread", up.length], ["mentions", "Mentions", ment.length], ["calls", "Calls", live.length]].map((f) => '<button type="button" data-flt="' + f[0] + '" aria-pressed="' + (flt === f[0]) + '">' + f[1] + (f[2] ? "<i>" + f[2] + "</i>" : "") + "</button>").join("") + "</div>") +
+      (flt === "mentions" ? (ment.length ? card(ment.map((id) => row(id, S.mine[id])).join("")) : '<div class="tc-none">Nobody is asking for you right now.</div>') : "") +
+      (flt === "calls" ? (live.length ? card(live.map((id) => row(id, S.mine[id])).join("")) : '<div class="tc-none">No call is on right now. Open a chat and tap the phone or the camera to start one.</div>') : "") +
+      (up.length && (flt === "all" || flt === "unread") ? '<section class="tc-hero" aria-label="Catch up"><div class="hh"><span>Catch up</span><button type="button" data-act="read-all">Mark all read</button></div><div class="big">' + up.length + (up.length === 1 ? " needs you" : " need you") + "</div>" +
+        up.slice(0, flt === "unread" ? 30 : 3).map((id, i) => { const c = S.mine[id]; const l = c.last || {}; return '<button type="button" class="hr' + (i ? "" : " first") + '" data-open="' + esc(id) + '"><span class="hi">' + (ment.includes(id) ? IC("at", 20) : c.kind === "channel" ? IC(c.private ? "lock" : "hash", 20) : esc(initials(titleOf(c)))) + '</span><span class="tx"><b>' + esc(titleOf(c)) + "</b><small>" + esc((l.by && l.by !== S.me && c.kind !== "dm" ? (l.name || "").split(" ")[0] + ": " : "") + (l.text || "New")) + "</small></span>" + IC("arrow", 16) + "</button>"; }).join("") +
         (up.length > 3 && flt !== "unread" ? '<button type="button" class="more" data-flt="unread">See all ' + up.length + "</button>" : "") + "</section>" : (flt === "unread" ? '<div class="tc-none">Nothing unread. You are all caught up.</div>' : "")) +
-      (saved.length ? '<div class="tc-sec"><span>Saved for later</span></div>' + saved.map((x) => { const c = chat(x.chat); return '<div class="tc-row" style="cursor:default"><button type="button" data-hit="' + esc(x.chat) + "|" + esc(x.id) + "|" + esc(x.th || "") + '" style="all:unset;display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer"><span class="ic">' + IC("mark") + '</span><span class="tx"><b>' + esc((x.name || "").split(" ")[0] + " in " + (c.kind === "channel" ? "#" : "") + titleOf(c)) + "</b><small>" + esc(x.text || "A file") + '</small></span></button><button type="button" class="sv-x" data-act="save" data-id="' + esc(x.id) + '" aria-label="Done, remove from saved" title="Done">' + IC("check", 15) + '</button></div>'; }).join("") : "") +
-      (!showCh ? "" : '<div class="tc-sec"><span>Channels</span></div>' + (chans.filter((id) => !up.includes(id) || flt !== "all").map((id) => row(id, S.mine[id])).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : q ? "No channel matches" : "No channels yet") + "</small></span></div>")) +
-      (!showDm ? "" : '<div class="tc-sec"><span>Direct messages</span></div>' + (liveDms.filter((id) => !up.includes(id) || flt !== "all").map((id) => row(id, S.mine[id])).join("") || (ppl.length || up.length || oldDms.length ? "" : '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : "Tap + to write to someone") + "</small></span></div>"))) +
-      (!showDm ? "" : ppl.map((p) => '<button type="button" class="tc-row" data-dm="' + esc(p.email) + '"><span class="ic av">' + esc(initials(p.name)) + '</span><span class="tx"><b>' + esc(p.name) + "</b><small>Write to " + esc(p.name.split(" ")[0]) + "</small></span></button>").join("")) +
-      (q.length >= 2 ? '<div class="tc-sec"><span>Messages</span></div>' + (S.results && S.results.q === q ? (S.results.hits.map((h) => { const c = chat(h.chat); const t = h.m.text || ((h.m.files || [])[0] || {}).name || ""; const i = t.toLowerCase().indexOf(q); const from = Math.max(0, i - 30); const snip = (from ? "…" : "") + t.slice(from, from + 110);
+      (people.length ? '<div class="tc-sec"><span>Your people</span></div><div class="tc-ppls">' + people.map((x) => '<button type="button" data-dm="' + esc(x.email) + '" aria-label="Write to ' + esc(x.name) + '"><span class="pa' + tone(x.email) + '">' + esc(initials(x.name)) + (dmWith[x.email] && unread(dmWith[x.email]) ? "<i></i>" : "") + "</span><small>" + esc(x.name.split(/\s+/)[0]) + "</small></button>").join("") + "</div>" : "") +
+      (saved.length && flt === "all" ? '<div class="tc-sec"><span>Saved for later</span></div>' + card(saved.map((x) => { const c = chat(x.chat); return '<div class="tc-row" style="cursor:default"><button type="button" data-hit="' + esc(x.chat) + "|" + esc(x.id) + "|" + esc(x.th || "") + '" style="all:unset;display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer"><span class="ic">' + IC("mark") + '</span><span class="tx"><b>' + esc((x.name || "").split(" ")[0] + " in " + (c.kind === "channel" ? "#" : "") + titleOf(c)) + "</b><small>" + esc(x.text || "A file") + '</small></span></button><button type="button" class="sv-x" data-act="save" data-id="' + esc(x.id) + '" aria-label="Done, remove from saved" title="Done">' + IC("check", 15) + '</button></div>'; }).join("")) : "") +
+      (!showCh ? "" : '<div class="tc-sec"><span>Channels</span></div>' + card(chans.map((id) => row(id, S.mine[id])).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : q ? "No channel matches" : "No channels yet") + "</small></span></div>")) +
+      (!showDm ? "" : ((liveDms.length || ppl.length) ? '<div class="tc-sec"><span>Direct</span></div>' + card(liveDms.map((id) => row(id, S.mine[id])).join("") + ppl.map((p) => '<button type="button" class="tc-row" data-dm="' + esc(p.email) + '"><span class="ic av' + tone(p.email) + '">' + esc(initials(p.name)) + '</span><span class="tx"><b>' + esc(p.name) + "</b><small>Write to " + esc(p.name.split(" ")[0]) + "</small></span></button>").join("")) : (oldDms.length || q ? "" : '<div class="tc-sec"><span>Direct</span></div>' + card('<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : "Tap the pencil to write to someone") + "</small></span></div>"))) ) +
+      (q.length >= 2 ? '<div class="tc-sec"><span>Messages</span></div>' + card(S.results && S.results.q === q ? (S.results.hits.map((h) => { const c = chat(h.chat); const t = h.m.text || ((h.m.files || [])[0] || {}).name || ""; const i = t.toLowerCase().indexOf(q); const from = Math.max(0, i - 30); const snip = (from ? "…" : "") + t.slice(from, from + 110);
           const j = snip.toLowerCase().indexOf(q); const marked = j < 0 ? esc(snip) : esc(snip.slice(0, j)) + "<mark>" + esc(snip.slice(j, j + q.length)) + "</mark>" + esc(snip.slice(j + q.length));
           return '<button type="button" class="tc-row" data-hit="' + esc(h.chat) + "|" + esc(h.m.id) + "|" + esc(h.m.th || "") + '"><span class="ic">' + (c && c.kind === "channel" ? IC(c.private ? "lock" : "hash") : esc(initials(h.m.name))) + '</span><span class="tx"><b>' + esc((h.m.name || nameOf(h.m.by)).split(" ")[0] + " in " + (c ? (c.kind === "channel" ? "#" : "") + titleOf(c) : "a chat")) + "</b><small>" + marked + '</small></span><span class="mu">' + esc(whenShort(h.m.at)) + "</span></button>"; }).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>No message has those words</small></span></div>') : '<div class="tc-row" style="cursor:default"><span class="tx"><small>Searching every chat you are in…</small></span></div>') : "") +
-      (!showDm ? "" : (oldDms.length ? '<div class="tc-sec"><span>Older · ' + oldDms.length + '</span><button type="button" data-act="older">' + (S.older ? "Hide" : "Show") + "</button></div>" + (S.older ? oldDms.map((id) => row(id, S.mine[id])).join("") : "") : "")) +
-      (!showCh ? "" : (more.length ? '<div class="tc-sec"><span>More channels</span></div>' + more.map((id) => '<button type="button" class="tc-row" data-open="' + esc(id) + '"><span class="ic">#</span><span class="tx"><b>' + esc(titleOf(S.open[id])) + "</b><small>" + esc(subOf(S.open[id])) + '</small></span><span class="join">Join</span></button>').join("") : "")) +
-      (q ? "" : '<button type="button" class="tc-quiet' + (S.reads.quiet ? " on" : "") + '" data-act="quiet" aria-pressed="' + (S.reads.quiet ? "true" : "false") + '">' + IC("moon", 20) + '<span style="flex:1"><b>Quiet at night</b>9 pm to 7 am: only direct messages and mentions reach this phone.</span><i>' + (S.reads.quiet ? "On" : "Off") + "</i></button>") +
+      (!showDm ? "" : (oldDms.length ? '<div class="tc-sec"><span>Older · ' + oldDms.length + '</span><button type="button" data-act="older">' + (S.older ? "Hide" : "Show") + "</button></div>" + (S.older ? card(oldDms.map((id) => row(id, S.mine[id])).join("")) : "") : "")) +
+      (!showCh ? "" : (more.length ? '<div class="tc-sec"><span>More channels</span></div>' + card(more.map((id) => '<button type="button" class="tc-row" data-open="' + esc(id) + '"><span class="ic">' + IC("hash") + '</span><span class="tx"><b>' + esc(titleOf(S.open[id])) + "</b><small>" + esc(subOf(S.open[id])) + '</small></span><span class="join">Join</span></button>').join("")) : "")) +
+      (q ? "" : '<button type="button" class="tc-quiet' + (S.reads.quiet ? " on" : "") + '" data-act="quiet" aria-pressed="' + (S.reads.quiet ? "true" : "false") + '">' + IC("moon", 20) + '<span style="flex:1"><b>Quiet at night</b>9 pm to 7 am. Direct messages and mentions only.</span><i class="sw" aria-hidden="true"></i></button>') +
       "</div>";
   }
 
@@ -359,21 +426,21 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     if (S.edit === m.id && mine) body = '<form class="tc-edit" data-edit="' + esc(m.id) + '"><textarea name="t" maxlength="4000" aria-label="Edit your message">' + esc(m.text) + '</textarea><div><button class="tc-pri" type="submit">Save</button><button class="tc-ib" type="button" data-act="edit-x">Cancel</button></div></form>';
     else body = m.deleted ? '<div class="bd gone">This message was deleted.</div>' : '<div class="bd">' + fmt(m.text) + (m.edited ? '<span class="ed">(edited)</span>' : "") + "</div>";
     if (!m.deleted && S.edit !== m.id && m.call) { const live = callLive(m.call); const mineCall = window.PWCall && window.PWCall.active() === m.call;
-      body = '<div class="tc-callm' + (live ? " live" : "") + '"><span>' + IC(m.callKind === "video" ? "video" : "phone", 18) + " " + esc(m.callKind === "video" ? "Video call" : "Call") + (live ? "" : " · ended") + "</span>" + (live ? '<button type="button" data-join="' + esc(m.call) + '">' + (mineCall ? "Back to the call" : "Join") + "</button>" : "") + "</div>"; }
+      body = '<div class="tc-callm' + (live ? " live" : "") + '"><span class="ci">' + IC(m.callKind === "video" ? "video" : "phone", 20) + '</span><span class="ct"><b>' + esc(m.callKind === "video" ? "Video call" : "Call") + (live ? " · live" : " · ended") + "</b><small>" + esc(live ? (mine ? "You started it" : firstOf(m.by) + " is in") : (mine ? "You" : firstOf(m.by)) + " · " + timeOf(m.at)) + "</small></span>" + (live ? '<button type="button" data-join="' + esc(m.call) + '">' + (mineCall ? "Back to the call" : "Join") + "</button>" : "") + "</div>"; }
     if (!m.deleted && S.edit !== m.id && Array.isArray(m.files) && m.files.length) { if (!m.text) body = ""; body += '<div class="tc-files">' + m.files.map((f) => { S.fmeta[f.id] = f;
       return isImg(f) ? '<button type="button" class="tc-img" data-view="' + esc(f.id) + '" style="aspect-ratio:' + (f.w && f.h ? f.w + "/" + f.h : "4/3") + '" aria-label="Open the photo ' + esc(f.name) + '"><img data-file="' + esc(f.id) + '" alt="' + esc(f.name) + '"' + (S.fcache[f.id] ? ' src="' + S.fcache[f.id] + '"' : "") + "></button>"
         : '<button type="button" class="tc-file" data-get="' + esc(f.id) + '"><span>' + IC("clip") + '</span><b>' + esc(f.name) + "</b><small>" + esc(kb(f.size || 0)) + "</small></button>"; }).join("") + "</div>"; }
     const rx = m.reactions && !m.deleted ? Object.keys(m.reactions).filter((e) => (m.reactions[e] || []).length).map((e) => '<button type="button" class="' + (m.reactions[e].includes(S.me) ? "me" : "") + '" data-rx="' + esc(m.id) + '" data-e="' + esc(e) + '" title="' + esc((RXN[e] ? RXN[e] + ": " : "") + m.reactions[e].map(nameOf).join(", ")) + '">' + rxi(e) + "<b>" + m.reactions[e].length + "</b></button>").join("") : "";
-    const rp = !inThread && m.replies ? '<button type="button" class="tc-rp" data-thread="' + esc(m.id) + '">' + m.replies + (m.replies === 1 ? " reply" : " replies") + "</button>" : "";
+    const rp = !inThread && m.replies ? '<button type="button" class="tc-rp" data-thread="' + esc(m.id) + '">' + IC("reply", 15) + m.replies + (m.replies === 1 ? " reply" : " replies") + "</button>" : "";
     const acts = m.deleted || S.edit === m.id ? "" : '<div class="tc-acts">' + EMO.slice(0, 3).map((e) => '<button type="button" data-rx="' + esc(m.id) + '" data-e="' + e + '" aria-label="' + (RXN[e] || "React") + '" title="' + (RXN[e] || "React") + '">' + rxi(e, 17) + "</button>").join("") + '<button type="button" data-act="rx-more" data-id="' + esc(m.id) + '" aria-label="More reactions">＋</button>' + (inThread ? "" : '<button type="button" class="t" data-thread="' + esc(m.id) + '">Reply</button>') + '<button type="button" class="t" data-act="save" data-id="' + esc(m.id) + '">' + (S.reads.saved && S.reads.saved[m.id] ? "Saved" : "Save") + "</button>" + (inThread || !isIn(chat(S.cur)) ? "" : '<button type="button" class="t" data-act="pin" data-id="' + esc(m.id) + '">' + (pinsOf(chat(S.cur)).some((x) => x.id === m.id) ? "Unpin" : "Pin") + "</button>") + (mine && !m.bot ? '<button type="button" class="t" data-act="edit" data-id="' + esc(m.id) + '">Edit</button><button type="button" class="t" data-act="del" data-id="' + esc(m.id) + '">Delete</button>' : "") + "</div>";
-    return day + '<div class="tc-m' + (mine ? " mine" : "") + (same && !day ? " more" : "") + (S.act === m.id ? " act" : "") + (S.hit && S.hit.id === m.id && Date.now() < S.hit.until ? " hit" : "") + '" data-m="' + esc(m.id) + '"><span class="av' + (m.bot ? " bot" : "") + '">' + esc(m.bot ? "PW" : initials(name)) + "</span><div>" + (same && !day ? "" : '<div class="hd"><b>' + esc(name) + "</b><time>" + esc(timeOf(m.at)) + "</time></div>") + body + (rx ? '<div class="tc-rx">' + rx + "</div>" : "") + rp + "</div>" + acts + "</div>";
+    return day + '<div class="tc-m' + (mine ? " mine" : "") + (same && !day ? " more" : "") + (S.act === m.id ? " act" : "") + (S.hit && S.hit.id === m.id && Date.now() < S.hit.until ? " hit" : "") + '" data-m="' + esc(m.id) + '"><span class="av' + (m.bot ? " bot" : tone(m.by)) + '">' + esc(m.bot ? "PW" : initials(name)) + "</span><div>" + (same && !day ? "" : '<div class="hd"><b>' + esc(mine ? "You" : name.split(/\s+/)[0]) + "</b><time>" + esc(timeOf(m.at)) + "</time></div>") + body + (rx ? '<div class="tc-rx">' + rx + "</div>" : "") + rp + "</div>" + acts + "</div>";
   }
   /* Pinned lines: what must not get buried in a busy channel (the first complaint in Slack's reviews). Five at most, on the chat itself. */
   const pinsOf = (c) => (c && Array.isArray(c.pins) ? c.pins : []);
   function pinBar(c) { const p = pinsOf(c); if (!p.length) return ""; const x = p[p.length - 1];
-    return '<button type="button" class="tc-pin" data-act="pins"><b>' + IC("pin", 16) + '</b><span>' + esc((x.name ? x.name.split(" ")[0] + ": " : "") + (x.text || "A file")) + "</span>" + (p.length > 1 ? "<small>+" + (p.length - 1) + " more</small>" : "") + "</button>"; }
+    return '<button type="button" class="tc-pin" data-act="pins"><b>' + IC("pin", 18) + '</b><span><strong>Pinned</strong> · ' + esc(x.text || "A file") + "</span>" + (p.length > 1 ? "<small>+" + (p.length - 1) + "</small>" : "") + "</button>"; }
   function composer(key, placeholder) {
-    return '<div class="tc-comp" data-comp="' + esc(key) + '"><div class="tc-sug" id="sug-' + esc(key) + '" hidden></div><div class="tc-att" data-att="' + esc(key) + '">' + attHtml(key) + '</div><form data-send="' + esc(key) + '"><label class="tc-clip" title="Add a photo or a file" aria-label="Add a photo or a file">＋<input type="file" multiple hidden data-pick="' + esc(key) + '"></label><textarea name="t" rows="1" maxlength="4000" placeholder="' + esc(placeholder) + '" aria-label="' + esc(placeholder) + '" enterkeyhint="send">' + esc(S.drafts[key] || "") + '</textarea><button class="tc-send" type="submit" aria-label="Send">Send</button></form></div>';
+    return '<div class="tc-comp" data-comp="' + esc(key) + '"><div class="tc-sug" id="sug-' + esc(key) + '" hidden></div><div class="tc-att" data-att="' + esc(key) + '">' + attHtml(key) + '</div><form data-send="' + esc(key) + '"><label class="tc-clip" title="Add a photo or a file" aria-label="Add a photo or a file">' + IC("plus", 20) + '<input type="file" multiple hidden data-pick="' + esc(key) + '"></label><textarea name="t" rows="1" maxlength="4000" placeholder="' + esc(placeholder) + '" aria-label="' + esc(placeholder) + '" enterkeyhint="send">' + esc(S.drafts[key] || "") + '</textarea><button class="tc-send" type="submit" aria-label="Send">' + IC("send", 22) + '</button></form></div>';
   }
   function attHtml(key) { return (S.att[key] || []).map((a, i) => "<span>" + (a.thumb ? '<img src="' + esc(a.thumb) + '" alt="">' : IC("clip", 16)) + "<b>" + esc(a.name) + "</b><small>" + esc(kb(a.size)) + '</small><button type="button" data-att-x="' + esc(key) + "|" + i + '" aria-label="Remove ' + esc(a.name) + '">' + IC("x", 13) + '</button></span>').join(""); }
   function mainHtml() {
@@ -392,7 +459,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     const reps = S.tmsgs.slice().sort((a, b) => a.at - b.at); let body = msgHtml(p, null, true); let prev = null;
     if (reps.length) body += '<div class="tc-day">' + reps.length + (reps.length === 1 ? " reply" : " replies") + "</div>";
     reps.forEach((m) => { body += msgHtml(m, prev, true).replace(/<div class="tc-day">[^<]*<\/div>/, ""); prev = m; });
-    return '<div class="tc-mh"><button type="button" class="bk" data-act="thread-x" aria-label="Back to the chat">‹ Back</button><span class="ti" style="cursor:default"><b>Thread</b><small>' + esc(titleOf(chat(S.cur))) + '</small></span><button type="button" class="tc-ib" data-act="thread-x">Close</button></div><div class="tc-msgs" id="tmsgs">' + body + "</div>" + (isIn(chat(S.cur)) ? composer("t:" + S.thread, "Reply in the thread") : "");
+    return '<div class="tc-mh"><button type="button" class="bk" data-act="thread-x" aria-label="Back to the chat">' + IC("back", 20) + '</button><span class="ti" style="cursor:default"><b>Thread</b><small>' + esc(titleOf(chat(S.cur))) + '</small></span><button type="button" class="tc-ib" data-act="thread-x">Close</button></div><div class="tc-msgs" id="tmsgs">' + body + "</div>" + (isIn(chat(S.cur)) ? composer("t:" + S.thread, "Reply in the thread") : "");
   }
 
   /* ── drawing: the three panes are redrawn whole; what is being typed and where the list is scrolled come back ── */
@@ -474,7 +541,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
           const meta = { id: fid, name: a.name.slice(0, 120), type: a.type, size: a.size, n: a.parts.length }; if (a.w) { meta.w = a.w; meta.h = a.h; } msg.files.push(meta); if (a.url) S.fcache[fid] = a.url; }
         S.att[key] = []; const box = document.querySelector('[data-att="' + key + '"]'); if (box) box.innerHTML = ""; }
       await ref.set(msg);
-      S.fs.doc("teamChats/" + id).update({ last: { at, by: S.me, name: S.name, text: (text.replace(/\s+/g, " ") || (msg.files && msg.files.length ? (/^image\//.test(msg.files[0].type) ? "Photo" : msg.files[0].name) : "")).slice(0, 140) } }).catch(() => {});
+      S.fs.doc("teamChats/" + id).update({ last: Object.assign({ at, by: S.me, name: S.name, text: (text.replace(/\s+/g, " ") || (msg.files && msg.files.length ? (/^image\//.test(msg.files[0].type) ? "Photo" : msg.files[0].name) : "")).slice(0, 140) }, mm.mentions.length ? { m: mm.mentions.slice(0, 40) } : {}, mm.everyone ? { e: true } : {}) }).catch(() => {});
       if (th) { const p = S.msgs.find((m) => m.id === th); S.fs.doc("teamChats/" + id + "/messages/" + th).update({ replies: ((p && p.replies) || 0) + 1, lastReply: at }).catch(() => {}); }
       S.reads.r[id] = at + 1; S.fs.doc("teamReads/" + S.me).set({ r: { [id]: at + 1 } }, { merge: true }).catch(() => {});
       api("notify", { chat: id, id: ref.id }).catch(() => {});
@@ -685,6 +752,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     if ((b = el("[data-open]"))) { S.q = ""; S.results = null; go(b.dataset.open); return; }
     if ((b = el("[data-dm]"))) { openDm(b.dataset.dm); return; }
     if ((b = el("[data-act]"))) { const a = b.dataset.act;
+      if (a === "find") { S.find = !S.find; if (!S.find) { S.q = ""; S.results = null; } render(true); if (S.find) { const q = $("tcq"); if (q) q.focus(); } return; }
       if (a === "new") sheet("new"); else if (a === "new-chan") sheet("chan"); else if (a === "sheet-x") closeSheet(); else if (a === "info") sheet("info");
       else if (a === "back") go(""); else if (a === "thread-x") { if (unThread) { unThread(); unThread = null; } S.thread = ""; render(true); }
       else if (a === "push-on") pushOn();
