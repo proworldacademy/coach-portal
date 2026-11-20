@@ -41,6 +41,7 @@ const TEAM = require('./lib/team');
 const COACHCAL = require('./lib/coachcal');
 const COURTS = require('./lib/courts');
 const SCHED = require('./lib/schedule');
+const PAYROLL = require('./lib/payroll');
 /* Who is told what, for the schedule (Nov 20, 2026). Owners: the staff records marked owner and the owner sign-ins. */
 async function ownerEmails(db) { const out = new Set(); try { (await db.collection('staff').where('owner', '==', true).get()).docs.forEach((d) => out.add(String(d.id).toLowerCase())); } catch (e) { /* the sign-ins below */ }
   try { const auth = require('firebase-admin/auth').getAuth(); for (const uid of ADMIN.OWNERS || []) { try { const u = await auth.getUser(uid); if (u.email) out.add(u.email.toLowerCase()); } catch (e) { /* next */ } } } catch (e) { /* none */ } return Array.from(out); }
@@ -244,6 +245,12 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /coach/courts/plan/apply') { const out = await SCHED.applyPlan(ctx.db, who, b); logger.info('court plan applied', { by: who.email, days: out.days }); return send(res, 200, out); }
       if (route === 'POST /coach/courts/plan/clear') { const out = await SCHED.clearPlan(ctx.db, who, b); logger.info('court plan cleared', { by: who.email, date: S.clean(b.date, 12) }); return send(res, 200, out); }
       if (route === 'POST /coach/courts/plan/auto') return send(res, 200, await SCHED.planAuto(ctx.db, who, b));
+      // payroll from the schedule (Nov 20, 2026): owners read the period and set the rates; a coach asks for an extra
+      if (route === 'POST /coach/payroll') return send(res, 200, await PAYROLL.report(ctx.db, who, b));
+      if (route === 'POST /coach/payroll/rates') { const out = await PAYROLL.setRate(ctx.db, who, b); logger.info('payroll rates', { by: who.email, coach: S.clean(b.coach, 40) }); return send(res, 200, out); }
+      if (route === 'POST /coach/payroll/extra') { const out = await PAYROLL.addExtra(ctx.db, who, b, schedDeps(ctx.db)); logger.info('payroll extra', { by: who.email, id: out.id, status: out.status }); return send(res, 200, out); }
+      if (route === 'POST /coach/payroll/extra/decide') { const out = await PAYROLL.decideExtra(ctx.db, who, b); logger.info('payroll extra decided', { by: who.email, id: S.clean(b.id, 80) }); return send(res, 200, out); }
+      if (route === 'POST /coach/payroll/mine') return send(res, 200, await PAYROLL.myExtras(ctx.db, who));
       if (route === 'POST /coach/rain') { const out = await SCHED.rain(ctx.db, who, b, schedDeps(ctx.db)); if (b.send) logger.info('rain notice', { by: who.email, send: b.send, sent: out.sent, total: out.total }); return send(res, 200, out); }
       if (route === 'POST /coach/calendar/off') { const out = await SCHED.setOff(ctx.db, who, b); logger.info('coach calendar off', { by: who.email, date: S.clean(b.date, 12), remove: !!b.remove }); return send(res, 200, out); }
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
