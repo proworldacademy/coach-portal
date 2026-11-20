@@ -482,10 +482,22 @@ const LESSON_PACKAGES=[
   {id:'soc_10',label:'Soccer: Package of 10',hours:10,price:960,cls:'Soccer'},{id:'soc_10_2',label:'Soccer: Package of 10 (2 players)',hours:10,price:1200,cls:'Soccer'},{id:'soc_10_3',label:'Soccer: Package of 10 (3 players)',hours:10,price:1450,cls:'Soccer'},{id:'soc_5',label:'Soccer: Package of 5',hours:5,price:540,cls:'Soccer'},{id:'soc_5_2',label:'Soccer: Package of 5 (2 players)',hours:5,price:675,cls:'Soccer'},{id:'soc_5_3',label:'Soccer: Package of 5 (3 players)',hours:5,price:810,cls:'Soccer'}];
 const LPACK=id=>LESSON_PACKAGES.find(x=>x.id===id);
 
+/* The campus as management gave it (Nov 19, 2026), the same list as the engine's (functions/lib/courts.js): hard = courts 1 to 12
+   (banks 1–4, 5–7, 8–12) and the Stadium court on its own; clay = 13 and 14, and 15 (the clay court the size of the Stadium).
+   Courts 16 and 17 (hard, in the back) and a third field are coming: they join this list the day they open. */
 const COURTS=[];
-for(let i=1;i<=18;i++)COURTS.push({id:String(i),name:'Court '+i,type:i<=12?'clay':'hard',kind:'tennis'});
-COURTS.push({id:'A',name:'Field A',type:'field',kind:'soccer'},{id:'B',name:'Field B',type:'field',kind:'soccer'});
-const courtById=id=>COURTS.find(c=>c.id===id);
+for(let i=1;i<=12;i++)COURTS.push({id:String(i),name:'Court '+i,type:'hard',kind:'tennis',bank:i<=4?'h1':i<=7?'h2':'h3'});
+COURTS.push({id:'S',name:'Stadium',type:'hard',kind:'tennis',bank:'stadium'});
+for(let i=13;i<=15;i++)COURTS.push({id:String(i),name:'Court '+i,type:'clay',kind:'tennis',bank:i<=14?'c1':'c2'});
+COURTS.push({id:'A',name:'Field A',type:'field',kind:'soccer',bank:'f'},{id:'B',name:'Field B',type:'field',kind:'soccer',bank:'f'});
+/* a record made before the map changed can name a court that is not on it (16, 17, 18): it still has a name, so nothing breaks */
+const courtById=id=>COURTS.find(c=>c.id===String(id))||{id:String(id),name:'Court '+id,type:'hard',kind:'tennis',gone:true};
+/* What the engine itself holds on a court (a private a family booked in the app: courtHolds, lib/courts.js). Read per day through the
+   engine and treated as taken everywhere on this page: the grid, the free courts for a private, a rental. */
+const HOLDS={};
+function loadHolds(dateStr,then){const c=HOLDS[dateStr];if(c&&Date.now()-c.at<20000)return;HOLDS[dateStr]={at:Date.now(),list:c?c.list:[]};if(typeof liveApi!=='function')return;
+  liveApi('/api/admin/court-holds',{date:dateStr}).then(o=>{const was=JSON.stringify(HOLDS[dateStr].list);HOLDS[dateStr]={at:Date.now(),list:(o&&o.holds)||[]};if(then&&was!==JSON.stringify(HOLDS[dateStr].list))then()}).catch(()=>{})}
+function holdAt(courtId,dateStr,h){const c=HOLDS[dateStr];if(!c)return null;const x=c.list.find(x=>String(x.court)===String(courtId)&&h>=x.start&&h<x.end);return x?{id:'H-'+x.ref+'-'+x.court,label:x.label||'Private',start:x.start,end:x.end,courts:[String(x.court)],private:true,hold:true,coach:x.coach,player:x.player}:null}
 const SLOTS=[];for(let h=7;h<21;h+=.5)SLOTS.push(h);          // half-hour slots, 7:00 AM – 8:30 PM (ends 9:00 PM)
 const END=21;
 
@@ -507,7 +519,7 @@ const SEED_BLOCKS=[
   {id:'b1b',label:'Full Time',courts:['8','9','10','11','12'],dows:[1,2,3,4,5],start:9.5,end:12},
   {id:'b2',label:'Full Time',courts:['1','2'],dows:[1,2,3,4,5],start:14,end:16},
   {id:'b3',label:'Afterschool',courts:['1','2','3','4','5','8','9','10','11','12'],dows:[1,2,3,4,5],start:16,end:19},
-  {id:'b4',label:'10 & Under',courts:['13','14','15','16'],dows:[1,2,3,4,5],start:16.5,end:18},
+  {id:'b4',label:'10 & Under',courts:['13','14','15'],dows:[1,2,3,4,5],start:16.5,end:18},
   {id:'b5',label:'Soccer',courts:['A'],dows:[2,4],start:17,end:18.5},
   {id:'b5s',label:'Soccer',courts:['A'],dows:[6],start:9,end:10.5},
   {id:'b6',label:'HotelPlanner Open',courts:['1','2','3','4','5','6','7','8','9','10','11','12'],dows:[0,6],start:8,end:17,event:true},
@@ -651,7 +663,7 @@ async function chargeCard(c,opts){const p=c.pid?playerById(c.pid):null;const cus
 function nowSlot(){const n=new Date();return n.getHours()+(n.getMinutes()>=30?.5:0)}
 function isPeak(date,h){const dow=date.getDay();return (dow>=1&&dow<=5)?(h>=16):(h>=8&&h<12)}
 function isPast(dateStr,h){const d=parse(dateStr);if(d<TODAY)return true;if(iso(d)===iso(TODAY))return h<=nowSlot();return false}
-function blockAt(courtId,dateStr,h){const d=parse(dateStr),dow=d.getDay();for(const b of state.blocks){if(!b.courts.includes(courtId)||!b.dows.includes(dow)||h<b.start||h>=b.end)continue;if(b.from&&dateStr<b.from)continue;if(b.until&&dateStr>b.until)continue;if(state.exceptions.some(x=>x.court===courtId&&x.date===dateStr&&x.h===h))continue;return b}return null}
+function blockAt(courtId,dateStr,h){const hd=holdAt(courtId,dateStr,h);if(hd)return hd;const d=parse(dateStr),dow=d.getDay();for(const b of state.blocks){if(!b.courts.includes(courtId)||!b.dows.includes(dow)||h<b.start||h>=b.end)continue;if(b.from&&dateStr<b.from)continue;if(b.until&&dateStr>b.until)continue;if(state.exceptions.some(x=>x.court===courtId&&x.date===dateStr&&x.h===h))continue;return b}return null}
 function bookingAt(courtId,dateStr,h){return state.bookings.find(b=>b.court===courtId&&b.date===dateStr&&h>=b.start&&h<b.start+b.dur)||null}
 function slotRate(court,date,h){let r=RATES[court.type]/2;const bits=[];if(isPeak(date,h)){r+=(court.type==='field'?RATES.peakField:RATES.peakCourt)/2;bits.push('peak')}if(court.type!=='field'&&h>=18){r+=RATES.lights/2;bits.push('lights')}return {r,bits}}
 function priceRun(court,dateStr,start,dur,member){const d=parse(dateStr);let total=0;const bits=new Set();for(let h=start;h<start+dur;h+=.5){const s=slotRate(court,d,h);total+=s.r;s.bits.forEach(b=>bits.add(b))}let disc=0;if(member){disc=Math.round(total*RATES.memberOff);total-=disc}return {total:Math.round(total),disc,bits:[...bits]}}
@@ -753,11 +765,12 @@ function validatePlayer(app){const e=state.enroll,p=e.player;let ok=true;for(con
 /* ====================== COURTS ====================== */
 let SEL=new Set(),drag=null;
 function renderCourts(app){
+  loadHolds(state.courtsDate,()=>{if(state.view==='courts')renderCourts(app)});
   const dateStr=state.courtsDate;const d=parse(dateStr);const staff=state.courtsMode==='staff'&&state.role!=='parent';
   const courts=COURTS.filter(c=>(staff||c.kind==='tennis')&&(state.courtsFilter==='all'||c.kind===state.courtsFilter));let rows='';
   const today=iso(d)===iso(TODAY),nowH=nowSlot();const isNow=(h)=>today&&h===nowH;
   // one block, one label: a run of half hours that belong to the same block, lesson or rental becomes one cell with its name and time
-  courts.forEach((c,ci)=>{rows+=`<tr><th scope="row">${c.name}<small>${c.type==='clay'?'Har-Tru clay':c.type==='hard'?'Hard court':'Turf · full size'}</small></th>`;
+  courts.forEach((c,ci)=>{rows+=`<tr><th scope="row">${c.name}<small>${c.type==='clay'?'Clay court':c.type==='hard'?'Hard court':'Turf · full size'}</small></th>`;
     let si=0;while(si<SLOTS.length){const h=SLOTS[si];const past=isPast(dateStr,h);
       const b=blockAt(c.id,dateStr,h),bk=b?null:bookingAt(c.id,dateStr,h);
       if(past&&!b&&!bk){rows+=`<td class="${h%1?'half':''}${isNow(h)?' now':''}"><button class="cell past" disabled data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}"></button></td>`;si++;continue}
@@ -765,7 +778,7 @@ function renderCourts(app){
       // how far does this same block or booking run?
       let n=1;while(si+n<SLOTS.length){const h2=SLOTS[si+n];const b2=blockAt(c.id,dateStr,h2),bk2=b2?null:bookingAt(c.id,dateStr,h2);if(b?(b2&&b2.id===b.id):(bk2&&bk2.id===bk.id))n++;else break}
       const endH=SLOTS[si]+n/2;const over=isPast(dateStr,endH-.5);let t,title,sub='',cls='cell blk staff'+(over?' done':'');
-      if(b){t=staff?tagOfBlock(b):null;title=b.label;if(b.private){const pv=state.privates.find(x=>x.blockId===b.id);const pl=pv?playerById(pv.pid):null;title=(pv?pv.coach.split(' ')[0]:'Private')+(pl?' · '+pl.name:'');sub=fmtRange(h,endH)+(pv?' · '+(pv.billed==='pack'?'pack':pv.billed==='card'?'paid':'to collect'):'')}else sub=fmtRange(h,endH);if(!staff){cls='cell blk taken';title='Unavailable';sub=''}}
+      if(b){t=staff?tagOfBlock(b):null;title=b.label;if(b.hold){sub=fmtRange(h,endH)+' · booked in the app'}else if(b.private){const pv=state.privates.find(x=>x.blockId===b.id);const pl=pv?playerById(pv.pid):null;title=(pv?pv.coach.split(' ')[0]:'Private')+(pl?' · '+pl.name:'');sub=fmtRange(h,endH)+(pv?' · '+(pv.billed==='pack'?'pack':pv.billed==='card'?'paid':'to collect'):'')}else sub=fmtRange(h,endH);if(!staff){cls='cell blk taken';title='Unavailable';sub=''}}
       else{t=staff?tagOfBooking(bk):null;if(staff){title=bk.name;sub=fmtRange(h,endH)+' · '+(bk.paidOn?'paid':'to collect')}else{cls='cell blk '+(bk.mine?'mine':'taken');title=bk.mine?'Yours':'Booked';sub=bk.mine?fmtRange(h,endH):''}}
       const style=t?tagStyle(t):'';
       rows+=`<td colspan="${n}" class="span${isNow(h)?' now':''}"><button class="${cls}" style="${style}" data-court="${c.id}" data-h="${h}" data-ci="${ci}" data-si="${si}" title="${esc(title)}${sub?' · '+esc(sub):''}"><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</button></td>`;si+=n}
@@ -774,7 +787,7 @@ function renderCourts(app){
   const blockedHrs=courts.reduce((n,c)=>n+SLOTS.filter(h=>blockAt(c.id,dateStr,h)).length,0)/2;const openHrs=courts.reduce((n,c)=>n+SLOTS.filter(h=>!isPast(dateStr,h)&&!blockAt(c.id,dateStr,h)&&!bookingAt(c.id,dateStr,h)).length,0)/2;
   const hrsByTag={};if(staff)courts.forEach(c=>SLOTS.forEach(h=>{if(isPast(dateStr,h))return;const b=blockAt(c.id,dateStr,h);const t=b?tagOfBlock(b):(bookingAt(c.id,dateStr,h)?tagOfBooking(bookingAt(c.id,dateStr,h)):null);if(t)hrsByTag[t.id]=(hrsByTag[t.id]||0)+.5}));
   const legend=staff?`<span><i style="background:var(--surface);outline:1px solid var(--line)"></i>Open · ${openHrs} court-hours</span>`+tags().map(t=>`<span><i style="background:${t.color}"></i>${esc(t.label)}${hrsByTag[t.id]?' · '+hrsByTag[t.id]+' h':''}</span>`).join('')+`<span><i style="background:var(--lime);outline:1px solid #000"></i>Selected</span><button class="btn ghost sm" id="tag-edit" style="margin-left:auto">Colours &amp; categories</button>`:`<span><i style="background:var(--surface);outline:1px solid var(--line)"></i>Open · ${openHrs} court-hours</span><span><i style="background:var(--surface-2)"></i>Unavailable</span><span><i style="background:var(--orchid)"></i>Yours</span><span><i style="background:var(--lime);outline:1px solid #000"></i>Selected</span>`;
-  app.innerHTML=`<section class="hero"><h1>${staff?'Court control.':'Book a court.'}</h1><p>${staff?'Drag across the grid to block a run of courts and times in one go — courts 7 to 12, 7:00 to 10:00, done. Tap a block, lesson or rental to release, cancel or refund. Renters only see what is left open.':'18 courts in half-hour slots. Tap a slot or drag across several courts and times, then reserve. Confirmed by email and text.'}</p></section>
+  app.innerHTML=`<section class="hero"><h1>${staff?'Court control.':'Book a court.'}</h1><p>${staff?'Drag across the grid to block a run of courts and times in one go — courts 7 to 12, 7:00 to 10:00, done. Tap a block, lesson or rental to release, cancel or refund. Renters only see what is left open.':'16 courts in half-hour slots. Tap a slot or drag across several courts and times, then reserve. Confirmed by email and text.'}</p></section>
   <div class="toolbar">${dateStrip(dateStr,0,9)}<div class="seg" role="group" aria-label="Filter"><button data-filter="all" aria-pressed="${state.courtsFilter==='all'}">All</button><button data-filter="tennis" aria-pressed="${state.courtsFilter==='tennis'}">Tennis</button>${staff?`<button data-filter="soccer" aria-pressed="${state.courtsFilter==='soccer'}">Fields</button>`:''}</div>${state.role!=='parent'?`<div class="seg" role="group" aria-label="Mode"><button data-mode="public" aria-pressed="${!staff}">Public</button><button data-mode="staff" aria-pressed="${staff}">Academy staff</button></div>`:''}${!staff?`<label class="check" style="font-size:13.5px"><input type="checkbox" id="member" ${state.member?'checked':''}><span>Enrolled family (no charge)</span></label>`:''}</div>
   <div class="legend">${legend}</div>
   <div class="gridwrap" id="gridwrap"><table class="grid" style="width:${140+46*SLOTS.length}px"><colgroup><col class="c0" style="width:140px">${SLOTS.map(()=>'<col style="width:46px">').join('')}</colgroup><thead>${head}</thead><tbody>${rows}</tbody></table></div>
@@ -808,6 +821,7 @@ function drawSelbar(app){
 }
 function onCell(app,courtId,h){
   const dateStr=state.courtsDate;const court=courtById(courtId);const b=blockAt(courtId,dateStr,h),bk=bookingAt(courtId,dateStr,h);const staff=state.courtsMode==='staff'&&state.role!=='parent';if(!staff)return;
+  if(b&&b.hold){openModal(`<h3>${esc(b.label)}</h3><p class="sub">${court.name} · ${fmtDate(parse(dateStr))} · ${fmtRange(b.start,b.end)} · private booked by the family in the app</p><p style="font-size:14px">It is confirmed with the family and holds this court. The family can cancel it in the app up to 24 hours before; after that it is changed with the admin team.</p><div class="actions"><button class="btn" id="m-ok">Close</button></div>`);$('#m-ok').onclick=closeModal;return}
   if(b){openModal(`<h3>${esc(b.label)}</h3><p class="sub">${court.name} · ${fmtDate(parse(dateStr))} · ${fmtRange(b.start,b.end)} · ${b.private?'private lesson':b.event?'event':'academy block'}</p><p style="font-size:14px">${b.private?'Cancelling frees the court. The session goes back on the pack or the charge is voided.':'Release this one half-hour to public rental, or the whole block for today. The weekly rule stays in place on other days.'}</p><div class="actions">${b.private?`<button class="btn" id="m-release">Cancel this private</button>`:`<button class="btn" id="m-release">Release ${fmtT(h)} slot</button><button class="btn ghost" id="m-release-all">Release ${fmtRange(b.start,b.end)} today</button>`}<button class="btn ghost" id="m-close">Keep it</button></div>`);
     const rel=(all)=>{if(b.private){state.blocks=state.blocks.filter(x=>x.id!==b.id);const pv=state.privates.find(x=>x.blockId===b.id);if(pv){const p=playerById(pv.pid);if(pv.billed==='pack'&&p){if(pv.packType==='flex')p.packLeft++;else p.privPack++}if(pv.cid){const c=state.charges.find(x=>x.id===pv.cid);if(c)c.status='void'}state.privates=state.privates.filter(x=>x!==pv);notify('SMS',p?phoneFmt(p.phone):'—','Private with '+pv.coach+' on '+fmtDate(parse(dateStr))+' cancelled.'+(pv.billed==='pack'?' Session returned to your pack.':' No charge.'),{phone:p?p.phone:''});liveApi('/api/admin/lesson/cancelled',{coach:pv.coach,player:p?p.name:'',date:pv.date,start:pv.start,dur:pv.dur}).catch(()=>{})}}else if(b.from===dateStr&&b.until===dateStr&&(all||b.end-b.start===.5)){state.blocks=state.blocks.filter(x=>x.id!==b.id)}else{const hs=all?SLOTS.filter(x=>x>=b.start&&x<b.end):[h];hs.forEach(x=>state.exceptions.push({court:courtId,date:dateStr,h:x}));notify('Slack','#front-desk',court.name+' '+(all?fmtRange(b.start,b.end):fmtT(h))+' on '+fmtDate(parse(dateStr))+' released from '+b.label)}closeModal();save();renderCourts(app);toast(b.private?'Private cancelled.':court.name+' released.')};
     $('#m-release').onclick=()=>rel(false);const ra=$('#m-release-all');if(ra)ra.onclick=()=>rel(true);return}
@@ -1140,7 +1154,7 @@ function renderPrivates(app){
   const kindOf=()=>PROX(PV.coach).tier==='SOCCER 120'?'soccer':'tennis';
   const fixChoices=()=>{const t=tier();const ns=Object.keys(t);if(!ns.includes(PV.n))PV.n=ns[0];const ds=Object.keys(t[PV.n]).map(Number).sort((a,b)=>a-b);if(!ds.includes(Number(PV.dur)))PV.dur=ds.includes(60)?60:ds[0];return {ns,ds}};
   const price=()=>{const t=tier();const each=t[PV.n][PV.dur];return {each,total:Math.round(each*Number(PV.n)*100)/100,hours:PV.dur/60,n:Number(PV.n),min:PV.dur}};
-  const freeCourts=()=>COURTS.filter(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,Number(PV.time),PV.dur/60));
+  const freeCourts=()=>{loadHolds(PV.date,()=>{if(state.view==='privates')draw()});return COURTS.filter(c=>c.kind===kindOf()&&slotFree(c.id,PV.date,Number(PV.time),PV.dur/60))};
   const payLine=()=>{const p=playerById(PV.pid);if(!p)return {k:'',t:'Pick a player'};const pr=price();
     if(p.privPack>=pr.hours)return {k:'pack',t:`Uses ${pr.hours} hour${pr.hours===1?'':'s'} of the lesson pack · ${Math.round((p.privPack-pr.hours)*100)/100} left after`};
     if(p.plan==='flex'&&p.packLeft>0)return {k:'pack',t:`Uses 1 session of the ${p.packTotal}-session pack · ${p.packLeft-1} left after`};

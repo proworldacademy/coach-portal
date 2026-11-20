@@ -359,7 +359,7 @@ function scheduleC(p,nm){
   if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));const ptime=p.enroll&&p.enroll.time?' · '+esc(p.enroll.time):'';
     const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
     const bk=(p.days||[]).find(d=>d.date===CALSEL&&d.kind==='book');if(x.flex&&x.pick&&!PICK)PICK=(bk&&bk.sessions||[]).slice();
-    const dayPv=pvs.filter(v=>v.date===CALSEL).map(v=>`<div class="ch-pick"><div><b>${v.kind==='fitness'?'Fitness private':v.kind==='mental'?'Mental private':'Private'}${v.coach?' with Coach '+esc(v.coach):''}</b><span>${esc(v.time||'')}</span></div>${v.id?`<button type="button" class="ch-btn line" data-pv-x="${esc(v.id)}">Cancel</button>`:''}</div>`).join('');
+    const dayPv=pvs.filter(v=>v.date===CALSEL).map(v=>`<div class="ch-pick"><div><b>${v.kind==='fitness'?'Fitness private':v.kind==='mental'?'Mental private':'Private'}${v.coach?' with Coach '+esc(v.coach):''}</b><span>${esc(v.time||'')}${v.court?' · '+esc(v.court):''}</span></div>${v.id?`<button type="button" class="ch-btn line" data-pv-x="${esc(v.id)}">Cancel</button>`:''}</div>`).join('');
     const core=x.flex&&x.pick?`<div class="ch-pick col" role="group" aria-label="Sessions"><div><b>${day}</b><span>Pick the session${(p.sessions||[]).length>1?'s':''} ${nm} is coming to.</span></div><div class="ch-ses">${(p.sessions||[]).map(m=>`<button type="button" data-ses="${esc(m.id)}" aria-pressed="${(PICK||[]).includes(m.id)}"><b>${esc(m.time)}</b>${esc(m.label)}</button>`).join('')}</div><button type="button" class="ch-btn" data-day-do="book">${bk?((PICK||[]).length?'Save the change':'Take this day off'):'Book'}</button></div>`
       :x.kind==='away'?row(`${nm} is marked away.`,`<button type="button" class="ch-btn" data-day-do="back">Coming after all</button>`)
       :x.kind==='makeup'?row('A make-up day.',`<button type="button" class="ch-btn line" data-day-do="nomakeup">Remove</button>`)
@@ -482,25 +482,35 @@ function bkPaint(){
       <div><h3>What</h3><div class="opts">${kinds.map(([k,l])=>`<button type="button" data-bk-kind="${k}" aria-pressed="${BK.kind===k}">${l} private</button>`).join('')}</div></div>
       <div><h3>Day</h3><input type="date" id="bk-date" min="${esc(me.today)}" max="${maxD}" value="${esc(BK.date)}"></div>
       <div><h3>Coach</h3>${BK.load&&!cs.length?'<p class="n"><span class="spin"></span></p>':`<div class="opts">${cs.map(c=>`<button type="button" data-bk-coach="${esc(c.key)}" aria-pressed="${BK.coach===c.key}">Coach ${esc(c.name)}${c.mine?`<small>${nm}'s coach</small>`:''}</button>`).join('')||'<p class="n">No coach gives this lesson yet. Write to Admin in Messages.</p>'}</div>`}</div>
-      ${BK.coach?`<div><h3>Open times · ${esc(nice(BK.date))}</h3>${BK.load?'<p class="n"><span class="spin"></span></p>':slots.length?`<div class="opts">${slots.map(x=>`<button type="button" data-bk-slot="${x.start}" aria-pressed="${BK.start===x.start}">${esc(x.label)}</button>`).join('')}</div>`:'<p class="n">No open time that day. Try another day or another coach.</p>'}</div>`:''}
+      ${BK.coach?`<div><h3>Open times · ${esc(nice(BK.date))}</h3>${BK.load?'<p class="n"><span class="spin"></span></p>':slots.length?`<div class="opts">${(BK.start!=null&&!BK.allTimes?slots.filter(x=>x.start===BK.start):slots).map(x=>`<button type="button" data-bk-slot="${x.start}" aria-pressed="${BK.start===x.start}">${esc(x.label)}</button>`).join('')}${BK.start!=null&&!BK.allTimes?'<button type="button" data-bk-times>Change time</button>':''}</div>`:'<p class="n">No open time that day. Try another day or another coach.</p>'}</div>`:''}
+      ${BK.coach&&BK.start!=null&&BK.kind==='tennis'?`<div><h3>Court · free at ${esc((slots.find(x=>x.start===BK.start)||{}).label||'')}</h3>${BK.cload?'<p class="n"><span class="spin"></span></p>':(BK.courts||[]).length?`<div class="opts">${BK.courts.map(c=>`<button type="button" data-bk-court="${esc(c.id)}" aria-pressed="${BK.court===c.id}">${esc(c.name)}<small>${c.type==='clay'?'Clay':'Hard'}</small></button>`).join('')}</div>`:'<p class="n">No court is free at that time. Pick another time.</p>'}</div>`:''}
       ${BK.err?`<p class="n" style="color:#8A1F8C">${esc(BK.err)}</p>`:''}
-      <p class="n">One hour. The admin team confirms the court and the rate. To change it inside 24 hours, write to Admin.</p>
-      <div class="go"><button type="button" class="ch-btn" id="bk-go" ${BK.coach&&BK.start!=null&&!BK.busy?'':'disabled'}>${BK.busy?'Booking…':BK.start!=null?'Book '+esc((slots.find(x=>x.start===BK.start)||{}).label||''):'Pick a time'}</button></div>
+      <p class="n">One hour. It is confirmed as soon as you book, and you get an e-mail. The admin team handles the rate. To change it inside 24 hours, write to Admin.</p>
+      <div class="go"><button type="button" class="ch-btn" id="bk-go" ${bkReady()&&!BK.busy?'':'disabled'}>${BK.busy?'Booking…':BK.start==null?'Pick a time':BK.kind==='tennis'&&!BK.court?'Pick a court':'Book '+esc((slots.find(x=>x.start===BK.start)||{}).label||'')+(BK.kind==='tennis'?' · '+esc(((BK.courts||[]).find(c=>c.id===BK.court)||{}).name||''):'')}</button></div>
     </div>`;
   document.getElementById('bk-x').onclick=()=>{BK=null;bkPaint()};
-  el.querySelectorAll('[data-bk-kind]').forEach(b=>b.onclick=()=>{BK.kind=b.dataset.bkKind;BK.coach='';BK.coaches=[];BK.slots=[];BK.start=null;bkLoad()});
-  document.getElementById('bk-date').onchange=(e)=>{if(!e.target.value)return;BK.date=e.target.value;BK.start=null;bkLoad()};
-  el.querySelectorAll('[data-bk-coach]').forEach(b=>b.onclick=()=>{BK.coach=b.dataset.bkCoach;BK.start=null;bkLoad()});
-  el.querySelectorAll('[data-bk-slot]').forEach(b=>b.onclick=()=>{BK.start=Number(b.dataset.bkSlot);BK.err='';bkPaint()});
-  document.getElementById('bk-go').onclick=async()=>{if(BK.busy||BK.start==null)return;BK.busy=true;BK.err='';bkPaint();
-    try{const o=await api('private/book',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,start:BK.start,dur:60});const d=BK.date;BK=null;bkPaint();toast('Booked: Coach '+o.coach+', '+nice(d)+' at '+o.time+'.');CALMON=d.slice(0,7);CALSEL=d;me=await api('me');render()}
-    catch(x){BK.busy=false;BK.err=x.message;BK.start=null;bkPaint();bkLoad()}};
+  el.querySelectorAll('[data-bk-kind]').forEach(b=>b.onclick=()=>{BK.kind=b.dataset.bkKind;BK.coach='';BK.coaches=[];BK.slots=[];BK.start=null;BK.court='';BK.courts=[];bkLoad()});
+  document.getElementById('bk-date').onchange=(e)=>{if(!e.target.value)return;BK.date=e.target.value;BK.start=null;BK.court='';BK.courts=[];bkLoad()};
+  el.querySelectorAll('[data-bk-coach]').forEach(b=>b.onclick=()=>{BK.coach=b.dataset.bkCoach;BK.start=null;BK.court='';BK.courts=[];bkLoad()});
+  el.querySelectorAll('[data-bk-slot]').forEach(b=>b.onclick=()=>{BK.start=Number(b.dataset.bkSlot);BK.allTimes=false;BK.err='';BK.court='';BK.courts=[];if(BK.kind==='tennis')bkCourts();else bkPaint()});
+  el.querySelectorAll('[data-bk-times]').forEach(b=>b.onclick=()=>{BK.allTimes=true;bkPaint()});
+  el.querySelectorAll('[data-bk-court]').forEach(b=>b.onclick=()=>{BK.court=b.dataset.bkCourt;BK.err='';bkPaint()});
+  document.getElementById('bk-go').onclick=async()=>{if(BK.busy||!bkReady())return;BK.busy=true;BK.err='';bkPaint();
+    try{const o=await api('private/book',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,start:BK.start,dur:60,court:BK.court||''});const d=BK.date;BK=null;bkPaint();toast('Confirmed: Coach '+o.coach+', '+nice(d)+' at '+o.time+(o.courtName?', '+o.courtName:'')+'.');CALMON=d.slice(0,7);CALSEL=d;me=await api('me');render()}
+    catch(x){BK.busy=false;BK.err=x.message;if(/court/i.test(x.message)){BK.court='';bkCourts()}else{BK.start=null;BK.court='';BK.courts=[];bkPaint();bkLoad()}}};
 }
+/* a tennis private needs a time and a court; fitness and mental only a time */
+function bkReady(){return !!(BK&&BK.coach&&BK.start!=null&&(BK.kind!=='tennis'||BK.court))}
+/* the courts free at the chosen time: the family picks one, the engine holds it with the lesson */
+async function bkCourts(){if(!BK||BK.start==null)return;BK.cload=true;bkPaint();const mine=BK,st=BK.start;
+  try{const o=await api('private/courts',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,start:BK.start,dur:60});if(BK!==mine||BK.start!==st)return;BK.courts=o.courts||[];if(BK.court&&!BK.courts.some(c=>c.id===BK.court))BK.court=''}
+  catch(x){if(BK===mine)BK.err=x.message}
+  if(BK===mine){BK.cload=false;bkPaint()}}
 async function bkLoad(){if(!BK)return;BK.load=true;BK.err='';bkPaint();const mine=BK;
   try{const o=await api('private/slots',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,dur:60});if(BK!==mine)return;BK.coaches=o.coaches;BK.slots=o.slots;if(!BK.coach){const c=o.coaches.filter(x=>x.mine);if(c.length===1||o.coaches.length===1){BK.coach=(c[0]||o.coaches[0]).key;BK.load=false;return bkLoad()}}}
   catch(x){if(BK===mine)BK.err=x.message}
   if(BK===mine){BK.load=false;bkPaint()}}
-function bkOpen(kind,date){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}BK={player:SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,load:false,busy:false,err:''};bkLoad()}
+function bkOpen(kind,date){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}BK={player:SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,court:'',courts:[],cload:false,load:false,busy:false,err:''};bkLoad()}
 function homeC(first,active){
   const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
