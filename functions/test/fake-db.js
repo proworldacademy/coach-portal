@@ -44,6 +44,8 @@ function fakeDb(seed) {
     doc: (path) => docRef(path),
     collection: (path) => colRef(path),
     collectionGroup: (name) => colRef(name, [], true),
+    /* a transaction, the way the engine uses one: reads through t.get, writes queued and applied only if the body does not throw */
+    runTransaction: async (fn) => { const ops = []; const t = { get: (ref) => ref.get(), set: (ref, data, opts) => { ops.push(() => apply(ref.path, data, opts)); }, update: (ref, data) => { ops.push(() => apply(ref.path, data, { merge: true })); }, delete: (ref) => { ops.push(() => remove(ref.path)); } }; const out = await fn(t); ops.forEach((o) => o()); return out; },
     batch: () => { const ops = []; return { set: (ref, data, opts) => { ops.push(() => apply(ref.path, data, opts)); }, update: (ref, data) => { ops.push(() => apply(ref.path, data, { merge: true })); }, delete: (ref) => { ops.push(() => remove(ref.path)); }, commit: async () => { ops.forEach((f) => f()); } }; }
   };
   return db;

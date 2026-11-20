@@ -39,6 +39,7 @@ const MAIL = require('./lib/mail');
 const USERS = require('./lib/users');
 const TEAM = require('./lib/team');
 const COACHCAL = require('./lib/coachcal');
+const COURTS = require('./lib/courts');
 const NEWS = require('./lib/news');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
@@ -157,9 +158,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         return send(res, 200, out);
       }
       /* privates from the client's calendar (Nov 19, 2026): the coaches of a kind, a coach's open times on a day, book one, cancel one */
-      if (route === 'POST /family/private/slots' || route === 'POST /family/private/book' || route === 'POST /family/private/cancel') {
+      if (route === 'POST /family/private/slots' || route === 'POST /family/private/courts' || route === 'POST /family/private/book' || route === 'POST /family/private/cancel') {
         const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
-        const deps = { tellCoach: (name, text) => LESSONS.tellCoach(ctx.db, name, text), tellDesk: (text) => NOTIFY.slack(ctx.db, 'desk', '*Private* — booked in the app', [text]) };
+        const deps = { tellCoach: (name, text) => LESSONS.tellCoach(ctx.db, name, text), tellDesk: (text) => NOTIFY.slack(ctx.db, 'desk', '*Private* — booked in the app', [text]),
+          tellFamily: async (email, m) => { try { await PUSH.send(ctx.db, [email], m.push); } catch (e) { /* no phone on */ } await MAIL.send(ctx.db, { to: email, subject: m.subject, text: m.text }); } };
+        if (route.endsWith('/courts')) return send(res, 200, await COACHCAL.familyCourts(ctx.db, who, b, players));
         const out = route.endsWith('/slots') ? await COACHCAL.familySlots(ctx.db, who, b, players) : route.endsWith('/book') ? await COACHCAL.familyBook(ctx.db, who, b, players, deps) : await COACHCAL.familyCancel(ctx.db, who, b, players, deps);
         if (!route.endsWith('/slots')) logger.info('family private ' + route.slice(21), { by: who.email, id: out.id || S.clean(b.id, 80) });
         return send(res, 200, out);
@@ -210,6 +213,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /coach/push/test') return send(res, 200, await PUSH.send(ctx.db, [who.email], { title: 'PROWORLD', body: 'Notifications are on for this phone.', url: '/portal', tag: 'test' }));
       // the coach's calendar (Nov 19, 2026): a week of academy hours, privates and open times; time off
       if (route === 'POST /coach/calendar') return send(res, 200, await COACHCAL.week(ctx.db, who, b));
+      if (route === 'POST /coach/private/ack') { const out = await COACHCAL.ack(ctx.db, who, b); logger.info('private received', { by: who.email, id: out.id }); return send(res, 200, out); }
       if (route === 'POST /coach/calendar/off') { const out = await COACHCAL.setOff(ctx.db, who, b); logger.info('coach calendar off', { by: who.email, date: S.clean(b.date, 12), remove: !!b.remove }); return send(res, 200, out); }
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
       if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
@@ -315,6 +319,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'GET /admin/contacts/justcall') { if (!who.director) throw S.err(403, 'director', 'Directors and owners only.'); return send(res, 200, await CONTACTS.justcallUsers(ctx.db)); }
       // what families booked from their calendar and is not on a court yet; parent news (Nov 19, 2026)
       if (route === 'GET /admin/family-privates') return send(res, 200, await COACHCAL.deskList(ctx.db));
+      if (route === 'POST /admin/court-holds') return send(res, 200, await COURTS.dayHolds(ctx.db, S.clean(b.date, 12)));
       if (route === 'POST /admin/family-privates/mark') return send(res, 200, await COACHCAL.deskMark(ctx.db, who, b));
       if (route === 'GET /admin/news') return send(res, 200, await NEWS.list(ctx.db));
       if (route === 'POST /admin/news' || route === 'POST /admin/news/remove') {
@@ -479,4 +484,9 @@ exports.contactNudge = onSchedule({ schedule: '31 11 * * 5', timeZone: CAL.TZ, r
 exports.lessonReminders = onSchedule({ schedule: '*/15 * * * *', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 120, memory: '256MiB' }, async () => {
   try { const out = await LESSONS.remind(DB.get(), Date.now(), (l) => logger.info('reminder: ' + l)); if (out.sent || out.errors.length) logger.info('lessonReminders', out); }
   catch (e) { logger.error('lessonReminders failed', { message: e.message }); }
+  // privates booked by a family and not yet marked Received by the coach (Nov 19, 2026): the coach again, then the coach's director
+  try { const db = DB.get(); const out = await COACHCAL.chase(db, Date.now(), { tellCoach: (name, text) => LESSONS.tellCoach(db, name, text),
+      tellDirectors: async (emails, text) => { if (!emails.length) { await NOTIFY.slack(db, 'desk', '*Private* — not marked received', [text]); return; } for (const e of emails) { try { await TEAM.direct(db, e, text); } catch (err) { /* next */ } } try { await PUSH.send(db, emails, { title: 'Private not marked received', body: text, url: '/portal#/calendar', tag: 'private-chase' }); } catch (err) { /* no phone on */ } } }, (l) => logger.info('private chase: ' + l));
+    if (out.coach || out.director) logger.info('privateChase', out); }
+  catch (e) { logger.error('privateChase failed', { message: e.message }); }
 });

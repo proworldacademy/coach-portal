@@ -552,7 +552,7 @@ async function me(db, stripe, who, opts) {
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
       flex: isFlex(p), sessions: menuOf(p), people: await peopleOf(db, p.id),
-      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach, id: x.own ? x.id : '', kind: x.kind || '' })).sort((a, b) => String(a.date).localeCompare(String(b.date))), openDays: openDays(p), closed,
+      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach, id: x.own ? x.id : '', kind: x.kind || '', court: x.court || '' })).sort((a, b) => String(a.date).localeCompare(String(b.date))), openDays: openDays(p), closed,
       reports: await reports(db, p.id)
     });
   }
