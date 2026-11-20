@@ -86,7 +86,7 @@ async function privatesOf(db, key, from, to) {
   try { const snap = await db.collection('familyPrivates').where('key', '==', key).get();
     snap.docs.forEach((d) => { const x = d.data() || {}; if (x.status === 'canceled' || !isDate(x.date) || x.date < from || x.date > to) return; const start = Number(x.start), dur = (Number(x.dur) || 60) / 60;
       if (out.some((o) => o.date === x.date && o.start === start)) return;   // already put on a court by the front desk
-      out.push({ id: d.id, date: x.date, start, dur, pid: x.player || '', playerName: x.playerName || '', kind: x.kind || 'tennis', src: 'family', status: x.status || 'booked', court: x.court || '', courtName: x.court ? COURTS.nameOf(x.court) : '', ack: !!x.ackAt }); }); } catch (e) { /* none yet */ }
+      out.push({ id: d.id, date: x.date, start, dur, pid: x.player || '', playerName: x.playerName || '', kind: x.kind || 'tennis', src: 'family', status: x.status || 'booked', court: x.court || '', courtName: x.court ? COURTS.nameOf(x.court) : '', ack: !!x.ackAt, origin: x.origin || '' }); }); } catch (e) { /* none yet */ }
   return out.sort((a, b) => (a.date + String(a.start).padStart(5, '0')).localeCompare(b.date + String(b.start).padStart(5, '0')));
 }
 function nowET(now) { const d = now ? new Date(now) : new Date(CLOCK()); const f = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }); const p = Object.fromEntries(f.formatToParts(d).map((x) => [x.type, x.value])); return { date: CAL.todayET(d), h: Number(p.hour) + Number(p.minute) / 60 }; }
@@ -96,11 +96,12 @@ function dayOf({ date, academy, privates, cal, durMin, now }) {
   const w = DOW3[CAL.dow(date)]; const hours = cal && cal.hours ? cal.hours : {}; const from = Number.isFinite(Number(hours.from)) ? Number(hours.from) : OPEN, to = Number.isFinite(Number(hours.to)) ? Number(hours.to) : CLOSE;
   const busy = [];
   (academy[w] || []).forEach((r) => busy.push({ a: r[0], b: r[1], what: 'academy' }));
-  (privates || []).filter((x) => x.date === date).forEach((x) => busy.push({ a: x.start, b: x.start + x.dur, what: 'private', id: x.id, src: x.src, pid: x.pid, playerName: x.playerName || '', kind: x.kind || '', courtName: x.courtName || '', ack: x.src === 'family' ? !!x.ack : true }));
+  (privates || []).filter((x) => x.date === date).forEach((x) => busy.push({ a: x.start, b: x.start + x.dur, what: 'private', id: x.id, src: x.src, pid: x.pid, playerName: x.playerName || '', kind: x.kind || '', courtName: x.courtName || '', ack: x.src === 'family' ? !!x.ack : true, origin: x.origin || '' }));
   ((cal && cal.off) || []).filter((o) => o && o.date === date).forEach((o) => busy.push({ a: Number(o.start), b: Number(o.end), what: 'off' }));
   const dur = (Number(durMin) || 60) / 60; const slots = [];
   for (let h = from; h + dur <= to + 1e-9; h += 0.5) {
-    if (now && (date < now.date || (date === now.date && h <= now.h + 1))) continue;        // not in the past, and not inside the next hour
+    if ((Array.isArray(hours.closed) ? hours.closed : []).includes(w)) break;               // a weekday the coach takes no privates
+    if (now && (date < now.date || (date === now.date && h <= now.h + (now.lead == null ? 1 : now.lead)))) continue;        // not in the past, and not inside the next hour
     if (busy.some((x) => h < x.b - 1e-9 && h + dur > x.a + 1e-9)) continue;
     slots.push({ start: h, label: fmtT(h) });
   }
@@ -193,7 +194,7 @@ async function week(db, who, body) {
   const days = []; let hAcademy = 0, hPrivate = 0;
   for (let i = 0; i < 7; i++) { const date = CAL.addDays(from, i); const d = dayOf({ date, academy, privates: pv, cal, durMin: 60, now: nowET() });
     d.busy.forEach((b) => { if (b.what === 'academy') hAcademy += b.b - b.a; if (b.what === 'private') hPrivate += b.b - b.a; });
-    days.push({ date, hours: [d.from, d.to], items: d.busy.map((b) => ({ what: b.what, a: b.a, b: b.b, time: fmtT(b.a) + ' – ' + fmtT(b.b), who: b.what === 'private' ? (b.playerName || names.get(b.pid) || '') : '', src: b.src || '', kind: b.kind || '', id: b.what === 'private' && b.src === 'family' ? b.id : '', court: b.courtName || '', ack: b.what === 'private' ? b.ack !== false : true })), open: d.slots.length, openTimes: d.slots.map((s) => s.label) }); }
+    days.push({ date, hours: [d.from, d.to], items: d.busy.map((b) => ({ what: b.what, a: b.a, b: b.b, time: fmtT(b.a) + ' – ' + fmtT(b.b), who: b.what === 'private' ? (b.playerName || names.get(b.pid) || '') : '', src: b.src || '', kind: b.kind || '', id: b.what === 'private' && b.src === 'family' ? b.id : '', court: b.courtName || '', ack: b.what === 'private' ? b.ack !== false : true, origin: b.origin || '' })), open: d.slots.length, openTimes: d.slots.map((s) => s.label) }); }
   const name = (all.find((c) => c.key === key) || {}).name || key;
   return { coach: key, coachName: name, coaches: who.director ? all : [], from, to, today, days, totals: { academy: Math.round(hAcademy * 100) / 100, privates: Math.round(hPrivate * 100) / 100 }, canEdit: who.director || key === ownKey };
 }
@@ -259,5 +260,5 @@ async function deskList(db) {
 }
 async function deskMark(db, who, body) { const id = S.clean(body.id, 80); const ref = db.doc('familyPrivates/' + id); const s = await ref.get(); if (!s.exists) throw S.err(404, 'private', 'Not found.'); const st = body.status === 'canceled' ? 'canceled' : 'confirmed'; if (st === 'canceled') { try { await COURTS.release(db, id); } catch (e) { /* next time */ } } await ref.set({ status: st, markedBy: who.email, markedAt: CLOCK() }, { merge: true }); return { ok: true, status: st }; }
 
-module.exports = { KINDS, ranges, merge, academyHours, dayOf, sameCoach, fmtT, coaches, slotsFor, familySlots, familyCourts, familyBook, familyCancel, familyList, week, setOff, deskList, deskMark, ack, chase, chaseStep, directorsOf,
+module.exports = { roster, calDoc, privatesOf, nowET, config, whenText, first, fold, isDate, DOW3, KINDS, ranges, merge, academyHours, dayOf, sameCoach, fmtT, coaches, slotsFor, familySlots, familyCourts, familyBook, familyCancel, familyList, week, setOff, deskList, deskMark, ack, chase, chaseStep, directorsOf,
   _clock: (f) => { CLOCK = f || (() => Date.now()); ROSTER = null; }, _reset: () => { ROSTER = null; } };
