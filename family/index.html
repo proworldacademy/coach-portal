@@ -499,6 +499,39 @@ function bkPaint(){
     try{const o=await api('private/book',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,start:BK.start,dur:60,court:BK.court||''});const d=BK.date;BK=null;bkPaint();toast('Confirmed: Coach '+o.coach+', '+nice(d)+' at '+o.time+(o.courtName?', '+o.courtName:'')+'.');CALMON=d.slice(0,7);CALSEL=d;me=await api('me');render()}
     catch(x){BK.busy=false;BK.err=x.message;if(/court/i.test(x.message)){BK.court='';bkCourts()}else{BK.start=null;BK.court='';BK.courts=[];bkPaint();bkLoad()}}};
 }
+/* Reserve a court (Nov 20, 2026): the day, the length, a time with a court free, the court. Confirmed at once; the engine holds
+   the court the same way it does for a private, so nobody else can take it. The family's own courts are listed with a Cancel. */
+let RT=null;
+function rtOpen(){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}RT={date:me.today,dur:60,slots:[],start:null,allTimes:false,courts:[],court:'',mine:[],load:false,cload:false,busy:false,err:''};rtLoad();rtMine()}
+async function rtMine(){const m=RT;try{const o=await api('court/list',{});if(RT===m){RT.mine=o.list||[];rtPaint()}}catch(x){/* the list is a nicety */}}
+async function rtLoad(){if(!RT)return;const m=RT;RT.load=true;RT.err='';rtPaint();try{const o=await api('court/slots',{date:RT.date,dur:RT.dur});if(RT!==m)return;RT.slots=o.slots||[];RT.ahead=(o.rules||{}).aheadDays||7;if(!RT.slots.some(x=>x.start===RT.start)){RT.start=null;RT.court='';RT.courts=[]}}catch(x){if(RT===m){RT.err=x.message;RT.slots=[]}}if(RT===m){RT.load=false;rtPaint()}}
+async function rtCourts(){if(!RT||RT.start==null)return;const m=RT,st=RT.start;RT.cload=true;rtPaint();try{const o=await api('court/slots',{date:RT.date,dur:RT.dur,start:RT.start});if(RT!==m||RT.start!==st)return;RT.courts=o.courts||[];if(!RT.courts.some(c=>c.id===RT.court))RT.court=''}catch(x){if(RT===m)RT.err=x.message}if(RT===m){RT.cload=false;rtPaint()}}
+function rtPaint(){
+  let el=document.getElementById('rt');if(!RT){if(el)el.remove();document.documentElement.style.overflow='';return}
+  if(!el){el=document.createElement('div');el.id='rt';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  document.documentElement.style.overflow='hidden';const maxD=ymd(new Date(new Date(String(me.today)+'T12:00:00').getTime()+(RT.ahead||7)*864e5));const slots=RT.slots||[];const lab=(slots.find(x=>x.start===RT.start)||{}).label||'';const ready=RT.start!=null&&RT.court;
+  el.innerHTML=`<header><button type="button" id="rt-x" aria-label="Back">${ico('arrow')}</button><div><h2>Reserve a court</h2><p>Free for enrolled families</p></div></header>
+    <div class="ch-bk">
+      ${(RT.mine||[]).length?`<div><h3>Your courts</h3>${RT.mine.map(v=>`<div class="ch-pick"><div><b>${esc(nice(v.date))}</b><span>${esc(v.time)} · ${v.dur} min · ${esc(v.court)}</span></div><button type="button" class="ch-btn line" data-rt-cancel="${esc(v.id)}">Cancel</button></div>`).join('')}</div>`:''}
+      <div><h3>Day</h3><input type="date" id="rt-date" min="${esc(me.today)}" max="${maxD}" value="${esc(RT.date)}"></div>
+      <div><h3>How long</h3><div class="opts">${[60,90,120].map(n=>`<button type="button" data-rt-dur="${n}" aria-pressed="${RT.dur===n}">${n===60?'1 hour':n===90?'1 hour 30':'2 hours'}</button>`).join('')}</div></div>
+      <div><h3>Time · ${esc(nice(RT.date))}</h3>${RT.load?'<p class="n"><span class="spin"></span></p>':slots.length?`<div class="opts">${(RT.start!=null&&!RT.allTimes?slots.filter(x=>x.start===RT.start):slots).map(x=>`<button type="button" data-rt-slot="${x.start}" aria-pressed="${RT.start===x.start}">${esc(x.label)}</button>`).join('')}${RT.start!=null&&!RT.allTimes?'<button type="button" data-rt-times>Change time</button>':''}</div>`:'<p class="n">No court is free that day. Try another day.</p>'}</div>
+      ${RT.start!=null?`<div><h3>Court · free at ${esc(lab)}</h3>${RT.cload?'<p class="n"><span class="spin"></span></p>':(RT.courts||[]).length?`<div class="opts">${RT.courts.map(c=>`<button type="button" data-rt-court="${esc(c.id)}" aria-pressed="${RT.court===c.id}">${esc(c.name)}<small>${c.type==='clay'?'Clay':'Hard'}</small></button>`).join('')}</div>`:'<p class="n">That time was just taken. Pick another time.</p>'}</div>`:''}
+      ${RT.err?`<p class="n" style="color:#8A1F8C">${esc(RT.err)}</p>`:''}
+      <p class="n">It is confirmed as soon as you reserve, and you get an e-mail. You can reserve up to the minute it starts and cancel any time before. One court a day.</p>
+      <div class="go"><button type="button" class="ch-btn" id="rt-go" ${ready&&!RT.busy?'':'disabled'}>${RT.busy?'Reserving…':RT.start==null?'Pick a time':!RT.court?'Pick a court':'Reserve '+esc(lab)+' · '+esc(((RT.courts||[]).find(c=>c.id===RT.court)||{}).name||'')}</button></div>
+    </div>`;
+  document.getElementById('rt-x').onclick=()=>{RT=null;rtPaint()};
+  document.getElementById('rt-date').onchange=(e)=>{if(!e.target.value)return;RT.date=e.target.value;RT.start=null;RT.court='';RT.courts=[];rtLoad()};
+  el.querySelectorAll('[data-rt-dur]').forEach(b=>b.onclick=()=>{RT.dur=Number(b.dataset.rtDur);RT.court='';RT.courts=[];rtLoad().then(()=>{if(RT&&RT.start!=null)rtCourts()})});
+  el.querySelectorAll('[data-rt-slot]').forEach(b=>b.onclick=()=>{RT.start=Number(b.dataset.rtSlot);RT.allTimes=false;RT.err='';RT.court='';RT.courts=[];rtCourts()});
+  el.querySelectorAll('[data-rt-times]').forEach(b=>b.onclick=()=>{RT.allTimes=true;rtPaint()});
+  el.querySelectorAll('[data-rt-court]').forEach(b=>b.onclick=()=>{RT.court=b.dataset.rtCourt;RT.err='';rtPaint()});
+  el.querySelectorAll('[data-rt-cancel]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('court/cancel',{id:b.dataset.rtCancel});toast('Canceled. The court is free again.');rtMine();rtLoad()}catch(x){b.disabled=false;toast(x.message,true)}});
+  document.getElementById('rt-go').onclick=async()=>{if(RT.busy||!ready)return;RT.busy=true;RT.err='';rtPaint();
+    try{const o=await api('court/book',{date:RT.date,start:RT.start,dur:RT.dur,court:RT.court});const d=RT.date;toast('Reserved: '+nice(d)+' at '+o.time+', '+o.courtName+'.');RT.busy=false;RT.start=null;RT.court='';RT.courts=[];rtMine();rtLoad()}
+    catch(x){RT.busy=false;RT.err=x.message;RT.court='';if(/court|taken/i.test(x.message))rtCourts();else rtPaint()}};
+}
 /* a tennis private needs a time and a court; fitness and mental only a time */
 function bkReady(){return !!(BK&&BK.coach&&BK.start!=null&&(BK.kind!=='tennis'||BK.court))}
 /* the courts free at the chosen time: the family picks one, the engine holds it with the lesson */
@@ -567,7 +600,7 @@ function render(){
     ${requestsBlock()}
     ${footer()}`;
   app.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{SEL=b.dataset.sel;render()});
-  app.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{if(b.dataset.ask==='private'){bkOpen('tennis',CALSEL||me.today);return}const k=document.getElementById('kind'),pl=document.getElementById('player');if(k)k.value=b.dataset.ask;if(pl&&SEL)pl.value=SEL;const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});const tx=document.getElementById('text');if(tx)setTimeout(()=>tx.focus({preventScroll:true}),450)});
+  app.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{if(b.dataset.ask==='private'){bkOpen('tennis',CALSEL||me.today);return}if(b.dataset.ask==='court'){rtOpen();return}const k=document.getElementById('kind'),pl=document.getElementById('player');if(k)k.value=b.dataset.ask;if(pl&&SEL)pl.value=SEL;const sec=document.getElementById('requests');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});const tx=document.getElementById('text');if(tx)setTimeout(()=>tx.focus({preventScroll:true}),450)});
   const daysDo=async(body,ok)=>{if(busy)return;busy=true;try{await api('days',Object.assign({player:SEL},body));toast(ok);me=await api('me')}catch(x){toast(x.message,true)}busy=false;render()};
   app.querySelectorAll('[data-absent]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Tap again to confirm';setTimeout(()=>{if(b.isConnected&&b.dataset.sure==='1'){b.dataset.sure='';b.textContent='Cannot make it'}},4000);return}b.disabled=true;   // two taps, no pop-up: a phone app's pop-ups are not dependable
     daysDo({action:'away',date:b.dataset.absent},'Told the academy. Thank you.')});

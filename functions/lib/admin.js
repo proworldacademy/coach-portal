@@ -176,4 +176,4 @@ async function requireMarketing(req) {
   return { uid: decoded.uid, email, name: rec.name || decoded.name || email, owner: rec.owner === true, admin: rec.owner === true || rec.role === 'admin', marketing: true };
 }
 
-module.exports = { requireStaff, requireCoach, requireTeam, requireMarketing, requireBilling, overview, chargeOnFile, planOf, readAs };
+module.exports = { OWNERS, requireStaff, requireCoach, requireTeam, requireMarketing, requireBilling, overview, chargeOnFile, planOf, readAs };

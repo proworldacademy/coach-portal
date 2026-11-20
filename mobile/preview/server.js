@@ -14,9 +14,14 @@ const PRICES = []; for (const p of CAT.PROGRAMS) for (const pl of p.plans) PRICE
 const PARENT = { email: 'maria.rivera@example.com', name: 'Maria Rivera' };
 /* the Courts page's own starting blocks, so the engine and the page read one schedule in the test copy */
 const PAGE_BLOCKS = (() => { try { const m = /const SEED_BLOCKS=(\[[\s\S]*?\n\]);/.exec(fs.readFileSync(path.join(REPO, 'backend/index.html'), 'utf8')); return new Function('return ' + m[1])(); } catch (e) { return []; } })();
+/* invented players with training hours, so the court plan has sessions to place in the test copy */
+const PLAN_KIDS = (() => { const o = {}; const mk = (pre, n, coach, time, prog) => { for (let i = 1; i <= n; i++) o['players/' + pre + i] = { name: 'Player ' + pre.toUpperCase() + i, coach, status: 'active', source: 'demo', createdAt: 5, enroll: { programName: prog, programShort: prog, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], pbp: { time } } }; };
+  mk('hb', 12, 'Kim Coach', '07:45 AM-09:45 AM', 'High Performance'); mk('hg', 8, 'Kim Coach', '09:45 AM-11:45 AM', 'High Performance'); mk('af', 7, 'Lee Coach', '04:00 PM-06:00 PM', 'Afterschool'); mk('tu', 10, 'Lee Coach', '04:30 PM-06:00 PM', '10 & Under'); return o; })();
 const FAMDB = fakeDb({
   // an invented private, so the client's calendar shows its mark (Nov 19, 2026)
-  'backend/state': { blocks: PAGE_BLOCKS, privates: [{ id: 'pv-demo', pid: 'as-mia-r', date: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10), start: 15.5, dur: 1, court: 4, coach: 'Lee' }] },
+  ...PLAN_KIDS,
+  'groups/g-demo': { coaches: ['Lee', 'Kim'], directors: ['director@example.test'] },
+  'backend/state': { blocks: PAGE_BLOCKS, bookings: [], privates: [{ id: 'pv-demo', pid: 'as-mia-r', date: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10), start: 15.5, dur: 1, court: 4, coach: 'Lee' }] },
   'players/ft-liam-r': { name: 'Liam Rivera', shortName: 'Liam R.', group: 'ft', coach: 'Kim Coach', status: 'active', source: 'monday', createdAt: 1, enroll: { programName: 'Full Time Program | Fall 2026', programShort: 'Full Time', pbp: { plan: '10 FLEX Sessions | Tennis Only', bySession: true } } },   // by the session: books his own sessions
   'players/ft-liam-r/private/contact': { guardian: 'Maria Rivera', email: PARENT.email, phone: '5615550102', source: 'monday' },
   'players/as-mia-r': { name: 'Mia Rivera', shortName: 'Mia R.', group: 'as', coach: 'Lee Coach', coach2: 'Kim Coach', status: 'active', source: 'coach', createdAt: 2, enroll: { programName: 'Afterschool | Fall 2026', programShort: 'Afterschool', days: ['Tue', 'Thu'], pbp: { plan: '2 Days per week | Monthly', bySession: false } } },   // training days, so the client home has a next session to show
@@ -63,6 +68,21 @@ http.createServer(async (req, res) => {
   if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }); res.end(''); return; }
   if (p === '/api/team/people') { const me = (next.who || 'coach') + '@example.test'; const w = WHO[next.who] || WHO.coach; const people = Object.keys(TH.STAFF).map((k) => TH.STAFF[k]).filter((r) => r.email !== TH.P.dee).map((r) => ({ email: r.email, name: r.name, role: r.owner ? 'owner' : r.role })).concat([{ email: me, name: w.name || 'You', role: w.role || 'team' }]); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ people })); return; }
   if (p.startsWith('/api/team/')) { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); return; }
+  /* the one schedule (Nov 20, 2026): the calendar, hours, days off, staff privates, the court plan and rain run on the real engine */
+  if (/^\/api\/coach\/(calendar|calendar\/off|calendar\/hours|timeoff\/(ask|decide|withdraw)|private\/(ack|players|slots|book|cancel)|courts\/plan(\/apply|\/clear|\/auto)?|rain)$/.test(p) && req.method === 'POST') {
+    let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; }
+    const SC = require(REPO + '/functions/lib/schedule'); const CC = require(REPO + '/functions/lib/coachcal'); const k = next.who || 'coach'; const w = WHO[k] || WHO.coach;
+    const who = { email: k + '@example.test', name: w.name, keys: [w.coachAs, String(w.name).split(' ')[0]].filter(Boolean).map((x) => String(x).toLowerCase()), role: w.role, owner: !!w.owner, admin: !!w.owner || w.role === 'admin', director: !!w.owner || w.role === 'admin' || w.role === 'director' };
+    const said = []; const deps = { tellCoach: async (n, t) => said.push(t), tellDesk: async (t) => said.push(t), tellFamily: async (e, m) => said.push(m.subject), tellOwners: async (t) => said.push(t), tellStaff: async (t) => said.push(t) };
+    const r = p.slice(11);
+    try { const out = r === 'calendar' ? await SC.week(FAMDB, who, b) : r === 'calendar/off' ? await SC.setOff(FAMDB, who, b) : r === 'calendar/hours' ? await SC.setHours(FAMDB, who, b) : r === 'timeoff/ask' ? await SC.askOff(FAMDB, who, b, deps) : r === 'timeoff/decide' ? await SC.decideOff(FAMDB, who, b, deps) : r === 'timeoff/withdraw' ? await SC.withdrawOff(FAMDB, who, b)
+        : r === 'private/ack' ? await CC.ack(FAMDB, who, b) : r === 'private/players' ? await SC.coachPlayers(FAMDB, who, b) : r === 'private/slots' ? await SC.coachSlots(FAMDB, who, b) : r === 'private/book' ? await SC.coachBook(FAMDB, who, b, deps) : r === 'private/cancel' ? await SC.coachCancel(FAMDB, who, b, deps)
+        : r === 'courts/plan' ? Object.assign(await SC.plan(FAMDB, String(b.date || '')), await SC.planState(FAMDB)) : r === 'courts/plan/apply' ? await SC.applyPlan(FAMDB, who, b) : r === 'courts/plan/clear' ? await SC.clearPlan(FAMDB, who, b) : r === 'courts/plan/auto' ? await SC.planAuto(FAMDB, who, b) : await SC.rain(FAMDB, who, b, deps);
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: e.code || 'x', message: e.message })); } return; }
+  if (/^\/api\/family\/court\/(slots|book|cancel|list)$/.test(p) && req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; }
+    const SC = require(REPO + '/functions/lib/schedule'); const fn = p.split('/').pop(); const fam = { email: PARENT.email, name: PARENT.name || 'Maria Rivera' };
+    try { const out = fn === 'slots' ? await SC.rentSlots(FAMDB, fam, b) : fn === 'list' ? await SC.rentList(FAMDB, fam) : fn === 'book' ? await SC.rentBook(FAMDB, fam, b, {}) : await SC.rentCancel(FAMDB, fam, b, {});
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: e.code || 'x', message: e.message })); } return; }
   if (p.startsWith('/api/coach/')) {
     let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
     const [st, j] = await H.engine(req.method, p, url.searchParams, body); res.writeHead(st, { 'content-type': 'application/json' }); res.end(JSON.stringify(j)); return;

@@ -40,6 +40,16 @@ const USERS = require('./lib/users');
 const TEAM = require('./lib/team');
 const COACHCAL = require('./lib/coachcal');
 const COURTS = require('./lib/courts');
+const SCHED = require('./lib/schedule');
+/* Who is told what, for the schedule (Nov 20, 2026). Owners: the staff records marked owner and the owner sign-ins. */
+async function ownerEmails(db) { const out = new Set(); try { (await db.collection('staff').where('owner', '==', true).get()).docs.forEach((d) => out.add(String(d.id).toLowerCase())); } catch (e) { /* the sign-ins below */ }
+  try { const auth = require('firebase-admin/auth').getAuth(); for (const uid of ADMIN.OWNERS || []) { try { const u = await auth.getUser(uid); if (u.email) out.add(u.email.toLowerCase()); } catch (e) { /* next */ } } } catch (e) { /* none */ } return Array.from(out); }
+async function directorEmails(db) { const out = new Set(); try { (await db.collection('groups').get()).docs.forEach((d) => ((d.data() || {}).directors || []).forEach((e) => out.add(String(e).toLowerCase()))); } catch (e) { /* none */ } return Array.from(out); }
+function schedDeps(db) { const many = async (emails, title, text, url) => { for (const e of emails) { try { await TEAM.direct(db, e, text); } catch (err) { /* next */ } } try { if (emails.length) await PUSH.send(db, emails, { title, body: text.slice(0, 180), url, tag: 'schedule' }); } catch (err) { /* no phone on */ } };
+  return { tellCoach: (name, text) => LESSONS.tellCoach(db, name, text), tellDesk: (text) => NOTIFY.slack(db, 'desk', '*Schedule*', [text]),
+    tellFamily: async (email, m) => { try { await PUSH.send(db, [email], m.push); } catch (e) { /* no phone on */ } await MAIL.send(db, { to: email, subject: m.subject, text: m.text }); },
+    tellOwners: async (text) => many(await ownerEmails(db), 'Time off request', text, '/portal#/calendar'),
+    tellStaff: async (text) => { try { await NOTIFY.slack(db, 'desk', '*Rain*', [text]); } catch (e) { /* next */ } await many(Array.from(new Set((await ownerEmails(db)).concat(await directorEmails(db)))), 'Rain', text, '/backend'); } }; }
 const NEWS = require('./lib/news');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
@@ -157,6 +167,13 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         if (route !== 'POST /family/chat') logger.info('family ' + route.slice(13), { by: who.email, player: S.clean(b.player, 60), action: out.action || out.to || '' });
         return send(res, 200, out);
       }
+      /* a court reserved from the client's calendar (Nov 20, 2026): the free times, the free courts, reserve, cancel, my courts */
+      if (route === 'POST /family/court/slots' || route === 'POST /family/court/book' || route === 'POST /family/court/cancel' || route === 'POST /family/court/list') {
+        const fn = route.split('/').pop(); const fam = { email: who.email, name: who.name || '' };
+        const out = fn === 'slots' ? await SCHED.rentSlots(ctx.db, fam, b) : fn === 'list' ? await SCHED.rentList(ctx.db, fam) : fn === 'book' ? await SCHED.rentBook(ctx.db, fam, b, schedDeps(ctx.db)) : await SCHED.rentCancel(ctx.db, fam, b, schedDeps(ctx.db));
+        if (fn === 'book' || fn === 'cancel') logger.info('family court ' + fn, { by: who.email, id: out.id || S.clean(b.id, 80) });
+        return send(res, 200, out);
+      }
       /* privates from the client's calendar (Nov 19, 2026): the coaches of a kind, a coach's open times on a day, book one, cancel one */
       if (route === 'POST /family/private/slots' || route === 'POST /family/private/courts' || route === 'POST /family/private/book' || route === 'POST /family/private/cancel') {
         const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
@@ -196,7 +213,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
         if (route === 'GET /coach/groups') return send(res, 200, await COACHTEXT.groups(ctx.db, who));
         if (route === 'GET /coach/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
-        if (route === 'POST /coach/calendar') return send(res, 200, await COACHCAL.week(ctx.db, who, b));
+        if (route === 'POST /coach/calendar') return send(res, 200, await SCHED.week(ctx.db, who, b));
         if (route === 'POST /coach/read') return send(res, 200, { ok: true, viewing: true });
         throw S.err(403, 'viewing', `You are looking at the portal as ${who.firstName || 'this person'}. Go back to your own view to send or change anything.`);
       }
@@ -212,9 +229,23 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /coach/push/apns/off') return send(res, 200, await PUSH.unregisterApns(ctx.db, who, b));
       if (route === 'POST /coach/push/test') return send(res, 200, await PUSH.send(ctx.db, [who.email], { title: 'PROWORLD', body: 'Notifications are on for this phone.', url: '/portal', tag: 'test' }));
       // the coach's calendar (Nov 19, 2026): a week of academy hours, privates and open times; time off
-      if (route === 'POST /coach/calendar') return send(res, 200, await COACHCAL.week(ctx.db, who, b));
+      if (route === 'POST /coach/calendar') return send(res, 200, await SCHED.week(ctx.db, who, b));
       if (route === 'POST /coach/private/ack') { const out = await COACHCAL.ack(ctx.db, who, b); logger.info('private received', { by: who.email, id: out.id }); return send(res, 200, out); }
-      if (route === 'POST /coach/calendar/off') { const out = await COACHCAL.setOff(ctx.db, who, b); logger.info('coach calendar off', { by: who.email, date: S.clean(b.date, 12), remove: !!b.remove }); return send(res, 200, out); }
+      /* the rest of the one schedule (Nov 20, 2026): hours, days off through an owner, privates added by staff, the court plan, rain */
+      if (route === 'POST /coach/calendar/hours') { const out = await SCHED.setHours(ctx.db, who, b); logger.info('coach hours', { by: who.email, coach: S.clean(b.coach, 40) }); return send(res, 200, out); }
+      if (route === 'POST /coach/timeoff/ask') { const out = await SCHED.askOff(ctx.db, who, b, schedDeps(ctx.db)); logger.info('time off asked', { by: who.email, id: out.id, status: out.status }); return send(res, 200, out); }
+      if (route === 'POST /coach/timeoff/decide') { const out = await SCHED.decideOff(ctx.db, who, b, schedDeps(ctx.db)); logger.info('time off decided', { by: who.email, id: S.clean(b.id, 80), status: out.status }); return send(res, 200, out); }
+      if (route === 'POST /coach/timeoff/withdraw') return send(res, 200, await SCHED.withdrawOff(ctx.db, who, b));
+      if (route === 'POST /coach/private/players') return send(res, 200, await SCHED.coachPlayers(ctx.db, who, b));
+      if (route === 'POST /coach/private/slots') return send(res, 200, await SCHED.coachSlots(ctx.db, who, b));
+      if (route === 'POST /coach/private/book') { const out = await SCHED.coachBook(ctx.db, who, b, schedDeps(ctx.db)); logger.info('private added by staff', { by: who.email, id: out.id }); return send(res, 200, out); }
+      if (route === 'POST /coach/private/cancel') { const out = await SCHED.coachCancel(ctx.db, who, b, schedDeps(ctx.db)); logger.info('private canceled by staff', { by: who.email, id: S.clean(b.id, 80) }); return send(res, 200, out); }
+      if (route === 'POST /coach/courts/plan') return send(res, 200, Object.assign(await SCHED.plan(ctx.db, S.clean(b.date, 12)), await SCHED.planState(ctx.db)));
+      if (route === 'POST /coach/courts/plan/apply') { const out = await SCHED.applyPlan(ctx.db, who, b); logger.info('court plan applied', { by: who.email, days: out.days }); return send(res, 200, out); }
+      if (route === 'POST /coach/courts/plan/clear') { const out = await SCHED.clearPlan(ctx.db, who, b); logger.info('court plan cleared', { by: who.email, date: S.clean(b.date, 12) }); return send(res, 200, out); }
+      if (route === 'POST /coach/courts/plan/auto') return send(res, 200, await SCHED.planAuto(ctx.db, who, b));
+      if (route === 'POST /coach/rain') { const out = await SCHED.rain(ctx.db, who, b, schedDeps(ctx.db)); if (b.send) logger.info('rain notice', { by: who.email, send: b.send, sent: out.sent, total: out.total }); return send(res, 200, out); }
+      if (route === 'POST /coach/calendar/off') { const out = await SCHED.setOff(ctx.db, who, b); logger.info('coach calendar off', { by: who.email, date: S.clean(b.date, 12), remove: !!b.remove }); return send(res, 200, out); }
       if (route === 'GET /coach/inbox') return send(res, 200, await COACHTEXT.inbox(ctx.db, who));
       if (route === 'POST /coach/read') return send(res, 200, await COACHTEXT.markRead(ctx.db, who, b));   // "I read this chat" (Nov 4 evening: one chat per number, group chats)
       throw S.err(404, 'route', 'No such coach route.');
@@ -489,4 +520,9 @@ exports.lessonReminders = onSchedule({ schedule: '*/15 * * * *', timeZone: CAL.T
       tellDirectors: async (emails, text) => { if (!emails.length) { await NOTIFY.slack(db, 'desk', '*Private* — not marked received', [text]); return; } for (const e of emails) { try { await TEAM.direct(db, e, text); } catch (err) { /* next */ } } try { await PUSH.send(db, emails, { title: 'Private not marked received', body: text, url: '/portal#/calendar', tag: 'private-chase' }); } catch (err) { /* no phone on */ } } }, (l) => logger.info('private chase: ' + l));
     if (out.coach || out.director) logger.info('privateChase', out); }
   catch (e) { logger.error('privateChase failed', { message: e.message }); }
+});
+/* Every night at 2:10 (Nov 20, 2026): the academy's courts for the next seven days, when an owner has switched the nightly plan on. */
+exports.courtPlanNightly = onSchedule({ schedule: '10 2 * * *', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 300, memory: '256MiB' }, async () => {
+  try { const out = await SCHED.nightly(DB.get(), (l) => logger.info(l)); if (out.ran) logger.info('courtPlanNightly', out); }
+  catch (e) { logger.error('courtPlanNightly failed', { message: e.message }); }
 });
