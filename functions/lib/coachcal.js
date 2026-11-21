@@ -226,10 +226,10 @@ async function directorsOf(db, coachName) {
 }
 /* Every 15 minutes: privates a family booked that the coach has not marked Received. The coach is reminded after one hour and
    again after three; after six hours, or once the lesson is within three hours, the coach's director is told, once. Between
-   9 pm and 7 am nobody is written to unless the lesson is within twelve hours. Pure of clocks: `now` comes in. */
+   9 pm and 6 am nobody is written to unless the lesson is within twelve hours. Pure of clocks: `now` comes in. */
 function chaseStep(x, now, hoursToLesson, hourET) {
   if (!x || x.status === 'canceled' || x.ackAt || hoursToLesson <= 0) return null;
-  const age = (now - Number(x.at || now)) / 36e5; const night = hourET >= 21 || hourET < 7; if (night && hoursToLesson > 12) return null;
+  const age = (now - Number(x.at || now)) / 36e5; const night = hourET >= 21 || hourET < 6; if (night && hoursToLesson > 12) return null;
   if (!x.dirAt && (age >= 6 || (hoursToLesson <= 3 && age >= 0.5))) return 'director';
   const n = Number(x.nudges || 0); if (n === 0 && age >= 1) return 'coach'; if (n === 1 && age >= 3) return 'coach';
   return null;

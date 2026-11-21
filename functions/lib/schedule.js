@@ -240,14 +240,22 @@ async function rentConfirm(db, who, body, deps) {
   return { ok: true, status: 'confirmed', time: fmtT(Number(x.start)), courtName: where };
 }
 const usd = (c) => '$' + (Number(c || 0) / 100).toFixed(2);
+const REFUND_HOURS = 24;
 async function rentCancel(db, who, body, deps) {
   const id = S.clean(body.id, 80); const ref = db.doc('rentals/' + id); const s = await ref.get(); const x = s.exists ? (s.data() || {}) : null; const email = String(who.email || '').toLowerCase();
   if (!x || x.status === 'canceled' || (x.email !== email && !who.admin && !who.owner)) throw S.err(404, 'rental', 'That court is not on this account.');
   await ref.set({ status: 'canceled', canceledAt: CLOCK(), canceledBy: email }, { merge: true });
   try { await COURTS.release(db, id); } catch (e) { /* next sweep */ }
   const wasPaid = x.status === 'confirmed' && Number(x.price || 0) > 0;
-  try { if (deps && deps.tellDesk && x.status !== 'pending') await deps.tellDesk(`Court canceled in the app: ${x.name}, ${CC.whenText(x.date, Number(x.start))}, ${COURTS.nameOf(x.court)}.${wasPaid ? ` It was paid (${usd(x.price)}): decide the refund.` : ''}`); } catch (e) { /* nicety */ }
-  if (wasPaid) return { ok: true, paid: true };
+  /* Refunds (Antonio, Nov 21, 2026): canceled 24 hours or more before it starts, the card is refunded in full, automatically.
+     Later than that there is no refund; the client can write to the admin team, who decide. */
+  const n = CC.nowET(CLOCK()); const hoursTo = (Date.parse(x.date + 'T00:00:00Z') - Date.parse(n.date + 'T00:00:00Z')) / 3600000 + Number(x.start) - n.h;
+  let refunded = false, failed = false;
+  if (wasPaid && hoursTo >= REFUND_HOURS && x.intent && deps && deps.refund) { try { const r = await deps.refund({ id, intent: x.intent, cents: Number(x.price) }); refunded = true; await ref.set({ refundedAt: CLOCK(), refund: (r && r.id) || '', refundCents: Number(x.price) }, { merge: true }); } catch (e) { failed = true; } }
+  const when = CC.whenText(x.date, Number(x.start)); const where = COURTS.nameOf(x.court); const late = wasPaid && hoursTo < REFUND_HOURS;
+  try { if (deps && deps.tellDesk && x.status !== 'pending') await deps.tellDesk(`Court canceled in the app: ${x.name}, ${when}, ${where}.${refunded ? ` ${usd(x.price)} was refunded to the card automatically (24 hours or more ahead).` : failed || (wasPaid && !late) ? ` REFUND NEEDED: ${usd(x.price)} should go back to the card (24 hours or more ahead) and the automatic refund did not go through. Refund it in Stripe.` : late ? ` It was paid (${usd(x.price)}) and canceled less than 24 hours before: no refund, unless you decide otherwise.` : ''}`); } catch (e) { /* nicety */ }
+  try { if (wasPaid && deps && deps.tellFamily) await deps.tellFamily(email, { subject: `Court canceled: ${when}`, text: ['Hello,', '', `Your court on ${when} (${where}) is canceled.`, '', refunded ? `${usd(x.price)} is on its way back to your card. It can take 5 to 10 business days to show.` : late ? 'It was canceled less than 24 hours before the start, so it is not refunded. If something came up, reply to this e-mail and the admin team will look at it.' : `Your refund of ${usd(x.price)} is being handled by the admin team.`, '', 'ProWorld Academy', '(561) 403-0008'].join('\n'), push: { title: 'Court canceled', body: refunded ? `${usd(x.price)} is going back to your card.` : `${when}, ${where}.`, url: '/family', tag: id } }); } catch (e) { /* same */ }
+  if (wasPaid) return { ok: true, paid: true, refunded, late };
   return { ok: true };
 }
 

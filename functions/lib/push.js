@@ -90,6 +90,10 @@ async function unregisterApns(db, who, body) {
 async function send(db, emails, note) {
   const list = Array.from(new Set((emails || []).map((e) => String(e || '').toLowerCase()).filter(Boolean))).slice(0, 10); const out = { sent: 0, gone: 0, failed: 0 };
   if (!list.length) return out;
+  /* Quiet at night for a client profile (Nov 21, 2026): 9 pm to 6 am nothing buzzes the phone of someone who asked for that. Staff
+     have their own switch in the Locker Room; this one reads clients/<e-mail>.quiet and leaves everyone else alone. */
+  const hr = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+  if ((hr >= 21 || hr < 6) && note.urgent !== true) { for (const e of list.slice()) { try { const c = await db.doc('clients/' + e).get(); if (c.exists && (c.data() || {}).quiet === true) list.splice(list.indexOf(e), 1); } catch (err) { /* told as usual */ } } if (!list.length) return out; }
   let subs = [];
   try { const snap = await db.collection('pushSubs').where('email', 'in', list).get(); subs = snap.docs.map((d) => Object.assign({ id: d.id }, d.data() || {})); } catch (e) { return out; }
   if (!subs.length) return out;

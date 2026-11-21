@@ -32,7 +32,10 @@ async function save(db, who, body) {
   const email = norm(who.email); const cur = (await get(db, email)) || { people: [], at: CLOCK(), src: 'family' };
   const name = body.name !== undefined ? S.clean(body.name, 80) : cur.name || who.name || ''; const phone = body.phone !== undefined ? S.clean(body.phone, 30) : cur.phone || '';
   if (name.length < 2) throw S.err(400, 'name', 'Add your name.');
-  await db.doc('clients/' + email).set(Object.assign({}, cur, { name, phone, updatedAt: CLOCK() })); return { ok: true, name, phone };
+  const rec = Object.assign({}, cur, { name, phone, updatedAt: CLOCK() });
+  if (body.photo !== undefined) { const ph = String(body.photo || ''); if (ph && (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(ph) || ph.length > 40000)) throw S.err(400, 'photo', 'That photo is too big. Pick another one.'); rec.photo = ph; }
+  if (body.quiet !== undefined) rec.quiet = body.quiet === true;
+  await db.doc('clients/' + email).set(rec); return { ok: true, name, phone, photo: rec.photo || '', quiet: rec.quiet === true };
 }
 /* "+" next to the players: an adult who takes privates or reserves courts. A child goes through the enrollment instead. */
 async function addPerson(db, who, body) {

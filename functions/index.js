@@ -160,7 +160,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       const who = await FAMILY.requireFamily(req);
       if (route === 'GET /family/me') { const out = await FAMILY.me(ctx.db, stripe, who); const cl = await CLIENT.get(ctx.db, who.email);
         /* a profile without a child is known too; `member` says an academy family (courts are free for them), `people` are the adults on the account */
-        return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '' } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents })); }
+        return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents })); }
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
       if (route === 'POST /family/request') {
         const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
@@ -192,10 +192,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
               payment_intent_data: { description: o.label.slice(0, 900), metadata: meta, setup_future_usage: 'off_session' }, metadata: meta, expires_at: Math.floor(Date.now() / 1000) + Math.max(30, o.minutes) * 60,
               success_url: `${ROSTER.SITE}/family?court=${encodeURIComponent(o.id)}`, cancel_url: `${ROSTER.SITE}/family?courtx=${encodeURIComponent(o.id)}` }, { idempotencyKey: 'court_' + o.id + '_' + o.cents });
             return { url: ses.url, id: ses.id }; },
+          refund: async (o) => stripe.refunds.create({ payment_intent: o.intent, amount: o.cents, reason: 'requested_by_customer', metadata: { kind: 'court-rental', rental: o.id } }, { idempotencyKey: 'court_refund_' + o.id }),
           paid: async (sid) => { const ses = await stripe.checkout.sessions.retrieve(sid); return { paid: ses.payment_status === 'paid', intent: S.customerId(ses.payment_intent) || '' }; } });
         if (fn === 'confirm') { const out = await SCHED.rentConfirm(ctx.db, fam, b, payDeps); logger.info('family court confirm', { by: who.email, id: S.clean(b.id, 80), status: out.status }); return send(res, 200, out); }
         if (fn === 'book') { const out = await SCHED.rentBook(ctx.db, fam, b, payDeps); logger.info('family court book', { by: who.email, id: out.id, paid: !!out.pay }); return send(res, 200, out); }
-        const out = fn === 'slots' ? await SCHED.rentSlots(ctx.db, fam, b) : fn === 'list' ? await SCHED.rentList(ctx.db, fam) : fn === 'book' ? await SCHED.rentBook(ctx.db, fam, b, schedDeps(ctx.db)) : await SCHED.rentCancel(ctx.db, fam, b, schedDeps(ctx.db));
+        const out = fn === 'slots' ? await SCHED.rentSlots(ctx.db, fam, b) : fn === 'list' ? await SCHED.rentList(ctx.db, fam) : fn === 'book' ? await SCHED.rentBook(ctx.db, fam, b, schedDeps(ctx.db)) : await SCHED.rentCancel(ctx.db, fam, b, payDeps);
         if (fn === 'book' || fn === 'cancel') logger.info('family court ' + fn, { by: who.email, id: out.id || S.clean(b.id, 80) });
         return send(res, 200, out);
       }
