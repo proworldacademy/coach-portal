@@ -43,6 +43,7 @@ const COURTS = require('./lib/courts');
 const SCHED = require('./lib/schedule');
 const PAYROLL = require('./lib/payroll');
 const CLIENT = require('./lib/client');
+const ASSISTANT = require('./lib/assistant');
 /* Who is told what, for the schedule (Nov 20, 2026). Owners: the staff records marked owner and the owner sign-ins. */
 async function ownerEmails(db) { const out = new Set(); try { (await db.collection('staff').where('owner', '==', true).get()).docs.forEach((d) => out.add(String(d.id).toLowerCase())); } catch (e) { /* the sign-ins below */ }
   try { const auth = require('firebase-admin/auth').getAuth(); for (const uid of ADMIN.OWNERS || []) { try { const u = await auth.getUser(uid); if (u.email) out.add(u.email.toLowerCase()); } catch (e) { /* next */ } } } catch (e) { /* none */ } return Array.from(out); }
@@ -164,8 +165,11 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       const who = await FAMILY.requireFamily(req);
       if (route === 'GET /family/me') { const out = await FAMILY.me(ctx.db, stripe, who); const cl = await CLIENT.get(ctx.db, who.email);
         /* a profile without a child is known too; `member` says an academy family (courts are free for them), `people` are the adults on the account */
-        return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents })); }
+        return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
+      /* Ask ProWorld (Nov 21, 2026): a question about the one player selected; the answer may carry a card the parent confirms (lib/assistant.js) */
+      if (route === 'POST /family/ask') { const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); const players = (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, who.email)));
+        const out = await ASSISTANT.ask(ctx.db, who, b, players); logger.info('family ask', { card: out.card ? out.card.type : '' }); return send(res, 200, out); }
       if (route === 'POST /family/request') {
         const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
         const out = await FAMILY.request(ctx.db, who, b, players);
