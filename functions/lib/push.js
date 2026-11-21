@@ -136,7 +136,7 @@ async function setState(db, who, body) {
   return { ok: true };
 }
 async function who(db, people) {
-  const list = (people || []).map((p) => ({ email: String(p.email || '').toLowerCase(), name: p.name || '' })).filter((p) => p.email); const subs = {}; const states = {};
+  const list = (Array.isArray(people) ? people : (people && people.people) || []).map((p) => ({ email: String(p.email || '').toLowerCase(), name: p.name || '' })).filter((p) => p.email); const subs = {}; const states = {};
   for (let i = 0; i < list.length; i += 10) {
     const part = list.slice(i, i + 10).map((p) => p.email);
     try { const snap = await db.collection('pushSubs').where('email', 'in', part).get(); snap.docs.forEach((d) => { const x = d.data() || {}; const e = String(x.email || '').toLowerCase(); const r = subs[e] = subs[e] || { app: 0, web: 0, at: 0 }; if (x.kind === 'apns') r.app++; else r.web++; r.at = Math.max(r.at, Number(x.at) || 0); }); } catch (e) { /* shown as not yet */ }

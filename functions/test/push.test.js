@@ -68,6 +68,7 @@ test('who has notifications on: a phone on file is on, a phone that said no is b
   await assert.rejects(() => PUSH.setState(db, KIM, { state: 'whatever' }));
   const r = await PUSH.who(db, ['kim', 'lee', 'dee', 'web', 'new'].map((n) => ({ email: n + '@example.test', name: n })));
   assert.deepEqual(r.people.map((p) => p.status), ['on', 'blocked', 'asked', 'browser', 'never']); assert.equal(r.people[0].app, 1);
+  assert.equal((await PUSH.who(db, { people: [{ email: 'kim@example.test', name: 'kim' }] })).people[0].status, 'on');   // the team list as lib/team.js hands it over
 });
 test('without the Apple key the app phones are skipped, not failed; a token Apple forgot is removed; a bad token is refused', async () => {
   PUSH._reset(); const { fakeDb } = require('./fake-db'); const tok = 'b'.repeat(64);
