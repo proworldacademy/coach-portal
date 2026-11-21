@@ -1,0 +1,2 @@
+t01-reminders|coach|/portal/|0
+t40-team|coach|/team/|0

@@ -67,11 +67,7 @@ jobs:
           name: iphone-shots
           path: ${{ runner.temp }}/shots
           retention-days: 7
-      - name: Keep the screenshots on the branch preview-shots
+      - name: The ringtone is in the app and was installed at first start
         run: |
-          cd "$RUNNER_TEMP/shots"; for f in *.jpg dark/*.jpg; do [ -f "$f" ] && sips -Z 1300 -s formatOptions 70 "$f" >/dev/null 2>&1 || true; done
-          for f in *.mov; do [ -f "$f" ] && avconvert --source "$f" --preset Preset960x540 --output "${f%.mov}.mp4" >/dev/null 2>&1 && rm "$f" || true; done
-          echo "Screenshots of the app shell in an iPhone simulator, test copy of the site, invented people. Run ${{ github.run_number }} of ${{ github.sha }}." > README.md
-          git init -q -b preview-shots; git add -A
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "iPhone preview shots, run ${{ github.run_number }}"
-          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" preview-shots
+          APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/App.app"; ls -la "$APP/public/ring.wav"
+          D=$(xcrun simctl get_app_container "$UDID" com.proworldacademy.app data); ls -la "$D/Library/Sounds/" && test -f "$D/Library/Sounds/ring.wav" && echo "RINGTONE INSTALLED"
