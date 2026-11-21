@@ -64,6 +64,11 @@ async function api(method, path, body) {
   // notifications: the app's bundle id needs Apple's push capability (once; Apple answers 409 when it is already on)
   const cap = await api('POST', '/v1/bundleIdCapabilities', { data: { type: 'bundleIdCapabilities', attributes: { capabilityType: 'PUSH_NOTIFICATIONS' }, relationships: { bundleId: { data: { type: 'bundleIds', id: found.id } } } } });
   console.log(cap.ok ? 'PUSH: capability turned on' : cap.status === 409 ? 'PUSH: capability already on' : 'PUSH: could not turn the capability on (HTTP ' + cap.status + ') ' + cap.err);
+  // a call's notification gets through a Focus (Nov 21, 2026): Apple's time-sensitive capability. Only when Apple turned it on does
+  // prepare-ios.sh ask for it in the app (the file .timesensitive): asking without it would stop the build at signing.
+  const ts = await api('POST', '/v1/bundleIdCapabilities', { data: { type: 'bundleIdCapabilities', attributes: { capabilityType: 'USERNOTIFICATIONS_TIMESENSITIVE' }, relationships: { bundleId: { data: { type: 'bundleIds', id: found.id } } } } });
+  console.log(ts.ok ? 'TIME-SENSITIVE: capability turned on' : ts.status === 409 ? 'TIME-SENSITIVE: capability already on' : 'TIME-SENSITIVE: not turned on (HTTP ' + ts.status + ') ' + ts.err);
+  try { if (ts.ok || ts.status === 409) fs.writeFileSync('.timesensitive', 'yes\n'); else if (fs.existsSync('.timesensitive')) fs.unlinkSync('.timesensitive'); } catch (e) { /* the app is built without it */ }
   const a = await api('GET', '/v1/apps?filter[bundleId]=' + encodeURIComponent(BUNDLE) + '&fields[apps]=name,bundleId,sku');
   if (!a.ok) { console.log('APPLE: HTTP ' + a.status + ' ' + a.err); process.exit(1); }
   const app = (a.j.data || [])[0];

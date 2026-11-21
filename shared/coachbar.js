@@ -125,16 +125,45 @@
       const beep = () => { try { ringCtx = ringCtx || new (window.AudioContext || window.webkitAudioContext)(); const t = ringCtx.currentTime; [0, 0.28].forEach((d) => { const o = ringCtx.createOscillator(), g = ringCtx.createGain(); o.frequency.value = 660; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.12, t + d + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.22); o.connect(g); g.connect(ringCtx.destination); o.start(t + d); o.stop(t + d + 0.24); }); } catch (e) { /* silent */ } };
       fs.collection('teamCalls').where('members', 'array-contains', me).where('state', '==', 'live').onSnapshot((s) => {
         const now = Date.now(); let pick = null; s.docs.forEach((d) => { const c = d.data() || {}; if (c.by !== me && now - (c.at || 0) < 45000 && !quiet[d.id]) pick = pick || Object.assign({ id: d.id }, c); });
-        if (window.PWCall && window.PWCall.active()) pick = null;
+        let inCall = ''; try { inCall = (window.PWCall && window.PWCall.active()) || (window.parent !== window && window.parent.PWCall && window.parent.PWCall.active()) || ''; } catch (e) { inCall = ''; }   // Nov 21: also the call going on behind this page, when it is open over the Locker Room
+        if (inCall) pick = null;
         if (!pick) { stopRing(); return; } if (document.getElementById('pw-ring') && document.getElementById('pw-ring').dataset.id === pick.id) return; stopRing();
         const b = document.createElement('div'); b.id = 'pw-ring'; b.dataset.id = pick.id; b.setAttribute('role', 'alertdialog');
         b.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:95;background:#0A0A0A;color:#fff;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.7);font:400 14.5px system-ui;max-width:520px;margin:0 auto';
         const who = String(pick.byName || 'Someone').replace(/[<>&]/g, ''); const where = String(pick.title || '').replace(/[<>&]/g, '');
         b.innerHTML = '<span style="font-size:22px">' + (pick.kind === 'video' ? '📹' : '📞') + '</span><span style="flex:1;min-width:0"><b style="display:block;font-weight:700">' + who + ' is calling</b><small style="color:rgba(255,255,255,.65)">' + (where && where !== who ? where : 'Locker Room') + '</small></span><button type="button" data-x style="border:1px solid rgba(255,255,255,.3);background:none;color:#fff;border-radius:999px;padding:9px 12px;font:700 12.5px system-ui;cursor:pointer">Not now</button><a href="/team#/call/' + pick.id + '" style="background:#E2FE78;color:#0A0A0A;border-radius:999px;padding:10px 16px;font:700 13px system-ui;text-decoration:none">Join</a>';
-        b.querySelector('[data-x]').onclick = () => { quiet[pick.id] = 1; stopRing(); }; b.querySelector('a').addEventListener('click', () => { quiet[pick.id] = 1; setTimeout(stopRing, 50); });
+        b.querySelector('[data-x]').onclick = () => { quiet[pick.id] = 1; stopRing(); noteOff(pick.id); }; b.querySelector('a').addEventListener('click', () => { quiet[pick.id] = 1; setTimeout(stopRing, 50); });
         document.body.appendChild(b); beep(); ringT = setInterval(() => { if (Date.now() - (pick.at || 0) > 45000) { stopRing(); return; } beep(); }, 2500);
       }, () => {});
       const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications; const here = location.pathname;
+      /* "Not now" also takes the ringing notification off the phone's screen (Nov 21) */
+      function noteOff(id) { try { if (!P || !P.getDeliveredNotifications) return; P.getDeliveredNotifications().then((r) => { const mine = ((r && r.notifications) || []).filter((n) => String((n.data && n.data.url) || '').indexOf('/call/' + id) >= 0); if (mine.length) P.removeDeliveredNotifications({ notifications: mine }).catch(() => {}); }, () => {}); } catch (e) { /* nothing to clear */ } }
+      /* Notifications for everyone (Nov 21, 2026 — "everybody should know you are calling"). In the App Store app, on every page of the
+         team side: a phone that already said yes hands its token over again (it used to do so only in the Coach Portal and the Locker
+         Room); a phone that was never asked gets a card with one button; a phone that said no is told where to change it. What the
+         phone answered goes to the engine once a day (POST /api/team/push/state) for the owners' list on the Dashboard. */
+      (function nudge() {
+        if (!P || window.parent !== window) return;
+        const api = async (path, body) => { const a = (window.PWAuth && window.PWAuth.auth && window.PWAuth.auth()) || (typeof firebase !== 'undefined' && firebase.auth ? firebase.auth() : null); const u = a && a.currentUser; if (!u) throw new Error('no sign-in'); const tok = await u.getIdToken(); const r = await fetch('/api/team/' + path, { method: 'POST', headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: JSON.stringify(body) }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
+        const ua = navigator.userAgent.slice(0, 180); const day = new Date().toISOString().slice(0, 10);
+        const tell = (state) => { try { if (localStorage.getItem('pw-push-told') === state + '|' + day) return; } catch (e) { /* no storage: tell again */ } api('push/state', { state, ua }).then(() => { try { localStorage.setItem('pw-push-told', state + '|' + day); } catch (e) { /* fine */ } }, () => {}); };
+        const own = /^\/(portal|team)(\/|$)/.test(here);   // these two pages hand the token over themselves
+        { try { P.addListener('registration', (t) => { const token = t && t.value; if (token) api('push/apns', { token, ua }).catch(() => {}); }); } catch (e) { /* older shell */ } }
+        const snoozed = () => { try { return Number(localStorage.getItem('pw-push-later') || 0) > Date.now(); } catch (e) { return false; } };
+        const close = () => { const c = document.getElementById('pw-nudge'); if (c) c.remove(); };
+        function card(blocked) {
+          close(); if (snoozed() || /^\/team(\/|$)/.test(here)) return;   // the Locker Room has its own card at the top of the list
+          const c = document.createElement('div'); c.id = 'pw-nudge'; c.setAttribute('role', 'dialog'); c.setAttribute('aria-label', 'Notifications');
+          c.style.cssText = 'position:fixed;left:14px;right:14px;bottom:calc(' + (document.querySelector('.pw-coachbar, .cp-appbar') ? 96 : 16) + 'px + env(safe-area-inset-bottom,0px));z-index:70;max-width:460px;margin:0 auto;background:#0A0A0A;color:#fff;border-radius:22px;padding:16px 16px 14px;box-shadow:0 20px 50px -18px rgba(0,0,0,.7);font:400 14px/1.45 "Aeonik Pro",system-ui,sans-serif';
+          c.innerHTML = '<b style="display:block;font-weight:700;font-size:15px;margin-bottom:3px">' + (blocked ? 'Notifications are off on this phone' : 'Turn on notifications') + '</b><span style="color:rgba(255,255,255,.72)">' + (blocked ? 'You will not know when someone on the team writes or calls you. Open the phone\u2019s Settings, then Notifications, then ProWorld, and allow them.' : 'So you know right away when someone on the team writes or calls you.') + '</span>' +
+            '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end"><button type="button" data-later style="border:1px solid rgba(255,255,255,.3);background:none;color:#fff;border-radius:999px;padding:10px 14px;font:700 13px \'Aeonik Pro\',system-ui,sans-serif;cursor:pointer">' + (blocked ? 'OK' : 'Not now') + '</button>' + (blocked ? '' : '<button type="button" data-on style="border:0;background:#E2FE78;color:#0A0A0A;border-radius:999px;padding:10px 16px;font:700 13px \'Aeonik Pro\',system-ui,sans-serif;cursor:pointer">Turn on</button>') + '</div>';
+          c.querySelector('[data-later]').onclick = () => { try { localStorage.setItem('pw-push-later', String(Date.now() + (blocked ? 3 : 1) * 86400000)); } catch (e) { /* asked again next page */ } close(); };
+          const on = c.querySelector('[data-on]'); if (on) on.onclick = () => { on.disabled = true; on.textContent = 'Turning on…'; P.requestPermissions().then((r) => { if ((r && r.receive) === 'granted') { tell('granted'); close(); P.register(); } else { tell('denied'); card(true); } }, () => close()); };
+          document.body.appendChild(c);
+        }
+        const look = () => P.checkPermissions().then((r) => { const perm = (r && r.receive) || 'prompt'; if (perm === 'granted') { close(); tell('granted'); if (!own) P.register(); } else { tell(perm === 'denied' ? 'denied' : 'prompt'); card(perm === 'denied'); } }, () => {});
+        setTimeout(look, 1800); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(look, 600); });   // back from the phone's Settings: the card goes by itself
+      })();
       if (P && !/^\/(portal|team)(\/|$)/.test(here)) P.addListener('pushNotificationActionPerformed', (a) => { try { const u = a && a.notification && a.notification.data && a.notification.data.url; if (u && /^\/[^/]/.test(u)) location.href = u; } catch (e) { /* stay */ } });
     } catch (e) { /* the pages work without it */ }
   };

@@ -47,6 +47,28 @@ test('a phone with the app registers a token; a send goes to it through Apple wh
   assert.equal(out.sent, 1); assert.equal(calls[0].token, tok); assert.equal(calls[0].payload.aps.alert.title, "Di's family"); assert.equal(calls[0].payload.url, '/portal#/messages/as-di-m'); assert.equal(calls[0].cfg.bundle, 'com.proworldacademy.app');
   PUSH._useApns(null);
 });
+test('a call rings on the app: the ringtone, time-sensitive, short-lived, and "Missed call" replaces it without a sound', async () => {
+  PUSH._reset(); const calls = []; PUSH._useApns(async (token, payload, cfg, opt) => { calls.push({ payload, opt }); });
+  const { fakeDb } = require('./fake-db');
+  const db = fakeDb({ 'settings/apns': { keyId: 'ABC1234567', p8: 'MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg' } });
+  await PUSH.registerApns(db, { email: 'lee@example.test' }, { token: 'b'.repeat(64) });
+  await PUSH.send(db, ['lee@example.test'], { title: 'Kim is calling', body: 'Voice call', url: '/team#/call/c9', tag: 'call-c9', ring: true });
+  assert.equal(calls[0].payload.aps.sound, 'ring.wav'); assert.equal(calls[0].payload.aps['interruption-level'], 'time-sensitive'); assert.deepEqual(calls[0].opt, { ttl: 60, collapse: 'call-c9' });
+  await PUSH.send(db, ['lee@example.test'], { title: 'Missed call from Kim', body: '', url: '/team#/c/x', tag: 'call-c9', quiet: true });
+  assert.equal(calls[1].payload.aps.sound, undefined); assert.equal(calls[1].payload.aps['interruption-level'], undefined); assert.deepEqual(calls[1].opt, { ttl: 3600, collapse: 'call-c9' });
+  await PUSH.send(db, ['lee@example.test'], { title: 'A message', body: 'hi', tag: 'team-x' });
+  assert.equal(calls[2].payload.aps.sound, 'default'); assert.deepEqual(calls[2].opt, { ttl: 3600, collapse: '' });
+  PUSH._useApns(null);
+});
+test('who has notifications on: a phone on file is on, a phone that said no is blocked, the rest are not yet', async () => {
+  PUSH._reset(); const { fakeDb } = require('./fake-db'); const db = fakeDb({});
+  await PUSH.registerApns(db, { email: 'kim@example.test' }, { token: 'c'.repeat(64) }); await PUSH.setState(db, { email: 'kim@example.test' }, { state: 'granted' });
+  await PUSH.setState(db, { email: 'lee@example.test' }, { state: 'denied' }); await PUSH.setState(db, { email: 'dee@example.test' }, { state: 'prompt' });
+  await PUSH.subscribe(db, { email: 'web@example.test' }, { subscription: SUB(7) });
+  await assert.rejects(() => PUSH.setState(db, KIM, { state: 'whatever' }));
+  const r = await PUSH.who(db, ['kim', 'lee', 'dee', 'web', 'new'].map((n) => ({ email: n + '@example.test', name: n })));
+  assert.deepEqual(r.people.map((p) => p.status), ['on', 'blocked', 'asked', 'browser', 'never']); assert.equal(r.people[0].app, 1);
+});
 test('without the Apple key the app phones are skipped, not failed; a token Apple forgot is removed; a bad token is refused', async () => {
   PUSH._reset(); const { fakeDb } = require('./fake-db'); const tok = 'b'.repeat(64);
   const db = fakeDb({}); await PUSH.registerApns(db, { email: 'lee@example.test' }, { token: tok });

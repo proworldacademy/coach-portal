@@ -45,7 +45,7 @@
   const user = seed.user === null ? null : Object.assign({ uid: 'u-dee', email: 'dee@example.test', emailVerified: true, displayName: 'Dee Director' }, seed.user || {}, { getIdToken: async () => 'tok' });   // user: null = nobody signed in (the sign-in screens)
   const auth = { currentUser: user, onAuthStateChanged: (cb) => { setTimeout(() => cb(user), 0); return () => {}; }, getRedirectResult: async () => null, signOut: async () => { auth.currentUser = null; }, isSignInWithEmailLink: () => false, signInWithEmailAndPassword: async () => { throw { code: 'auth/wrong-password' }; }, sendPasswordResetEmail: async () => {} };
   const fs = { settings: () => {}, enablePersistence: async () => { throw new Error('no'); }, doc: docRef, collection: (p) => colRef(p), waitForPendingWrites: async () => {}, terminate: async () => {}, clearPersistence: async () => {} };
-  const fsFn = () => fs; fsFn.FieldValue = FV;
+  const fsFn = () => fs; fsFn.FieldValue = FV; fsFn.FieldPath = { documentId: () => '__name__' };   // the Dashboard orders one read by document id
   window.firebase = { initializeApp: () => ({}), auth: () => auth, firestore: fsFn, apps: [] };
   window.__fsDocs = docs;
 })();

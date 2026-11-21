@@ -68,7 +68,8 @@ function serve(port, seedOf, whoFn) {
     if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(''); return; }
     if (p.startsWith('/api/team/')) { let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
       calls.push([req.method + ' ' + p, body]);
-      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? Object.assign({ here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) }, await (async () => { const pr = await TEAM.profiles(db); return body && Number(body.pv) === pr.v ? { pv: pr.v } : { pv: pr.v, profiles: pr.p }; })()) : p === '/api/team/profile' ? await TEAM.setProfile(db, { email: P[whoFn ? whoFn() : ''] || 'x@example.test' }, body || {}) : p === '/api/team/ice' ? { iceServers: [], relay: false } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? Object.assign({ here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) }, await (async () => { const pr = await TEAM.profiles(db); return body && Number(body.pv) === pr.v ? { pv: pr.v } : { pv: pr.v, profiles: pr.p }; })()) : p === '/api/team/profile' ? await TEAM.setProfile(db, { email: P[whoFn ? whoFn() : ''] || 'x@example.test' }, body || {}) : p === '/api/team/ice' ? { iceServers: [], relay: false } : p === '/api/team/ring/end' ? { ok: true, asked: true } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+    if (p === '/api/admin/push/who') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(await PUSH.who(db, (await TEAM.people(db)).people))); return; }
     if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"message":"not here"}'); return; }
     if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
     const f = path.join(REPO, p); if (!f.startsWith(REPO) || !fs.existsSync(f)) { res.writeHead(404); res.end('no'); return; }
@@ -262,7 +263,64 @@ if (require.main !== module) return;
   // ── a call on a phone ──
   { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, permissions: ['camera', 'microphone'] }); const page = await ctx.newPage(); await page.goto(base + '/team/#/c/dm_kd'); await page.waitForSelector('.tc-callb');
     await shot(page, 'team-phone-dm-callbuttons'); await page.tap('[data-act="call-v"]'); await page.waitForSelector('.pc-wrap'); await page.waitForTimeout(700); await shot(page, 'team-phone-call');
-    ok(await page.locator('[data-pc="flip"]').count() === 1 && await page.locator('[data-pc="screen"]').count() === 0, 'call on a phone: Flip is there, Share screen is not'); const bb = await page.locator('.pc-bar').boundingBox(); ok(bb && bb.y + bb.height <= 845, 'call on a phone: the buttons sit inside the screen'); await ctx.close(); }
+    ok(await page.locator('[data-pc="flip"]').count() === 1 && await page.locator('[data-pc="screen"]').count() === 0, 'call on a phone: Flip is there, Share screen is not'); const bb = await page.locator('.pc-bar').boundingBox(); ok(bb && bb.y + bb.height <= 845, 'call on a phone: the buttons sit inside the screen');
+    // the rest of the app while you talk (Nov 21, 2026): the call survives another section, with a pill to come back
+    const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+    await page.tap('[data-pc="min"]'); await page.waitForSelector('.pc-pill');
+    ok(/On a call/.test(await page.locator('.pc-pill').textContent()) && /Calling|\d\d:\d\d/.test(await page.locator('.pc-pill span').textContent()), 'call on a phone: out of the call screen, a pill says "On a call" with the time');
+    ok(await page.locator('.pc-pill.low').count() === 0, 'call on a phone: in the Locker Room the pill sits at the top');
+    const pb = await page.locator('.pc-pill').boundingBox(); ok(pb && pb.x >= 0 && pb.x + pb.width <= 390, 'call on a phone: the pill fits the screen');
+    await shot(page, 'team-phone-call-pill');
+    await page.evaluate(() => { const a = document.createElement('a'); a.href = '/start/'; a.id = 't-out'; a.textContent = 'Start here'; a.style.cssText = 'position:fixed;left:8px;top:120px;z-index:70;background:#fff;padding:6px'; document.body.appendChild(a); });
+    await page.tap('#t-out'); await page.waitForSelector('#pc-browse iframe', { timeout: 4000 }).catch(() => {});
+    ok(await page.locator('#pc-browse iframe').count() === 1 && /\/team\//.test(page.url()), 'call on a phone: another section opens over the Locker Room, the page itself does not leave');
+    ok(!!(await page.evaluate(() => window.PWCall.active())) && await page.evaluate(() => window.PWCall.browsing()), 'call on a phone: the call is still on behind it');
+    ok(await page.locator('.pc-pill.low').count() === 1 && await page.locator('.pc-pill').isVisible(), 'call on a phone: the pill stays on the screen, above the bottom bar'); await page.waitForTimeout(900); await shot(page, 'team-phone-call-browse');
+    const fr = page.frameLocator('#pc-browse iframe'); await page.waitForFunction(() => { try { const d = document.querySelector('#pc-browse iframe').contentDocument; return d && d.readyState === 'complete' && /\/start\//.test(d.location.pathname); } catch (e) { return false; } }, null, { timeout: 8000 }).catch(() => {});
+    await page.evaluate(() => { const d = document.querySelector('#pc-browse iframe').contentDocument; const a = d.createElement('a'); a.href = '/team#/c/general'; a.id = 't-back'; a.textContent = 'Locker Room'; a.style.cssText = 'position:fixed;left:8px;top:200px;z-index:99;background:#fff;padding:6px'; d.body.appendChild(a); });
+    await fr.locator('#t-back').tap(); await page.waitForFunction(() => !document.getElementById('pc-browse'), null, { timeout: 4000 }).catch(() => {});
+    ok(await page.locator('#pc-browse').count() === 0 && /#\/c\/general/.test(page.url()) && !!(await page.evaluate(() => window.PWCall.active())), 'call on a phone: a link back to the Locker Room closes the section and opens that chat, still on the call');
+    ok(await page.locator('.pc-pill.low').count() === 0 && await page.locator('.pc-pill').count() === 1, 'call on a phone: the pill is back at the top');
+    await page.tap('#t-out'); await page.waitForSelector('#pc-browse iframe'); await page.tap('.pc-pill'); await page.waitForTimeout(200);
+    ok(await page.locator('.pc-wrap').isVisible() && (await page.locator('#pc-min').textContent()) === 'Back', 'call on a phone: a tap on the pill brings the call back over the section');
+    const before = calls.length; await page.tap('[data-pc="end"]'); await page.waitForURL(/\/start\//, { timeout: 6000 }).catch(() => {});
+    ok(/\/start\//.test(page.url()), 'call on a phone: when the call ends, the section that was open becomes the page');
+    ok(calls.slice(before).some((c) => c[0] === 'POST /api/team/ring/end' && Array.isArray(c[1].joined) && c[1].joined.includes(P.dee)), 'call on a phone: the engine is told the call is over, with who had joined');
+    ok(errs.length === 0, 'call on a phone: no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
+
+  // ── notifications for everyone (Nov 21, 2026): in the app, a phone that was never asked gets one card with one button, on any page ──
+  { const fake = (first) => `window.__perm = '${first}'; window.__L = {}; window.Capacitor = { Plugins: { PushNotifications: {
+        addListener: (n, f) => { (window.__L[n] = window.__L[n] || []).push(f); return Promise.resolve({ remove() {} }); },
+        checkPermissions: () => Promise.resolve({ receive: window.__perm }),
+        requestPermissions: () => { window.__perm = 'granted'; return Promise.resolve({ receive: 'granted' }); },
+        register: () => { setTimeout(() => (window.__L.registration || []).forEach((f) => f({ value: 'ab'.repeat(32) })), 50); return Promise.resolve(); },
+        getDeliveredNotifications: () => Promise.resolve({ notifications: [] }), removeDeliveredNotifications: () => Promise.resolve() } } };`;
+    for (const w of [390, 1280]) { const ctx = await browser.newContext({ viewport: { width: w, height: 844 }, deviceScaleFactor: 2, hasTouch: w < 500, isMobile: w < 500 }); await ctx.addInitScript(fake('prompt')); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+      const before = calls.length; await page.goto(base + '/start/?as=dee'); await page.waitForSelector('#pw-nudge', { timeout: 9000 }).catch(() => {});
+      ok(await page.locator('#pw-nudge').count() === 1 && /Turn on notifications/.test(await page.locator('#pw-nudge').textContent()), 'notifications ' + w + ': a phone that was never asked sees the card, outside the Locker Room too');
+      const nb = await page.locator('#pw-nudge').boundingBox(); ok(nb && nb.x >= 0 && nb.x + nb.width <= w && nb.y + nb.height <= 844, 'notifications ' + w + ': the card sits inside the screen'); await shot(page, 'nudge-' + w);
+      if (w < 500) { const bar = await page.locator('.pw-coachbar').boundingBox(); ok(!bar || nb.y + nb.height <= bar.y + 1, 'notifications ' + w + ': the card sits above the bottom bar'); }
+      ok(calls.slice(before).some((c) => c[0] === 'POST /api/team/push/state' && c[1].state === 'prompt'), 'notifications ' + w + ': the engine is told this phone has not answered yet');
+      await page.locator('#pw-nudge [data-on]').click(); await page.waitForFunction(() => !document.getElementById('pw-nudge'), null, { timeout: 4000 }).catch(() => {}); await page.waitForTimeout(500);
+      ok(await page.locator('#pw-nudge').count() === 0, 'notifications ' + w + ': Turn on closes the card');
+      ok(calls.slice(before).some((c) => c[0] === 'POST /api/team/push/state' && c[1].state === 'granted') && calls.slice(before).some((c) => c[0] === 'POST /api/team/push/apns' && c[1].token === 'ab'.repeat(32)), 'notifications ' + w + ': the phone hands its token over and the engine is told it is on');
+      ok(errs.length === 0, 'notifications ' + w + ': no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
+    { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); await ctx.addInitScript(fake('denied')); const page = await ctx.newPage();
+      await page.goto(base + '/start/?as=dee'); await page.waitForSelector('#pw-nudge', { timeout: 9000 }).catch(() => {});
+      ok(/Notifications are off on this phone/.test(await page.locator('#pw-nudge').textContent().catch(() => '')) && await page.locator('#pw-nudge [data-on]').count() === 0, 'notifications: a phone that said no is told where to change it'); await shot(page, 'nudge-blocked');
+      await page.locator('#pw-nudge [data-later]').tap(); ok(await page.locator('#pw-nudge').count() === 0, 'notifications: OK puts the card away');
+      await page.goto(base + '/team/?as=dee'); await page.waitForTimeout(2600); ok(await page.locator('#pw-nudge').count() === 0, 'notifications: the Locker Room keeps its own card, not a second one'); await ctx.close(); }
+    { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); const page = await ctx.newPage(); await page.goto(base + '/start/?as=dee'); await page.waitForTimeout(2600);
+      ok(await page.locator('#pw-nudge').count() === 0, 'notifications: nothing is asked in a browser, only in the app'); await ctx.close(); }
+  }
+  // ── the owners' list: who has notifications on ──
+  for (const w of [390, 1280]) { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+    await page.goto(base + '/?as=ownerEmpty#people-sec'); await page.waitForSelector('#pushwho-card:not([hidden])', { timeout: 9000 }).catch(() => {});
+    const seen = await page.locator('#pushwho-card:not([hidden])').count() === 1;
+    ok(seen && /of \d+ on in the app/.test(await page.locator('#pushwho-count').textContent()) && await page.locator('#pushwho-list > div').count() >= 5, 'owners ' + w + ': the Dashboard lists who has notifications on');
+    if (seen) { await page.evaluate(() => { const s = document.getElementById('people-sec'); s.hidden = false; s.querySelectorAll('[hidden]').forEach((x) => { if (x.id === 'pushwho-card') x.hidden = false; }); document.getElementById('pushwho-card').scrollIntoView({ block: 'start' }); }); await page.waitForTimeout(300);
+      const over = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1); ok(!over, 'owners ' + w + ': the list does not push the page sideways'); await page.locator('#pushwho-card').screenshot({ path: path.join(SHOTS, 'pushwho-' + w + '.png') }).catch(() => {}); }
+    ok(errs.length === 0, 'owners ' + w + ': no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
 
   // ── your profile; what shows under a sliding row; a PDF and a video open in the app (Nov 21, 2026) ──
   who = 'dee'; { const { page, ctx } = await open(390, 844, 'light'); const errs = []; page.on('pageerror', (e) => errs.push(e.message));

@@ -24,7 +24,7 @@ self.addEventListener('fetch', (e) => {
 /* Notifications (Nov 13, 2026): the engine sends {title, body, url, tag} when a family writes back; a tap opens that chat. */
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
-  e.waitUntil(self.registration.showNotification(d.title || 'PROWORLD', { body: d.body || '', tag: d.tag || undefined, renotify: !!d.tag, data: { url: d.url || '/portal' }, icon: '/app/icon-192.png', badge: '/app/icon-192.png' }));
+  e.waitUntil(self.registration.showNotification(d.title || 'PROWORLD', Object.assign({ body: d.body || '', tag: d.tag || undefined, renotify: !!d.tag && !d.quiet, silent: !!d.quiet, data: { url: d.url || '/portal' }, icon: '/app/icon-192.png', badge: '/app/icon-192.png' }, d.ring ? { requireInteraction: true, vibrate: [400, 200, 400, 200, 400, 200, 400] } : {})));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close(); const url = (e.notification.data && e.notification.data.url) || '/portal';

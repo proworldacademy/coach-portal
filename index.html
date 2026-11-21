@@ -129,6 +129,11 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   <section class="sec" id="people-sec" hidden>
     <div class="sec-h"><h2>People &amp; access</h2><small id="people-small"></small></div>
+    <div class="card" id="pushwho-card" hidden style="margin-bottom:14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><b style="font-size:15px">Who gets notifications</b><small id="pushwho-count" style="color:var(--ink-3,#6b6d66)"></small></div>
+      <p style="margin:4px 0 10px;font-size:13px;line-height:1.5;color:var(--ink-2,#3b3c38)">A message or a call in the Locker Room reaches a phone only when notifications are on for ProWorld on that phone. The app asks each person when they open it.</p>
+      <div id="pushwho-list" style="display:grid;gap:0"></div>
+    </div>
     <div class="card" id="apns-card" hidden style="margin-bottom:14px">
       <div class="notice"><b>The key for the app's notifications.</b> Apple delivers a notification only when we sign it with the academy's push key. Make it once on developer.apple.com → Certificates, IDs &amp; Profiles → Keys → + → tick <b>Apple Push Notifications service (APNs)</b> → Register → Download. Type its <b>Key ID</b> (10 characters, shown on that page) and paste the whole downloaded file. Kept for owners only. <span id="apns-state"></span></div>
       <form class="addf" id="apns-form" autocomplete="off">
@@ -449,6 +454,17 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       try { await window.PWAuth.fs().doc("settings/mail").set({ user, pass, at: Date.now(), by: ctx.email }); $("mail-pass").value = ""; state("Saved. Send yourself a test."); } catch (x) { state("Could not save: " + (x.message || x), true); } });
     $("mail-test").addEventListener("click", async () => { state("Sending…"); try { const j = await api("mail/test", {}); state("Sent to " + j.to + ". Check the inbox."); } catch (x) { state(x.message || "Could not send.", true); } });
   }
+  /* who has notifications on (Nov 21, 2026): one line per person on the team, the ones to chase first; the engine reads pushSubs and pushState */
+  function pushWhoCard() {
+    if (!ctx.owner && !ctx.admin) return; const box = $("pushwho-card"); if (!box || box.dataset.on) return; box.dataset.on = "1";
+    const WORD = { on: "On", browser: "Browser only", blocked: "Blocked on the phone", asked: "Asked, not turned on", never: "Not on yet" };
+    const ORDER = ["blocked", "asked", "never", "browser", "on"];
+    api("push/who").then((j) => { const list = ((j && j.people) || []).slice().sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || String(a.name).localeCompare(String(b.name))); if (!list.length) return;
+      const on = list.filter((p) => p.status === "on").length; $("pushwho-count").textContent = on + " of " + list.length + " on in the app";
+      $("pushwho-list").innerHTML = list.map((p) => { const ok = p.status === "on"; const mid = p.status === "browser";
+        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid rgba(0,0,0,.08);font-size:13.5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>' + esc(p.name || p.email) + '</b></span><span style="flex:none;max-width:62%;text-align:right;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:' + (ok ? "#E2FE78" : p.status === "blocked" ? "#0A0A0A" : "rgba(0,0,0,.06)") + ";color:" + (p.status === "blocked" ? "#fff" : "#0A0A0A") + '">' + esc(WORD[p.status] || p.status) + "</span></div>"; }).join("");
+      box.hidden = false; }).catch(() => {});
+  }
   /* the key Apple wants on every notification to the App Store app (Nov 15): owners paste it once; the engine reads settings/apns */
   function apnsCard() {
     if (!ctx.owner) return; const box = $("apns-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
@@ -498,7 +514,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   }
   function own() {
     if (!ctx.admin) return;
-    mailCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
+    mailCard(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';
