@@ -281,7 +281,7 @@ async function api(path,body){
 }
 async function load(){
   app.innerHTML=`<div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; Loading your family…</p></div></div>`;
-  try{if(!VIEW)localStorage.setItem('pw-side','family')}catch(e){}
+  try{if(!VIEW&&localStorage.getItem('pw-team')!=='1')localStorage.setItem('pw-side','family')}catch(e){}   // not on a device the team signs in on (pw-team, set by shared/pwauth.js): its Dashboard stays the Dashboard
   try{me=await api('me');render();courtReturn()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
 }
 

@@ -5,7 +5,7 @@
 <link rel="icon" href="data:,">
 <script>
   // One app, two sides (Nov 14, 2026): someone who last used the family account opens the app straight into it.
-  try { if (/[?&]side=team/.test(location.search)) localStorage.setItem("pw-side", "team"); else if (location.pathname === "/" && !location.hash && localStorage.getItem("pw-side") === "family") location.replace("/family"); } catch (e) { /* no storage */ }
+  try { if (/[?&]side=team/.test(location.search)) localStorage.setItem("pw-side", "team"); else if (location.pathname === "/" && !location.hash && localStorage.getItem("pw-side") === "family" && localStorage.getItem("pw-team") !== "1") location.replace("/family");   /* Nov 21: never for a device the team signs in on — an owner who looked at the client account was sent back to it by every tap on Dashboard */ } catch (e) { /* no storage */ }
   // The old GitHub Pages address of the Coach Portal (proworldacademy.github.io/coach-portal) forwards here.
   // Links to the Coach Portal from before it moved under /portal keep working: /#/tryouts → /portal#/tryouts
   if (location.hostname === "proworldacademy.github.io") location.replace("https://proworld-coach-portal.web.app" + (/^#\//.test(location.hash) ? "/portal" : "/") + location.search + location.hash);
