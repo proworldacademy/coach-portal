@@ -23,13 +23,17 @@ $PB -c "Add :UIBackgroundModes array" "$PLIST"; $PB -c "Add :UIBackgroundModes:0
 $PB -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
 $PB -c "Add :UISupportedInterfaceOrientations array" "$PLIST"; $PB -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
 # Notifications (Nov 15, 2026): the push entitlement, and the two calls that hand Apple's device token to Capacitor's PushNotifications.
-cat > "$APP/App.entitlements" <<'ENT'
+# A call's notification gets through a Focus (Nov 21, 2026): only when asc.js saw Apple turn the capability on (.timesensitive).
+TS=""; if [ -f .timesensitive ]; then TS='  <key>com.apple.developer.usernotifications.time-sensitive</key><true/>'; fi
+cat > "$APP/App.entitlements" <<ENT
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>aps-environment</key><string>production</string>
+$TS
 </dict></plist>
 ENT
+plutil -lint "$APP/App.entitlements"
 PBX=ios/App/App.xcodeproj/project.pbxproj
 grep -q "CODE_SIGN_ENTITLEMENTS" "$PBX" || sed -i '' 's#\(PRODUCT_BUNDLE_IDENTIFIER = [^;]*;\)#\1 CODE_SIGN_ENTITLEMENTS = App/App.entitlements;#' "$PBX"
 python3 - "$APP/AppDelegate.swift" <<'PY'
@@ -48,6 +52,30 @@ if "capacitorDidRegisterForRemoteNotifications" not in s:
     i = s.rstrip().rfind("}")
     s = s[:i] + add + "}\n"
     open(f, "w").write(s)
+# The ringtone of a call (Nov 21, 2026). A notification can only play a sound that sits in the app itself or in its Library/Sounds:
+# www/ring.wav travels in the app (public/ring.wav) and is copied there the first time the app starts. The engine names it (lib/push.js).
+if "PWSounds" not in s:
+    import re
+    m = re.search(r"didFinishLaunchingWithOptions[^{]*\{", s)
+    if not m: sys.exit("AppDelegate: didFinishLaunchingWithOptions not found, the ringtone was not wired")
+    s = s[:m.end()] + "\n        PWSounds.install()" + s[m.end():]
+    s = s.rstrip() + '''
+
+enum PWSounds {
+    static func install() {
+        let fm = FileManager.default
+        guard let src = Bundle.main.url(forResource: "ring", withExtension: "wav", subdirectory: "public"),
+              let lib = fm.urls(for: .libraryDirectory, in: .userDomainMask).first else { return }
+        let dir = lib.appendingPathComponent("Sounds", isDirectory: true)
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dst = dir.appendingPathComponent("ring.wav")
+        if !fm.fileExists(atPath: dst.path) { try? fm.copyItem(at: src, to: dst) }
+    }
+}
+'''
+    open(f, "w").write(s)
 PY
+grep -q "PWSounds.install()" "$APP/AppDelegate.swift" || { echo "the ringtone is not wired into the app"; exit 1; }
+[ -f "$APP/public/ring.wav" ] || { echo "public/ring.wav is not in the app"; exit 1; }
 grep -c "CODE_SIGN_ENTITLEMENTS" "$PBX"
-echo "prepared: icon, launch screen, name, permissions, notifications"
+echo "prepared: icon, launch screen, name, permissions, notifications, ringtone"

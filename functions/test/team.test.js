@@ -108,9 +108,27 @@ test('calls: the relay list comes from Cloudflare when a key is set, the public 
 test('calls: the others are rung once, by the caller only', async () => {
   const { db, got } = await world();
   await db.doc('teamCalls/c1').set({ chat: 'general', kind: 'video', by: 'kim@example.test', byName: 'Kim Coach', title: '#general', members: ['kim@example.test', 'lee@example.test', 'dee@example.test'], at: 1, state: 'live' });
-  const r = await TEAM.ring(db, KIM, { call: 'c1' }); assert.equal(r.sent, 2); assert.equal(got[0][1].title, '📹 Kim Coach is calling'); assert.equal(got[0][1].url, '/team#/call/c1');
+  const r = await TEAM.ring(db, KIM, { call: 'c1' }); assert.equal(r.sent, 2); assert.equal(got[0][1].title, 'Kim Coach is calling'); assert.equal(got[0][1].body, '#general · Video call · tap to join'); assert.equal(got[0][1].url, '/team#/call/c1');
+  assert.equal(got[0][1].ring, undefined);                                                                  // a channel's call is a plain notification: the whole channel does not ring
   assert.equal((await TEAM.ring(db, KIM, { call: 'c1' })).again, true);
   await assert.rejects(() => TEAM.ring(db, { email: 'lee@example.test' }, { call: 'c1' }), /Not your call/);
+  PUSH._useSender(null);
+});
+test('calls: a direct call rings; when it ends unanswered the other gets "Missed call" in its place, once, without a sound', async () => {
+  const { db, got } = await world();
+  await db.doc('teamCalls/c2').set({ chat: 'dm_x', kind: 'audio', by: 'kim@example.test', byName: 'Kim Coach', title: 'Kim Coach', members: ['kim@example.test', 'lee@example.test'], at: 1, state: 'live' });
+  const r = await TEAM.ring(db, KIM, { call: 'c2' }); assert.equal(r.sent, 1);
+  assert.deepEqual(got[0][1], { title: 'Kim Coach is calling', body: 'Voice call · tap to join', url: '/team#/call/c2', tag: 'call-c2', ring: true });
+  assert.equal((await TEAM.ringEnd(db, KIM, { call: 'c2' })).live, true); assert.equal(got.length, 1);       // still going: nothing is sent
+  await db.doc('teamCalls/c2').set({ state: 'ended' }, { merge: true });
+  await assert.rejects(() => TEAM.ringEnd(db, { email: 'dee@example.test' }, { call: 'c2' }), /Not your call/);
+  const e = await TEAM.ringEnd(db, KIM, { call: 'c2', joined: [] }); assert.equal(e.sent, 1);
+  assert.deepEqual(got[1][1], { title: 'Missed call from Kim Coach', body: 'Tap to open the chat', url: '/team#/c/dm_x', tag: 'call-c2', quiet: true });
+  assert.equal((await TEAM.ringEnd(db, KIM, { call: 'c2' })).again, true); assert.equal(got.length, 2);
+  // a call that was answered: whoever joined is not told they missed it
+  await db.doc('teamCalls/c3').set({ chat: 'dm_x', kind: 'audio', by: 'kim@example.test', byName: 'Kim Coach', title: 'Kim Coach', members: ['kim@example.test', 'lee@example.test'], at: 1, state: 'live' });
+  await TEAM.ring(db, KIM, { call: 'c3' }); await db.doc('teamCalls/c3').set({ state: 'ended' }, { merge: true });
+  const a = await TEAM.ringEnd(db, { email: 'lee@example.test' }, { call: 'c3', joined: ['kim@example.test', 'LEE@example.test'] }); assert.equal(a.sent, 0); assert.equal(got.length, 3);
   PUSH._useSender(null);
 });
 

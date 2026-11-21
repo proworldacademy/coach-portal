@@ -1,1 +1,2 @@
 10 · Nov 15, 2026 · sign the archive with the build's own certificate
+ring 2026-11-21

@@ -310,6 +310,8 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /team/profile') return send(res, 200, await TEAM.setProfile(ctx.db, who, b));
       if (route === 'GET /team/ice') return send(res, 200, await TEAM.ice(ctx.db));
       if (route === 'POST /team/ring') { const out = await TEAM.ring(ctx.db, who, b); logger.info('team call', { by: who.email, to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }
+      if (route === 'POST /team/ring/end') return send(res, 200, await TEAM.ringEnd(ctx.db, who, b));
+      if (route === 'POST /team/push/state') return send(res, 200, await PUSH.setState(ctx.db, who, b));
       if (route === 'POST /team/notify') { const out = await TEAM.notify(ctx.db, who, b); logger.info('team message', { by: who.email, chat: S.clean(b.chat, 80), to: out.to || 0, sent: out.sent || 0 }); return send(res, 200, out); }
       if (route === 'GET /team/push/key') return send(res, 200, { key: (await PUSH.keys(ctx.db)).publicKey });
       if (route === 'POST /team/push/subscribe') return send(res, 200, await PUSH.subscribe(ctx.db, who, b));
@@ -337,6 +339,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /admin/voice/setup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.setup(ctx.db); logger.info('voice connected', { by: who.email }); return send(res, 200, out); }
       if (route === 'POST /admin/voice/assign') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.assign(ctx.db, b); logger.info('voice number', { by: who.email }); return send(res, 200, out); }
       if (route === 'GET /admin/turn') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await TEAM.turnReady(ctx.db)); }
+      if (route === 'GET /admin/push/who') { if (!who.owner && !who.admin) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await PUSH.who(ctx.db, await TEAM.people(ctx.db))); }
       if (route === 'GET /admin/apns') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await PUSH.apnsReady(ctx.db) }); }
       if (route === 'GET /admin/mail') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await MAIL.ready(ctx.db) }); }
       if (route === 'POST /admin/mail/test') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); await MAIL.send(ctx.db, Object.assign({ to: who.email }, SIGNIN.letter('123456'), { subject: 'ProWorld: the sign-in e-mail works' })); return send(res, 200, { sent: true, to: who.email }); }

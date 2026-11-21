@@ -157,9 +157,30 @@ async function ring(db, who, body) {
   await ref.set({ rang: Date.now() }, { merge: true });
   const to = (Array.isArray(c.members) ? c.members : []).map((e) => String(e || '').toLowerCase()).filter((e) => e && e !== me && e !== BOT);
   const name = S.clean(c.byName, 60) || S.clean(who.name, 60) || 'Someone';
-  const r = await fanOut(db, to, { title: (c.kind === 'video' ? '📹 ' : '📞 ') + name + ' is calling', body: c.title ? S.clean(c.title, 80) + ' · tap to join' : 'Tap to join', url: '/team#/call/' + id, tag: 'call-' + id });
+  /* It rings like a call (the ringtone, through a Focus) in a direct message or a group; a call started in a channel is a plain
+     notification, so a whole channel's phones do not ring at once (Nov 21, 2026). */
+  let kind = 'dm'; try { const ch = await db.doc('teamChats/' + String(c.chat || '')).get(); kind = String(((ch.exists && ch.data()) || {}).kind || 'dm'); } catch (e) { kind = 'dm'; }
+  const where = kind !== 'dm' && c.title && S.clean(c.title, 80) !== name ? S.clean(c.title, 80) + ' · ' : '';
+  const r = await fanOut(db, to, { title: name + ' is calling', body: where + (c.kind === 'video' ? 'Video call' : 'Voice call') + ' · tap to join', url: '/team#/call/' + id, tag: 'call-' + id, ring: kind !== 'channel' && to.length <= 8 });
+  return Object.assign({ ok: true }, r);
+}
+/* The call is over (POST /api/team/ring/end { call, joined: [e-mail] }, from whoever closed it): the people it rang and who never joined
+   get "Missed call" in the place of the ringing notification, without a sound; a tap opens the chat. Once per call. */
+async function ringEnd(db, who, body) {
+  const id = String((body && body.call) || ''); if (!ID_OK.test(id)) throw S.err(400, 'call', 'Which call?');
+  const ref = db.doc('teamCalls/' + id); const snap = await ref.get(); if (!snap.exists) throw S.err(404, 'call', 'No such call.');
+  const c = snap.data() || {}; const me = String(who.email || '').toLowerCase();
+  const members = (Array.isArray(c.members) ? c.members : []).map((e) => String(e || '').toLowerCase());
+  if (!members.includes(me)) throw S.err(403, 'call', 'Not your call.');
+  if (c.state !== 'ended') return { ok: true, sent: 0, live: true };
+  if (c.missed || !c.rang) return { ok: true, sent: 0, again: !!c.missed };
+  await ref.set({ missed: Date.now() }, { merge: true });
+  const joined = new Set((Array.isArray(body.joined) ? body.joined : []).slice(0, 40).map((e) => String(e || '').toLowerCase())); joined.add(me); joined.add(String(c.by || '').toLowerCase());
+  const to = members.filter((e) => e && e !== BOT && !joined.has(e)); if (!to.length) return { ok: true, sent: 0, to: 0 };
+  const name = S.clean(c.byName, 60) || 'Someone';
+  const r = await fanOut(db, to, { title: 'Missed call from ' + name, body: 'Tap to open the chat', url: '/team#/c/' + String(c.chat || ''), tag: 'call-' + id, quiet: true });
   return Object.assign({ ok: true }, r);
 }
 function _useFetch(f) { fetchImpl = f || ((...a) => fetch(...a)); }
 
-module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, here, setProfile, profiles, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
+module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, here, setProfile, profiles, notify, post, direct, hook, ice, ring, ringEnd, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
