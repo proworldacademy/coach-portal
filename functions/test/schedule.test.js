@@ -59,14 +59,14 @@ test('a coach adds a private: own players only, a real court, no double booking'
 });
 
 test('a family reserves a court: free courts only, one a day, cancel frees it', async () => {
-  const db = fresh(); const fam = { email: 'maria@example.test', name: 'Maria Example' };
+  const db = fresh(); const fam = { email: 'maria@example.test', name: 'Maria Example', member: true };
   const today = require('../lib/calendar').todayET(); const d = require('../lib/calendar').addDays(today, 2);
   const s = await SCH.rentSlots(db, fam, { date: d }); assert.ok(s.slots.length > 0);
   const st = s.slots[s.slots.length - 1].start; const cs = (await SCH.rentSlots(db, fam, { date: d, start: st })).courts; assert.ok(cs.length > 0);
   const b = await SCH.rentBook(db, fam, { date: d, start: st, court: cs[0].id }, {});
   assert.ok(!(await SCH.rentSlots(db, fam, { date: d, start: st })).courts.some((c) => c.id === cs[0].id));
   await assert.rejects(SCH.rentBook(db, fam, { date: d, start: st, court: cs[1].id }, {}), (e) => e.code === 'limit');
-  await assert.rejects(SCH.rentBook(db, { email: 'x@example.test' }, { date: d, start: st, court: cs[0].id }, {}), (e) => e.status === 409);
+  await assert.rejects(SCH.rentBook(db, { email: 'x@example.test', member: true }, { date: d, start: st, court: cs[0].id }, {}), (e) => e.status === 409);
   assert.equal((await SCH.rentList(db, fam)).list.length, 1);
   await SCH.rentCancel(db, fam, { id: b.id }, {}); assert.equal((await SCH.rentList(db, fam)).list.length, 0);
   await assert.rejects(SCH.rentSlots(db, fam, { date: require('../lib/calendar').addDays(today, 30) }), (e) => e.status === 400);
@@ -98,4 +98,37 @@ test('rain: renters and privates are told, the same people hear the courts are r
   const a = await SCH.rain(db, owner, { send: 'rain' }, deps); assert.equal(a.sent, 2); assert.ok(sent.every((x) => /Rain delay/.test(x[1])));
   const b = await SCH.rain(db, owner, { send: 'ready' }, deps); assert.equal(b.sent, 2); assert.match(sent[3][1], /ready/);
   await assert.rejects(SCH.rain(db, owner, { send: 'ready' }, deps), (e) => e.status === 400);
+});
+
+test('someone who is not an academy family pays by card: held while paying, theirs once paid, freed if not', async () => {
+  const db = fresh(); const CALm = require('../lib/calendar'); const d = CALm.addDays(CALm.todayET(), 2); const out = { email: 'pat@example.test', name: 'Pat Example' }; const said = []; let paid = false;
+  const deps = { checkout: async (o) => { said.push(o.cents); return { url: 'https://pay.example/' + o.id, id: 'cs_1' }; }, paid: async () => ({ paid, intent: 'pi_1' }), tellDesk: async (t) => said.push(t), tellFamily: async () => {} };
+  await assert.rejects(SCH.rentBook(db, out, { date: d, start: 10, dur: 90, court: '5' }, {}), (e) => e.status === 503);
+  const b = await SCH.rentBook(db, out, { date: d, start: 10, dur: 90, court: '5' }, deps); assert.equal(b.cents, 3000); assert.match(b.pay, /pay\.example/);
+  assert.ok(!(await SCH.rentSlots(db, out, { date: d, start: 10, dur: 60 })).courts.some((c) => c.id === '5'));         // held while they pay
+  assert.equal((await SCH.rentList(db, out)).list[0].pending, true);
+  assert.equal((await SCH.rentConfirm(db, out, { id: b.id }, deps)).ok, false);                                          // not paid yet
+  await assert.rejects(SCH.rentConfirm(db, { email: 'x@example.test' }, { id: b.id }, deps), (e) => e.status === 404);
+  paid = true; const c = await SCH.rentConfirm(db, out, { id: b.id }, deps); assert.equal(c.status, 'confirmed'); assert.ok(said.some((t) => /Paid \$30\.00/.test(String(t))));
+  assert.equal((await SCH.rentConfirm(db, out, { id: b.id }, deps)).status, 'confirmed');                                // asked twice: told once
+  assert.equal(said.filter((t) => /Paid \$30\.00/.test(String(t))).length, 1);
+  // one that is never paid goes back on the schedule
+  const d2 = CALm.addDays(d, 1); paid = false; const b2 = await SCH.rentBook(db, out, { date: d2, start: 9, court: '6' }, deps);
+  SCH._clock(() => NOW + 40 * 60000); assert.equal(await SCH.rentSweep(db), 1); SCH._clock(() => NOW);
+  assert.ok((await SCH.rentSlots(db, out, { date: d2, start: 9, dur: 60 })).courts.some((c2) => c2.id === '6')); assert.ok(b2.id);
+  // an academy family still reserves for free
+  const fam = await SCH.rentBook(db, { email: 'maria@example.test', name: 'Maria', member: true }, { date: d, start: 12, court: '6' }, {}); assert.equal(fam.pay, undefined);
+});
+
+test('a profile without a child: sign up, add an adult, book with it', async () => {
+  const CL = require('../lib/client'); const db = fresh();
+  await assert.rejects(CL.signup(db, { email: 'pat@example.test', name: 'Pat Example', phone: '12' }, {}), (e) => e.code === 'phone');
+  await CL.signup(db, { email: 'Pat@Example.test', name: 'Pat Example', phone: '561 555 0100' }, { isTeam: async () => false, onFile: async () => false });
+  assert.equal((await CL.get(db, 'pat@example.test')).name, 'Pat Example');
+  await CL.signup(db, { email: 'pat@example.test', name: 'Someone Else', phone: '561 555 0199' }, {}); assert.equal((await CL.get(db, 'pat@example.test')).name, 'Pat Example');   // never overwritten from outside
+  const who = { email: 'pat@example.test', name: 'Pat Example' }; const a = await CL.addPerson(db, who, { name: 'Pat Example' });
+  await assert.rejects(CL.addPerson(db, who, { name: 'pat example' }), (e) => e.status === 409);
+  const people = CL.people(await CL.get(db, who.email)); assert.equal(people.length, 1); assert.equal(people[0].id, a.person.id);
+  const s = await C.familySlots(db, who, { player: a.person.id, date: DAY, coach: 'nico' }, people); assert.ok(s.slots.length > 0);
+  await CL.removePerson(db, who, { id: a.person.id }); assert.equal(CL.people(await CL.get(db, who.email)).length, 0);
 });

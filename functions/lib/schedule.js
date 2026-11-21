@@ -173,12 +173,18 @@ async function coachCancel(db, who, body, deps) {
 }
 
 /* ── a court a family reserves ── */
-const RENT = { aheadDays: 7, maxMin: 120, perDay: 1 };          // settings/rental overrides these
+const RENT = { aheadDays: 7, maxMin: 120, perDay: 1, hourCents: 2000, holdMin: 30 };          // $20 an hour for someone who is not an academy family (Antonio, Nov 21, 2026); a court waits 30 minutes for the card, as long as the payment page stays open          // settings/rental overrides these
 async function rentRules(db) { try { const s = await db.doc('settings/rental').get(); return Object.assign({}, RENT, s.exists ? (s.data() || {}) : {}); } catch (e) { return RENT; } }
 const rentDur = (v, r) => { const n = Number(v); return [30, 60, 90, 120].includes(n) && n <= r.maxMin ? n : 60; };
 /* The times with at least one court free. A court can be taken up to the minute it starts. */
+/* A court that waited for a card and never got one goes back on the schedule. */
+async function rentSweep(db) {
+  let n = 0; try { const snap = await db.collection('rentals').where('status', '==', 'pending').get();
+    for (const d of snap.docs) { const x = d.data() || {}; if (Number(x.expires || 0) >= CLOCK()) continue; await d.ref.set({ status: 'canceled', canceledAt: CLOCK(), canceledBy: 'unpaid' }, { merge: true }); try { await COURTS.release(db, d.id); } catch (e) { /* next sweep */ } n++; } } catch (e) { /* next time */ }
+  return n;
+}
 async function rentSlots(db, who, body) {
-  const r = await rentRules(db); const today = CAL.todayET(); const date = String(body.date || ''); const dur = rentDur(body.dur, r);
+  await rentSweep(db); const r = await rentRules(db); const today = CAL.todayET(); const date = String(body.date || ''); const dur = rentDur(body.dur, r);
   if (!isDate(date) || date < today || date > CAL.addDays(today, r.aheadDays)) throw S.err(400, 'date', `A court is reserved up to ${r.aheadDays} days ahead.`);
   const now = CC.nowET(); const start = Number(body.start);
   if (Number.isFinite(start) && body.start !== '' && body.start != null) return { date, dur, start, courts: await COURTS.free(db, date, start, dur, 'tennis') };
@@ -189,34 +195,59 @@ async function rentSlots(db, who, body) {
 }
 async function rentMine(db, email, today) {
   const out = []; try { const snap = await db.collection('rentals').where('email', '==', email).get();
-    snap.docs.forEach((d) => { const x = d.data() || {}; if (x.status === 'canceled' || x.date < today) return; out.push({ id: d.id, date: x.date, start: Number(x.start), dur: x.dur, time: fmtT(Number(x.start)), court: COURTS.nameOf(x.court) }); }); } catch (e) { /* none */ }
+    snap.docs.forEach((d) => { const x = d.data() || {}; if (x.status === 'canceled' || x.date < today) return; if (x.status === 'pending' && Number(x.expires || 0) < CLOCK()) return; out.push({ id: d.id, date: x.date, start: Number(x.start), dur: x.dur, time: fmtT(Number(x.start)), court: COURTS.nameOf(x.court), pending: x.status === 'pending', pay: x.status === 'pending' ? x.payUrl || '' : '', paid: Number(x.price || 0) }); }); } catch (e) { /* none */ }
   return out.sort((a, b) => (a.date + String(a.start).padStart(5, '0')).localeCompare(b.date + String(b.start).padStart(5, '0')));
 }
 async function rentList(db, who) { return { list: await rentMine(db, String(who.email || '').toLowerCase(), CAL.todayET()) }; }
 async function rentBook(db, who, body, deps) {
-  const r = await rentRules(db); const today = CAL.todayET(); const now = CC.nowET(); const date = String(body.date || ''); const start = Number(body.start); const dur = rentDur(body.dur, r);
+  await rentSweep(db); const r = await rentRules(db); const today = CAL.todayET(); const now = CC.nowET(); const date = String(body.date || ''); const start = Number(body.start); const dur = rentDur(body.dur, r);
   if (!isDate(date) || date < today || date > CAL.addDays(today, r.aheadDays) || !Number.isFinite(start)) throw S.err(400, 'slot', 'Pick a day and a time.');
   if (date === now.date && start < now.h - 1e-9) throw S.err(400, 'past', 'That time has already started. Pick the next one.');
   const court = S.clean(body.court, 4); const c = COURTS.byId(court); if (!c || c.kind !== 'tennis') throw S.err(400, 'court', 'Pick a court.');
   const email = String(who.email || '').toLowerCase(); const mine = (await rentMine(db, email, today)).filter((x) => x.date === date);
   if (mine.length >= r.perDay) throw S.err(400, 'limit', r.perDay === 1 ? 'You already have a court that day. Cancel it first to pick another time.' : `That is the limit of ${r.perDay} courts in one day.`);
   const id = 'rent_' + date.replace(/-/g, '') + '_' + court + '_' + String(Math.round(start * 100)).padStart(4, '0'); const ref = db.doc('rentals/' + id);
-  const name = who.name || email; let held = null;
+  const name = who.name || email; let held = null; const paid = !who.member; const cents = paid ? Math.round(r.hourCents * dur / 60) : 0;
+  if (paid && !(deps && deps.checkout)) throw S.err(503, 'pay', 'Card payments are not available right now. Please try again in a moment.');
   await db.runTransaction(async (t) => {
     held = await COURTS.holdIn(t, db, { date, court, start, durMin: dur, ref: id, what: 'rental', label: 'Rental · ' + name, player: name, by: email });
-    t.set(ref, { email, name, date, start, dur, court, price: 0, status: 'confirmed', at: CLOCK() });
+    t.set(ref, { email, name, date, start, dur, court, price: cents, status: paid ? 'pending' : 'confirmed', expires: paid ? CLOCK() + r.holdMin * 60000 : 0, at: CLOCK() });
   });
   const when = CC.whenText(date, start);
+  /* Not an academy family: the court is held while they pay by card. It is theirs once the payment is through. */
+  if (paid) {
+    try { const pay = await deps.checkout({ id, email, name, cents, minutes: r.holdMin, label: `Court rental · ${held.courtName} · ${when} (${dur} min)` }); await ref.set({ payUrl: pay.url, session: pay.id }, { merge: true }); return { ok: true, id, pay: pay.url, cents, time: fmtT(start), courtName: held.courtName, holdMin: r.holdMin }; }
+    catch (e) { await ref.set({ status: 'canceled', canceledAt: CLOCK(), canceledBy: 'checkout failed' }, { merge: true }); try { await COURTS.release(db, id); } catch (x) { /* next sweep */ } throw S.err(502, 'pay', 'The payment page could not be opened. The court was not reserved. Please try again.'); }
+  }
   try { if (deps && deps.tellDesk) await deps.tellDesk(`Court reserved in the app: ${name}, ${when} (${dur} min), ${held.courtName}.`); } catch (e) { /* nicety */ }
   try { if (deps && deps.tellFamily) await deps.tellFamily(email, { subject: `Court reserved: ${when}`, text: [`Hello${who.name ? ' ' + first(who.name) : ''},`, '', 'Your court is reserved.', '', `When: ${when} (${dur} minutes)`, `Where: ${held.courtName}`, '', 'You can cancel it in the app any time before it starts.', '', 'ProWorld Academy'].join('\n'), push: { title: 'Court reserved', body: `${when}, ${held.courtName}.`, url: '/family', tag: id } }); } catch (e) { /* same */ }
   return { ok: true, id, time: fmtT(start), courtName: held.courtName };
 }
+/* Back from the payment page: paid means confirmed, and the family and the admin team are told once. */
+async function rentConfirm(db, who, body, deps) {
+  const id = S.clean(body.id, 80); const ref = db.doc('rentals/' + id); const s = await ref.get(); const x = s.exists ? (s.data() || {}) : null; const email = String(who.email || '').toLowerCase();
+  if (!x || x.email !== email) throw S.err(404, 'rental', 'That court is not on this account.');
+  if (x.status === 'confirmed') return { ok: true, status: 'confirmed', time: fmtT(Number(x.start)), courtName: COURTS.nameOf(x.court) };
+  if (x.status !== 'pending' || !x.session || !(deps && deps.paid)) return { ok: false, status: x.status };
+  const pay = await deps.paid(x.session); if (!pay.paid) return { ok: false, status: 'pending', pay: x.payUrl || '' };
+  /* the card went through after the 15 minutes: the court may have gone to someone else meanwhile */
+  let held = true; if (Number(x.expires || 0) < CLOCK()) { const hs = await COURTS.holdsOn(db, x.date); if (!hs.some((h) => h.ref === id)) { try { await db.runTransaction(async (t) => { await COURTS.holdIn(t, db, { date: x.date, court: x.court, start: Number(x.start), durMin: x.dur, ref: id, what: 'rental', label: 'Rental · ' + x.name, player: x.name, by: email }); }); } catch (e) { held = false; } } }
+  const when = CC.whenText(x.date, Number(x.start)); const where = COURTS.nameOf(x.court);
+  if (!held) { await ref.set({ status: 'canceled', canceledAt: CLOCK(), canceledBy: 'paid late', paidAt: CLOCK(), intent: pay.intent || '' }, { merge: true }); try { if (deps.tellDesk) await deps.tellDesk(`REFUND NEEDED: ${x.name} paid ${usd(x.price)} for ${where}, ${when}, after the hold ended and the court was taken. Refund it in Stripe.`); } catch (e) { /* logged by the caller */ } return { ok: false, status: 'late' }; }
+  await ref.set({ status: 'confirmed', paidAt: CLOCK(), intent: pay.intent || '', payUrl: '' }, { merge: true });
+  try { if (deps.tellDesk) await deps.tellDesk(`Court rented in the app: ${x.name}, ${when} (${x.dur} min), ${where}. Paid ${usd(x.price)} by card.`); } catch (e) { /* nicety */ }
+  try { if (deps.tellFamily) await deps.tellFamily(email, { subject: `Court reserved: ${when}`, text: ['Hello,', '', 'Your court is reserved and paid.', '', `When: ${when} (${x.dur} minutes)`, `Where: ${where}`, `Paid: ${usd(x.price)}`, '', 'ProWorld Academy · 651 Egret Cir, Delray Beach', '(561) 403-0008'].join('\n'), push: { title: 'Court reserved', body: `${when}, ${where}.`, url: '/family', tag: id } }); } catch (e) { /* same */ }
+  return { ok: true, status: 'confirmed', time: fmtT(Number(x.start)), courtName: where };
+}
+const usd = (c) => '$' + (Number(c || 0) / 100).toFixed(2);
 async function rentCancel(db, who, body, deps) {
   const id = S.clean(body.id, 80); const ref = db.doc('rentals/' + id); const s = await ref.get(); const x = s.exists ? (s.data() || {}) : null; const email = String(who.email || '').toLowerCase();
   if (!x || x.status === 'canceled' || (x.email !== email && !who.admin && !who.owner)) throw S.err(404, 'rental', 'That court is not on this account.');
   await ref.set({ status: 'canceled', canceledAt: CLOCK(), canceledBy: email }, { merge: true });
   try { await COURTS.release(db, id); } catch (e) { /* next sweep */ }
-  try { if (deps && deps.tellDesk) await deps.tellDesk(`Court canceled in the app: ${x.name}, ${CC.whenText(x.date, Number(x.start))}, ${COURTS.nameOf(x.court)}.`); } catch (e) { /* nicety */ }
+  const wasPaid = x.status === 'confirmed' && Number(x.price || 0) > 0;
+  try { if (deps && deps.tellDesk && x.status !== 'pending') await deps.tellDesk(`Court canceled in the app: ${x.name}, ${CC.whenText(x.date, Number(x.start))}, ${COURTS.nameOf(x.court)}.${wasPaid ? ` It was paid (${usd(x.price)}): decide the refund.` : ''}`); } catch (e) { /* nicety */ }
+  if (wasPaid) return { ok: true, paid: true };
   return { ok: true };
 }
 
@@ -335,5 +366,5 @@ async function nightly(db, log) {
 async function planAuto(db, who, body) { if (!who.owner) throw S.err(403, 'owner', 'Only an owner switches the nightly plan.'); await db.doc('settings/courtPlan').set({ auto: body.on === true, by: who.email, at: CLOCK() }, { merge: true }); return { ok: true, auto: body.on === true }; }
 async function planState(db) { try { const s = await db.doc('settings/courtPlan').get(); return { auto: !!(s.exists && (s.data() || {}).auto === true) }; } catch (e) { return { auto: false }; } }
 
-module.exports = { scope, week, setHours, setOff, askOff, decideOff, withdrawOff, coachPlayers, coachSlots, coachBook, coachCancel, rentSlots, rentBook, rentCancel, rentList, rentMine, rain, rainWho, RAIN_TEXT, sessionsOn, plan, applyPlan, clearPlan, nightly, planAuto, planState, DOWN,
+module.exports = { scope, week, setHours, setOff, askOff, decideOff, withdrawOff, coachPlayers, coachSlots, coachBook, coachCancel, rentSlots, rentBook, rentConfirm, rentSweep, rentCancel, rentList, rentMine, RENT, rain, rainWho, RAIN_TEXT, sessionsOn, plan, applyPlan, clearPlan, nightly, planAuto, planState, DOWN,
   _clock: (f) => { CLOCK = f || (() => Date.now()); } };

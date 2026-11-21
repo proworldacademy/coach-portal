@@ -176,6 +176,8 @@ html.dark .ch-who button{background:#161616;color:#F4F4F0;border-color:#F4F4F0}h
 html.dark .ch-card,html.dark .ch-acts button,html.dark .ch-acts a{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-s,html.dark .ch-h span{color:#C9C9C4}html.dark .ch-h span b{color:#F4F4F0}html.dark .ch-btn{background:#E2FE78;color:#0A0A0A}html.dark .ch-btn.line{background:none;color:#F4F4F0;border-color:#F4F4F0}html.dark .ch-dots i.off{background:#0F0F0F;border-color:#6A6A66}html.dark .ch-pay{border:1px solid #343434}
 html.dark .ch-hero.out{background:#161616;color:#F4F4F0;border-color:#F4F4F0}html.dark .ch-hero.out .ch-n{color:#C9C9C4}html.dark .ch-hero.out .ch-tg{background:rgba(255,255,255,.12)}html.dark .ch-hero.out .ch-tg button{color:#F4F4F0}html.dark .ch-hero.out .ch-tg button[aria-pressed="true"]{background:#F4F4F0;color:#0A0A0A}
 .sec.pg{display:none}.sec.pg.on{display:block}#app.pgon>.ch{display:none}
+.ch-who .plus{width:38px;min-width:38px;padding:0;border-radius:50%;font:700 20px/1 var(--body,inherit);display:inline-grid;place-items:center}.ch-acts button{font:inherit;text-align:left;cursor:pointer}.ch-acts small{display:block;font-size:12px;opacity:.7;margin-top:2px}
+.newp{margin-top:18px;border-top:1px solid var(--line,#ddd);padding-top:14px}.newp summary{cursor:pointer;font-weight:700}.newp form{display:grid;gap:10px;margin-top:12px}.newp input{font:inherit;padding:13px 14px;border:1px solid var(--line-2,#ccc);border-radius:14px;background:#fff}
 </style>
 </head>
 <body class="skin-family sky-short">
@@ -236,9 +238,12 @@ function gate(state,extra){
       ${INAPP?'':`<div class="or">or</div><button class="btn" id="google">${G} Continue with Google</button>`}
       ${err}
       <p class="fine"><a href="/?side=team" id="toteam" style="text-decoration:underline">On the ProWorld team? Sign in here →</a></p>
-      <p class="fine">No password. We send six digits to your e-mail; type them here and you're in. If your e-mail isn't on file yet, text the front desk at (561) 403-0008 and we'll add it.</p>
+      <p class="fine">No password. We send six digits to your e-mail; type them here and you are in.</p>
+      <details class="newp"${extra&&extra.signup?' open':''}><summary>New here? Create your profile</summary><form id="signup"><input type="text" id="su-name" placeholder="Your full name" autocomplete="name" maxlength="80" required><input type="email" id="su-email" placeholder="you@example.com" autocomplete="email" required><input type="tel" id="su-phone" placeholder="Mobile number" autocomplete="tel" required><button class="btn lime" type="submit" id="su-go">Create my profile</button><p class="fine">For anyone: reserve a court, book a private lesson, or enroll a child. You do not need a child in the academy.</p></form></details>
     </div></div>${footer()}`;
   if(!INAPP)document.getElementById('google').onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});try{if(touch()){await auth.signInWithRedirect(prov);return}await auth.signInWithPopup(prov)}catch(x){gate('in',{err:cleanErr(x)})}};
+  const su=document.getElementById('signup');if(su)su.onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('su-email').value.trim().toLowerCase();const btn=document.getElementById('su-go');btn.disabled=true;btn.textContent='One moment…';
+    try{await pub('family/signup',{email,name:document.getElementById('su-name').value,phone:document.getElementById('su-phone').value});await pub('family/code',{email});localStorage.setItem(EMAIL_KEY,email);gate('code',{email})}catch(x){gate('in',{email,signup:true,err:x.message})}};
   document.getElementById('link').onsubmit=async(e)=>{e.preventDefault();const email=document.getElementById('email').value.trim().toLowerCase();if(!email)return;const btn=document.getElementById('codebtn');btn.disabled=true;btn.textContent='Sending…';
     try{await pub('family/code',{email});localStorage.setItem(EMAIL_KEY,email);gate('code',{email})}
     catch(x){
@@ -260,7 +265,7 @@ async function api(path,body){
 async function load(){
   app.innerHTML=`<div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; Loading your family…</p></div></div>`;
   try{if(!VIEW)localStorage.setItem('pw-side','family')}catch(e){}
-  try{me=await api('me');render()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
+  try{me=await api('me');render();courtReturn()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
 }
 
 /* ── the page ── */
@@ -475,7 +480,7 @@ let BK=null;
 function bkPaint(){
   let el=document.getElementById('bk');if(!BK){if(el)el.remove();if(!CHAT)document.documentElement.style.overflow='';return}
   if(!el){el=document.createElement('div');el.id='bk';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
-  document.documentElement.style.overflow='hidden';const pl=(me.players||[]).find(x=>x.id===BK.player)||{};const nm=esc(pl.shortName||String(pl.name||'').split(' ')[0]);
+  document.documentElement.style.overflow='hidden';const pl=(me.players||[]).concat(me.people||[]).find(x=>x.id===BK.player)||{};const nm=esc(pl.shortName||String(pl.name||'').split(' ')[0]);
   const kinds=[['tennis','Tennis'],['fitness','Fitness'],['mental','Mental']];const maxD=ymd(new Date(new Date(String(me.today)+'T12:00:00').getTime()+365*864e5));
   const cs=BK.coaches||[];const slots=BK.slots||[];
   el.innerHTML=`<header><button type="button" id="bk-x" aria-label="Back">${ico('arrow')}</button><div><h2>Book a private</h2><p>For ${nm}</p></div></header>
@@ -511,16 +516,16 @@ function rtPaint(){
   let el=document.getElementById('rt');if(!RT){if(el)el.remove();document.documentElement.style.overflow='';return}
   if(!el){el=document.createElement('div');el.id='rt';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
   document.documentElement.style.overflow='hidden';const maxD=ymd(new Date(new Date(String(me.today)+'T12:00:00').getTime()+(RT.ahead||7)*864e5));const slots=RT.slots||[];const lab=(slots.find(x=>x.start===RT.start)||{}).label||'';const ready=RT.start!=null&&RT.court;
-  el.innerHTML=`<header><button type="button" id="rt-x" aria-label="Back">${ico('arrow')}</button><div><h2>Reserve a court</h2><p>Free for enrolled families</p></div></header>
+  el.innerHTML=`<header><button type="button" id="rt-x" aria-label="Back">${ico('arrow')}</button><div><h2>Reserve a court</h2><p>${me.member?'Free for enrolled families':'$'+((me.courtCents||2000)/100).toFixed(0)+' an hour · paid by card'}</p></div></header>
     <div class="ch-bk">
-      ${(RT.mine||[]).length?`<div><h3>Your courts</h3>${RT.mine.map(v=>`<div class="ch-pick"><div><b>${esc(nice(v.date))}</b><span>${esc(v.time)} · ${v.dur} min · ${esc(v.court)}</span></div><button type="button" class="ch-btn line" data-rt-cancel="${esc(v.id)}">Cancel</button></div>`).join('')}</div>`:''}
+      ${(RT.mine||[]).length?`<div><h3>Your courts</h3>${RT.mine.map(v=>`<div class="ch-pick"><div><b>${esc(nice(v.date))}</b><span>${esc(v.time)} · ${v.dur} min · ${esc(v.court)}${v.pending?' · waiting for payment':''}</span></div>${v.pending&&v.pay?`<a class="ch-btn" href="${esc(v.pay)}">Pay</a>`:''}<button type="button" class="ch-btn line" data-rt-cancel="${esc(v.id)}">Cancel</button></div>`).join('')}</div>`:''}
       <div><h3>Day</h3><input type="date" id="rt-date" min="${esc(me.today)}" max="${maxD}" value="${esc(RT.date)}"></div>
       <div><h3>How long</h3><div class="opts">${[60,90,120].map(n=>`<button type="button" data-rt-dur="${n}" aria-pressed="${RT.dur===n}">${n===60?'1 hour':n===90?'1 hour 30':'2 hours'}</button>`).join('')}</div></div>
       <div><h3>Time · ${esc(nice(RT.date))}</h3>${RT.load?'<p class="n"><span class="spin"></span></p>':slots.length?`<div class="opts">${(RT.start!=null&&!RT.allTimes?slots.filter(x=>x.start===RT.start):slots).map(x=>`<button type="button" data-rt-slot="${x.start}" aria-pressed="${RT.start===x.start}">${esc(x.label)}</button>`).join('')}${RT.start!=null&&!RT.allTimes?'<button type="button" data-rt-times>Change time</button>':''}</div>`:'<p class="n">No court is free that day. Try another day.</p>'}</div>
       ${RT.start!=null?`<div><h3>Court · free at ${esc(lab)}</h3>${RT.cload?'<p class="n"><span class="spin"></span></p>':(RT.courts||[]).length?`<div class="opts">${RT.courts.map(c=>`<button type="button" data-rt-court="${esc(c.id)}" aria-pressed="${RT.court===c.id}">${esc(c.name)}<small>${c.type==='clay'?'Clay':'Hard'}</small></button>`).join('')}</div>`:'<p class="n">That time was just taken. Pick another time.</p>'}</div>`:''}
       ${RT.err?`<p class="n" style="color:#8A1F8C">${esc(RT.err)}</p>`:''}
-      <p class="n">It is confirmed as soon as you reserve, and you get an e-mail. You can reserve up to the minute it starts and cancel any time before. One court a day.</p>
-      <div class="go"><button type="button" class="ch-btn" id="rt-go" ${ready&&!RT.busy?'':'disabled'}>${RT.busy?'Reserving…':RT.start==null?'Pick a time':!RT.court?'Pick a court':'Reserve '+esc(lab)+' · '+esc(((RT.courts||[]).find(c=>c.id===RT.court)||{}).name||'')}</button></div>
+      <p class="n">${me.member?'It is confirmed as soon as you reserve, and you get an e-mail.':'You pay by card on the next screen. The court is yours as soon as the payment goes through, and you get an e-mail. It is held for 30 minutes while you pay.'} You can reserve up to the minute it starts. One court a day.</p>
+      <div class="go"><button type="button" class="ch-btn" id="rt-go" ${ready&&!RT.busy?'':'disabled'}>${RT.busy?'Reserving…':RT.start==null?'Pick a time':!RT.court?'Pick a court':(me.member?'Reserve ':'Pay $'+((me.courtCents||2000)*RT.dur/6000).toFixed(2)+' · ')+esc(lab)+' · '+esc(((RT.courts||[]).find(c=>c.id===RT.court)||{}).name||'')}</button></div>
     </div>`;
   document.getElementById('rt-x').onclick=()=>{RT=null;rtPaint()};
   document.getElementById('rt-date').onchange=(e)=>{if(!e.target.value)return;RT.date=e.target.value;RT.start=null;RT.court='';RT.courts=[];rtLoad()};
@@ -528,11 +533,31 @@ function rtPaint(){
   el.querySelectorAll('[data-rt-slot]').forEach(b=>b.onclick=()=>{RT.start=Number(b.dataset.rtSlot);RT.allTimes=false;RT.err='';RT.court='';RT.courts=[];rtCourts()});
   el.querySelectorAll('[data-rt-times]').forEach(b=>b.onclick=()=>{RT.allTimes=true;rtPaint()});
   el.querySelectorAll('[data-rt-court]').forEach(b=>b.onclick=()=>{RT.court=b.dataset.rtCourt;RT.err='';rtPaint()});
-  el.querySelectorAll('[data-rt-cancel]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('court/cancel',{id:b.dataset.rtCancel});toast('Canceled. The court is free again.');rtMine();rtLoad()}catch(x){b.disabled=false;toast(x.message,true)}});
+  el.querySelectorAll('[data-rt-cancel]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const c=await api('court/cancel',{id:b.dataset.rtCancel});toast(c.paid?'Canceled. The admin team will write to you about the refund.':'Canceled. The court is free again.');rtMine();rtLoad()}catch(x){b.disabled=false;toast(x.message,true)}});
   document.getElementById('rt-go').onclick=async()=>{if(RT.busy||!ready)return;RT.busy=true;RT.err='';rtPaint();
-    try{const o=await api('court/book',{date:RT.date,start:RT.start,dur:RT.dur,court:RT.court});const d=RT.date;toast('Reserved: '+nice(d)+' at '+o.time+', '+o.courtName+'.');RT.busy=false;RT.start=null;RT.court='';RT.courts=[];rtMine();rtLoad()}
+    try{const o=await api('court/book',{date:RT.date,start:RT.start,dur:RT.dur,court:RT.court});if(o.pay){location.href=o.pay;return}const d=RT.date;toast('Reserved: '+nice(d)+' at '+o.time+', '+o.courtName+'.');RT.busy=false;RT.start=null;RT.court='';RT.courts=[];rtMine();rtLoad()}
     catch(x){RT.busy=false;RT.err=x.message;RT.court='';if(/court|taken/i.test(x.message))rtCourts();else rtPaint()}};
 }
+/* Add a person (Nov 21, 2026): the plus next to the names. An adult goes on the profile at once and can book privates; a child goes
+   through the enrollment. Tapping an adult's name books a private for them. */
+let PP=null;
+function ppPaint(){let el=document.getElementById('pp');if(!PP){if(el)el.remove();return}if(!el){el=document.createElement('div');el.id='pp';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  const mine=!(me.people||[]).some(x=>x.name.toLowerCase()===String(me.name||'').toLowerCase())&&me.name;
+  el.innerHTML=`<header><button type="button" id="pp-x" aria-label="Back">${ico('arrow')}</button><div><h2>Add a person</h2><p>Who is it for?</p></div></header><div class="ch-bk">
+    <div><h3>An adult</h3><p class="n">For private lessons and classes. They are added right away.</p><form id="pp-f"><input type="text" id="pp-n" maxlength="80" placeholder="Full name" value="${mine?esc(me.name):''}" required style="width:100%;font:inherit;padding:12px 14px;border:1px solid var(--line-2,#ddd);border-radius:14px;margin:6px 0 10px"><button type="submit" class="ch-btn" style="display:block;width:100%" ${PP.busy?'disabled':''}>${PP.busy?'Adding…':'Add'}</button></form>${PP.err?`<p class="n" style="color:#8A1F8C">${esc(PP.err)}</p>`:''}</div>
+    <div><h3>A child</h3><p class="n">Choose the program and the days. The child appears here once enrolled.</p><a class="ch-btn line" href="/enroll">Enroll a child</a></div>
+    ${(me.people||[]).length?`<div><h3>Adults on this account</h3>${me.people.map(x=>`<div class="ch-pick"><div><b>${esc(x.name)}</b></div><button type="button" class="ch-btn line" data-pp-rm="${esc(x.id)}">Remove</button></div>`).join('')}</div>`:''}</div>`;
+  document.getElementById('pp-x').onclick=()=>{PP=null;ppPaint()};
+  document.getElementById('pp-f').onsubmit=async(e)=>{e.preventDefault();if(PP.busy)return;const name=document.getElementById('pp-n').value.trim();PP.busy=true;PP.err='';ppPaint();try{await api('person',{name});me=await api('me');PP=null;ppPaint();render();toast(name.split(' ')[0]+' is on your account. Tap the name to book a private.')}catch(x){PP.busy=false;PP.err=x.message;ppPaint()}};
+  el.querySelectorAll('[data-pp-rm]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('person/remove',{id:b.dataset.ppRm});me=await api('me');ppPaint();render()}catch(x){b.disabled=false;toast(x.message,true)}});
+}
+document.addEventListener('click',(e)=>{const b=e.target.closest&&e.target.closest('[data-pp]');if(!b||!me)return;if(me.viewing){toast('You are looking at this account as the client. Nothing is changed from this view.',true);return}const a=b.dataset.pp;
+  if(a==='add'){PP={busy:false,err:''};ppPaint()}else if(a==='person'){bkOpen('tennis',me.today,b.dataset.id)}else if(a==='private'){const f=(me.people||[])[0];if(f)bkOpen('tennis',me.today,f.id);else{PP={busy:false,err:''};ppPaint();toast('Add yourself first, then book the private.')}}});
+/* Back from the card page for a court (Nov 21, 2026): ?court=<id> paid, ?courtx=<id> gave up. */
+async function courtReturn(){const q=new URLSearchParams(location.search);const ok=q.get('court'),no=q.get('courtx');if(!ok&&!no)return;history.replaceState(null,'',location.pathname);
+  try{if(ok){let o=await api('court/confirm',{id:ok});if(!o.ok&&o.status==='pending'){await new Promise(r=>setTimeout(r,2500));o=await api('court/confirm',{id:ok})}
+      toast(o.ok?'Paid and reserved: '+o.time+', '+o.courtName+'. A confirmation is in your e-mail.':o.status==='late'?'The payment came after the court was released. The admin team will refund it.':'The payment has not come through yet. Open Reserve a court to finish it.',!o.ok)}
+    else{await api('court/cancel',{id:no});toast('No payment was made. The court was not reserved.')}}catch(x){/* the court list shows where it stands */}}
 /* a tennis private needs a time and a court; fitness and mental only a time */
 function bkReady(){return !!(BK&&BK.coach&&BK.start!=null&&(BK.kind!=='tennis'||BK.court))}
 /* the courts free at the chosen time: the family picks one, the engine holds it with the lesson */
@@ -544,14 +569,18 @@ async function bkLoad(){if(!BK)return;BK.load=true;BK.err='';bkPaint();const min
   try{const o=await api('private/slots',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,dur:60});if(BK!==mine)return;BK.coaches=o.coaches;BK.slots=o.slots;if(!BK.coach){const c=o.coaches.filter(x=>x.mine);if(c.length===1||o.coaches.length===1){BK.coach=(c[0]||o.coaches[0]).key;BK.load=false;return bkLoad()}}}
   catch(x){if(BK===mine)BK.err=x.message}
   if(BK===mine){BK.load=false;bkPaint()}}
-function bkOpen(kind,date){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}BK={player:SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,court:'',courts:[],cload:false,load:false,busy:false,err:''};bkLoad()}
+function bkOpen(kind,date,who){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}BK={player:who||SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,court:'',courts:[],cload:false,load:false,busy:false,err:''};bkLoad()}
 function homeC(first,active){
   const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   if(!active.find(p=>p.id===SEL))SEL=active.length?active[0].id:'';const p=active.find(x=>x.id===SEL)||null;
   const top=`<div class="ch-day">${esc(day)}</div><h1 class="ch-hello"><span>${hello}</span> <em>${esc(first)}.</em></h1>`;
-  if(!p)return `<div class="ch">${top}<div class="ch-card"><p class="ch-s">No active players right now.</p><a class="ch-btn" href="/enroll">Enroll a player</a></div></div>`;
-  const nm=esc(p.shortName||p.name.split(' ')[0]);const chips=active.length>1?`<div class="ch-who" role="group" aria-label="Which player">${active.map(x=>`<button type="button" data-sel="${esc(x.id)}" aria-pressed="${x.id===SEL}">${esc(x.shortName||x.name.split(' ')[0])}</button>`).join('')}</div>`:'';
+  /* Who is on the account (Nov 21, 2026): the children, the adults who take privates, and a plus to add someone. */
+  const ppl=(me.people||[]);const who=`<div class="ch-who" role="group" aria-label="Who is on this account">${active.map(x=>`<button type="button" data-sel="${esc(x.id)}" aria-pressed="${x.id===SEL}">${esc(x.shortName||x.name.split(' ')[0])}</button>`).join('')}${ppl.map(x=>`<button type="button" data-pp="person" data-id="${esc(x.id)}" aria-pressed="false">${esc(x.name.split(' ')[0])}</button>`).join('')}<button type="button" class="plus" data-pp="add" aria-label="Add a person">+</button></div>`;
+  if(!p){const tile=(attr,ic,l,s2)=>`<button type="button" ${attr}><span class="ch-i">${ico(ic)}</span>${l}${s2?`<small>${s2}</small>`:''}</button>`;const rate='$'+((me.courtCents||2000)/100).toFixed(0)+' an hour';
+    return `<div class="ch">${top}${who}<section class="ch-card"><div class="ch-h"><h2>Welcome</h2></div><p class="ch-s">Reserve a court, book a private lesson, or enroll a child in a program. Everything is booked and paid here.</p></section>
+      <div class="ch-acts">${tile('data-ask="court"','court','Reserve a court',rate)}${tile('data-pp="private"','plus','Book a private',ppl.length?'':'Add yourself first')}<a href="/enroll"><span class="ch-i">${ico('plus')}</span>Enroll a child<small>Programs and camps</small></a>${tile('data-pp="add"','plus','Add a person','Yourself or another adult')}</div></div>`}
+  const nm=esc(p.shortName||p.name.split(' ')[0]);const chips=who;
   const ns=nextSession(p);const out=ns&&isOut(p,ns.date);const coaches=[p.coach,p.coach2].filter(Boolean);const prog=(p.enroll&&(p.enroll.programShort||p.enroll.programName))||p.groupLabel||'Training';
   const hero=`<section class="ch-hero${out?' out':''}" aria-label="Next session"><div class="ch-hl"><span>Next session</span>${ns?`<b>${esc(ns.long)}</b>`:''}</div>
     <div class="ch-when">${ns?esc(ns.word):esc(prog)}</div>
