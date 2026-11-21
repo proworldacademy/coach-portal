@@ -23,14 +23,12 @@ $PB -c "Add :UIBackgroundModes array" "$PLIST"; $PB -c "Add :UIBackgroundModes:0
 $PB -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
 $PB -c "Add :UISupportedInterfaceOrientations array" "$PLIST"; $PB -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
 # Notifications (Nov 15, 2026): the push entitlement, and the two calls that hand Apple's device token to Capacitor's PushNotifications.
-# A call's notification gets through a Focus (Nov 21, 2026): only when asc.js saw Apple turn the capability on (.timesensitive).
-TS=""; if [ -f .timesensitive ]; then TS='  <key>com.apple.developer.usernotifications.time-sensitive</key><true/>'; fi
+# Nov 21, 2026: no time-sensitive entitlement. Apple's key cannot put that capability in the build's profile, and the archive then stops at signing.
 cat > "$APP/App.entitlements" <<ENT
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>aps-environment</key><string>production</string>
-$TS
 </dict></plist>
 ENT
 plutil -lint "$APP/App.entitlements"
