@@ -120,11 +120,31 @@
     if (old && old !== track) { try { old.stop(); } catch (e) { /* stopped */ } }
     beat(); paint();
   }
-  async function toggleCam() {
-    if (camTrack() && C.camKind !== "screen") return setVideo(null, "");
-    try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: C.facing || "user", width: { ideal: 960 }, height: { ideal: 540 } } }); await setVideo(s.getVideoTracks()[0], "cam"); } catch (e) { say("The camera could not be turned on. Check that the app may use it.", true); }
+  /* The microphone, kept alive (Nov 21, 2026). On an iPhone, asking for the camera on its own can silence the microphone that was
+     already open: the other side then sees you and does not hear you. So the camera is always asked for together with the
+     microphone and both are swapped in, and a microphone that goes quiet or ends by itself is opened again. */
+  async function swapMic(track) {
+    const old = micTrack(); if (!C || !track || track === old) return; track.enabled = old ? old.enabled : true; C.stream = new MediaStream([track]);
+    await Promise.all(senders("audio").map((s) => s.replaceTrack(track).catch(() => {}))); if (old) { try { old.stop(); } catch (e) { /* stopped */ } } guardMic(track); beat();
   }
-  async function flip() { C.facing = C.facing === "environment" ? "user" : "environment"; try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: C.facing } } }); await setVideo(s.getVideoTracks()[0], "cam"); } catch (e) { C.facing = C.facing === "environment" ? "user" : "environment"; say("This device has one camera."); } }
+  function guardMic(t) {
+    if (!t || t._g) return; t._g = true;
+    const fix = () => setTimeout(async () => { if (!C || micTrack() !== t || (t.readyState !== "ended" && !t.muted)) return;
+      try { const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); await swapMic(s.getAudioTracks()[0]); } catch (e) { say("Your microphone stopped. Leave the call and join again.", true); } }, 1500);
+    t.addEventListener("mute", fix); t.addEventListener("ended", fix);
+  }
+  async function camera(facing) {
+    const v = { facingMode: facing, width: { ideal: 960 }, height: { ideal: 540 } }; let s;
+    try { s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: v }); } catch (e) { s = await navigator.mediaDevices.getUserMedia({ video: v }); }
+    if (!C) { s.getTracks().forEach((t) => t.stop()); return; }
+    const a = s.getAudioTracks()[0]; if (a) await swapMic(a); await setVideo(s.getVideoTracks()[0], "cam");
+  }
+  let camBusy = false;
+  async function toggleCam() {
+    if (camTrack() && C.camKind !== "screen") return setVideo(null, ""); if (camBusy) return; camBusy = true;
+    try { await camera(C.facing || "user"); } catch (e) { say("The camera could not be turned on. Check that the app may use it.", true); } camBusy = false;
+  }
+  async function flip() { if (camBusy) return; camBusy = true; C.facing = C.facing === "environment" ? "user" : "environment"; try { await camera({ exact: C.facing }); } catch (e) { C.facing = C.facing === "environment" ? "user" : "environment"; say("This device has one camera."); } camBusy = false; }
   async function toggleScreen() {
     if (C.camKind === "screen") return setVideo(null, "");
     try { const s = await navigator.mediaDevices.getDisplayMedia({ video: true }); const t = s.getVideoTracks()[0]; t.onended = () => { if (C && C.video === t) setVideo(null, ""); }; await setVideo(t, "screen"); } catch (e) { /* they closed the picker */ }
@@ -135,6 +155,7 @@
     const me = X.me; let ice = [{ urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] }]; let relay = false;
     try { const r = await X.api("ice"); if (r && Array.isArray(r.iceServers) && r.iceServers.length) { ice = r.iceServers; relay = !!r.relay; } } catch (e) { /* the public finders */ }
     C = { id, me, kind: call.kind, title: call.title || "Call", chat: call.chat, by: call.by, stream, video: stream.getVideoTracks()[0] || null, camKind: stream.getVideoTracks()[0] ? "cam" : "", facing: "user", pcs: {}, peers: {}, ice, relay, min: false, since: 0, un: [], timers: [], sid: Math.random().toString(36).slice(2, 12) + Date.now().toString(36) };
+    guardMic(micTrack());
     C.peers[me] = { name: X.name }; beat(); paint();
     C.un.push(X.fs.collection("teamCalls/" + id + "/peers").onSnapshot((snap) => { if (!C || C.id !== id) return; const now = Date.now(); const seen = {};
       snap.docs.forEach((d) => { const p = d.data() || {}; if (d.id !== me && now - (p.at || 0) > FRESH) return; seen[d.id] = p; });
