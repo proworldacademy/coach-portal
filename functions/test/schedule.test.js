@@ -132,3 +132,25 @@ test('a profile without a child: sign up, add an adult, book with it', async () 
   const s = await C.familySlots(db, who, { player: a.person.id, date: DAY, coach: 'nico' }, people); assert.ok(s.slots.length > 0);
   await CL.removePerson(db, who, { id: a.person.id }); assert.equal(CL.people(await CL.get(db, who.email)).length, 0);
 });
+
+test('a paid court canceled 24 hours ahead is refunded; later it is not', async () => {
+  const db = fresh(); C._clock(null); SCH._clock(null); const CALm = require('../lib/calendar'); const n = C.nowET(Date.now()); const out = { email: 'pat@example.test', name: 'Pat Example' }; const refunds = []; const said = [];
+  const deps = { checkout: async (o) => ({ url: 'https://pay.example/' + o.id, id: 'cs_1' }), paid: async () => ({ paid: true, intent: 'pi_9' }), refund: async (o) => { refunds.push(o); return { id: 're_1' }; }, tellDesk: async (t) => said.push(t), tellFamily: async (e, m) => said.push(m.text) };
+  const far = CALm.addDays(n.date, 3); const a = await SCH.rentBook(db, out, { date: far, start: 10, court: '5' }, deps); await SCH.rentConfirm(db, out, { id: a.id }, deps);
+  const c1 = await SCH.rentCancel(db, out, { id: a.id }, deps); assert.equal(c1.refunded, true); assert.deepEqual(refunds, [{ id: a.id, intent: 'pi_9', cents: 2000 }]); assert.ok(said.some((t) => /on its way back to your card/.test(t)));
+  assert.ok((await SCH.rentSlots(db, out, { date: far, start: 10, dur: 60 })).courts.some((c) => c.id === '5'));
+  // tomorrow, less than 24 hours away: no refund, the admin team is told
+  const soon = CALm.addDays(n.date, 1); const st = Math.max(7, Math.floor(n.h) - 2); const b = await SCH.rentBook(db, out, { date: soon, start: st, court: '6' }, deps); await SCH.rentConfirm(db, out, { id: b.id }, deps);
+  const c2 = await SCH.rentCancel(db, out, { id: b.id }, deps); assert.equal(c2.refunded, false); assert.equal(c2.late, true); assert.equal(refunds.length, 1); assert.ok(said.some((t) => /no refund, unless you decide otherwise/.test(t)));
+  // the refund fails at the bank: the admin team is told to do it by hand
+  const c = await SCH.rentBook(db, out, { date: CALm.addDays(n.date, 4), start: 10, court: '5' }, deps); await SCH.rentConfirm(db, out, { id: c.id }, deps);
+  const c3 = await SCH.rentCancel(db, out, { id: c.id }, Object.assign({}, deps, { refund: async () => { throw new Error('down'); } })); assert.equal(c3.refunded, false); assert.ok(said.some((t) => /REFUND NEEDED/.test(t)));
+  C._clock(() => NOW); SCH._clock(() => NOW);
+});
+
+test('a client profile keeps a picture and quiet nights', async () => {
+  const CL = require('../lib/client'); const db = fresh(); const who = { email: 'pat@example.test', name: 'Pat Example' };
+  const r = await CL.save(db, who, { name: 'Pat Example', phone: '561 555 0100', photo: 'data:image/jpeg;base64,AAAA', quiet: true }); assert.equal(r.quiet, true); assert.equal(r.photo, 'data:image/jpeg;base64,AAAA');
+  await assert.rejects(CL.save(db, who, { photo: 'data:text/html;base64,AAAA' }), (e) => e.code === 'photo');
+  const r2 = await CL.save(db, who, { phone: '561 555 0101' }); assert.equal(r2.photo, 'data:image/jpeg;base64,AAAA'); assert.equal(r2.quiet, true);     // saving the phone keeps the rest
+});
