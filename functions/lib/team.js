@@ -27,12 +27,27 @@ async function people(db) {
 
 /* Who is here now (Nov 19, 2026): a phone or a computer with the Locker Room open says so once a minute; the answer is everyone seen in
    the last quarter of an hour. One record (teamState/here), written by the engine only, so no one's reading list is opened to the others. */
-async function here(db, who) {
+/* Each person's own profile for the whole app (Nov 21, 2026): a photo and a colour, set by that person only. One record
+   (teamState/profiles), written by the engine; `v` moves when anyone changes theirs, so the pages ask for it only when it moved. */
+const PROFILE_COLORS = ['', 'lime', 'pink', 'grey'];
+async function profiles(db) { try { const s = await db.doc('teamState/profiles').get(); const d = s.exists ? (s.data() || {}) : {}; return { v: Number(d.v || 0), p: d.p || {} }; } catch (e) { return { v: 0, p: {} }; } }
+async function setProfile(db, who, body) {
+  const me = String((who && who.email) || '').toLowerCase(); if (!me) throw S.err(403, 'who', 'Sign in again.');
+  const rec = {}; const now = CLOCK();
+  if (body.color !== undefined) { const c = String(body.color || ''); if (!PROFILE_COLORS.includes(c)) throw S.err(400, 'color', 'Pick one of the colours.'); rec.color = c; }
+  if (body.photo !== undefined) { const ph = String(body.photo || ''); if (ph && (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(ph) || ph.length > 40000)) throw S.err(400, 'photo', 'That photo is too big. Pick another one.'); rec.photo = ph; }
+  if (!Object.keys(rec).length) throw S.err(400, 'empty', 'Nothing to save.'); rec.at = now;
+  await db.doc('teamState/profiles').set({ v: now, p: { [me]: rec } }, { merge: true });
+  return { ok: true, v: now, me: rec };
+}
+async function here(db, who, body) {
   const now = CLOCK(); const me = String((who && who.email) || '').toLowerCase(); const ref = db.doc('teamState/here');
   let at = {}; try { const s = await ref.get(); at = (s.exists && (s.data() || {}).at) || {}; } catch (e) { at = {}; }
   if (me) { at[me] = now; await ref.set({ at: { [me]: now } }, { merge: true }); }
   const out = {}; Object.keys(at).forEach((e) => { const t = Number(at[e] || 0); if (now - t < 15 * 60000) out[e] = now - t; });
-  return { here: out };
+  const pr = await profiles(db); const res = { here: out, pv: pr.v };
+  if (body && Number(body.pv) !== pr.v) res.profiles = pr.p;
+  return res;
 }
 
 /* Who hears about a message: the others in the chat, minus whoever muted it. A mention or @channel gets through a mute. */
@@ -147,4 +162,4 @@ async function ring(db, who, body) {
 }
 function _useFetch(f) { fetchImpl = f || ((...a) => fetch(...a)); }
 
-module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, here, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };
+module.exports = { _clock: (f) => { CLOCK = f || (() => Date.now()); }, people, here, setProfile, profiles, notify, post, direct, hook, ice, ring, turnReady, botChatId, plain, BOT, CHANNELS, _useFetch };

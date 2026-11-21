@@ -59,7 +59,7 @@ function seedFor(k) {
   Object.assign(docs, teamFor(email));
   return { user: { uid: 'u-' + k, email, emailVerified: true, displayName: w.name, providerData: [{ providerId: 'password' }] }, docs };
 }
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost:4173'); let p = decodeURIComponent(url.pathname);
   if (p === '/__set') { next = { u: url.searchParams.get('u') || '/', who: url.searchParams.get('who') || 'coach', y: Number(url.searchParams.get('y') || 0), look: url.searchParams.get('look') || '' }; res.writeHead(200); res.end('ok'); return; }
@@ -67,6 +67,8 @@ http.createServer(async (req, res) => {
   if (p === '/__stub/firebase.js') { res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }); res.end(STUB); return; }
   if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }); res.end(''); return; }
   if (p === '/api/team/people') { const me = (next.who || 'coach') + '@example.test'; const w = WHO[next.who] || WHO.coach; const people = Object.keys(TH.STAFF).map((k) => TH.STAFF[k]).filter((r) => r.email !== TH.P.dee).map((r) => ({ email: r.email, name: r.name, role: r.owner ? 'owner' : r.role })).concat([{ email: me, name: w.name || 'You', role: w.role || 'team' }]); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ people })); return; }
+  if (p === '/api/team/here' || p === '/api/team/profile') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; } const TM = require(REPO + '/functions/lib/team'); const me = { email: (next.who || 'coach') + '@example.test' };
+    try { const out = p.endsWith('profile') ? await TM.setProfile(FAMDB, me, b) : await TM.here(FAMDB, me, b); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
   if (p.startsWith('/api/team/')) { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); return; }
   /* the one schedule (Nov 20, 2026): the calendar, hours, days off, staff privates, the court plan and rain run on the real engine */
   if (/^\/api\/coach\/(calendar|calendar\/off|calendar\/hours|timeoff\/(ask|decide|withdraw)|private\/(ack|players|slots|book|cancel)|courts\/plan(\/apply|\/clear|\/auto)?|rain|payroll(\/rates|\/extra|\/extra\/decide|\/mine)?)$/.test(p) && req.method === 'POST') {

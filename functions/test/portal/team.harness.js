@@ -59,8 +59,8 @@ function teamDocs() {
 }
 const user = (k, name) => ({ uid: 'u-' + k, email: P[k], emailVerified: true, displayName: name, providerData: [{ providerId: 'password' }] });
 const SEEDS = { deeShare: () => ({ share: true, user: user('dee', 'Dee Director'), docs: Object.assign({}, STAFF, teamDocs()) }), kimShare: () => ({ share: true, user: user('kim', 'Kim Coach'), docs: Object.assign({}, STAFF, teamDocs()) }), dee: () => ({ user: user('dee', 'Dee Director'), docs: Object.assign({}, STAFF, teamDocs()) }), ownerEmpty: () => ({ user: user('olive', 'Olive Owner'), docs: Object.assign({}, STAFF) }), rob: () => ({ user: user('rob', 'Rob Grounds'), docs: Object.assign({}, STAFF, teamDocs()) }) };
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.otf': 'font/otf', '.woff2': 'font/woff2' };
-function serve(port, seedOf) {
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.otf': 'font/otf', '.woff2': 'font/woff2' };
+function serve(port, seedOf, whoFn) {
   const calls = []; const db = fakeDb(Object.assign({}, STAFF, teamDocs()));
   const srv = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost'); let p = decodeURIComponent(url.pathname);
@@ -68,7 +68,7 @@ function serve(port, seedOf) {
     if (p === '/__stub/empty.js' || p === '/sw.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(''); return; }
     if (p.startsWith('/api/team/')) { let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
       calls.push([req.method + ' ' + p, body]);
-      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? { here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) } : p === '/api/team/ice' ? { iceServers: [], relay: false } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+      try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? Object.assign({ here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) }, await (async () => { const pr = await TEAM.profiles(db); return body && Number(body.pv) === pr.v ? { pv: pr.v } : { pv: pr.v, profiles: pr.p }; })()) : p === '/api/team/profile' ? await TEAM.setProfile(db, { email: P[whoFn ? whoFn() : ''] || 'x@example.test' }, body || {}) : p === '/api/team/ice' ? { iceServers: [], relay: false } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
     if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"message":"not here"}'); return; }
     if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
     const f = path.join(REPO, p); if (!f.startsWith(REPO) || !fs.existsSync(f)) { res.writeHead(404); res.end('no'); return; }
@@ -84,7 +84,7 @@ module.exports = { STAFF, teamDocs, P, SEEDS };
 if (require.main !== module) return;
 (async () => {
   if (!chromium) { console.error('Playwright is not on NODE_PATH.'); process.exit(2); }
-  let who = 'dee'; const { srv, calls } = await serve(4188, () => SEEDS[who]()); const base = 'http://localhost:4188';
+  let who = 'dee'; const { srv, calls } = await serve(4188, () => SEEDS[who](), () => who); const base = 'http://localhost:4188';
   const browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--allow-loopback-in-peer-connection'] }); const fails = []; const ok = (cond, what) => { console.log((cond ? 'ok   ' : 'FAIL ') + what); if (!cond) fails.push(what); };
   const open = async (w, h, look, hashPath) => { const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: w < 500 ? 2 : 1, colorScheme: look, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message)); await page.goto(base + '/team/' + (hashPath || '')); await page.waitForSelector('.tc-row', { timeout: 15000, state: 'attached' }); await page.waitForTimeout(700); return { page, ctx, errs }; };
   const shot = (page, name) => page.screenshot({ path: path.join(SHOTS, name + '.png') });
@@ -188,7 +188,7 @@ if (require.main !== module) return;
       await slide(page, '.tc-card .tc-row[data-open="general"]', 150); ok(await page.locator('.tc-card .tc-row[data-open="general"] .dot').count() === 0, 'phone: sliding an unread chat to the right marks it read');
       await page.evaluate(() => { document.querySelector('.tc-card .tc-row[data-open="general"]').scrollIntoView({ block: 'center' }); }); await slide(page, '.tc-card .tc-row[data-open="general"]', 150); ok(await page.locator('.tc-card .tc-row[data-open="general"] .dot').count() === 1, 'phone: and again marks it unread');
       await page.tap('[data-act="ppl-edit"]'); await page.waitForTimeout(150); await page.check('.tc-sheet input[value="' + P.rob + '"]'); await page.click('.tc-sheet button[type=submit]'); await page.waitForTimeout(250); d0 = await docs(page);
-      ok(JSON.stringify(d0['teamReads/' + P.dee].people) === JSON.stringify([P.rob]) && await page.locator('.tc-ppls button').count() === 1, 'phone: Your people is who you tick');
+      ok(JSON.stringify(d0['teamReads/' + P.dee].people) === JSON.stringify([P.rob]) && await page.locator('.tc-ppls button[data-dm]').count() === 1, 'phone: Your people is who you tick');
       await page.evaluate((me) => firebase.firestore().doc('teamReads/' + me).set({ top: [], people: [] }, { merge: true }), P.dee); await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('.tc-list').scrollTop = 0; }); await page.waitForTimeout(250); }
     if (look === 'light') { await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 560; }); await page.waitForTimeout(150); await shot(page, 'team-phone-list2'); await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 99999; }); await page.waitForTimeout(150); await shot(page, 'team-phone-list3');
       ok(await page.locator('.tc-quiet i.sw').isVisible(), 'phone: Quiet at night is a switch'); await page.evaluate(() => { document.querySelector('.tc-list').scrollTop = 0; }); }
@@ -263,6 +263,28 @@ if (require.main !== module) return;
   { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, permissions: ['camera', 'microphone'] }); const page = await ctx.newPage(); await page.goto(base + '/team/#/c/dm_kd'); await page.waitForSelector('.tc-callb');
     await shot(page, 'team-phone-dm-callbuttons'); await page.tap('[data-act="call-v"]'); await page.waitForSelector('.pc-wrap'); await page.waitForTimeout(700); await shot(page, 'team-phone-call');
     ok(await page.locator('[data-pc="flip"]').count() === 1 && await page.locator('[data-pc="screen"]').count() === 0, 'call on a phone: Flip is there, Share screen is not'); const bb = await page.locator('.pc-bar').boundingBox(); ok(bb && bb.y + bb.height <= 845, 'call on a phone: the buttons sit inside the screen'); await ctx.close(); }
+
+  // ── your profile; what shows under a sliding row; a PDF and a video open in the app (Nov 21, 2026) ──
+  who = 'dee'; { const { page, ctx } = await open(390, 844, 'light'); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+    await page.tap('[data-act="me"]'); await page.waitForSelector('.tc-pfa'); await page.tap('[data-act="pf-color"][data-c="lime"]'); await page.waitForSelector('.tc-pfa.pf-l', { timeout: 4000 }).catch(() => {});
+    ok(await page.locator('.tc-pfa.pf-l').count() === 1, 'profile: the colour you pick shows at once');
+    await page.setInputFiles('#pf-file', [{ name: 'me.png', mimeType: 'image/png', buffer: PNG }]); await page.waitForSelector('.tc-pfa.pf-ph', { timeout: 5000 }).catch(() => {});
+    ok(await page.locator('.tc-pfa.pf-ph').count() === 1, 'profile: your photo is on your picture'); await shot(page, 'team-profile');
+    await page.tap('[data-act="pf-quiet"]'); await page.waitForTimeout(300); ok(await page.locator('.tc-sheet .tc-quiet.on').count() === 1, 'profile: Quiet at night switches from the profile');
+    await page.tap('[data-act="sheet-x"]'); await page.waitForTimeout(300); ok(await page.locator('.tc-ppls .tc-me.pf-ph').count() === 1, 'profile: "You" in Your people carries your photo');
+    // a row sliding: something is under it
+    await page.evaluate(() => { document.querySelector('.tc-row[data-open="general"]').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(250); await page.evaluate(() => { document.querySelector('.tc-row[data-open="general"]').scrollIntoView({ block: 'center' }); }); await page.waitForTimeout(250); const b = await page.locator('.tc-row[data-open="general"]').boundingBox(); const cdp = await page.context().newCDPSession(page); const y = b.y + b.height / 2;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: b.x + b.width - 60, y }] }); for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: b.x + b.width - 60 - i * 25, y }] }); await page.waitForTimeout(25); }
+    ok(await page.locator('.tc-und .r i').count() === 3 && /Pin/.test(await page.locator('.tc-und .r').textContent()), 'slide: Pin, Mute, Read show under the row while it moves'); await shot(page, 'team-slide-under');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.waitForTimeout(600); await cdp.detach(); ok(await page.locator('.tc-swa').count() === 1, 'slide: let go and the three buttons are there'); await page.evaluate(() => window.scrollTo(0, 0)); await page.evaluate(() => window.scrollTo(0, 0)); await page.mouse.click(10, 10); await page.waitForTimeout(700);
+    // a PDF opens inside the app
+    await page.tap('.tc-row[data-open="general"]'); await page.waitForSelector('[data-pick="c:general"]', { state: 'attached' });
+    const PDF = Buffer.from('%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length 44>>stream\nBT /F1 18 Tf 40 100 Td (Court survey) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>');
+    await page.setInputFiles('[data-pick="c:general"]', [{ name: 'Survey.pdf', mimeType: 'application/pdf', buffer: PDF }]); await page.waitForTimeout(400); await page.click('[data-send="c:general"] .tc-send').catch(() => {}); await page.waitForSelector('.tc-file[data-get]', { timeout: 6000 }).catch(() => {});
+    await page.locator('.tc-file[data-get]').last().tap(); await page.waitForSelector('.tc-docb canvas', { timeout: 15000 }).catch(() => {});
+    ok(await page.locator('.tc-docb canvas').count() >= 1, 'a PDF opens inside the app, on the page'); await shot(page, 'team-pdf-open');
+    await page.tap('[data-docx]'); await page.waitForTimeout(300); ok(await page.locator('.tc-doc').count() === 0 && await page.locator('.tc-comp').count() >= 1, 'Back returns to the chat');
+    ok(errs.length === 0, 'profile, slide, PDF: no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
 
   // ── someone with no pages at all (the grounds): the chat is theirs too; no New channel ──
   who = 'rob'; { const { page, ctx } = await open(390, 844, 'light'); ok(await page.locator('.tc-row[data-open="general"]').count() === 1 && await page.locator('.tc-row[data-open="tennis-core"]').count() === 0, 'grounds: sees the open channels, not the private ones'); await page.tap('[data-act="new"]'); ok(await page.locator('[data-act="new-chan"]').count() === 0, 'grounds: channels are made by directors'); await ctx.close(); }

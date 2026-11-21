@@ -4,12 +4,19 @@ set -euo pipefail
 APP=ios/App/App; PLIST=$APP/Info.plist; PB=/usr/libexec/PlistBuddy
 cp art/icon-1024.png "$APP/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
 for f in "$APP"/Assets.xcassets/Splash.imageset/*.png; do cp art/splash-2732.png "$f"; done
-put() { $PB -c "Delete :$1" "$PLIST" 2>/dev/null || true; $PB -c "Add :$1 $2 $3" "$PLIST"; }
+# plutil takes the text as it is. PlistBuddy read an apostrophe as an open quote ("Parse Error: Unclosed Quotes") and left the camera
+# and photo texts out without stopping the build: iOS then closed the app the moment the camera opened (found Nov 21, 2026).
+put() { plutil -replace "$1" "-$2" "$3" "$PLIST"; }
 put CFBundleDisplayName string "ProWorld"
 put ITSAppUsesNonExemptEncryption bool false
 put NSMicrophoneUsageDescription string "ProWorld uses the microphone when you call a family or someone on the team from the app."
-put NSCameraUsageDescription string "ProWorld uses the camera for a video call with the team, and when you add a photo to a message or a player's page."
-put NSPhotoLibraryUsageDescription string "ProWorld opens your photos when you add a photo or a video to a player's page."
+put NSCameraUsageDescription string "ProWorld uses the camera for a video call with the team, and when you add a photo or a video to a message or a player page."
+put NSPhotoLibraryUsageDescription string "ProWorld opens your photos when you add a photo or a video to a message or a player page."
+put NSPhotoLibraryAddUsageDescription string "ProWorld saves a photo or a file from a chat to your photos when you ask it to."
+# the build stops here if any permission text is missing: without one, iOS closes the app when that feature is used
+for k in NSMicrophoneUsageDescription NSCameraUsageDescription NSPhotoLibraryUsageDescription NSPhotoLibraryAddUsageDescription; do
+  v=$(plutil -extract "$k" raw "$PLIST") || { echo "MISSING $k in Info.plist"; exit 1; }; [ -n "$v" ] || { echo "EMPTY $k"; exit 1; }; echo "ok $k"
+done
 # A call with the team (Nov 15, 2026) keeps its sound when the screen locks or another app is opened.
 $PB -c "Delete :UIBackgroundModes" "$PLIST" 2>/dev/null || true
 $PB -c "Add :UIBackgroundModes array" "$PLIST"; $PB -c "Add :UIBackgroundModes:0 string audio" "$PLIST"

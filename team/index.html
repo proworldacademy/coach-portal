@@ -292,6 +292,20 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
 .tc-swp .tc-row{transform:translateX(-204px);transition:transform .18s ease;background:var(--pw-sf,#fff);position:relative;z-index:1}
 .tc-swa{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:center;gap:6px;padding:6px 0}
 .tc-swa button{width:62px;height:100%;max-height:64px;border:0;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:700 11px var(--body);cursor:pointer;padding:0}
+.tc-und{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 18px;z-index:0;pointer-events:none}
+.tc-und .l{display:flex;align-items:center;gap:8px;font:700 13px var(--body);color:#0A0A0A;background:var(--lime);border-radius:999px;padding:9px 14px;opacity:.75}
+.tc-und .r{display:flex;gap:6px;height:100%;padding:8px 0;box-sizing:border-box}.tc-und .r i{width:62px;max-height:64px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:700 11px var(--body);font-style:normal;opacity:.75}
+.tc-und .a1{background:var(--lime);color:#0A0A0A}.tc-und .a2{background:var(--line);color:var(--ink)}.tc-und .a3{background:#0A0A0A;color:#F4F4F0}.tc-und.go .l,.tc-und.go .r i{opacity:1}
+.tc-row.sliding{position:relative;z-index:1;background:var(--pw-sf,#fff)}
+.tc-doc{position:fixed;inset:0;z-index:60;background:#1b1b1a;display:flex;flex-direction:column}
+.tc-doc header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:var(--pw-sf,#fff)}.tc-doc header b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 15px var(--body)}
+.tc-docs{border:0;background:var(--lime);color:#0A0A0A;border-radius:999px;padding:9px 16px;font:700 13px var(--body);cursor:pointer}
+.tc-docb{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 8px calc(16px + env(safe-area-inset-bottom))}.tc-docb canvas{background:#fff;border-radius:4px;max-width:100%}.tc-docb video{width:100%;max-height:100%;margin:auto;background:#000}.tc-docb p{color:#d8d8d2;font:400 14px var(--body);margin:auto;text-align:center;padding:20px}
+.pf-l{background:var(--lime)!important;color:#0A0A0A!important}.pf-g{background:#E4E4DE!important;color:#0A0A0A!important}.pf-ph{background-size:cover!important;background-position:center!important;color:transparent!important;font-size:0!important}
+.tc-ppls .pa.tc-me{position:relative}.tc-ppls .pa .tc-mee{position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:var(--pw-sf,#fff);color:#0A0A0A;display:grid;place-items:center;border:1px solid var(--line-2)}
+.tc-pfa{width:96px;height:96px;border-radius:50%;background:var(--ink);color:#F4F4F0;display:grid;place-items:center;font:700 28px var(--body);margin:4px auto 12px}
+.tc-pfc{display:flex;gap:10px;justify-content:center;margin:6px 0 14px}.tc-pfc button{width:40px;height:40px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}.tc-pfc button[aria-pressed=true]{border-color:var(--ink);box-shadow:0 0 0 3px var(--pw-sf,#fff) inset}
+.tc-pfr{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}.tc-pfl{font:700 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
 .tc-swa small{font-size:11px}.tc-swa .a1{background:var(--lime);color:#0A0A0A}.tc-swa .a2{background:var(--line);color:var(--ink)}.tc-swa .a3{background:#0A0A0A;color:#F4F4F0}
 .tc-row.held{background:var(--line)}
 .tc-row.drag{z-index:5;background:var(--pw-sf,#fff);box-shadow:0 14px 34px -14px rgba(0,0,0,.45);border-radius:18px!important;transition:none}.tc-row.drag::before,.tc-row.drag+.tc-row::before{display:none}
@@ -353,7 +367,9 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   const wide = () => window.innerWidth > 760;
   const initials = (n) => (String(n || "").trim().split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
   const nameOf = (email) => (email === BOT ? "ProWorld" : (S.people[email] && S.people[email].name) || String(email || "").split("@")[0]);
-  const tone = (email) => (email && email !== BOT && hash(String(email)).charCodeAt(0) % 3 === 0 ? " pk" : "");
+  /* Each person's own colour and photo (Nov 21, 2026). Before, one in three got pink by chance. Now it is what that person picked. */
+  const PROF = { p: {}, v: 0 }; const PCOL = { lime: "pf-l", pink: "pk", grey: "pf-g" };
+  const tone = (email) => { const e = String(email || "").toLowerCase(); const r = PROF.p[e]; if (!e || e === BOT) return ""; return (r && PCOL[r.color] ? " " + PCOL[r.color] : "") + (r && r.photo ? ' pf-ph" style="background-image:url(' + r.photo + ")" : ""); };
   const isHere = (email) => email !== BOT && S.here[email] === true;
   const firstOf = (email) => nameOf(email).split(/\s+/)[0];
   const chats = () => Object.assign({}, S.open, S.mine);
@@ -447,7 +463,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
         up.slice(0, flt === "unread" ? 30 : 3).map((id, i) => { const c = S.mine[id]; const l = c.last || {}; return '<button type="button" class="hr' + (i ? "" : " first") + '" data-open="' + esc(id) + '"><span class="hi">' + (ment.includes(id) ? IC("at", 20) : c.kind === "channel" ? IC(c.private ? "lock" : "hash", 20) : c.kind === "dm" && others(c)[0] === BOT ? "PW" : esc(initials(titleOf(c)))) + '</span><span class="tx"><b>' + esc(titleOf(c)) + "</b><small>" + esc((l.by && l.by !== S.me && c.kind !== "dm" ? (l.name || "").split(" ")[0] + ": " : "") + (l.text || "New")) + "</small></span>" + IC("arrow", 16) + "</button>"; }).join("") +
         (up.length > 3 && flt !== "unread" ? '<button type="button" class="more" data-flt="unread">See all ' + up.length + "</button>" : "") + "</section>" : (flt === "unread" ? '<div class="tc-none">Nothing unread. You are all caught up.</div>' : "")) +
       (topIds.length && flt === "all" && !q ? '<div class="tc-sec"><span>Pinned</span><small>Hold to move</small></div><section class="tc-card tc-topc">' + topIds.map((id) => row(id, S.mine[id], true)).join("") + "</section>" : "") +
-      (people.length || (flt === "all" && !q) ? '<div class="tc-sec"><span>Your people</span><button type="button" data-act="ppl-edit">' + (chosen.length ? "Edit" : "Choose") + '</button></div><div class="tc-ppls">' + people.map((x) => '<button type="button" data-dm="' + esc(x.email) + '" aria-label="Write to ' + esc(x.name) + '"><span class="pa' + tone(x.email) + '">' + esc(initials(x.name)) + (isHere(x.email) ? '<i title="Here now"></i>' : "") + (dmWith[x.email] && unread(dmWith[x.email]) ? '<u aria-label="Unread"></u>' : "") + "</span><small>" + esc(x.name.split(/\s+/)[0]) + "</small></button>").join("") + "</div>" : "") +
+      (people.length || (flt === "all" && !q) ? '<div class="tc-sec"><span>Your people</span><button type="button" data-act="ppl-edit">' + (chosen.length ? "Edit" : "Choose") + '</button></div><div class="tc-ppls"><button type="button" data-act="me" aria-label="Your profile and notifications"><span class="pa tc-me' + tone(S.me) + '">' + esc(initials(nameOf(S.me))) + '<b class="tc-mee">' + IC("pen", 11) + '</b></span><small>You</small></button>' + people.map((x) => '<button type="button" data-dm="' + esc(x.email) + '" aria-label="Write to ' + esc(x.name) + '"><span class="pa' + tone(x.email) + '">' + esc(initials(x.name)) + (isHere(x.email) ? '<i title="Here now"></i>' : "") + (dmWith[x.email] && unread(dmWith[x.email]) ? '<u aria-label="Unread"></u>' : "") + "</span><small>" + esc(x.name.split(/\s+/)[0]) + "</small></button>").join("") + "</div>" : "") +
       (saved.length && flt === "all" ? '<div class="tc-sec"><span>Saved for later</span></div>' + card(saved.map((x) => { const c = chat(x.chat); return '<div class="tc-row" style="cursor:default"><button type="button" data-hit="' + esc(x.chat) + "|" + esc(x.id) + "|" + esc(x.th || "") + '" style="all:unset;display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer"><span class="ic">' + IC("mark") + '</span><span class="tx"><b>' + esc((x.name || "").split(" ")[0] + " in " + (c.kind === "channel" ? "#" : "") + titleOf(c)) + "</b><small>" + esc(x.text || "A file") + '</small></span></button><button type="button" class="sv-x" data-act="save" data-id="' + esc(x.id) + '" aria-label="Done, remove from saved" title="Done">' + IC("check", 15) + '</button></div>'; }).join("")) : "") +
       (!showCh ? "" : '<div class="tc-sec"><span>Channels</span></div>' + card(chans.map((id) => row(id, S.mine[id])).join("") || '<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : q ? "No channel matches" : "No channels yet") + "</small></span></div>")) +
       (!showDm ? "" : ((liveDms.length || ppl.length) ? '<div class="tc-sec"><span>Direct</span></div>' + card(liveDms.map((id) => row(id, S.mine[id])).join("") + ppl.map((p) => '<button type="button" class="tc-row" data-dm="' + esc(p.email) + '"><span class="ic av' + tone(p.email) + '">' + esc(initials(p.name)) + '</span><span class="tx"><b>' + esc(p.name) + "</b><small>Write to " + esc(p.name.split(" ")[0]) + "</small></span></button>").join("")) : (oldDms.length || q ? "" : '<div class="tc-sec"><span>Direct</span></div>' + card('<div class="tc-row" style="cursor:default"><span class="tx"><small>' + (loading ? "Loading…" : "Tap the pencil to write to someone") + "</small></span></div>"))) ) +
@@ -541,7 +557,9 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   let player = null;
   async function recStart(key) {
     if (S.rec) return; if (!canRec()) { toast("This device cannot record here.", true); return; }
-    let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { toast("Allow the microphone for ProWorld to record a voice message.", true); return; }
+    if (S.recWait) return; S.recWait = true; if (player) { try { player.a.pause(); } catch (e) { /* fine */ } }       /* a voice message still playing holds the phone's sound: stop it first */
+    let stream; try { stream = await Promise.race([navigator.mediaDevices.getUserMedia({ audio: true }), new Promise((_, no) => setTimeout(() => no(new Error("slow")), 6000))]); } catch (e) { S.recWait = false; toast(e && e.message === "slow" ? "The microphone did not start. Try once more." : "Allow the microphone for ProWorld to record a voice message.", true); return; }
+    S.recWait = false;
     const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || "";
     let mr; try { mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 32000 } : undefined); } catch (e) { stream.getTracks().forEach((t) => t.stop()); toast("This device cannot record here.", true); return; }
     const chunks = []; const r = { key, mr, t0: Date.now(), keep: false, tick: 0 }; S.rec = r;
@@ -551,10 +569,12 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
         const had = (S.att[key] || []).length; await addFiles(key, [f]); const a = (S.att[key] || [])[had]; if (a) { a.dur = dur; render(true); send(key, S.drafts[key] || ""); return; } }
       render(true); };
     r.tick = setInterval(() => { const s = Math.floor((Date.now() - r.t0) / 1000); const el = $("rect"); if (el) el.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); if (s >= 120) recStop(true); }, 400);
-    try { mr.start(); } catch (e) { clearInterval(r.tick); S.rec = null; stream.getTracks().forEach((t) => t.stop()); toast("This device cannot record here.", true); return; }
+    try { mr.start(500); } catch (e) { clearInterval(r.tick); S.rec = null; stream.getTracks().forEach((t) => t.stop()); toast("This device cannot record here.", true); return; }
     render(true);
   }
-  function recStop(keep) { const r = S.rec; if (!r) return; r.keep = !!keep; try { r.mr.stop(); } catch (e) { S.rec = null; render(true); } }
+  function recStop(keep) { const r = S.rec; if (!r || r.stopping) return; r.keep = !!keep; r.stopping = true; try { r.mr.stop(); } catch (e) { S.rec = null; render(true); return; }
+    /* a recorder that never says it stopped must not leave the bar on the screen */
+    setTimeout(() => { if (S.rec === r) { clearInterval(r.tick); try { r.mr.stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* fine */ } S.rec = null; render(true); if (keep) toast("That recording did not save. Try once more.", true); } }, 2500); }
   async function voice(fid) {
     const mark = () => document.querySelectorAll("[data-voice]").forEach((x) => x.classList.toggle("on", !!player && x.dataset.voice === player.fid && !player.a.paused));
     if (player && player.fid === fid) { if (player.a.paused) player.a.play().catch(() => {}); else player.a.pause(); return; }
@@ -623,7 +643,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     try {
       if (atts.length) { send.busy = true; toast(atts.length === 1 ? "Sending " + atts[0].name + "…" : "Sending " + atts.length + " files…"); msg.files = [];
         for (let k = 0; k < atts.length; k++) { const a = atts[k]; const fid = ref.id + "f" + k;
-          for (let i = 0; i < a.parts.length; i++) await S.fs.doc("teamChats/" + id + "/files/" + fid + "_" + i).set({ by: S.me, at, f: fid, i, n: a.parts.length, d: a.parts[i] });
+          for (let i = 0; i < a.parts.length; i++) { if (a.parts.length > 6 && i % 4 === 0) toast("Sending " + a.name + "… " + Math.round(i / a.parts.length * 100) + "%"); await S.fs.doc("teamChats/" + id + "/files/" + fid + "_" + i).set({ by: S.me, at, f: fid, i, n: a.parts.length, d: a.parts[i] }); }
           const meta = { id: fid, name: a.name.slice(0, 120), type: a.type, size: a.size, n: a.parts.length }; if (a.dur) meta.dur = a.dur; if (a.w) { meta.w = a.w; meta.h = a.h; } msg.files.push(meta); if (a.url) S.fcache[fid] = a.url; }
         S.att[key] = []; const box = document.querySelector('[data-att="' + key + '"]'); if (box) box.innerHTML = ""; }
       await ref.set(msg);
@@ -636,7 +656,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   }
 
   /* ── photos and files: a photo is made smaller on this device (1600 px, JPEG) so it fits one record; any other file up to 8 MB travels in pieces ── */
-  const PART = 524288; const MAX_FILE = 8 * 1048576; const MAX_B64 = 900000;
+  const PART = 524288; const MAX_FILE = 40 * 1048576; const MAX_B64 = 900000;
   const b64 = (buf) => { const u = new Uint8Array(buf); let out = ""; for (let i = 0; i < u.length; i += 32768) out += String.fromCharCode.apply(null, u.subarray(i, i + 32768)); return btoa(out); };
   function shrink(file) { return new Promise((ok) => { const url = URL.createObjectURL(file); const im = new Image();
     im.onload = () => { try { let side = 1600, q = 0.82, data = "", w = 0, h = 0; for (let tries = 0; tries < 7; tries++) { const k = Math.min(1, side / Math.max(im.naturalWidth, im.naturalHeight)); w = Math.max(1, Math.round(im.naturalWidth * k)); h = Math.max(1, Math.round(im.naturalHeight * k)); const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); data = cv.toDataURL("image/jpeg", q); if (data.length - 23 <= MAX_B64) break; if (q > 0.6) q -= 0.12; else side = Math.round(side * 0.8); }
@@ -646,7 +666,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     const files = Array.from(list || []); if (!files.length) return; S.att[key] = S.att[key] || [];
     for (const file of files) { if (S.att[key].length >= 6) { toast("Six files at a time."); break; }
       let a = null; if (/^image\//.test(file.type) && !/gif|svg/.test(file.type)) a = await shrink(file);
-      if (!a) { if (file.size > MAX_FILE) { toast(file.name + " is over 8 MB. Videos and big files do not fit yet.", true); continue; }
+      if (!a) { if (file.size > MAX_FILE) { toast(file.name + " is over 40 MB. Trim the video or send a shorter one.", true); continue; }
         const buf = await file.arrayBuffer(); const parts = []; for (let i = 0; i < buf.byteLength; i += PART) parts.push(b64(buf.slice(i, i + PART))); if (!parts.length) continue;
         a = { name: file.name || "file", type: file.type || "application/octet-stream", size: file.size, parts }; if (file.type === "image/gif" && parts.length === 1) { a.url = "data:image/gif;base64," + parts[0]; a.thumb = a.url; } }
       S.att[key].push(a); }
@@ -667,6 +687,40 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     if (io) io.disconnect(); io = new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); load(e.target); } }); }, { rootMargin: "500px" }); imgs.forEach((im) => io.observe(im));
   }
   async function fileBlob(fid) { const meta = S.fmeta[fid]; const got = await fileData(fid); const parts = typeof got === "string" ? [got.slice(got.indexOf(",") + 1)] : got; const bytes = parts.map((p) => { const bin = atob(p); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }); return new Blob(bytes, { type: meta.type || "application/octet-stream" }); }
+  /* Your profile (Nov 21, 2026): your photo and colour, seen by everyone across the app, and your notifications. Only you change yours. */
+  function profSheet() {
+    const me = PROF.p[S.me] || {}; const cols = [["", "var(--ink)", "Black"], ["lime", "var(--lime)", "Lime"], ["pink", "#E286E4", "Pink"], ["grey", "#E4E4DE", "Grey"]];
+    const note = !S.push.can ? "Notifications are not available on this device." : S.push.on ? "Notifications are on for this " + (wide() ? "device" : "phone") + "." : S.push.on === null ? "Notifications are blocked for ProWorld. Turn them on in the " + (wide() ? "browser" : "phone") + " settings, under ProWorld." : "";
+    S.sheet = "me"; $("sheet").innerHTML = '<div class="tc-veil" data-veil><div class="tc-sheet" role="dialog" aria-modal="true"><h2>Your profile</h2><p>' + esc(nameOf(S.me)) + ' · this is how everyone sees you in the app.</p>' +
+      '<div class="tc-pfa' + tone(S.me) + '">' + esc(initials(nameOf(S.me))) + '</div><div class="tc-pfr"><button type="button" class="tc-pri" data-act="pf-photo">' + (me.photo ? "Change photo" : "Add a photo") + "</button>" + (me.photo ? '<button type="button" class="tc-ib" data-act="pf-nophoto">Remove</button>' : "") + '</div><input type="file" id="pf-file" accept="image/*" hidden>' +
+      '<div class="tc-pfl" style="text-align:center">Colour</div><div class="tc-pfc">' + cols.map((c) => '<button type="button" data-act="pf-color" data-c="' + c[0] + '" style="background:' + c[1] + '" aria-label="' + c[2] + '" aria-pressed="' + ((me.color || "") === c[0] ? "true" : "false") + '"></button>').join("") + "</div>" +
+      '<div class="tc-pfl">Notifications</div>' + (note ? '<p style="margin:0 0 8px">' + note + "</p>" : '<button type="button" class="tc-pri" data-act="push-on" style="margin-bottom:8px">Turn on notifications on this ' + (wide() ? "device" : "phone") + "</button>") +
+      '<button type="button" class="tc-quiet' + (S.reads.quiet ? " on" : "") + '" data-act="pf-quiet" aria-pressed="' + (S.reads.quiet ? "true" : "false") + '">' + IC("moon", 20) + '<span style="flex:1"><b>Quiet at night</b>9 pm to 7 am. Direct messages and mentions only.</span><i class="sw" aria-hidden="true"></i></button>' +
+      '<p style="margin-top:10px">To silence one chat, slide it to the left and tap Mute.</p><div class="tc-btns"><button type="button" class="tc-pri" data-act="sheet-x">Done</button></div></div></div>';
+  }
+  async function profSave(o) { try { const r = await api("profile", o); PROF.p[S.me] = Object.assign({}, PROF.p[S.me] || {}, r.me); PROF.v = r.v; render(true); profSheet(); } catch (e) { toast((e && e.message) || "Not saved.", true); } }
+  /* a square 160-pixel photo: small enough to travel with every page, sharp enough for a round picture */
+  function profPhoto(file) { const im = new Image(); const u = URL.createObjectURL(file); im.onload = () => { const n = 160; const c = document.createElement("canvas"); c.width = c.height = n; const s = Math.min(im.naturalWidth, im.naturalHeight); c.getContext("2d").drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, n, n); URL.revokeObjectURL(u); let q = 0.82, d = c.toDataURL("image/jpeg", q); while (d.length > 38000 && q > 0.4) { q -= 0.1; d = c.toDataURL("image/jpeg", q); } profSave({ photo: d }); }; im.onerror = () => { URL.revokeObjectURL(u); toast("That picture could not be read. Pick another one.", true); }; im.src = u; }
+  document.addEventListener("change", (e) => { if (e.target && e.target.id === "pf-file" && e.target.files && e.target.files[0]) profPhoto(e.target.files[0]); });
+  /* A PDF or a video opens here, in the app (Nov 21, 2026): no other app, no leaving the chat. Anything else is saved as before. */
+  let docUrl = "";
+  function closeDoc() { if (docUrl) { try { URL.revokeObjectURL(docUrl); } catch (e) { /* fine */ } docUrl = ""; } if (S.sheet === "doc") closeSheet(); }
+  async function openFile(fid) {
+    const meta = S.fmeta[fid] || {}; const nm = String(meta.name || ""); const pdf = /pdf/i.test(meta.type || "") || /\.pdf$/i.test(nm); const vid = /^video\//i.test(meta.type || "") || /\.(mov|mp4|m4v|webm)$/i.test(nm);
+    if (!pdf && !vid) { saveFile(fid); return; }
+    S.sheet = "doc"; $("sheet").innerHTML = '<div class="tc-doc" role="dialog" aria-modal="true"><header><button type="button" class="tc-rb" data-docx aria-label="Back to the chat">' + IC("back", 20) + '</button><b>' + esc(nm) + '</b><button type="button" class="tc-docs" data-save="' + esc(fid) + '">Save</button></header><div class="tc-docb" id="docb"><p>Opening…</p></div></div>';
+    const box = () => (S.sheet === "doc" ? $("docb") : null);
+    try {
+      const blob = await fileBlob(fid); if (!box()) return;
+      if (vid) { docUrl = URL.createObjectURL(blob); box().innerHTML = '<video controls playsinline autoplay src="' + docUrl + '"></video>'; return; }
+      const lib = await import("/team/vendor/pdf.min.mjs"); lib.GlobalWorkerOptions.workerSrc = "/team/vendor/pdf.worker.min.mjs";
+      const doc = await lib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise; if (!box()) return; box().innerHTML = "";
+      const wide = Math.min(box().clientWidth - 16, 900); const dpr = Math.min(window.devicePixelRatio || 1, 2); const n = Math.min(doc.numPages, 80);
+      for (let i = 1; i <= n; i++) { const pg = await doc.getPage(i); if (!box()) return; const v0 = pg.getViewport({ scale: 1 }); const vp = pg.getViewport({ scale: wide / v0.width * dpr });
+        const cv = document.createElement("canvas"); cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height); cv.style.width = wide + "px"; box().appendChild(cv); await pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise; }
+      if (doc.numPages > n && box()) box().insertAdjacentHTML("beforeend", "<p>The first " + n + " pages are shown. Save the file to read the rest.</p>");
+    } catch (e) { if (box()) box().innerHTML = '<p>This file could not be opened here. Tap Save to open it another way.</p>'; }
+  }
   async function saveFile(fid) {
     const meta = S.fmeta[fid]; if (!meta) return; toast("Getting " + meta.name + "…");
     try { const blob = await fileBlob(fid); const file = new File([blob], meta.name, { type: meta.type });
@@ -828,20 +882,27 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   /* A row under the finger. Slide it to the left: Pin, Mute, Read. Slide it to the right: read or unread at once. Hold it: the same
      options; a pinned row lifts instead and moves up or down among the pinned. A slide or a hold is never also a tap. */
   let g = null, swallow = 0; const SWW = 204;
+  /* What shows under a row while it slides: to the right, Read or Unread; to the left, Pin, Mute, Read. Before this the space was blank. */
+  function under(m) {
+    if (m.open || m.r.parentElement.classList.contains("tc-swp")) return; const par = m.r.parentElement; const id = m.id; const un = unread(id), mu = !!S.reads.mute[id], isTop = (S.reads.top || []).includes(id);
+    const d = document.createElement("div"); d.className = "tc-und"; d.style.top = m.r.offsetTop + "px"; d.style.height = m.r.offsetHeight + "px";
+    d.innerHTML = '<span class="l">' + IC(un ? "check" : "dotc", 20) + "<b>" + (un ? "Mark read" : "Mark unread") + '</b></span><span class="r"><i class="a1">' + IC("pin", 20) + "<small>" + (isTop ? "Unpin" : "Pin") + '</small></i><i class="a2">' + IC(mu ? "bell" : "mute", 20) + "<small>" + (mu ? "Unmute" : "Mute") + '</small></i><i class="a3">' + IC(un ? "check" : "dotc", 20) + "<small>" + (un ? "Read" : "Unread") + "</small></i></span>";
+    if (getComputedStyle(par).position === "static") par.style.position = "relative"; par.insertBefore(d, par.firstChild); m.und = d; m.r.classList.add("sliding");
+  }
   const buzz = () => { try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) { /* fine */ } };
   document.addEventListener("touchstart", (e) => {
     if (e.touches.length !== 1) { g = null; return; } const r = e.target.closest && e.target.closest(".tc-list .tc-card .tc-row[data-open]"); if (!r || e.target.closest(".tc-swa")) return;
     const t = e.touches[0]; const id = r.dataset.open; if (!S.mine[id]) return;
     g = { r, id, x: t.clientX, y: t.clientY, mode: "", open: S.sw === id, pinned: r.hasAttribute("data-top"), dx: 0, dy: 0 };
     const mine = g; g.hold = setTimeout(() => { if (g !== mine || g.mode) return;
-      if (g.pinned && (S.reads.top || []).filter((x) => S.mine[x]).length > 1) { g.mode = "drag"; g.rows = Array.from(r.parentElement.querySelectorAll(".tc-row[data-top]")); g.i = g.rows.indexOf(r); g.h = r.getBoundingClientRect().height || 72; g.to = g.i; r.classList.add("drag"); buzz(); }
-      else { g.mode = "held"; r.classList.add("held"); buzz(); } }, 450);   /* the options come when the finger lifts: the row must stay in the page until then, or the lift is never heard */
+      if (g.pinned && (S.reads.top || []).filter((x) => S.mine[x]).length > 1) { g.mode = "drag"; toast("Move it up or down, then let go."); g.rows = Array.from(r.parentElement.querySelectorAll(".tc-row[data-top]")); g.i = g.rows.indexOf(r); g.h = r.getBoundingClientRect().height || 72; g.to = g.i; r.classList.add("drag"); buzz(); }
+      else { g.mode = "held"; r.classList.add("held"); buzz(); toast(g.pinned ? "Let go for Unpin, Mute, Read." : "Let go for Pin, Mute, Read. A pinned chat can be moved up and down."); } }, 450);   /* the options come when the finger lifts: the row must stay in the page until then, or the lift is never heard */
   }, { passive: true });
   document.addEventListener("touchmove", (e) => {
     if (!g || g.mode === "held") return; const t = e.touches[0]; g.dx = t.clientX - g.x; g.dy = t.clientY - g.y;
-    if (!g.mode) { if (Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.4) { g.mode = "swipe"; clearTimeout(g.hold); } else if (Math.abs(g.dy) > 10) { clearTimeout(g.hold); g = null; return; } else return; }
+    if (!g.mode) { if (Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.4) { g.mode = "swipe"; clearTimeout(g.hold); under(g); } else if (Math.abs(g.dy) > 10) { clearTimeout(g.hold); g = null; return; } else return; }
     if (e.cancelable) e.preventDefault();
-    if (g.mode === "swipe") { const x = Math.max(-SWW - 24, Math.min(90, g.dx + (g.open ? -SWW : 0))); g.r.style.transition = "none"; g.r.style.transform = "translateX(" + x + "px)"; }
+    if (g.mode === "swipe") { const x = Math.max(-SWW - 24, Math.min(90, g.dx + (g.open ? -SWW : 0))); g.r.style.transition = "none"; g.r.style.transform = "translateX(" + x + "px)"; if (g.und) g.und.classList.toggle("go", x > 70 || x < -70); }
     else if (g.mode === "drag") { const to = Math.max(0, Math.min(g.rows.length - 1, g.i + Math.round(g.dy / g.h))); g.to = to; g.r.style.transform = "translateY(" + g.dy + "px)";
       g.rows.forEach((x, j) => { if (x === g.r) return; x.style.transition = "transform .12s"; x.style.transform = j > g.i && j <= to ? "translateY(" + -g.h + "px)" : j < g.i && j >= to ? "translateY(" + g.h + "px)" : ""; }); }
   }, { passive: false });
@@ -864,7 +925,9 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
     if ((b = el("[data-hit]"))) { const p = b.dataset.hit.split("|"); S.jump = { chat: p[0], id: p[1], th: p[2] || "" }; S.q = ""; S.results = null; if (S.cur === p[0]) { render(true); } else go(p[0]); return; }
     if ((b = el("[data-att-x]"))) { const p = b.dataset.attX.split("|"); (S.att[p[0]] || []).splice(+p[1], 1); const box = document.querySelector('[data-att="' + p[0] + '"]'); if (box) box.innerHTML = attHtml(p[0]); return; }
     if ((b = el("[data-view]"))) { const fid = b.dataset.view; const meta = S.fmeta[fid] || {}; S.sheet = "view"; $("sheet").innerHTML = '<div class="tc-veil" data-veil><div class="tc-sheet tc-view" role="dialog" aria-modal="true" style="max-width:860px"><img alt="' + esc(meta.name || "") + '"' + (S.fcache[fid] ? ' src="' + S.fcache[fid] + '"' : "") + ' data-file="' + esc(fid) + '"><div class="tc-btns"><button type="button" class="tc-ib" data-get="' + esc(fid) + '">' + (wide() ? "Download" : "Save or share") + '</button><button type="button" class="tc-pri" data-act="sheet-x">Done</button></div></div></div>'; lazy(); return; }
-    if ((b = el("[data-get]"))) { saveFile(b.dataset.get); return; }
+    if ((b = el("[data-get]"))) { openFile(b.dataset.get); return; }
+    if ((b = el("[data-save]"))) { saveFile(b.dataset.save); return; }
+    if (el("[data-docx]")) { closeDoc(); return; }
     if ((b = el("[data-join]"))) { const id = b.dataset.join; if (window.PWCall.active() === id) window.PWCall.join(id); else callSheet(id); return; }
     if ((b = el("[data-callin]"))) { const id = b.dataset.callin; const v = b.dataset.v === "1"; const c = S.calls[id]; closeSheet(); if (c && S.cur !== c.chat) go(c.chat); window.PWCall.join(id, v); return; }
     if ((b = el("[data-sa]"))) { rowAct(b.dataset.sa, b.dataset.id); return; }
@@ -879,6 +942,11 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
       if (a === "new") sheet("new"); else if (a === "new-chan") sheet("chan"); else if (a === "sheet-x") closeSheet(); else if (a === "info") sheet("info");
       else if (a === "back") go(""); else if (a === "thread-x") { if (unThread) { unThread(); unThread = null; } S.thread = ""; render(true); }
       else if (a === "push-on") pushOn();
+      else if (a === "me") profSheet();
+      else if (a === "pf-photo") { const i = $("pf-file"); if (i) i.click(); }
+      else if (a === "pf-nophoto") profSave({ photo: "" });
+      else if (a === "pf-color") profSave({ color: b.dataset.c || "" });
+      else if (a === "pf-quiet") { const on = !S.reads.quiet; S.reads.quiet = on; S.fs.doc("teamReads/" + S.me).set({ quiet: on }, { merge: true }).catch(() => {}); profSheet(); }
       else if (a === "call-a" || a === "call-v") window.PWCall.start(S.cur, a === "call-v" ? "video" : "audio");
       else if (a === "join") S.fs.doc("teamChats/" + S.cur).update({ members: FV().arrayUnion(S.me) }).then(() => { delete S.reads.left[S.cur]; S.fs.doc("teamReads/" + S.me).set({ left: { [S.cur]: false } }, { merge: true }).catch(() => {}); }, (er) => toast("Could not join (" + (er.code || er.message) + ").", true));
       else if (a === "leave") { const id = S.cur; S.fs.doc("teamReads/" + S.me).set({ left: { [id]: true } }, { merge: true }).catch(() => {}); S.reads.left[id] = true; S.fs.doc("teamChats/" + id).update({ members: FV().arrayRemove(S.me) }).then(() => { closeSheet(); go(""); }, (er) => toast("Could not leave (" + (er.code || er.message) + ").", true)); }
@@ -946,7 +1014,7 @@ html.dark .tc-flt button[aria-pressed="true"]{background:#F4F4F0;border-color:#F
   window.addEventListener("resize", () => { document.body.classList.toggle("tc-open", !!S.cur && !wide()); fit(); });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { markRead(); ping(); } else if (S.rec) recStop(false); });
   /* here now: said once a minute while the page is in front; four minutes without a word and the dot goes */
-  function ping() { if (document.hidden || !S.me) return; api("here", {}).then((r) => { const h = {}; Object.keys((r && r.here) || {}).forEach((e) => { if (r.here[e] < 4 * 60000) h[e] = true; }); const was = JSON.stringify(Object.keys(S.here).sort()); S.here = h; if (was !== JSON.stringify(Object.keys(h).sort())) render(true); }).catch(() => {}); }
+  function ping() { if (document.hidden || !S.me) return; api("here", { pv: PROF.v }).then((r) => { if (r && r.profiles) { PROF.p = r.profiles; PROF.v = r.pv || 0; render(true); } const h = {}; Object.keys((r && r.here) || {}).forEach((e) => { if (r.here[e] < 4 * 60000) h[e] = true; }); const was = JSON.stringify(Object.keys(S.here).sort()); S.here = h; if (was !== JSON.stringify(Object.keys(h).sort())) render(true); }).catch(() => {}); }
   setInterval(ping, 60000);
 
   /* ── start ── */
