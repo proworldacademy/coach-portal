@@ -53,6 +53,13 @@ test('a family books a private: the coach and the court go together, and neither
     db._docs.set('settings/coachCal', { fitness: ['Tara'], mental: ['Toño'], hide: [] });
     assert.deepEqual(await C.familyCourts(db, who, { player: 'p1', kind: 'fitness', coach: 'tara', date: DAY, start: 11, dur: 60 }, players), { needs: false, courts: [] });
     const fit = await C.familyBook(db, who, { player: 'p1', kind: 'fitness', coach: 'tara', date: DAY, start: 11, dur: 60 }, players, deps); assert.equal(fit.court, ''); assert.ok(told.some((x) => x[0] === 'coach' && x[1] === 'Tara'));
+    // Nov 21, 2026: a family books at least 24 hours ahead, and a day with nothing open comes with the next days that have something
+    C._clock(() => Date.parse('2027-02-28T22:00:00Z'));   // Sunday 5 PM in Florida: Monday morning is inside the 24 hours
+    const soon = await C.familySlots(db, who, { player: 'p1', kind: 'tennis', coach: 'nico', date: DAY, dur: 60 }, players);
+    assert.ok(soon.slots.length && soon.slots.every((x) => x.start > 17), 'Monday opens only after 5 PM'); assert.equal(soon.notice, 24); assert.deepEqual(soon.next, []);
+    await assert.rejects(() => C.familyBook(db, who, { player: 'p1', kind: 'tennis', coach: 'nico', date: DAY, start: 9, dur: 60, court: '6' }, players, deps), /24 hours ahead/);
+    const today = await C.familySlots(db, who, { player: 'p1', kind: 'tennis', coach: 'nico', date: '2027-02-28', dur: 60 }, players);
+    assert.equal(today.slots.length, 0, 'nothing today'); assert.ok(today.next.length >= 1 && today.next.length <= 4 && today.next[0].date === DAY && today.next[0].open > 0 && /PM$/.test(today.next[0].first), 'the next open days come with it');
   } finally { C._clock(null); }
 });
 test('not marked Received: the coach after one hour and after three, the director after six or when the lesson is close, quiet at night', () => {

@@ -30,3 +30,14 @@ test('open times: inside 7 to 7, around the academy hours, a private and time of
   assert.strictEqual(today.slots[0].start, 15.5);                        // not inside the next hour
   assert.strictEqual(C.dayOf({ date: '2026-11-18', academy, privates: [], cal: {}, durMin: 60, now: { date: '2026-11-19', h: 14 } }).slots.length, 0);
 });
+
+test('10 & Under: the afternoon on weekdays, the morning on Saturday; every other program keeps all its hours', () => {
+  const CC = require('../lib/coachcal');
+  const en = { programName: '10 & Under Advanced', days: ['Mon', 'Wed', 'Sat'], pbp: { time: '04:30 PM-06:30 PM, 09:00 AM-10:30 AM' } };
+  assert.deepEqual(CC.timesByDay(en), { mon: '4:30–6:30 PM', wed: '4:30–6:30 PM', sat: '9:00–10:30 AM' });
+  assert.deepEqual(CC.rangesOn(en, 'sat'), [[9, 10.5]]); assert.deepEqual(CC.rangesOn(en, 'tue'), [[16.5, 18.5]]);
+  assert.deepEqual(CC.timesByDay({ programName: 'Full Time', days: ['Mon'], time: '07:45 AM-09:30 AM, 02:00 PM-04:00 PM' }), { mon: '7:45–9:30 AM, 2:00–4:00 PM' });
+  assert.deepEqual(CC.timesByDay({ programName: '10 & Under Pathway', days: ['Tue'], time: '04:30 PM-06:00 PM' }), { tue: '4:30–6:00 PM' });
+  const players = [{ coach: 'Kim', enroll: en }];
+  const h = CC.academyHours(players, 'kim'); assert.deepEqual(h.sat, [[9, 10.5]]); assert.deepEqual(h.mon, [[16.5, 18.5]]);
+});

@@ -302,9 +302,10 @@ async function rain(db, who, body, deps) {
 function sessionsOn(players, date) {
   const w = DOW3[CAL.dow(date)]; const by = new Map();
   for (const p of players) {
-    const en = p.enroll || {}; const rs = CC.ranges((en.pbp && en.pbp.time) || en.time || ''); if (!rs.length) continue;
+    const en = p.enroll || {}; let rs = CC.ranges((en.pbp && en.pbp.time) || en.time || ''); if (!rs.length) continue;
     let days = (Array.isArray(en.days) ? en.days : []).map((d) => String(d).slice(0, 3).toLowerCase()).filter((d) => DOW3.includes(d)); if (!days.length) days = ['mon', 'tue', 'wed', 'thu', 'fri'];
     if (!days.includes(w)) continue;
+    rs = CC.rangesOn(en, w);   // Nov 21, 2026: 10 & Under trains in the afternoon on weekdays and in the morning on Saturday
     const prog = String(en.programName || en.programShort || en.program || ''); const u10 = /10\s*(&|and)?\s*u|under\s*10|u\s*10|red ball|orange ball|green ball/i.test(prog);
     if (/soccer|fitness|mental/i.test(prog)) continue;
     rs.forEach((r) => { const k = (u10 ? 'u10' : 'reg') + '|' + r[0] + '|' + r[1]; if (!by.has(k)) by.set(k, { u10, start: r[0], end: r[1], players: [], progs: new Map() }); const s = by.get(k); s.players.push({ id: p.id, name: p.name || '' }); if (prog) s.progs.set(prog, (s.progs.get(prog) || 0) + 1); });

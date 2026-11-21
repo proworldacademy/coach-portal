@@ -44,6 +44,26 @@ function ranges(text) {
   while ((m = re.exec(String(text || '')))) { const a = h(m[1], m[2], m[3]), b = h(m[4], m[5], m[6]); if (b > a) out.push([a, b]); }
   return out;
 }
+/* Which hours on which day (Nov 21, 2026 — "10 and under on Saturday 4:30 to 6:30? That is only during the week; Saturday is 9 to
+   10:30"). Play by Point's line lists every time of a program in one string, "04:30 PM-06:30 PM, 09:00 AM-10:30 AM", without the day.
+   For 10 & Under, when the line has a morning and an afternoon time, the weekend takes the morning and the weekdays the
+   afternoon. Every other line is read as before: all its hours on every training day. */
+const U10 = /10\s*(&|and)?\s*u|under\s*10|u\s*10|red ball|orange ball|green ball/i;
+const WEEKEND = ['sat', 'sun'];
+function rangesOn(en, w) {
+  en = en || {}; const all = ranges((en.pbp && en.pbp.time) || en.time || ''); if (all.length < 2) return all;
+  if (!U10.test(String(en.programName || en.programShort || en.program || ''))) return all;
+  const am = all.filter((r) => r[0] < 12), pm = all.filter((r) => r[0] >= 12);
+  if (!am.length || !pm.length) return all;
+  return WEEKEND.includes(w) ? am : pm;
+}
+/* the same, in words, per training day: { mon: '4:30–6:30 PM', sat: '9:00–10:30 AM' } — what the client account shows */
+function timesByDay(en) {
+  const out = {}; const days = (Array.isArray((en || {}).days) ? en.days : []).map((d) => String(d).slice(0, 3).toLowerCase()).filter((d) => DOW3.includes(d));
+  const word = (r) => { const a = fmtT(r[0]), b = fmtT(r[1]); return a.slice(-2) === b.slice(-2) ? a.slice(0, -3) + '–' + b : a + '–' + b; };
+  days.forEach((d) => { const t = rangesOn(en, d).map(word).join(', '); if (t) out[d] = t; });
+  return out;
+}
 const merge = (list) => { const s = list.slice().sort((a, b) => a[0] - b[0]); const out = []; for (const r of s) { const l = out[out.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else out.push([r[0], r[1]]); } return out; };
 
 /* The roster, read once every few minutes per engine instance: 1,200 records are not read for every tap on a day. */
@@ -64,7 +84,7 @@ function academyHours(players, key) {
     const en = p.enroll || {}; const rs = ranges((en.pbp && en.pbp.time) || en.time || ''); if (!rs.length) continue;
     let days = (Array.isArray(en.days) ? en.days : []).map((d) => String(d).slice(0, 3).toLowerCase()).filter((d) => DOW3.includes(d));
     if (!days.length) days = ['mon', 'tue', 'wed', 'thu', 'fri'];
-    days.forEach((d) => rs.forEach((r) => by[d].push(r)));
+    days.forEach((d) => rangesOn(en, d).forEach((r) => by[d].push(r)));
   }
   DOW3.forEach((d) => { by[d] = merge(by[d]); });
   return by;
@@ -101,15 +121,25 @@ function dayOf({ date, academy, privates, cal, durMin, now }) {
   const dur = (Number(durMin) || 60) / 60; const slots = [];
   for (let h = from; h + dur <= to + 1e-9; h += 0.5) {
     if ((Array.isArray(hours.closed) ? hours.closed : []).includes(w)) break;               // a weekday the coach takes no privates
-    if (now && (date < now.date || (date === now.date && h <= now.h + (now.lead == null ? 1 : now.lead)))) continue;        // not in the past, and not inside the next hour
+    if (now && (new Date(date + 'T00:00:00Z').getTime() - new Date(now.date + 'T00:00:00Z').getTime()) / 36e5 + h - now.h <= (now.lead == null ? 1 : now.lead)) continue;   // not in the past, and not inside the notice: an hour for the team, FAMILY_NOTICE for a family
     if (busy.some((x) => h < x.b - 1e-9 && h + dur > x.a + 1e-9)) continue;
     slots.push({ start: h, label: fmtT(h) });
   }
   return { date, from, to, busy: busy.sort((x, y) => x.a - y.a), slots };
 }
-async function slotsFor(db, key, date, durMin) {
+async function slotsFor(db, key, date, durMin, lead) {
   const [players, cal, pv] = await Promise.all([roster(db), calDoc(db, key), privatesOf(db, key, date, date)]);
-  return dayOf({ date, academy: academyHours(players, key), privates: pv, cal, durMin, now: nowET() });
+  return dayOf({ date, academy: academyHours(players, key), privates: pv, cal, durMin, now: Object.assign(nowET(), lead == null ? {} : { lead }) });
+}
+/* A family books a private at least 24 hours ahead (Nov 21, 2026 — "I want people to book at least 24 hours in advance… if that day
+   is not available, it gives you options for the next days"). When the day asked for has no open time with that coach, the answer
+   also carries the next days that do: up to four of them, inside the next three weeks. */
+const FAMILY_NOTICE = 24, NEXT_DAYS = 4, NEXT_SPAN = 21;
+async function nextOpen(db, key, date, durMin) {
+  const to = CAL.addDays(date, NEXT_SPAN); const [players, cal, pv] = await Promise.all([roster(db), calDoc(db, key), privatesOf(db, key, date, to)]);
+  const academy = academyHours(players, key); const now = Object.assign(nowET(), { lead: FAMILY_NOTICE }); const out = [];
+  for (let i = 1; i <= NEXT_SPAN && out.length < NEXT_DAYS; i++) { const d = CAL.addDays(date, i); const day = dayOf({ date: d, academy, privates: pv, cal, durMin, now }); if (day.slots.length) out.push({ date: d, open: day.slots.length, first: day.slots[0].label }); }
+  return out;
 }
 
 /* ── the family's side ── */
@@ -123,8 +153,8 @@ async function familySlots(db, who, body, players) {
   const key = fold(body.coach); const dur = [30, 60, 90].includes(Number(body.dur)) ? Number(body.dur) : 60;
   if (!key) return { kind, kindLabel: KINDS[kind], date, coaches: cs, coach: '', slots: [] };
   const c = cs.find((x) => x.key === key); if (!c) throw S.err(404, 'coach', 'That coach does not give this lesson.');
-  const day = await slotsFor(db, key, date, dur);
-  return { kind, kindLabel: KINDS[kind], date, coaches: cs, coach: key, coachName: c.name, dur, slots: day.slots };
+  const day = await slotsFor(db, key, date, dur, FAMILY_NOTICE);
+  return { kind, kindLabel: KINDS[kind], date, coaches: cs, coach: key, coachName: c.name, dur, slots: day.slots, notice: FAMILY_NOTICE, next: day.slots.length ? [] : await nextOpen(db, key, date, dur) };
 }
 /* The courts free at that time, for the family to pick from. Fitness and mental take none. */
 async function familyCourts(db, who, body, players) {
@@ -141,7 +171,8 @@ async function familyBook(db, who, body, players, deps) {
   const key = fold(body.coach); const list = await coaches(db, kind); const c = list.find((x) => x.key === key); if (!c) throw S.err(404, 'coach', 'Pick a coach.');
   if (!isDate(date) || !Number.isFinite(start)) throw S.err(400, 'slot', 'Pick a time.');
   const id = `${key}_${date}_${String(Math.round(start * 100)).padStart(4, '0')}`; const ref = db.doc('familyPrivates/' + id);
-  const day = await slotsFor(db, key, date, dur);
+  const day = await slotsFor(db, key, date, dur, FAMILY_NOTICE);
+  { const n = nowET(); const away = (new Date(date + 'T00:00:00Z').getTime() - new Date(n.date + 'T00:00:00Z').getTime()) / 36e5 + start - n.h; if (away <= FAMILY_NOTICE) throw S.err(409, 'notice', 'A private is booked at least 24 hours ahead. Pick a later time.'); }
   if (!day.slots.some((s) => Math.abs(s.start - start) < 1e-9)) throw S.err(409, 'taken', 'That time was just taken. Pick another one.');
   const needsCourt = kind === 'tennis'; const court = needsCourt ? S.clean(body.court, 4) : '';
   if (needsCourt && !COURTS.byId(court)) throw S.err(400, 'court', 'Pick a court.');
@@ -260,5 +291,5 @@ async function deskList(db) {
 }
 async function deskMark(db, who, body) { const id = S.clean(body.id, 80); const ref = db.doc('familyPrivates/' + id); const s = await ref.get(); if (!s.exists) throw S.err(404, 'private', 'Not found.'); const st = body.status === 'canceled' ? 'canceled' : 'confirmed'; if (st === 'canceled') { try { await COURTS.release(db, id); } catch (e) { /* next time */ } } await ref.set({ status: st, markedBy: who.email, markedAt: CLOCK() }, { merge: true }); return { ok: true, status: st }; }
 
-module.exports = { roster, calDoc, privatesOf, nowET, config, whenText, first, fold, isDate, DOW3, KINDS, ranges, merge, academyHours, dayOf, sameCoach, fmtT, coaches, slotsFor, familySlots, familyCourts, familyBook, familyCancel, familyList, week, setOff, deskList, deskMark, ack, chase, chaseStep, directorsOf,
+module.exports = { roster, calDoc, privatesOf, nowET, config, whenText, first, fold, isDate, DOW3, KINDS, ranges, rangesOn, timesByDay, nextOpen, FAMILY_NOTICE, merge, academyHours, dayOf, sameCoach, fmtT, coaches, slotsFor, familySlots, familyCourts, familyBook, familyCancel, familyList, week, setOff, deskList, deskMark, ack, chase, chaseStep, directorsOf,
   _clock: (f) => { CLOCK = f || (() => Date.now()); ROSTER = null; }, _reset: () => { ROSTER = null; } };
