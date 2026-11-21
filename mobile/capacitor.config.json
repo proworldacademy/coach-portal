@@ -7,7 +7,9 @@
     "allowNavigation": [
       "proworld-coach-portal.web.app",
       "app.justcall.io",
-      "*.justcall.io"
+      "*.justcall.io",
+      "checkout.stripe.com",
+      "*.stripe.com"
     ]
   },
   "ios": {

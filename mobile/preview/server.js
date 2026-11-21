@@ -12,6 +12,8 @@ const CAT = require(REPO + '/functions/lib/catalog'); const CHECKOUT = require(R
 const { fakeStripe } = require(REPO + '/functions/test/fake-stripe'); const { fakeDb } = require(REPO + '/functions/test/fake-db');
 const PRICES = []; for (const p of CAT.PROGRAMS) for (const pl of p.plans) PRICES.push({ id: 'price_' + pl.lookup, object: 'price', active: true, lookup_key: pl.lookup, type: 'recurring', recurring: { interval: 'month', interval_count: 1 }, unit_amount: pl.monthly * 100, product: p.product });
 const PARENT = { email: 'maria.rivera@example.com', name: 'Maria Rivera' };
+const RENTER = { email: 'pat.guest@example.com', name: 'Pat Guest' };
+const ME = () => (next.who === 'renter' ? RENTER : PARENT);
 /* the Courts page's own starting blocks, so the engine and the page read one schedule in the test copy */
 const PAGE_BLOCKS = (() => { try { const m = /const SEED_BLOCKS=(\[[\s\S]*?\n\]);/.exec(fs.readFileSync(path.join(REPO, 'backend/index.html'), 'utf8')); return new Function('return ' + m[1])(); } catch (e) { return []; } })();
 /* invented players with training hours, so the court plan has sessions to place in the test copy */
@@ -20,6 +22,7 @@ const PLAN_KIDS = (() => { const o = {}; const mk = (pre, n, coach, time, prog) 
 const FAMDB = fakeDb({
   // an invented private, so the client's calendar shows its mark (Nov 19, 2026)
   ...PLAN_KIDS,
+  'clients/pat.guest@example.com': { name: 'Pat Guest', phone: '5615550144', people: [], at: 5 },
   'groups/g-demo': { coaches: ['Lee', 'Kim'], directors: ['director@example.test'] },
   'backend/state': { blocks: PAGE_BLOCKS, bookings: [], privates: [{ id: 'pv-demo', pid: 'as-mia-r', date: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10), start: 15.5, dur: 1, court: 4, coach: 'Lee' }] },
   'players/ft-liam-r': { name: 'Liam Rivera', shortName: 'Liam R.', group: 'ft', coach: 'Kim Coach', status: 'active', source: 'monday', createdAt: 1, enroll: { programName: 'Full Time Program | Fall 2026', programShort: 'Full Time', pbp: { plan: '10 FLEX Sessions | Tennis Only', bySession: true } } },   // by the session: books his own sessions
@@ -50,6 +53,7 @@ const teamFor = (email) => JSON.parse(JSON.stringify(TH.teamDocs()).split(TH.P.d
 let next = { u: '/portal/', who: 'coach', y: 0 };
 function seedFor(k) {
   if (k === 'guest') return { user: null, docs: {} };          // nobody signed in: the sign-in screens
+  if (k === 'renter') return { user: { uid: 'u-renter', email: RENTER.email, emailVerified: true, displayName: RENTER.name, providerData: [{ providerId: 'password' }] }, docs: {} };   // a profile without a child
   if (k === 'parent') return { user: { uid: 'u-parent', email: PARENT.email, emailVerified: true, displayName: PARENT.name, providerData: [{ providerId: 'google.com' }] }, docs: {} };
   const w = WHO[k] || WHO.coach; const email = k + '@example.test'; const docs = JSON.parse(JSON.stringify(BASE));
   Object.keys(docs).filter((d) => d.startsWith('staff/')).forEach((d) => delete docs[d]);
@@ -81,9 +85,10 @@ http.createServer(async (req, res) => {
         : r === 'private/ack' ? await CC.ack(FAMDB, who, b) : r === 'private/players' ? await SC.coachPlayers(FAMDB, who, b) : r === 'private/slots' ? await SC.coachSlots(FAMDB, who, b) : r === 'private/book' ? await SC.coachBook(FAMDB, who, b, deps) : r === 'private/cancel' ? await SC.coachCancel(FAMDB, who, b, deps)
         : r === 'courts/plan' ? Object.assign(await SC.plan(FAMDB, String(b.date || '')), await SC.planState(FAMDB)) : r === 'courts/plan/apply' ? await SC.applyPlan(FAMDB, who, b) : r === 'courts/plan/clear' ? await SC.clearPlan(FAMDB, who, b) : r === 'courts/plan/auto' ? await SC.planAuto(FAMDB, who, b) : r.startsWith('payroll') ? await (() => { const P = require(REPO + '/functions/lib/payroll'); return r === 'payroll' ? P.report(FAMDB, who, b) : r === 'payroll/rates' ? P.setRate(FAMDB, who, b) : r === 'payroll/extra' ? P.addExtra(FAMDB, who, b, deps) : r === 'payroll/mine' ? P.myExtras(FAMDB, who) : P.decideExtra(FAMDB, who, b); })() : await SC.rain(FAMDB, who, b, deps);
       res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: e.code || 'x', message: e.message })); } return; }
-  if (/^\/api\/family\/court\/(slots|book|cancel|list)$/.test(p) && req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; }
-    const SC = require(REPO + '/functions/lib/schedule'); const fn = p.split('/').pop(); const fam = { email: PARENT.email, name: PARENT.name || 'Maria Rivera' };
-    try { const out = fn === 'slots' ? await SC.rentSlots(FAMDB, fam, b) : fn === 'list' ? await SC.rentList(FAMDB, fam) : fn === 'book' ? await SC.rentBook(FAMDB, fam, b, {}) : await SC.rentCancel(FAMDB, fam, b, {});
+  if (/^\/api\/family\/court\/(slots|book|cancel|list|confirm)$/.test(p) && req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; }
+    const SC = require(REPO + '/functions/lib/schedule'); const fn = p.split('/').pop(); const fam = { email: ME().email, name: ME().name, member: next.who !== 'renter' };
+    const pd = { checkout: async (o) => ({ url: '/family?court=' + encodeURIComponent(o.id), id: 'cs_demo' }), paid: async () => ({ paid: true, intent: 'pi_demo' }), tellDesk: async () => {}, tellFamily: async () => {} };   // the test copy's card page pays at once
+    try { const out = fn === 'slots' ? await SC.rentSlots(FAMDB, fam, b) : fn === 'list' ? await SC.rentList(FAMDB, fam) : fn === 'book' ? await SC.rentBook(FAMDB, fam, b, pd) : fn === 'confirm' ? await SC.rentConfirm(FAMDB, fam, b, pd) : await SC.rentCancel(FAMDB, fam, b, pd);
       res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: e.code || 'x', message: e.message })); } return; }
   if (p.startsWith('/api/coach/')) {
     let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
@@ -100,12 +105,16 @@ http.createServer(async (req, res) => {
   /* privates from the client's calendar, and the courts they hold: the real engine on the test copy's database */
   if (/^\/api\/family\/private\/(slots|courts|book|cancel)$/.test(p) && req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; }
     const CC = require(REPO + '/functions/lib/coachcal'); const fn = p.split('/').pop(); const deps = { tellCoach: async () => {}, tellDesk: async () => {}, tellFamily: async () => {} };
-    try { const { players } = await FAMILY.findPlayers(FAMDB, null, PARENT.email);
-      const out = fn === 'slots' ? await CC.familySlots(FAMDB, PARENT, b, players) : fn === 'courts' ? await CC.familyCourts(FAMDB, PARENT, b, players) : fn === 'book' ? await CC.familyBook(FAMDB, PARENT, b, players, deps) : await CC.familyCancel(FAMDB, PARENT, b, players, deps);
+    try { const CLp = require(REPO + '/functions/lib/client'); const players = (await FAMILY.findPlayers(FAMDB, null, ME().email)).players.concat(CLp.people(await CLp.get(FAMDB, ME().email)));
+      const out = fn === 'slots' ? await CC.familySlots(FAMDB, ME(), b, players) : fn === 'courts' ? await CC.familyCourts(FAMDB, ME(), b, players) : fn === 'book' ? await CC.familyBook(FAMDB, ME(), b, players, deps) : await CC.familyCancel(FAMDB, ME(), b, players, deps);
       res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: e.code || 'x', message: e.message })); } return; }
   if (p === '/api/admin/court-holds') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; } const out = await require(REPO + '/functions/lib/courts').dayHolds(FAMDB, String(b.date || '')); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); return; }
+  if (/^\/api\/family\/(profile|person|person\/remove|signup)$/.test(p) && req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { b = {}; } const CLp = require(REPO + '/functions/lib/client');
+    try { const out = p.endsWith('signup') ? await CLp.signup(FAMDB, b, {}) : p.endsWith('profile') ? await CLp.save(FAMDB, ME(), b) : p.endsWith('remove') ? await CLp.removePerson(FAMDB, ME(), b) : await CLp.addPerson(FAMDB, ME(), b); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: e.code || 'x', message: e.message })); } return; }
   if (p === '/api/family/me') { try { const vp = String(req.headers['x-view-family'] || ''); const asOwner = vp && next.who === 'owner'; if (asOwner && !FAMDB._docs.get('players/' + vp + '/private/contact')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'noemail', message: 'This player has no parent e-mail on file, so the family has no account to open yet.' })); return; }
-    const j = Object.assign(asOwner ? { viewing: true } : {}, await FAMILY.me(FAMDB, fakeStripe({ prices: PRICES }), asOwner || next.who !== 'owner' ? PARENT : { email: 'owner@example.test', name: '' })); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test' }, j))); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'me', message: e.message })); } return; }
+    const j = Object.assign(asOwner ? { viewing: true } : {}, await FAMILY.me(FAMDB, fakeStripe({ prices: PRICES }), asOwner || next.who !== 'owner' ? ME() : { email: 'owner@example.test', name: '' }));
+    { const CLp = require(REPO + '/functions/lib/client'); const cl = await CLp.get(FAMDB, ME().email); Object.assign(j, { member: (j.players || []).some((x) => x.status !== 'finished'), known: j.known || !!cl, people: CLp.people(cl), profile: cl ? { name: cl.name, phone: cl.phone } : null, name: j.name || (cl && cl.name) || '', courtCents: 2000 }); }
+    res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(Object.assign({ mode: 'test' }, j))); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: 'me', message: e.message })); } return; }
   if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"error":"route","message":"not in the test copy"}'); return; }
   if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
   const f = path.join(REPO, p); if (!f.startsWith(REPO) || !fs.existsSync(f)) { res.writeHead(404); res.end('no'); return; }

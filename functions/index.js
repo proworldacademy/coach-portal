@@ -42,6 +42,7 @@ const COACHCAL = require('./lib/coachcal');
 const COURTS = require('./lib/courts');
 const SCHED = require('./lib/schedule');
 const PAYROLL = require('./lib/payroll');
+const CLIENT = require('./lib/client');
 /* Who is told what, for the schedule (Nov 20, 2026). Owners: the staff records marked owner and the owner sign-ins. */
 async function ownerEmails(db) { const out = new Set(); try { (await db.collection('staff').where('owner', '==', true).get()).docs.forEach((d) => out.add(String(d.id).toLowerCase())); } catch (e) { /* the sign-ins below */ }
   try { const auth = require('firebase-admin/auth').getAuth(); for (const uid of ADMIN.OWNERS || []) { try { const u = await auth.getUser(uid); if (u.email) out.add(u.email.toLowerCase()); } catch (e) { /* next */ } } } catch (e) { /* none */ } return Array.from(out); }
@@ -87,12 +88,19 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
     if (route === 'GET /health') return send(res, 200, { ok: true, mode: mode(key), today: CAL.todayET(), rules: CAL.RULES.version });
     if (route === 'GET /catalog') return send(res, 200, Object.assign({ mode: mode(key), rules: { version: CAL.RULES.version, bill_day: CAL.RULES.bill_day, late: CAL.RULES.late_policy, terms: CAL.RULES.terms, breaks: CAL.RULES.breaks } }, CAT.publicCatalog()));
     // A parent signs in with six digits sent to their e-mail (lib/signin.js) — the sign-in that works inside the App Store app.
+    /* Open sign-up (Nov 21, 2026): a profile without a child. The page then asks for the six-digit code like any sign-in. */
+    if (route === 'POST /family/signup') {
+      const db = ctx.db; const out = await CLIENT.signup(db, req.body || {}, { isTeam: async (e) => (await db.collection('staff').doc(e).get()).exists,
+        onFile: async (e) => { const f = await FAMILY.findPlayers(db, S.stripeFor(key), e); return !!(f && ((f.players && f.players.length) || (f.customers && f.customers.length))); },
+        tellDesk: (text) => NOTIFY.slack(db, 'desk', '*New profile*', [text]) });
+      log('signup: profile asked'); return send(res, 200, out);
+    }
     if (route === 'POST /family/code' || route === 'POST /family/code/verify') {
       const b = req.body || {}; const db = ctx.db;
       if (route === 'POST /family/code') {
         const out = await SIGNIN.start(db, {
           isTeam: async (e) => (await db.collection('staff').doc(e).get()).exists,
-          onFile: async (e) => { const f = await FAMILY.findPlayers(db, S.stripeFor(key), e); return !!(f && ((f.players && f.players.length) || (f.customers && f.customers.length) || (Array.isArray(f) && f.length))); },
+          onFile: async (e) => { if (await CLIENT.get(db, e)) return true; const f = await FAMILY.findPlayers(db, S.stripeFor(key), e); return !!(f && ((f.players && f.players.length) || (f.customers && f.customers.length) || (Array.isArray(f) && f.length))); },
           mail: (m) => MAIL.send(db, m)
         }, b.email);
         log('signin: code asked'); return send(res, 200, out);
@@ -150,7 +158,9 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         }
       }
       const who = await FAMILY.requireFamily(req);
-      if (route === 'GET /family/me') return send(res, 200, Object.assign({ mode: mode(key) }, await FAMILY.me(ctx.db, stripe, who)));
+      if (route === 'GET /family/me') { const out = await FAMILY.me(ctx.db, stripe, who); const cl = await CLIENT.get(ctx.db, who.email);
+        /* a profile without a child is known too; `member` says an academy family (courts are free for them), `people` are the adults on the account */
+        return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '' } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents })); }
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
       if (route === 'POST /family/request') {
         const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
@@ -169,15 +179,29 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         return send(res, 200, out);
       }
       /* a court reserved from the client's calendar (Nov 20, 2026): the free times, the free courts, reserve, cancel, my courts */
-      if (route === 'POST /family/court/slots' || route === 'POST /family/court/book' || route === 'POST /family/court/cancel' || route === 'POST /family/court/list') {
-        const fn = route.split('/').pop(); const fam = { email: who.email, name: who.name || '' };
+      /* the profile and its people (Nov 21, 2026) */
+      if (route === 'POST /family/profile') return send(res, 200, await CLIENT.save(ctx.db, who, b));
+      if (route === 'POST /family/person') { const out = await CLIENT.addPerson(ctx.db, who, b); logger.info('family person added', { by: who.email }); return send(res, 200, out); }
+      if (route === 'POST /family/person/remove') return send(res, 200, await CLIENT.removePerson(ctx.db, who, b));
+      if (route === 'POST /family/court/slots' || route === 'POST /family/court/book' || route === 'POST /family/court/cancel' || route === 'POST /family/court/list' || route === 'POST /family/court/confirm') {
+        const fn = route.split('/').pop(); const cl = await CLIENT.get(ctx.db, who.email); const fam = { email: who.email, name: who.name || (cl && cl.name) || '' };
+        if (fn === 'book') { const f = await FAMILY.findPlayers(ctx.db, stripe, who.email); fam.member = (f.players || []).some((p) => String(p.status || 'active') !== 'finished'); }
+        const payDeps = Object.assign(schedDeps(ctx.db), {
+          checkout: async (o) => { const customer = await S.findOrCreateCustomer(stripe, { email: o.email, name: o.name }); const meta = { kind: 'court-rental', rental: o.id, source: 'proworld-backend' };
+            const ses = await stripe.checkout.sessions.create({ mode: 'payment', customer: customer.id, payment_method_types: ['card'], line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: o.cents, product_data: { name: o.label.slice(0, 240) } } }],
+              payment_intent_data: { description: o.label.slice(0, 900), metadata: meta, setup_future_usage: 'off_session' }, metadata: meta, expires_at: Math.floor(Date.now() / 1000) + Math.max(30, o.minutes) * 60,
+              success_url: `${ROSTER.SITE}/family?court=${encodeURIComponent(o.id)}`, cancel_url: `${ROSTER.SITE}/family?courtx=${encodeURIComponent(o.id)}` }, { idempotencyKey: 'court_' + o.id + '_' + o.cents });
+            return { url: ses.url, id: ses.id }; },
+          paid: async (sid) => { const ses = await stripe.checkout.sessions.retrieve(sid); return { paid: ses.payment_status === 'paid', intent: S.customerId(ses.payment_intent) || '' }; } });
+        if (fn === 'confirm') { const out = await SCHED.rentConfirm(ctx.db, fam, b, payDeps); logger.info('family court confirm', { by: who.email, id: S.clean(b.id, 80), status: out.status }); return send(res, 200, out); }
+        if (fn === 'book') { const out = await SCHED.rentBook(ctx.db, fam, b, payDeps); logger.info('family court book', { by: who.email, id: out.id, paid: !!out.pay }); return send(res, 200, out); }
         const out = fn === 'slots' ? await SCHED.rentSlots(ctx.db, fam, b) : fn === 'list' ? await SCHED.rentList(ctx.db, fam) : fn === 'book' ? await SCHED.rentBook(ctx.db, fam, b, schedDeps(ctx.db)) : await SCHED.rentCancel(ctx.db, fam, b, schedDeps(ctx.db));
         if (fn === 'book' || fn === 'cancel') logger.info('family court ' + fn, { by: who.email, id: out.id || S.clean(b.id, 80) });
         return send(res, 200, out);
       }
       /* privates from the client's calendar (Nov 19, 2026): the coaches of a kind, a coach's open times on a day, book one, cancel one */
       if (route === 'POST /family/private/slots' || route === 'POST /family/private/courts' || route === 'POST /family/private/book' || route === 'POST /family/private/cancel') {
-        const { players } = await FAMILY.findPlayers(ctx.db, stripe, who.email);
+        const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); const players = (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, who.email)));   // the adults on the profile book privates too
         const deps = { tellCoach: (name, text) => LESSONS.tellCoach(ctx.db, name, text), tellDesk: (text) => NOTIFY.slack(ctx.db, 'desk', '*Private* — booked in the app', [text]),
           tellFamily: async (email, m) => { try { await PUSH.send(ctx.db, [email], m.push); } catch (e) { /* no phone on */ } await MAIL.send(ctx.db, { to: email, subject: m.subject, text: m.text }); } };
         if (route.endsWith('/courts')) return send(res, 200, await COACHCAL.familyCourts(ctx.db, who, b, players));
@@ -524,6 +548,7 @@ exports.lessonReminders = onSchedule({ schedule: '*/15 * * * *', timeZone: CAL.T
   try { const out = await LESSONS.remind(DB.get(), Date.now(), (l) => logger.info('reminder: ' + l)); if (out.sent || out.errors.length) logger.info('lessonReminders', out); }
   catch (e) { logger.error('lessonReminders failed', { message: e.message }); }
   // privates booked by a family and not yet marked Received by the coach (Nov 19, 2026): the coach again, then the coach's director
+  try { const n = await SCHED.rentSweep(DB.get()); if (n) logger.info('courts freed, never paid: ' + n); } catch (e) { logger.error('rentSweep failed', { message: e.message }); }
   try { const db = DB.get(); const out = await COACHCAL.chase(db, Date.now(), { tellCoach: (name, text) => LESSONS.tellCoach(db, name, text),
       tellDirectors: async (emails, text) => { if (!emails.length) { await NOTIFY.slack(db, 'desk', '*Private* — not marked received', [text]); return; } for (const e of emails) { try { await TEAM.direct(db, e, text); } catch (err) { /* next */ } } try { await PUSH.send(db, emails, { title: 'Private not marked received', body: text, url: '/portal#/calendar', tag: 'private-chase' }); } catch (err) { /* no phone on */ } } }, (l) => logger.info('private chase: ' + l));
     if (out.coach || out.director) logger.info('privateChase', out); }
