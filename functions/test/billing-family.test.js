@@ -50,7 +50,6 @@ test('billing: every payment line by line, with what came back, and the picks fo
   assert.equal(B.pick(a.items, { from: '2026-11-10', to: '2026-11-19' }).length, 2); assert.equal(B.pick(a.items, { what: 'nonsense' }).length, 4);
   const buf = await B.pdf({ name: 'Maria Rivera', email: 'maria.rivera@example.test', from: '2026-11-01', to: '2026-11-22', what: 'all', player: '', items: a.items, today: '2026-11-22' });
   assert.equal(buf.slice(0, 5).toString(), '%PDF-'); assert.ok(buf.length > 3000);
-  require('fs').writeFileSync('/tmp/nt/invoice-test.pdf', buf);
 });
 
 test('billing: the invoice link holds the picks for fifteen minutes and does not go back further than the list', async () => {
