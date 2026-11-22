@@ -57,6 +57,7 @@ function schedDeps(db) { const many = async (emails, title, text, url) => { for 
     tellStaff: async (text) => { try { await NOTIFY.slack(db, 'desk', '*Rain*', [text]); } catch (e) { /* next */ } await many(Array.from(new Set((await ownerEmails(db)).concat(await directorEmails(db)))), 'Rain', text, '/backend'); } }; }
 const NEWS = require('./lib/news');
 const NOTICES = require('./lib/notices');
+const BILLING = require('./lib/billing');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -154,6 +155,14 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
     if (path.startsWith('/api/family/')) {
       // the family portal: a signed-in parent sees their own players, attendance, reports and bills — nothing else
       const stripe = S.stripeFor(key); const b = req.body || {};
+      /* the invoice a parent made for themselves (Nov 22, 2026): the link is the key, for fifteen minutes, so a phone opens it like any file */
+      { const m = /^GET \/family\/invoice\/([a-f0-9]{48})\.pdf$/.exec(route);
+        if (m) { const ref = ctx.db.doc('familyInvoiceLinks/' + m[1]); const snap = await ref.get(); const x = snap.exists ? snap.data() || {} : null;
+          if (!x || !(x.exp > Date.now())) throw S.err(410, 'expired', 'That link has expired. Open Billing and download it again.');
+          const found = await FAMILY.findPlayers(ctx.db, stripe, x.email); const names = {}; (found.players || []).forEach((p) => { names[p.id] = p.name; });
+          const act = await BILLING.activity(stripe, found.customers, { from: x.from, to: x.to, names });
+          const buf = await BILLING.pdf({ name: x.name || (found.customers[0] && found.customers[0].name) || '', email: x.email, from: x.from, to: x.to, what: x.what, player: x.player, items: BILLING.pick(act.items, x), today: CAL.todayET() });
+          res.set('Content-Type', 'application/pdf'); res.set('Content-Disposition', `inline; filename="ProWorld-invoice-${x.from}-to-${x.to}.pdf"`); res.set('Cache-Control', 'private, no-store'); return res.status(200).send(buf); } }
       /* An owner in a client's account (Nov 22, 2026 — "coming in as an owner, taking that view… it has to be identical": what the
          client sees, does and receives). The page sends the player's id in X-View-Family with the owner's own sign-in; the engine
          looks the family's e-mail up itself, and from there every route runs as that family: book, mark a day, pay with the card
@@ -177,6 +186,16 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         /* a profile without a child is known too; `member` says an academy family (courts are free for them), `people` are the adults on the account */
         return send(res, 200, Object.assign({ mode: mode(key) }, acting ? { viewing: true } : {}, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
       /* notifications for the parents (Nov 22, 2026): the list behind the bell and the switches. An owner looking at the account sees the list; it is not marked read for the family. */
+      /* billing a family reads by itself (Nov 22, 2026): every payment line by line, an invoice as a PDF, and a backup card */
+      if (route === 'GET /family/billing' || route === 'POST /family/billing/invoice' || route.startsWith('POST /family/card/backup')) {
+        const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); const names = {}; (found.players || []).forEach((p) => { names[p.id] = p.name; });
+        if (route === 'GET /family/billing') { const act = await BILLING.activity(stripe, found.customers, { names }); return send(res, 200, Object.assign(act, { cards: await BILLING.cards(stripe, found.customers), cats: BILLING.CATS })); }
+        if (route === 'POST /family/billing/invoice') return send(res, 200, await BILLING.link(ctx.db, { email: who.email, name: who.name || (found.customers[0] && found.customers[0].name) || '' }, b, CAL.todayET()));
+        const fn = route.split('/').pop();
+        const out = fn === 'backup' ? await BILLING.backupStart(stripe, found.customers, b, ROSTER.SITE) : fn === 'confirm' ? await BILLING.backupConfirm(stripe, found.customers, b) : fn === 'remove' ? await BILLING.backupRemove(stripe, found.customers, b) : fn === 'swap' ? await BILLING.backupSwap(stripe, found.customers, b) : null;
+        if (!out) throw S.err(404, 'route', 'Not found.');
+        logger.info('family backup card ' + fn, { by: acting ? acting.by : who.email }); return send(res, 200, out);
+      }
       if (route === 'GET /family/notices') return send(res, 200, await NOTICES.forFamily(ctx.db, who.email));
       if (route === 'POST /family/notices/read') return send(res, 200, acting ? { ok: true } : await NOTICES.markRead(ctx.db, who.email));
       if (route === 'POST /family/notices/prefs') { const out = await NOTICES.setPrefs(ctx.db, who.email, b); logger.info('family notices prefs', { by: acting ? acting.by : who.email }); return send(res, 200, out); }
@@ -556,6 +575,7 @@ exports.dailyBilling = onSchedule({ schedule: '5 5 * * *', timeZone: CAL.TZ, reg
   const ctx = { db: DB.get(), mode: mode(key) };
   const today = CAL.todayET();
   const log = (l) => logger.info('billing: ' + l);
+  try { const bk = await BILLING.backupSweep(stripe, log); if (bk.tried) logger.info('billing: backup cards', bk); } catch (e) { logger.error('backup cards failed', { message: e.message }); }   // before the late policy looks at what is still unpaid
   const plans = await JOBS.convertPaidEnrollments(stripe, today, log, ctx);
   const credits = await JOBS.applyBreakCredits(stripe, today, log, ctx);
   const late = await JOBS.applyLatePolicy(stripe, today, log, ctx);
