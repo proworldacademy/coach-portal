@@ -74,3 +74,37 @@ test('assistant: one family asks at most forty questions a day, and without a ke
   const off = fakeDb({ 'settings/ai': {} }); await IDEAS.settings(off, true); assert.equal(await A.ready(off), false);
   await assert.rejects(() => A.ask(off, who, { player: 'p1', message: 'q' }, players), /not switched on/); await IDEAS.settings(fakeDb(seed()), true);
 });
+
+test('assistant: it remembers what this parent asked about this player for 90 days, and never for another player', async () => {
+  const BRAIN = require('../lib/brain'); BRAIN._reset(); const db = fakeDb(seed()); const two = players.concat([{ id: 'p2', name: 'Bo Example', coach: 'Nico' }]); const seen = [];
+  A._useModel(async ({ system }) => { seen.push(system); return JSON.stringify({ reply: 'Saturday is 9 to 10:30.', action: null }); });
+  try {
+    let t = Date.parse('2026-11-21T15:00:00Z'); A._clock(() => t);
+    await A.ask(db, who, { player: 'p1', message: 'What time is Saturday training?' }, two); assert.ok(!/ASKED ABOUT THIS PLAYER BEFORE/.test(seen[0]), 'nothing to remember the first time');
+    t += 3 * 864e5; await A.ask(db, who, { player: 'p1', message: 'And Sunday?' }, two);
+    assert.match(seen[1], /ASKED ABOUT THIS PLAYER BEFORE \(the last 90 days/); assert.match(seen[1], /2026-11-21: asked "What time is Saturday training\?"; you said "Saturday is 9 to 10:30\."/);
+    await A.ask(db, who, { player: 'p2', message: 'Any camps?' }, two); assert.ok(!/Saturday training/.test(seen[2]), 'a brother or sister starts with no memory of the other');
+    await A.ask(db, { email: 'other@example.test', name: 'Someone Else' }, { player: 'p1', message: 'Hello there' }, two); assert.ok(!/Saturday training/.test(seen[3]), 'another parent has their own');
+    t += 91 * 864e5; await A.ask(db, who, { player: 'p1', message: 'Still there?' }, two); assert.ok(!/Saturday training|And Sunday/.test(seen[4]), 'after 90 days it is gone');
+    assert.equal((await A.recall(db, who.email, 'p1', t)).length, 1); await A.forget(db, who, two); assert.equal((await A.recall(db, who.email, 'p1', t)).length, 0, 'the parent can clear it');
+  } finally { A._clock(null); A._useModel(null); }
+});
+
+test('one brain: notes and taught answers reach every assistant; what it could not answer waits for an owner, once', async () => {
+  const BRAIN = require('../lib/brain'); BRAIN._reset(); const db = fakeDb(seed()); const owner = { email: 'owner@example.test', owner: true }; const seen = [];
+  try {
+    A._useModel(async ({ system }) => { seen.push(system); return JSON.stringify({ reply: 'I am not sure. Admin can tell you.', action: null, unknown: true }); });
+    await A.ask(db, who, { player: 'p1', message: 'Does Ada need her own balls, says Pat?', context: { name: 'Ada' } }, players);
+    await A.ask(db, who, { player: 'p1', message: 'does ada need her own balls, says pat' }, players);
+    let v = await BRAIN.view(db); assert.equal(v.open.length, 1, 'the same question is kept once'); assert.equal(v.open[0].n, 2); assert.equal(v.open[0].q, 'Does [name] need her own balls, says [name]?'); assert.equal(v.open[0].src, 'app');
+    v = await BRAIN.admin(db, owner, { action: 'teach', id: v.open[0].id, q: 'Do players bring their own balls?', a: 'No. The academy provides the balls.' }); assert.equal(v.open.length, 0); assert.equal(v.learned.length, 1);
+    await BRAIN.admin(db, owner, { action: 'save', notes: 'The pro shop opens at 8 AM on weekdays.' });
+    const text = BRAIN.text(await BRAIN.get(db, true), '2026-11-21');
+    assert.match(text, /PROGRAMS AND PRICES/); assert.match(text, /Thanksgiving/); assert.match(text, /NOTES FROM MANAGEMENT[^]*pro shop opens at 8 AM/); assert.match(text, /Q: Do players bring their own balls\?\n  A: No\. The academy provides the balls\./);
+    A._useModel(async ({ system }) => { seen.push(system); return JSON.stringify({ reply: 'No. The academy provides the balls.', action: null }); });
+    await A.ask(db, who, { player: 'p1', message: 'Does she need balls?' }, players); assert.match(seen[2], /The academy provides the balls/); assert.match(seen[2], /pro shop opens at 8 AM/);
+    await BRAIN.wonder(db, 'Is there parking for visitors?', 'web'); v = await BRAIN.view(db); assert.equal(v.open[0].src, 'web');
+    v = await BRAIN.admin(db, owner, { action: 'forget', id: v.learned[0].id }); assert.equal(v.learned.length, 0);
+    await assert.rejects(() => BRAIN.admin(db, owner, { action: 'save', notes: 'x'.repeat(6001) }), /too long/); await assert.rejects(() => BRAIN.admin(db, owner, { action: 'teach', q: 'q', a: '' }), /question and the answer/);
+  } finally { A._useModel(null); BRAIN._reset(); }
+});

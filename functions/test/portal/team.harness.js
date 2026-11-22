@@ -69,6 +69,9 @@ function serve(port, seedOf, whoFn) {
     if (p.startsWith('/api/team/')) { let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
       calls.push([req.method + ' ' + p, body]);
       try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? Object.assign({ here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) }, await (async () => { const pr = await TEAM.profiles(db); return body && Number(body.pv) === pr.v ? { pv: pr.v } : { pv: pr.v, profiles: pr.p }; })()) : p === '/api/team/profile' ? await TEAM.setProfile(db, { email: P[whoFn ? whoFn() : ''] || 'x@example.test' }, body || {}) : p === '/api/team/ice' ? { iceServers: [], relay: false } : p === '/api/team/ring/end' ? { ok: true, asked: true } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+    if (p === '/api/admin/brain') { const BR = require(path.join(REPO, 'functions/lib/brain')); let body = null; if (req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; try { body = JSON.parse(raw || '{}'); } catch (e) { body = {}; } }
+      if (!db._brainSeeded) { db._brainSeeded = true; await BR.wonder(db, 'Is there parking for visitors on tournament days?', 'web'); await BR.wonder(db, 'Do players bring their own balls?', 'app'); }
+      try { const out = body ? await BR.admin(db, { email: 'olive@example.test', owner: true }, body) : await BR.view(db); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
     if (p === '/api/admin/push/who') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(await PUSH.who(db, (await TEAM.people(db)).people))); return; }
     if (p.startsWith('/api/')) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"message":"not here"}'); return; }
     if (p.endsWith('/')) p += 'index.html'; if (!path.extname(p)) p += '/index.html';
@@ -313,6 +316,18 @@ if (require.main !== module) return;
     { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); const page = await ctx.newPage(); await page.goto(base + '/start/?as=dee'); await page.waitForTimeout(2600);
       ok(await page.locator('#pw-nudge').count() === 0, 'notifications: nothing is asked in a browser, only in the app'); await ctx.close(); }
   }
+  // ── What the AI knows (Nov 21, 2026): the owners' card for the one brain ──
+  {
+    for (const w of [390, 1280]) { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+      await page.goto(base + '/?as=ownerEmpty#people-sec'); await page.waitForSelector('#brain-card:not([hidden])', { timeout: 9000 }).catch(() => {});
+      ok(await page.locator('#brain-card:not([hidden])').count() === 1 && await page.locator('#brain-open [data-teach]').count() === (w === 390 ? 2 : 1), 'brain ' + w + ': the card opens with the questions it could not answer');
+      await page.evaluate(() => { const s = document.getElementById('people-sec'); s.hidden = false; document.getElementById('brain-card').scrollIntoView({ block: 'start' }); });
+      if (w === 390) { await page.fill('#brain-notes', 'The pro shop opens at 8 AM on weekdays.'); await page.click('#brain-save'); await page.waitForFunction(() => /Saved/.test(document.getElementById('brain-state').textContent), null, { timeout: 5000 }).catch(() => {}); ok(/Saved/.test(await page.locator('#brain-state').textContent()), 'brain: notes are saved');
+        await page.locator('#brain-open input').first().fill('No. The academy provides the balls.'); await page.locator('#brain-open [data-teach]').first().click(); await page.waitForFunction(() => document.querySelectorAll('#brain-learned [data-forget]').length === 1, null, { timeout: 5000 }).catch(() => {});
+        ok(await page.locator('#brain-learned [data-forget]').count() === 1 && await page.locator('#brain-open [data-teach]').count() === 1, 'brain: a taught answer moves from the questions to what it knows'); }
+      else ok(/pro shop opens at 8 AM/.test(await page.inputValue('#brain-notes')) && await page.locator('#brain-learned [data-forget]').count() === 1, 'brain 1280: what was saved on the phone is there on the computer');
+      const over = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1); ok(!over, 'brain ' + w + ': the card does not push the page sideways'); await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOTS, 'brain-' + w + '.png') });
+      ok(errs.length === 0, 'brain ' + w + ': no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); } }
   // ── the owners' list: who has notifications on ──
   for (const w of [390, 1280]) { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
     await page.goto(base + '/?as=ownerEmpty#people-sec'); await page.waitForSelector('#pushwho-card:not([hidden])', { timeout: 9000 }).catch(() => {});
