@@ -78,6 +78,42 @@ async function admin(db, who, body) {
   else throw S.err(400, 'action', 'Which action?');
   return view(db);
 }
+/* The weekly review (Nov 22, 2026). What families asked the two assistants in the last seven days, read from assistantLog (the client
+   app writes it on every question; the website's assistant hands its questions in through `note`). Names, e-mails and numbers were
+   taken out before anything was written. Nothing here is made up by a model: questions are sorted into subjects by their words. */
+const TOPICS = [
+  ['Prices and billing', /price|cost|how much|fee|\$|pay|bill|invoice|charge|refund|discount|card/i],
+  ['Camps', /camp|thanksgiving|winter break|spring break|summer/i],
+  ['Private lessons', /private|lesson|1 on 1|one on one/i],
+  ['Schedule and days', /schedule|what time|when|hours|days|calendar|session|today|tomorrow|week/i],
+  ['Not coming and make-ups', /absen|not coming|can.?t make|cannot make|miss|sick|make.?up|away|travel/i],
+  ['Courts', /court|rent|reserve/i],
+  ['Programs and signing up', /program|enroll|sign.?up|join|try.?out|trial|level|group|after.?school|full.?time|10 ?(&|and)? ?under/i],
+  ['Coaches and reports', /coach|report|assessment|progress|feedback/i]
+];
+const topicOf = (q) => { for (const t of TOPICS) if (t[1].test(q)) return t[0]; return 'Other'; };
+/* a question the website's assistant was asked: logged for the review, never shown to anyone but the owners */
+async function note(db, body) {
+  const q = clip((body || {}).q, 240); if (q.length < 3) return { ok: false };
+  const ch = ['web', 'whatsapp', 'instagram', 'sms', 'messenger'].includes(String((body || {}).channel)) ? String(body.channel) : 'web';
+  await db.collection('assistantLog').add({ at: Date.now(), day: require('./calendar').todayET(), q, a: '', action: body.handed === true ? 'request' : '', took: 0, src: 'web', channel: ch }); return { ok: true };
+}
+async function review(db, now) {
+  now = now || Date.now(); const day = 864e5; const from = now - 7 * day, before = from - 7 * day; const rows = [];
+  try { (await db.collection('assistantLog').where('at', '>=', before).get()).docs.forEach((d) => { const x = d.data() || {}; if (Number(x.at) <= now) rows.push(x); }); } catch (e) { /* an empty week */ }
+  const wk = rows.filter((x) => x.at >= from), prev = rows.filter((x) => x.at < from);
+  const by = new Map(); wk.forEach((x) => { const t = topicOf(String(x.q || '')); if (!by.has(t)) by.set(t, { topic: t, n: 0, admin: 0, ex: [] }); const o = by.get(t); o.n++; if (x.action === 'request') o.admin++; if (o.ex.length < 3 && x.q && !o.ex.includes(x.q)) o.ex.push(x.q); });
+  const acts = {}; wk.forEach((x) => { if (x.action) acts[x.action] = (acts[x.action] || 0) + 1; });
+  const days = {}; wk.forEach((x) => { const k = new Date(x.at).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' }); days[k] = (days[k] || 0) + 1; });
+  const busiest = Object.keys(days).sort((a, b) => days[b] - days[a])[0] || '';
+  const b = await get(db, true); const open = (b.open || []).filter((o) => Number(o.at) >= from);
+  const sent = wk.filter((x) => x.action === 'request');
+  return { from, to: now, total: wk.length, app: wk.filter((x) => x.src !== 'web').length, web: wk.filter((x) => x.src === 'web').length, before: prev.length,
+    toAdmin: sent.length, toAdminEx: sent.slice(-5).reverse().map((x) => x.q).filter(Boolean), booked: (acts.private || 0) + (acts.court || 0) + (acts.camp || 0) + (acts.program || 0), actions: acts,
+    topics: Array.from(by.values()).sort((x, y) => y.n - x.n), busiest, unanswered: open.map((o) => ({ q: o.q, n: o.n || 1, src: o.src })), unansweredAll: (b.open || []).length, taught: (b.learned || []).filter((l) => Number(l.at) >= from).length };
+}
+/* One line for the Monday note to the owners. */
+function headline(r) { return `AI review, last 7 days: ${r.total} question${r.total === 1 ? '' : 's'} (${r.app} in the app, ${r.web} on the website and messages), ${r.toAdmin} sent to Admin, ${r.unansweredAll} waiting for an answer from you. Open the Dashboard.`; }
 async function view(db) { const b = await get(db, true); return { notes: b.notes, learned: b.learned, open: b.open, at: b.at, max: MAX_NOTES }; }
 
-module.exports = { get, text, catalog, wonder, admin, view, POLICIES, _reset: () => { cache = { at: 0, data: null }; } };
+module.exports = { get, text, catalog, wonder, admin, view, note, review, headline, topicOf, POLICIES, _reset: () => { cache = { at: 0, data: null }; } };

@@ -147,7 +147,7 @@ async function ask(db, who, body, players) {
   const did = card ? ({ private: 'offered times for a ' + (card.kind || 'tennis') + ' private on ' + card.date, away: 'offered to mark ' + card.date + ' as not coming', makeup: 'offered a make-up day on ' + card.date, court: 'offered a court on ' + card.date, camp: 'showed the camp sign-up', program: 'showed the programs', admin: 'offered to send it to Admin', open: 'opened ' + card.where }[card.type] || '') : '';
   try { await memRef(db, who.email, p.id).set({ items: before.concat([{ at: nowMs, day: today, q: clip(message, 300), a: clip(reply, 300), action: did }]).slice(-KEEP), at: nowMs }); } catch (e) { /* the answer does not wait for the memory */ }
   if (out.unknown || (card && card.type === 'admin')) { try { const hide0 = [who.name, p.name, (body.context || {}).name].join(' ').split(/\s+/).filter(Boolean); await BRAIN.wonder(db, scrub(message, hide0), 'app'); } catch (e) { /* the weekly review still has the log */ } }
-  try { const hide = [who.name, p.name, (body.context || {}).name].join(' ').split(/\s+/).filter(Boolean); await db.collection('assistantLog').add({ at: Date.now(), day: today, q: scrub(message, hide), a: scrub(reply, hide), action: card ? card.type : '', took: Date.now() - t0 }); } catch (e) { /* the answer does not wait for the log */ }
+  try { const hide = [who.name, p.name, (body.context || {}).name].join(' ').split(/\s+/).filter(Boolean); await db.collection('assistantLog').add({ at: Date.now(), day: today, q: scrub(message, hide), a: scrub(reply, hide), action: card ? card.type : '', took: Date.now() - t0, src: 'app' }); } catch (e) { /* the answer does not wait for the log */ }
   return { reply, card };
 }
 

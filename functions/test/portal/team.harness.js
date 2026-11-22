@@ -69,6 +69,9 @@ function serve(port, seedOf, whoFn) {
     if (p.startsWith('/api/team/')) { let raw = ''; for await (const c of req) raw += c; let body = null; try { body = raw ? JSON.parse(raw) : null; } catch (e) { body = null; }
       calls.push([req.method + ' ' + p, body]);
       try { const out = p === '/api/team/people' ? await TEAM.people(db) : p === '/api/team/here' ? Object.assign({ here: Object.fromEntries((await TEAM.people(db)).people.filter((x, i) => i % 2 === 0).map((x) => [x.email, 1000])) }, await (async () => { const pr = await TEAM.profiles(db); return body && Number(body.pv) === pr.v ? { pv: pr.v } : { pv: pr.v, profiles: pr.p }; })()) : p === '/api/team/profile' ? await TEAM.setProfile(db, { email: P[whoFn ? whoFn() : ''] || 'x@example.test' }, body || {}) : p === '/api/team/ice' ? { iceServers: [], relay: false } : p === '/api/team/ring/end' ? { ok: true, asked: true } : { ok: true }; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
+    if (p === '/api/admin/brain/review') { const BR = require(path.join(REPO, 'functions/lib/brain')); if (!global.__aiSeed) { global.__aiSeed = 1; const now = Date.now(); const add = (d, q, src, action) => db.collection('assistantLog').add({ at: now - d * 864e5, q, a: '', action: action || '', took: 0, src });
+        await add(1, 'How much is the after school program?', 'app'); await add(1, 'What does the winter camp cost?', 'app', 'camp'); await add(2, 'Can I get a refund for last month?', 'app', 'request'); await add(2, 'Can we book a private on Saturday?', 'app', 'private'); await add(3, 'Do you rent courts on Sunday?', 'web'); await add(3, 'What time does the 10 and under group train?', 'web'); await add(4, 'Is there a sibling discount?', 'web', 'request'); await add(9, 'Is there a camp in summer?', 'app'); }
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(await BR.review(db))); return; }
     if (p === '/api/admin/brain') { const BR = require(path.join(REPO, 'functions/lib/brain')); let body = null; if (req.method === 'POST') { let raw = ''; for await (const c of req) raw += c; try { body = JSON.parse(raw || '{}'); } catch (e) { body = {}; } }
       if (!db._brainSeeded) { db._brainSeeded = true; await BR.wonder(db, 'Is there parking for visitors on tournament days?', 'web'); await BR.wonder(db, 'Do players bring their own balls?', 'app'); }
       try { const out = body ? await BR.admin(db, { email: 'olive@example.test', owner: true }, body) : await BR.view(db); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); } catch (e) { res.writeHead(e.status || 500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ message: e.message })); } return; }
@@ -316,6 +319,17 @@ if (require.main !== module) return;
     { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); const page = await ctx.newPage(); await page.goto(base + '/start/?as=dee'); await page.waitForTimeout(2600);
       ok(await page.locator('#pw-nudge').count() === 0, 'notifications: nothing is asked in a browser, only in the app'); await ctx.close(); }
   }
+  // ── What families asked (Nov 22, 2026): the weekly review on the owners' Dashboard ──
+  {
+    for (const w of [390, 1280]) { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+      await page.goto(base + '/?as=ownerEmpty#ai-review'); await page.waitForSelector('#ai-sec:not([hidden])', { timeout: 9000 }).catch(() => {});
+      ok(await page.locator('#ai-sec:not([hidden]) .aiw-n').count() === 4, 'review ' + w + ': four numbers for the week');
+      ok(/7/.test(await page.locator('.aiw-n b').first().textContent()) && await page.locator('.aiw-t').count() >= 3, 'review ' + w + ': the questions are counted and sorted by subject');
+      ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'review ' + w + ': nothing runs off the side');
+      await page.locator('#ai-sec').scrollIntoViewIfNeeded(); await page.locator('#ai-sec').screenshot({ path: path.join(SHOTS, 'ai-review-' + w + '.png') });
+      ok(errs.length === 0, 'review ' + w + ': no script errors' + (errs.length ? ' — ' + errs.join(' | ') : '')); await ctx.close(); }
+  }
+
   // ── What the AI knows (Nov 21, 2026): the owners' card for the one brain ──
   {
     for (const w of [390, 1280]) { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2, hasTouch: w < 500, isMobile: w < 500 }); const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));

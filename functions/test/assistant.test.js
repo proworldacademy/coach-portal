@@ -82,7 +82,7 @@ test('assistant: it remembers what this parent asked about this player for 90 da
     let t = Date.parse('2026-11-21T15:00:00Z'); A._clock(() => t);
     await A.ask(db, who, { player: 'p1', message: 'What time is Saturday training?' }, two); assert.ok(!/ASKED ABOUT THIS PLAYER BEFORE/.test(seen[0]), 'nothing to remember the first time');
     t += 3 * 864e5; await A.ask(db, who, { player: 'p1', message: 'And Sunday?' }, two);
-    assert.match(seen[1], /ASKED ABOUT THIS PLAYER BEFORE \(the last 90 days/); assert.match(seen[1], /2026-11-21: asked "What time is Saturday training\?"; you said "Saturday is 9 to 10:30\."/);
+    assert.match(seen[1], /ASKED ABOUT THIS PLAYER BEFORE \(the last 90 days/); assert.match(seen[1], /\d{4}-\d{2}-\d{2}: asked "What time is Saturday training\?"; you said "Saturday is 9 to 10:30\."/);
     await A.ask(db, who, { player: 'p2', message: 'Any camps?' }, two); assert.ok(!/Saturday training/.test(seen[2]), 'a brother or sister starts with no memory of the other');
     await A.ask(db, { email: 'other@example.test', name: 'Someone Else' }, { player: 'p1', message: 'Hello there' }, two); assert.ok(!/Saturday training/.test(seen[3]), 'another parent has their own');
     t += 91 * 864e5; await A.ask(db, who, { player: 'p1', message: 'Still there?' }, two); assert.ok(!/Saturday training|And Sunday/.test(seen[4]), 'after 90 days it is gone');

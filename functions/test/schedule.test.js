@@ -139,8 +139,8 @@ test('a paid court canceled 24 hours ahead is refunded; later it is not', async 
   const far = CALm.addDays(n.date, 3); const a = await SCH.rentBook(db, out, { date: far, start: 10, court: '5' }, deps); await SCH.rentConfirm(db, out, { id: a.id }, deps);
   const c1 = await SCH.rentCancel(db, out, { id: a.id }, deps); assert.equal(c1.refunded, true); assert.deepEqual(refunds, [{ id: a.id, intent: 'pi_9', cents: 2000 }]); assert.ok(said.some((t) => /on its way back to your card/.test(t)));
   assert.ok((await SCH.rentSlots(db, out, { date: far, start: 10, dur: 60 })).courts.some((c) => c.id === '5'));
-  // tomorrow, less than 24 hours away: no refund, the admin team is told
-  const soon = CALm.addDays(n.date, 1); const st = Math.max(7, Math.floor(n.h) - 2); const b = await SCH.rentBook(db, out, { date: soon, start: st, court: '6' }, deps); await SCH.rentConfirm(db, out, { id: b.id }, deps);
+  // less than 24 hours away whatever the hour the tests run at: no refund, the admin team is told
+  const today = n.h < 19; const soon = today ? n.date : CALm.addDays(n.date, 1); const st = today ? Math.max(7, Math.ceil(n.h) + 1) : 7; const b = await SCH.rentBook(db, out, { date: soon, start: st, court: '6' }, deps); await SCH.rentConfirm(db, out, { id: b.id }, deps);
   const c2 = await SCH.rentCancel(db, out, { id: b.id }, deps); assert.equal(c2.refunded, false); assert.equal(c2.late, true); assert.equal(refunds.length, 1); assert.ok(said.some((t) => /no refund, unless you decide otherwise/.test(t)));
   // the refund fails at the bank: the admin team is told to do it by hand
   const c = await SCH.rentBook(db, out, { date: CALm.addDays(n.date, 4), start: 10, court: '5' }, deps); await SCH.rentConfirm(db, out, { id: c.id }, deps);
@@ -153,4 +153,18 @@ test('a client profile keeps a picture and quiet nights', async () => {
   const r = await CL.save(db, who, { name: 'Pat Example', phone: '561 555 0100', photo: 'data:image/jpeg;base64,AAAA', quiet: true }); assert.equal(r.quiet, true); assert.equal(r.photo, 'data:image/jpeg;base64,AAAA');
   await assert.rejects(CL.save(db, who, { photo: 'data:text/html;base64,AAAA' }), (e) => e.code === 'photo');
   const r2 = await CL.save(db, who, { phone: '561 555 0101' }); assert.equal(r2.photo, 'data:image/jpeg;base64,AAAA'); assert.equal(r2.quiet, true);     // saving the phone keeps the rest
+});
+
+test('the weekly review: what families asked, from the app and the website, with nothing made up', async () => {
+  const B = require('../lib/brain'); B._reset(); const db = fresh(); const now = Date.now(); const add = (o) => db.collection('assistantLog').add(Object.assign({ a: '', action: '', took: 0 }, o));
+  await add({ at: now - 1 * 864e5, q: 'How much is the after school program?', src: 'app' });
+  await add({ at: now - 2 * 864e5, q: 'What does the winter camp cost?', src: 'app', action: 'camp' });
+  await add({ at: now - 2 * 864e5, q: 'Can I get a refund for last month?', src: 'app', action: 'request' });
+  await add({ at: now - 9 * 864e5, q: 'Is there a camp in summer?', src: 'app' });                                // the week before
+  await B.note(db, { q: 'Do you rent courts on Sunday?', channel: 'whatsapp' }); await B.note(db, { q: 'hi' });   // too short: not kept
+  await B.wonder(db, 'Do you have a pro shop?', 'web');
+  const r = await B.review(db, Date.now() + 1000);
+  assert.equal(r.total, 4); assert.equal(r.app, 3); assert.equal(r.web, 1); assert.equal(r.before, 1); assert.equal(r.toAdmin, 1); assert.equal(r.booked, 1);
+  assert.equal(r.topics[0].topic, 'Prices and billing'); assert.equal(r.topics[0].n, 3); assert.ok(r.topics.some((t) => t.topic === 'Courts'));
+  assert.equal(r.unanswered.length, 1); assert.match(B.headline(r), /4 questions .* 1 sent to Admin, 1 waiting/);
 });
