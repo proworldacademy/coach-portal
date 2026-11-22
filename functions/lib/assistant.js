@@ -63,7 +63,8 @@ function prompt(today, now, p, ctx, coachNames, brain, before) {
     c.coming ? `The next days on the schedule: ${clip(c.coming, 700)}.` : '',
     c.privates ? `Privates booked: ${clip(c.privates, 300)}.` : 'No private is booked.',
     `Make-up sessions to use: ${Number(c.makeups) || 0}${Number(c.makeups) ? ' (they expire ' + clip(c.makeupsUntil, 12) + ')' : ''}.`,
-    c.coaches ? `Coaches: ${clip(c.coaches, 120)}.` : ''
+    c.coaches ? `Coaches: ${clip(c.coaches, 120)}.` : '',
+    c.charges ? `What the family paid lately (date, item, player, amount; from the Billing screen): ${clip(c.charges, 900)}. Explain a charge from this list plainly; for a refund, a dispute or anything not on the list, send it to Admin.` : ''
   ].filter(Boolean);
   return [
     'You are "Ask ProWorld", the assistant inside the ProWorld Academy client app (a tennis, soccer and fitness academy in Delray Beach, Florida). A parent or an adult player writes to you. Be short, warm and plain: one to three sentences, no lists unless asked, no emoji, no em dashes. Answer in the language the person writes in.',

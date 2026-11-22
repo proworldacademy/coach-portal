@@ -152,6 +152,20 @@ html.dark .ch-ppl .ch-i{background:#F4F4F0;color:#0A0A0A}html.dark .ch-ppl .ch-i
 html.dark .ch-chat{background:#0A0A0A;color:#F4F4F0}html.dark .ch-chat header,html.dark .ch-send{background:#161616;border-color:#343434}html.dark .ch-chat header button{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-chat header p,html.dark .ch-lines .n{color:#C9C9C4}
 html.dark .ch-b{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-b.me{background:#E2FE78;color:#0A0A0A;border-color:#E2FE78}html.dark .ch-send textarea{background:#0A0A0A;border-color:#343434;color:#F4F4F0}
 .ch-day{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#5E605A;font-weight:700}
+.bl{display:grid;gap:14px;max-width:680px}.bl-c{background:#fff;border:1px solid #DADCD5;border-radius:30px;padding:20px 22px;display:grid;gap:4px}
+.bl-c h3{margin:0 0 6px;font:700 12px/1.2 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#5E605A}
+.bl-r{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:11px 0;border-top:1px solid #ECEDE8;color:inherit;text-decoration:none}.bl-c h3+.bl-r,.bl-m+.bl-r{border-top:0}
+.bl-r b{display:block;font-size:16px;line-height:1.3}.bl-r span{font-size:13.5px;color:#5E605A}.bl-r em{font-style:normal;font-weight:700;font-size:16px;text-align:right;white-space:nowrap;display:flex;flex-direction:column;align-items:flex-end;gap:2px}.bl-r em small{font-weight:400;font-size:12.5px;color:#5E605A}
+.bl-m{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#5E605A;padding:14px 0 2px;border-bottom:1px solid #0A0A0A}.bl-c h3+.bl-m{padding-top:2px}
+.bl-ch{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0}.bl-ch button{height:40px;border-radius:20px;border:1px solid #0A0A0A;background:none;color:#0A0A0A;padding:0 16px;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer}.bl-ch button[aria-pressed=true]{background:#0A0A0A;color:#E2FE78}
+.bl-d{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0}.bl-d label{display:grid;gap:4px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5E605A}.bl-d input{font:400 16px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;height:46px;border-radius:14px;border:1px solid #DADCD5;padding:0 12px;background:#fff;color:#0A0A0A;min-width:0;width:100%}
+.bl-s{margin:8px 0 4px;font-size:14.5px;color:#2F312C}.bl-p{margin:4px 0;font-size:15px;line-height:1.45;color:#2F312C}.bl-p a,.bl-f a{color:inherit;text-decoration:underline}.bl-f{margin:8px 0 0;font-size:13px;line-height:1.45;color:#5E605A}
+.bl-go{height:52px;border-radius:26px;border:0;background:#0A0A0A;color:#fff;font:700 16px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;margin-top:6px}.bl-go:disabled{opacity:.4;cursor:default}
+.bl-gh{height:48px;border-radius:24px;border:1.5px solid #0A0A0A;background:none;color:#0A0A0A;font:700 15px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;margin-top:8px}
+.bl-a{border:0;background:none;color:inherit;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;text-decoration:underline;cursor:pointer;padding:6px 0}.bl-pay{display:inline-flex;align-items:center;height:34px;border-radius:17px;background:#E2FE78;color:#0A0A0A;padding:0 16px;font-size:14px;text-decoration:none;margin-top:4px}
+.bl .ch-askl{margin:0}#app.pg-billing #requests{display:none}
+html.dark .bl-c{background:#161616;border-color:#343434}html.dark .bl-c h3,html.dark .bl-r span,html.dark .bl-r em small,html.dark .bl-m,html.dark .bl-f,html.dark .bl-d label{color:#B5B5B0}html.dark .bl-r{border-color:#2A2A2A}html.dark .bl-m{border-color:#F4F4F0}html.dark .bl-s,html.dark .bl-p{color:#D5D5D0}
+html.dark .bl-ch button,html.dark .bl-gh{border-color:#F4F4F0;color:#F4F4F0}html.dark .bl-ch button[aria-pressed=true]{background:#E2FE78;color:#0A0A0A;border-color:#E2FE78}html.dark .bl-go{background:#E2FE78;color:#0A0A0A}html.dark .bl-d input{background:#161616;border-color:#343434;color:#F4F4F0}
 .ch-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
 .ch-nb{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;padding:0}
 .ch-nb i{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#0A0A0A;color:#E2FE78;font:normal 700 12px/20px "Aeonik Pro",system-ui,sans-serif;text-align:center}
@@ -301,7 +315,7 @@ async function api(path,body){
 async function load(){
   app.innerHTML=`<div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; Loading your family…</p></div></div>`;
   try{if(!VIEW&&localStorage.getItem('pw-team')!=='1')localStorage.setItem('pw-side','family')}catch(e){}   // not on a device the team signs in on (pw-team, set by shared/pwauth.js): its Dashboard stays the Dashboard
-  try{me=await api('me');render();courtReturn();ntLoad()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
+  try{me=await api('me');render();courtReturn();ntLoad();blReturn()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
 }
 
 /* ── the page ── */
@@ -341,18 +355,68 @@ function reportCard(p,r){
     ${r.notes.map(n=>`<div class="note"><b>${esc(n.label)}</b><p>${esc(n.text)}</p></div>`).join('')}
   </div>`;
 }
-function billingBlock(){
-  const b=me.billing;const subs=b.subscriptions;const inv=b.openInvoices;
-  const rows=subs.map(s=>`<tr><td>${esc(s.player||'—')}</td><td>${esc(s.program)}${s.plan?' · '+esc(s.plan):''}${s.days.length?'<br><span class="hint">'+esc(s.days.join('/'))+'</span>':''}</td><td>${s.hold?'<span class="pill lime">On hold</span>':s.cancelAtPeriodEnd?'<span class="pill ghost">Ends '+esc(short(s.next&&s.next.date))+'</span>':s.status==='canceled'?'<span class="pill ghost">Ended</span>':s.status==='past_due'?'<span class="pill lime">Payment due</span>':'<span class="pill mint">Active</span>'}</td><td class="r">${s.next&&s.next.date&&!s.cancelAtPeriodEnd&&s.status!=='canceled'?(s.next.cents!=null?cents(s.next.cents):dollars(s.monthly))+'<br><span class="hint">'+esc(short(s.next.date))+'</span>':'—'}</td></tr>`).join('');
-  const open=inv.map(i=>`<tr><td>${esc(i.description)}<br><span class="hint">${esc(nice(i.created))}</span></td><td class="r">${cents(i.amountDue)}</td><td class="r">${i.url?`<a class="btn sm lime" href="${esc(i.url)}" target="_blank" rel="noopener">Pay</a>`:''}</td></tr>`).join('');
+/* Billing a family reads and uses by itself (Nov 22, 2026): the plan, an invoice they make themselves (how long, what, who → a PDF),
+   every payment line by line, the card and a backup card, and one line to ask about a charge. Engine: functions/lib/billing.js. */
+let BILL=null,BLERR='',BLMORE=false;const BF={per:'month',what:'all',player:'',from:'',to:''};
+const blMoney=(c)=>(c<0?'-':'')+'$'+(Math.abs(c)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const blDay=(iso,y)=>new Date(iso+'T12:00:00').toLocaleDateString('en-US',y?{month:'short',day:'numeric',year:'numeric'}:{month:'short',day:'numeric'});
+function blRange(){const t=String(me.today);if(BF.per==='last'){const d=new Date(t.slice(0,7)+'-01T12:00:00');d.setDate(0);const e=ymd(d);return[e.slice(0,7)+'-01',e]}if(BF.per==='year')return[t.slice(0,4)+'-01-01',t];if(BF.per==='pick')return[BF.from||t.slice(0,7)+'-01',BF.to||t];return[t.slice(0,7)+'-01',t]}
+function blPicked(){const[f,t]=blRange();return(BILL?BILL.items:[]).filter(x=>x.date>=f&&x.date<=t&&(BF.what==='all'||x.cat===BF.what)&&(!BF.player||x.player===BF.player))}
+async function blLoad(force){if(BILL&&!force)return;try{BILL=await api('billing');BLERR=''}catch(e){BLERR=e.message||'Billing did not load.'}blDraw()}
+function blDraw(){const el=document.getElementById('bl');if(el)el.innerHTML=blInner()}
+function blInner(){
+  const b=me.billing;const subs=b.subscriptions;const inv=b.openInvoices;const chip=(k,v,l,cur)=>`<button type="button" data-bl="${k}" data-v="${esc(v)}" aria-pressed="${v===cur}">${esc(l)}</button>`;
+  const plan=subs.length?subs.map(s=>{const live=s.next&&s.next.date&&!s.cancelAtPeriodEnd&&s.status!=='canceled';const st=s.hold?'On hold':s.cancelAtPeriodEnd?'Ends '+short(s.next&&s.next.date):s.status==='canceled'?'Ended':s.status==='past_due'?'Payment due':'Active';
+    return `<div class="bl-r"><div><b>${esc(s.player||'Player')} · ${esc(s.program)}</b><span>${esc([s.plan,s.days.length?s.days.join('/'):'',st].filter(Boolean).join(' · '))}</span></div><em>${live?(s.next.cents!=null?cents(s.next.cents):dollars(s.monthly)):''}<small>${live?'next charge '+esc(short(s.next.date)):''}</small></em></div>`}).join('')
+    :`<p class="bl-p">No monthly plan through this account yet. <a href="/enroll">Enroll a player</a>.</p>`;
   const cycles=[...new Set(subs.filter(s=>s.status!=='canceled').map(s=>s.cycle||'a month'))];const onCycle=cycles.length===1&&cycles[0]!=='a month'?cycles[0]:null;   // the staff test renews every 3 days, not on the 1st
-  return `<section class="sec pg" id="billing"><div class="sec-h"><h2>Billing</h2><small>${inv.length?inv.length+' to pay':onCycle?'renews '+esc(onCycle):'the 1st of each month'}</small></div>
-    ${subs.length?`<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>Player</th><th>Plan</th><th>Status</th><th class="r">Next charge</th></tr></thead><tbody>${rows}</tbody></table></div><p class="fine">${onCycle?'This plan renews '+esc(onCycle)+' on the card on file until it is cancelled.':'Tuition bills on the 1st of each month for that month\'s training days; school breaks are taken off before the charge. Late policy: a $50 late fee on the 6th, the spot goes on hold on the 10th.'} <a href="/enroll/agreement">Program policies</a>.</p></div>`:`<div class="card"><p class="hint">No monthly plan through this account yet. <a href="/enroll">Enroll a player</a> — nothing is charged until the start month, and your card is kept on file for everything after.</p></div>`}
-    ${inv.length?`<div class="card"><h3>Open invoices</h3><div class="scroll"><table class="tbl"><tbody>${open}</tbody></table></div></div>`:''}
-    ${(b.paidInvoices||[]).length?`<div class="card"><h3>Invoices paid</h3><div class="scroll"><table class="tbl"><tbody>${b.paidInvoices.map(i=>`<tr><td>${esc(i.description)}<br><span class="hint">${esc(nice(i.date))}</span></td><td class="r">${cents(i.cents)}</td><td class="r">${i.pdf?`<a class="btn sm" href="${esc(i.pdf)}" target="_blank" rel="noopener">Download</a>`:''}</td></tr>`).join('')}</tbody></table></div></div>`:''}
-    <div class="rowx"><button class="btn ghost sm" type="button" data-ask="invoice">Ask for an invoice</button><span class="hint">For a scholarship, your accountant or your records. The admin team sends it to your e-mail.</span></div>
-    ${b.customers.length?`<div class="rowx"><button class="btn" id="portal">Manage card, invoices &amp; receipts <span class="ar">→</span></button><span class="hint">Opens your secure Stripe account page.</span></div>`:''}</section>`;
+  const open=inv.length?`<section class="bl-c"><h3>To pay</h3>${inv.map(i=>`<div class="bl-r"><div><b>${esc(i.description)}</b><span>${esc(nice(i.created))}</span></div><em>${cents(i.amountDue)}${i.url?`<a class="bl-pay" href="${esc(i.url)}" target="_blank" rel="noopener">Pay</a>`:''}</em></div>`).join('')}</section>`:'';
+  let mid;
+  if(!BILL)mid=`<section class="bl-c"><h3>Everything charged</h3><p class="bl-p">${BLERR?esc(BLERR)+' <button type="button" class="bl-a" data-bl="retry">Try again</button>':'<span class="spin"></span>'}</p></section>`;
+  else{
+    const[f,t]=blRange();const got=blPicked();const paid=got.reduce((n,x)=>n+x.cents-(x.refunded||0),0);const names=[...new Set(BILL.items.map(x=>x.player).filter(Boolean))];
+    const invoice=`<section class="bl-c"><h3>Get an invoice</h3>
+      <div class="bl-ch" role="group" aria-label="How long">${chip('per','month','This month',BF.per)}${chip('per','last','Last month',BF.per)}${chip('per','year','This year',BF.per)}${chip('per','pick','Pick dates',BF.per)}</div>
+      ${BF.per==='pick'?`<div class="bl-d"><label>From<input type="date" id="bl-from" value="${esc(f)}" max="${esc(me.today)}"></label><label>To<input type="date" id="bl-to" value="${esc(t)}" max="${esc(me.today)}"></label></div>`:''}
+      <div class="bl-ch" role="group" aria-label="What">${Object.entries(BILL.cats||{all:'Everything'}).map(([k,l])=>chip('what',k,l,BF.what)).join('')}</div>
+      ${names.length>1?`<div class="bl-ch" role="group" aria-label="Who">${chip('player','','All players',BF.player)}${names.map(n=>chip('player',n,n.split(' ')[0]+(n.split(' ')[1]?' '+n.split(' ')[1][0]+'.':''),BF.player)).join('')}</div>`:''}
+      <p class="bl-s">${got.length?got.length+(got.length===1?' item':' items')+' · '+blMoney(paid)+' paid · ':'Nothing paid · '}${esc(blDay(f))} to ${esc(blDay(t))}</p>
+      <button type="button" class="bl-go" data-bl="pdf" ${got.length?'':'disabled'}>Download PDF</button></section>`;
+    const rows=BLMORE?BILL.items:BILL.items.slice(0,10);let last='';
+    const list=`<section class="bl-c"><h3>Everything charged</h3>${BILL.items.length?rows.map(x=>{const m=x.date.slice(0,7);let head='';if(m!==last){last=m;const tot=BILL.items.filter(y=>y.date.slice(0,7)===m).reduce((n,y)=>n+y.cents-(y.refunded||0),0);head=`<div class="bl-m"><span>${esc(new Date(m+'-01T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'}))}</span><span>${blMoney(tot)}</span></div>`}
+      const left=x.cents-(x.refunded||0);const inner=`<div><b>${esc(x.label)}</b><span>${esc(blDay(x.date))}${x.player?' · '+esc(x.player.split(' ')[0]+(x.player.split(' ')[1]?' '+x.player.split(' ')[1][0]+'.':'')):''}</span></div><em>${blMoney(left)}<small>${x.refunded?'Refunded '+blMoney(x.refunded):'Paid'}</small></em>`;
+      return head+(x.receipt?`<a class="bl-r" href="${esc(x.receipt)}" target="_blank" rel="noopener">${inner}</a>`:`<div class="bl-r">${inner}</div>`)}).join('')+(BILL.items.length>rows.length?`<button type="button" class="bl-a" data-bl="more">Show all ${BILL.items.length}</button>`:''):`<p class="bl-p">Nothing has been charged through the app yet.</p>`}</section>`;
+    const cd=(BILL.cards||[])[0];
+    const cards=`<section class="bl-c"><h3>Cards</h3>
+      <div class="bl-r"><div><b>${cd&&cd.main?esc(cd.main.brand)+' ending '+esc(cd.main.last4):'No card on file'}</b><span>Main card${cd&&cd.main&&cd.main.exp?' · expires '+esc(cd.main.exp):''}</span></div><em><button type="button" class="bl-a" data-bl="portal">${cd&&cd.main?'Change':'Add a card'}</button></em></div>
+      ${cd&&cd.backup?`<div class="bl-r"><div><b>${esc(cd.backup.brand)} ending ${esc(cd.backup.last4)}</b><span>Backup card${cd.backup.exp?' · expires '+esc(cd.backup.exp):''}</span></div><em><button type="button" class="bl-a" data-bl="swap">Make it the main card</button><button type="button" class="bl-a" data-bl="unback">Remove</button></em></div>`
+        :cd&&cd.main?`<button type="button" class="bl-gh" data-bl="back">Add a backup card</button>`:''}
+      <p class="bl-f">A backup card is only used when the main card does not go through.</p></section>`;
+    mid=invoice+list+cards}
+  return `${open}<section class="bl-c"><h3>Your plan</h3>${plan}${subs.length?`<p class="bl-f">${onCycle?'This plan renews '+esc(onCycle)+' on the card on file until it is cancelled.':'Tuition bills on the 1st of each month. A $50 late fee applies on the 6th, and the spot goes on hold on the 10th.'} <a href="/enroll/agreement">Program policies</a>.</p>`:''}</section>${mid}
+    ${me.ask?`<form class="ch-askl" id="bl-ask"><input id="bl-q" type="text" placeholder="Ask about a charge" aria-label="Ask about a charge" autocomplete="off" enterkeyhint="send" maxlength="300"><button type="submit" aria-label="Ask">${ico('arrow')}</button></form>`:`<p class="bl-f" style="text-align:center">A question about a charge? <a href="#messages">Write to Admin</a>.</p>`}`;
 }
+function billingBlock(){return `<section class="sec pg" id="billing"><div class="sec-h"><h2>Billing</h2><small>${me.billing.openInvoices.length?me.billing.openInvoices.length+' to pay':''}</small></div><div class="bl" id="bl">${blInner()}</div></section>`}
+async function blPdf(btn){const[from,to]=blRange();btn.disabled=true;btn.textContent='Making your PDF…';
+  try{const o=await api('billing/invoice',{from,to,what:BF.what,player:BF.player});const r=await fetch(o.url);if(!r.ok)throw new Error('The PDF did not open. Try again.');const blob=await r.blob();const name='ProWorld-invoice-'+from+'-to-'+to+'.pdf';
+    if(INAPP||/iPhone|iPad|iPod/.test(navigator.userAgent)){let file=null;try{file=new File([blob],name,{type:'application/pdf'})}catch(x){file=null}
+      if(file&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name})}catch(x){if(x&&x.name!=='AbortError')blView(o.url)}}else blView(o.url)}
+    else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);toast('Your invoice is in your downloads.')}}
+  catch(e){toast(e.message,true)}blDraw()}
+function blView(url){let el=document.getElementById('blv');if(el)el.remove();if(!url)return;el=document.createElement('div');el.id='blv';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Your invoice');
+  el.innerHTML=`<header><button type="button" id="blv-x" aria-label="Back">${ico('arrow')}</button><div><h2>Your invoice</h2><p>Use the share button of your phone to save or send it</p></div></header><iframe src="${esc(url)}" title="Your invoice" style="flex:1;width:100%;border:0;background:#fff"></iframe>`;
+  document.body.appendChild(el);document.getElementById('blv-x').onclick=()=>blView('')}
+async function blCard(kind,btn){if(busy)return;busy=true;btn.disabled=true;
+  try{if(kind==='back'){const o=await api('card/backup',{});location.href=o.url;return}
+    if(kind==='unback'&&btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Tap again to remove';btn.disabled=false;busy=false;return}
+    await api(kind==='swap'?'card/backup/swap':'card/backup/remove',{});toast(kind==='swap'?'Done. The cards are switched.':'The backup card is removed.');await blLoad(true)}
+  catch(e){toast(e.message,true)}busy=false;if(btn.isConnected)btn.disabled=false}
+async function blReturn(){const q=new URLSearchParams(location.search);const sid=q.get('backupcard');if(!sid)return;history.replaceState(null,'',location.pathname+'#billing');showPg();
+  try{const o=await api('card/backup/confirm',{session:sid});toast(o.as==='main'?'Your card is saved.':'Your backup card is saved.');await blLoad(true)}catch(e){toast(e.message,true)}}
+document.addEventListener('click',(e)=>{const b=e.target.closest&&e.target.closest('[data-bl]');if(!b||!me)return;const k=b.dataset.bl;
+  if(k==='per'||k==='what'||k==='player'){BF[k]=b.dataset.v;blDraw()}else if(k==='more'){BLMORE=true;blDraw()}else if(k==='retry'){BLERR='';blDraw();blLoad(true)}else if(k==='pdf')blPdf(b);else if(k==='back'||k==='swap'||k==='unback')blCard(k,b);else if(k==='portal'&&!busy){busy=true;b.disabled=true;api('portal',{}).then(o=>{location.href=o.url}).catch(x=>{toast(x.message,true);busy=false;b.disabled=false})}});
+document.addEventListener('change',(e)=>{const t=e.target;if(!t||!me)return;if(t.id==='bl-from'){BF.from=t.value;if(BF.to&&BF.to<BF.from)BF.to=BF.from;blDraw()}if(t.id==='bl-to'){BF.to=t.value;if(BF.from&&BF.from>BF.to)BF.from=BF.to;blDraw()}});
+document.addEventListener('submit',(e)=>{if(e.target&&e.target.id==='bl-ask'){e.preventDefault();const i=document.getElementById('bl-q');const q=i.value.trim();i.value='';i.blur();askOpen(q||'I have a question about a charge')}});
 function requestsBlock(){
   const players=me.players.filter(p=>p.status!=='finished');
   const list=me.requests.map(r=>`<tr><td>${esc(r.kindLabel)}${r.player?' · '+esc(r.player):''}<br><span class="hint">${esc(r.text)}</span>${r.reply?`<br><b>Front desk:</b> ${esc(r.reply)}`:''}</td><td class="r">${r.state==='open'?'<span class="pill lime">Open</span>':'<span class="pill mint">Done</span>'}<br><span class="hint">${esc(new Date(r.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></td></tr>`).join('');
@@ -522,7 +586,7 @@ const akDay=(iso)=>new Date(String(iso)+'T12:00:00').toLocaleDateString('en-US',
 function askCtx(p){const en=p.enroll||{};const t=new Date(String(me.today)+'T12:00:00');const soon=[];
   for(let i=0;i<14&&soon.length<8;i++){const iso=ymd(new Date(t.getTime()+i*864e5));const x=dayInfo(p,iso);if(x.kind==='train'||x.kind==='makeup'||x.kind==='book'||x.kind==='away')soon.push(akDay(iso)+' ('+iso+') '+(x.kind==='away'?'marked not coming':x.kind==='makeup'?'make-up day':'training')+(timeOn(p,iso)?' '+timeOn(p,iso):''))}
   return{name:p.shortName||String(p.name||'').split(' ')[0],program:en.programShort||en.programName||p.groupLabel||'',times:Object.entries(en.times||{}).map(([d,v])=>d+' '+v).join('; ')||en.time||'',coming:soon.join('; '),
-    privates:(p.privates||[]).filter(v=>v.date>=String(me.today)).slice(0,5).map(v=>pvWord(v)+' '+akDay(v.date)+' '+(v.time||'')+(v.coach?' with Coach '+v.coach:'')).join('; '),makeups:p.makeupsLeft||0,makeupsUntil:p.makeupsUntil||'',coaches:[p.coach,p.coach2].filter(Boolean).map(c=>String(c).split(' ')[0]).join(', ')}}
+    privates:(p.privates||[]).filter(v=>v.date>=String(me.today)).slice(0,5).map(v=>pvWord(v)+' '+akDay(v.date)+' '+(v.time||'')+(v.coach?' with Coach '+v.coach:'')).join('; '),makeups:p.makeupsLeft||0,makeupsUntil:p.makeupsUntil||'',coaches:[p.coach,p.coach2].filter(Boolean).map(c=>String(c).split(' ')[0]).join(', '),charges:BILL?BILL.items.slice(0,12).map(x=>x.date+' '+x.label+(x.player?' ('+x.player+')':'')+' '+blMoney(x.cents)+(x.refunded?' refunded '+blMoney(x.refunded):'')).join('; '):''}}
 function askCard(c,i){
   if(!c||c.gone)return '';const pl=(me.players||[]).concat(me.people||[]).find(x=>x.id===ASK.player)||{};const nm=esc(pl.shortName||String(pl.name||'').split(' ')[0]);
   if(c.done)return `<div class="ak-c"><div class="ak-ok"><i>✓</i>${esc(c.done)}</div>${c.doneSub?`<div class="s">${esc(c.doneSub)}</div>`:''}</div>`;
@@ -754,7 +818,7 @@ function homeC(first,active){
   const paint=()=>{b.classList.toggle('on',(window.scrollY>360||app.classList.contains('pgon'))&&!document.getElementById('chat'))};window.addEventListener('scroll',paint,{passive:true});setInterval(paint,600)})();
 /* One of each (Nov 21, 2026, Antonio: "you repeat… remove the double reports, keep those little buttons"). The player card, the
    reports and billing no longer sit under the home screen a second time: each opens as its own page from its tile, with Back. */
-function showPg(){const id=(location.hash||'').slice(1);let on=false;document.querySelectorAll('.sec.pg').forEach(x=>{const m=x.id===id;x.classList.toggle('on',m);if(m)on=true});app.classList.toggle('pgon',on);if(on)window.scrollTo(0,0)}
+function showPg(){const id=(location.hash||'').slice(1);let on=false;document.querySelectorAll('.sec.pg').forEach(x=>{const m=x.id===id;x.classList.toggle('on',m);if(m)on=true});app.classList.toggle('pgon',on);app.classList.toggle('pg-billing',id==='billing');if(id==='billing'&&me)blLoad();if(on)window.scrollTo(0,0)}
 window.addEventListener('hashchange',showPg);
 function render(){
   const first=(me.name||me.email).split(/[\s@]/)[0];
@@ -822,7 +886,6 @@ function render(){
   app.querySelectorAll('[data-renew]').forEach(b=>b.onclick=()=>{const pl=(me.players||[]).find(x=>x.id===b.dataset.renew);if(!pl||!pl.renew)return;const r=pl.renew;const w=String(pl.name||'').trim().split(/\s+/);
     try{sessionStorage.setItem('pw-renew',JSON.stringify({first:w[0]||'',last:w.slice(1).join(' '),parent:me.name||'',email:me.email||'',at:Date.now()}))}catch(x){/* the form is filled in by hand */}
     location.href='/enroll?switch=1&p='+encodeURIComponent(r.program)+'&plan='+encodeURIComponent(r.plan)+(r.days&&r.days.length?'&days='+encodeURIComponent(r.days.join(',')):'')+'&start='+encodeURIComponent(r.start)+'&by=renew'});
-  const pb=document.getElementById('portal');if(pb)pb.onclick=async()=>{if(busy)return;busy=true;pb.disabled=true;try{const o=await api('portal',{});location.href=o.url}catch(e){toast(e.message,true)}busy=false;pb.disabled=false};
   document.getElementById('req').onsubmit=async(e)=>{e.preventDefault();if(busy)return;const btn=document.getElementById('send');busy=true;btn.disabled=true;btn.textContent='Sending…';
     try{await api('request',{kind:document.getElementById('kind').value,player:document.getElementById('player').value,when:document.getElementById('when').value,phone:document.getElementById('phone').value,text:document.getElementById('text').value,name:me.name});toast('Sent — the front desk will get back to you.');me=await api('me');render();location.hash='#requests'}catch(x){toast(x.message,true);busy=false;btn.disabled=false;btn.innerHTML='Send to the front desk <span class="ar">→</span>'}
     busy=false};
