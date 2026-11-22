@@ -405,7 +405,7 @@
     if (v.kind === "client" && !/^\/(family|enroll)(\/|$)/.test(location.pathname)) { location.replace("/family"); return; }
     css();
     if (!el) { el = document.createElement("div"); el.id = "pw-viewing"; el.setAttribute("role", "status"); document.body.appendChild(el); }
-    el.innerHTML = '<span class="t">Viewing as <b>' + esc(v.name || v.email || "a client") + "</b>" + (v.label ? " <small>· " + esc(v.label) + "</small>" : "") + '</span><button type="button" class="q" data-view-as>Change</button><button type="button" data-view-back>Back to me</button>';
+    el.innerHTML = '<span class="t">Viewing as <b>' + esc(v.name || v.email || "a client") + "</b>" + (v.label ? " <small>· " + esc(v.label) + "</small>" : "") + (v.kind === "client" ? " <small>· what you do here is real</small>" : "") + '</span><button type="button" class="q" data-view-as>Change</button><button type="button" data-view-back>Back to me</button>';
   }
 
   const labelOf = (r) => { const role = String(r.role || "").toLowerCase(); const pages = Array.isArray(r.pages) ? r.pages : ["coach-portal", "tryouts"];

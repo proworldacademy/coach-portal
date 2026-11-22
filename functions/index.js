@@ -148,34 +148,28 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
     if (path.startsWith('/api/family/')) {
       // the family portal: a signed-in parent sees their own players, attendance, reports and bills — nothing else
       const stripe = S.stripeFor(key); const b = req.body || {};
-      /* View as a client (Nov 16, 2026): an owner opens the client account the way one family sees it. The page sends the player's id
-         in X-View-Family with the owner's own sign-in; the engine looks the family's e-mail up itself and answers the one reading
-         route. Nothing can be asked, paid or changed from this view. */
-      const viewPid = S.clean(req.headers['x-view-family'], 80);
+      /* An owner in a client's account (Nov 22, 2026 — "coming in as an owner, taking that view… it has to be identical": what the
+         client sees, does and receives). The page sends the player's id in X-View-Family with the owner's own sign-in; the engine
+         looks the family's e-mail up itself, and from there every route runs as that family: book, mark a day, pay with the card
+         on file, write to Admin, ask the assistant. It is real: the family's card is charged and the family gets the confirmations.
+         Each thing done is logged with the owner's e-mail. One thing stays the owner's own: this phone is not registered for the
+         family's notifications. (Nov 16: the view was read-only.) */
+      const viewPid = S.clean(req.headers['x-view-family'], 80); let acting = null;
       if (viewPid) {
         const o = await ADMIN.requireStaff(req).catch(() => null);
         if (o && o.owner) {
-          /* One thing an owner may do from this view (Nov 21, 2026): add a parent or a contact to the family's account, so a second
-             parent can sign in without the first one being there. Everything else stays read-only. */
-          const adding = route === 'POST /family/account' && S.clean((req.body || {}).action, 20) === 'add';
-          const asking = route === 'POST /family/ask';   // an owner may try the assistant on a client's account (Nov 22, 2026): it answers, and nothing it offers can be confirmed from this view
-          if (route !== 'GET /family/me' && !adding && !asking) throw S.err(403, 'viewing', 'You are looking at this account as the client. Nothing is sent from this view.');
           const snap = viewPid.includes('/') ? null : await ctx.db.doc('players/' + viewPid + '/private/contact').get();
           const c = snap && snap.exists ? snap.data() || {} : {}; const em = String(c.email || '').trim().toLowerCase();
           if (!em) throw S.err(404, 'noemail', 'This player has no parent e-mail on file, so the family has no account to open yet.');
-          if (adding) { const fam = { email: em, name: String(c.guardian || '') }; const found = await FAMILY.findPlayers(ctx.db, stripe, em); const out = await FAMILY.account(ctx.db, fam, req.body || {}, found.players); logger.info('parent added by an owner', { by: o.email, player: viewPid }); return send(res, 200, out); }
-          logger.info('view as client', { by: o.email, player: viewPid });
-          if (asking) { const found = await FAMILY.findPlayers(ctx.db, stripe, em); const players = (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, em)));
-            /* asked under the owner's own e-mail, so the family's memory and daily count stay untouched */
-            return send(res, 200, await ASSISTANT.ask(ctx.db, { email: o.email, name: String(c.guardian || '') }, req.body || {}, players)); }
-          { const vout = await FAMILY.me(ctx.db, stripe, { email: em, name: String(c.guardian || '') }); const vcl = await CLIENT.get(ctx.db, em);
-            return send(res, 200, Object.assign({ mode: mode(key), viewing: true }, vout, { member: (vout.players || []).some((p) => p.status !== 'finished'), known: vout.known || !!vcl, people: CLIENT.people(vcl), profile: vcl ? { name: vcl.name || '', phone: vcl.phone || '', photo: vcl.photo || '', quiet: vcl.quiet === true } : null, courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
+          if (route.indexOf(' /family/push/') > 0 && req.method === 'POST') throw S.err(403, 'viewing', 'Notifications stay on the family\'s own phones. Your phone is not added to this account.');
+          acting = { email: em, name: String(c.guardian || ''), by: o.email };
+          logger.info(req.method === 'GET' ? 'view as client' : 'acting as client', { by: o.email, player: viewPid, route });
         }
       }
-      const who = await FAMILY.requireFamily(req);
+      const who = acting ? { email: acting.email, name: acting.name } : await FAMILY.requireFamily(req);
       if (route === 'GET /family/me') { const out = await FAMILY.me(ctx.db, stripe, who); const cl = await CLIENT.get(ctx.db, who.email);
         /* a profile without a child is known too; `member` says an academy family (courts are free for them), `people` are the adults on the account */
-        return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
+        return send(res, 200, Object.assign({ mode: mode(key) }, acting ? { viewing: true } : {}, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
       /* Ask ProWorld (Nov 21, 2026): a question about the one player selected; the answer may carry a card the parent confirms (lib/assistant.js) */
       if (route === 'POST /family/ask/forget') { const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); return send(res, 200, await ASSISTANT.forget(ctx.db, who, (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, who.email))))); }

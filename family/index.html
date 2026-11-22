@@ -464,7 +464,7 @@ const ico=(k)=>`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 2
    an e-mail, a mobile, or both. */
 let ACCADD=false,ACCOPEN=false,ACCED=null;   // folded until asked for (Nov 19); ACCED = {k:'name'} or {k:'phone',tail}
 function accountC(){
-  const a=me.account;if(!a)return '';const ro=me.viewing;const mine=a.emails.find(e=>e.me)||{};
+  const a=me.account;if(!a)return '';const ro=false;   /* Nov 22, 2026: an owner in a client's account does what the client can */const mine=a.emails.find(e=>e.me)||{};
   const head=`<div class="ch-h"><h2>Your account</h2><button type="button" class="ch-sm" data-acc-open aria-expanded="${ACCOPEN}">${ACCOPEN?'Close':'Open'}</button></div>`;
   if(!ACCOPEN)return `<section class="ch-card" id="account" aria-label="Your account">${head}<p class="ch-s">${esc([mine.name,a.email,a.phones.length+' phone number'+(a.phones.length===1?'':'s'),a.card?'card saved':'no card saved'].filter(Boolean).join(' · '))}</p></section>`;
   const edName=ACCED&&ACCED.k==='name';
@@ -606,7 +606,7 @@ function bkPaint(){
 /* Reserve a court (Nov 20, 2026): the day, the length, a time with a court free, the court. Confirmed at once; the engine holds
    the court the same way it does for a private, so nobody else can take it. The family's own courts are listed with a Cancel. */
 let RT=null;
-function rtOpen(){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}RT={date:me.today,dur:60,slots:[],start:null,allTimes:false,courts:[],court:'',mine:[],load:false,cload:false,busy:false,err:''};rtLoad();rtMine()}
+function rtOpen(){RT={date:me.today,dur:60,slots:[],start:null,allTimes:false,courts:[],court:'',mine:[],load:false,cload:false,busy:false,err:''};rtLoad();rtMine()}
 async function rtMine(){const m=RT;try{const o=await api('court/list',{});if(RT===m){RT.mine=o.list||[];rtPaint()}}catch(x){/* the list is a nicety */}}
 async function rtLoad(){if(!RT)return;const m=RT;RT.load=true;RT.err='';rtPaint();try{const o=await api('court/slots',{date:RT.date,dur:RT.dur});if(RT!==m)return;RT.slots=o.slots||[];RT.ahead=(o.rules||{}).aheadDays||7;if(!RT.slots.some(x=>x.start===RT.start)){RT.start=null;RT.court='';RT.courts=[]}}catch(x){if(RT===m){RT.err=x.message;RT.slots=[]}}if(RT===m){RT.load=false;rtPaint()}}
 async function rtCourts(){if(!RT||RT.start==null)return;const m=RT,st=RT.start;RT.cload=true;rtPaint();try{const o=await api('court/slots',{date:RT.date,dur:RT.dur,start:RT.start});if(RT!==m||RT.start!==st)return;RT.courts=o.courts||[];if(!RT.courts.some(c=>c.id===RT.court))RT.court=''}catch(x){if(RT===m)RT.err=x.message}if(RT===m){RT.cload=false;rtPaint()}}
@@ -649,7 +649,7 @@ function ppPaint(){let el=document.getElementById('pp');if(!PP){if(el)el.remove(
   document.getElementById('pp-f').onsubmit=async(e)=>{e.preventDefault();if(PP.busy)return;const name=document.getElementById('pp-n').value.trim();PP.busy=true;PP.err='';ppPaint();try{await api('person',{name});me=await api('me');PP=null;ppPaint();render();toast(name.split(' ')[0]+' is on your account. Tap the name to book a private.')}catch(x){PP.busy=false;PP.err=x.message;ppPaint()}};
   el.querySelectorAll('[data-pp-rm]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('person/remove',{id:b.dataset.ppRm});me=await api('me');ppPaint();render()}catch(x){b.disabled=false;toast(x.message,true)}});
 }
-document.addEventListener('click',(e)=>{const b=e.target.closest&&e.target.closest('[data-pp]');if(!b||!me)return;if(me.viewing){toast('You are looking at this account as the client. Nothing is changed from this view.',true);return}const a=b.dataset.pp;
+document.addEventListener('click',(e)=>{const b=e.target.closest&&e.target.closest('[data-pp]');if(!b||!me)return;const a=b.dataset.pp;
   if(a==='me'){MP={busy:false,err:''};mpPaint()}else if(a==='add'){PP={busy:false,err:''};ppPaint()}else if(a==='person'){bkOpen('tennis',me.today,b.dataset.id)}else if(a==='private'){const f=(me.people||[])[0];if(f)bkOpen('tennis',me.today,f.id);else{PP={busy:false,err:''};ppPaint();toast('Add yourself first, then book the private.')}}});
 /* Your profile (Nov 21, 2026): your picture, your name and phone, and quiet nights. The same for anyone with an account. */
 let MP=null;
@@ -684,7 +684,7 @@ async function bkLoad(){if(!BK)return;BK.load=true;BK.err='';bkPaint();const min
   try{const o=await api('private/slots',{player:BK.player,kind:BK.kind,coach:BK.coach,date:BK.date,dur:60});if(BK!==mine)return;BK.coaches=o.coaches;BK.slots=o.slots;BK.next=o.next||[];if(!BK.coach){const c=o.coaches.filter(x=>x.mine);if(c.length===1||o.coaches.length===1){BK.coach=(c[0]||o.coaches[0]).key;BK.load=false;return bkLoad()}}}
   catch(x){if(BK===mine)BK.err=x.message}
   if(BK===mine){BK.load=false;bkPaint()}}
-function bkOpen(kind,date,who){if(me.viewing){toast('You are looking at this account as the client. Nothing is booked from this view.',true);return}BK={player:who||SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,court:'',courts:[],cload:false,load:false,busy:false,err:''};bkLoad()}
+function bkOpen(kind,date,who){BK={player:who||SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,court:'',courts:[],cload:false,load:false,busy:false,err:''};bkLoad()}
 function homeC(first,active){
   const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
