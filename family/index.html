@@ -177,8 +177,6 @@ html.dark .ch-nb{background:#161616;border-color:#343434;color:#F4F4F0}html.dark
 .ch-askl{display:flex;align-items:center;gap:8px;height:54px;border-radius:27px;background:#fff;border:1px solid #DADCD5;padding:0 7px 0 18px;margin:14px 0 0}
 .ch-askl input{flex:1;min-width:0;border:0;background:none;outline:0;font:400 16px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;color:#0A0A0A}.ch-askl input::placeholder{color:#6B6B68}
 .ch-askl button,.ak-go{width:40px;height:40px;border-radius:50%;border:0;background:#0A0A0A;color:#E2FE78;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer}.ch-askl:focus-within{border-color:#0A0A0A}
-.ch-sug{display:flex;gap:8px;margin:10px 0 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.ch-sug::-webkit-scrollbar{display:none}
-.ch-sug button{flex:none;height:40px;border-radius:20px;border:1px solid #0A0A0A;background:none;color:#0A0A0A;padding:0 18px;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;white-space:nowrap}
 .ak-c{align-self:stretch;background:#fff;border:1px solid #DADCD5;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:14px}
 .ak-c .l{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#6B6B68;font-weight:700}.ak-c b.t{font-size:17px;line-height:1.3}.ak-c .s{font-size:14.5px;line-height:1.45;color:#2F312C}
 .ak-c .opts{display:flex;flex-wrap:wrap;gap:8px}.ak-c .opts button{border:1px solid #DADCD5;background:#fff;border-radius:16px;padding:10px 14px;font:700 14px 'Aeonik Pro','Helvetica Neue',Arial,sans-serif;cursor:pointer;color:#0A0A0A;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:44px;justify-content:center}.ak-c .opts button small{font-weight:500;font-size:11.5px;color:#6B6B68}
@@ -710,6 +708,9 @@ async function ntPref(k){if(!NT)return;const v=!NT.prefs[k];NT.prefs[k]=v;mpPain
 document.addEventListener('click',(e)=>{const b=e.target.closest&&e.target.closest('#nt-bell');if(b&&me)ntOpen()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&me)ntLoad()});
 window.addEventListener('hashchange',()=>{if(location.hash==='#notices'&&me)ntLoad()});
+/* The ask box says what it can do (Nov 22, 2026): the hint inside it changes every few seconds while it is empty. The bubbles under it are gone; the menu at the bottom already has them. */
+const ASKHINTS=['Ask anything, or book something','Book a private lesson','Sign up for a camp or a program','Tell us a player is not coming','Change a day on the schedule','Ask about prices, times or make-ups'];let ASKHINT=0;
+setInterval(()=>{const i=document.getElementById('askq');if(!i||i.value||document.hidden)return;ASKHINT=(ASKHINT+1)%ASKHINTS.length;i.placeholder=ASKHINTS[ASKHINT]},3200);
 function homeC(first,active){
   const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
@@ -722,7 +723,7 @@ function homeC(first,active){
     return `<div class="ch">${top}${who}<section class="ch-card"><div class="ch-h"><h2>Welcome</h2></div><p class="ch-s">Reserve a court, book a private lesson, or enroll a child in a program. Everything is booked and paid here.</p></section>
       <div class="ch-acts">${tile('data-ask="court"','court','Reserve a court',rate)}${tile('data-pp="private"','plus','Book a private',ppl.length?'':'Add yourself first')}<a href="/enroll"><span class="ch-i">${ico('plus')}</span>Enroll a child<small>Programs and camps</small></a>${tile('data-pp="add"','plus','Add a person','Yourself or another adult')}</div></div>`}
   const nm=esc(p.shortName||p.name.split(' ')[0]);
-  const askLine=me.ask?`<form class="ch-askl" id="askl"><input id="askq" type="text" placeholder="Ask anything, or book something" aria-label="Ask ProWorld" autocomplete="off" enterkeyhint="send" maxlength="300"><button type="submit" aria-label="Ask">${ico('arrow')}</button></form><div class="ch-sug" role="group" aria-label="Quick questions"><button type="button" data-askq="I want to book a private lesson">Book a private</button><button type="button" data-askq="${nm} is not coming to the next session">${nm} is not coming</button><button type="button" data-askq="What camps are coming up?">Camps</button></div>`:'';
+  const askLine=me.ask?`<form class="ch-askl" id="askl"><input id="askq" type="text" placeholder="${ASKHINTS[ASKHINT]}" aria-label="Ask ProWorld" autocomplete="off" enterkeyhint="send" maxlength="300"><button type="submit" aria-label="Ask">${ico('arrow')}</button></form>`:'';
   const chips=who+askLine;
   const ns0=nextSession(p);
   /* Next session is whatever comes first: the program or a private (Nov 21, 2026). The same day shows both. */
@@ -800,7 +801,7 @@ function render(){
     daysDo(a==='book'?{action:a,date:d,sessions:PICK||[]}:{action:a,date:d},a==='book'?((PICK||[]).length?'Booked. The academy knows.':'Taken off.'):a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
   app.querySelectorAll('[data-mon]').forEach(b=>b.onclick=()=>{const [y0,m0]=CALMON.split('-').map(Number);const d=new Date(y0,m0-1+Number(b.dataset.mon),1,12);CALMON=ymd(d).slice(0,7);CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-book]').forEach(b=>b.onclick=()=>bkOpen(b.dataset.book,b.dataset.bookDay));
-  {const f=document.getElementById('askl');if(f)f.onsubmit=(e)=>{e.preventDefault();const i=document.getElementById('askq');const q=i.value.trim();i.value='';i.blur();askOpen(q)};app.querySelectorAll('[data-askq]').forEach(b=>b.onclick=()=>askOpen(b.dataset.askq))}
+  {const f=document.getElementById('askl');if(f)f.onsubmit=(e)=>{e.preventDefault();const i=document.getElementById('askq');const q=i.value.trim();i.value='';i.blur();askOpen(q)}}
   app.querySelectorAll('[data-bell]').forEach(b=>b.onclick=()=>bellOn());
   app.querySelectorAll('[data-pv-x]').forEach(b=>b.onclick=()=>twice(b,'',async()=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('private/cancel',{id:b.dataset.pvX});toast('Canceled. The coach and the academy know.');me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)}));
   const accDo=async(body,ok)=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('account',body);toast(ok);ACCADD=false;me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)};
