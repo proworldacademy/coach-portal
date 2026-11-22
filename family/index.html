@@ -571,7 +571,7 @@ async function askSend(q){if(!ASK||ASK.busy)return;const p=(me.players||[]).conc
   try{const o=await api('ask',{player:ASK.player,message:q,history,context:askCtx(p)});if(ASK!==mine)return;ASK.lines.push({text:o.reply,card:o.card||null})}
   catch(x){if(ASK!==mine)return;ASK.lines.push({text:x.message,err:true})}
   ASK.busy=false;askPaint();const T=document.getElementById('ask-t');if(T&&!('ontouchstart' in window))T.focus()}
-function askOpen(q){if(me.viewing){toast('You are looking at this account as the client. Nothing is asked from this view.',true);return}if(!ASK||ASK.player!==SEL)ASK={player:SEL,lines:[],busy:false};askPaint();if(q)askSend(q)}
+function askOpen(q){if(!ASK||ASK.player!==SEL)ASK={player:SEL,lines:[],busy:false};askPaint();if(q)askSend(q)}
 /* Book a private (Nov 19, 2026): the kind, the day, the coach, then that coach's open times, straight from the coach's calendar. */
 let BK=null;
 function bkPaint(){
