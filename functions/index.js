@@ -158,13 +158,18 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
           /* One thing an owner may do from this view (Nov 21, 2026): add a parent or a contact to the family's account, so a second
              parent can sign in without the first one being there. Everything else stays read-only. */
           const adding = route === 'POST /family/account' && S.clean((req.body || {}).action, 20) === 'add';
-          if (route !== 'GET /family/me' && !adding) throw S.err(403, 'viewing', 'You are looking at this account as the client. Nothing is sent from this view.');
+          const asking = route === 'POST /family/ask';   // an owner may try the assistant on a client's account (Nov 22, 2026): it answers, and nothing it offers can be confirmed from this view
+          if (route !== 'GET /family/me' && !adding && !asking) throw S.err(403, 'viewing', 'You are looking at this account as the client. Nothing is sent from this view.');
           const snap = viewPid.includes('/') ? null : await ctx.db.doc('players/' + viewPid + '/private/contact').get();
           const c = snap && snap.exists ? snap.data() || {} : {}; const em = String(c.email || '').trim().toLowerCase();
           if (!em) throw S.err(404, 'noemail', 'This player has no parent e-mail on file, so the family has no account to open yet.');
           if (adding) { const fam = { email: em, name: String(c.guardian || '') }; const found = await FAMILY.findPlayers(ctx.db, stripe, em); const out = await FAMILY.account(ctx.db, fam, req.body || {}, found.players); logger.info('parent added by an owner', { by: o.email, player: viewPid }); return send(res, 200, out); }
           logger.info('view as client', { by: o.email, player: viewPid });
-          return send(res, 200, Object.assign({ mode: mode(key), viewing: true }, await FAMILY.me(ctx.db, stripe, { email: em, name: String(c.guardian || '') })));
+          if (asking) { const found = await FAMILY.findPlayers(ctx.db, stripe, em); const players = (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, em)));
+            /* asked under the owner's own e-mail, so the family's memory and daily count stay untouched */
+            return send(res, 200, await ASSISTANT.ask(ctx.db, { email: o.email, name: String(c.guardian || '') }, req.body || {}, players)); }
+          { const vout = await FAMILY.me(ctx.db, stripe, { email: em, name: String(c.guardian || '') }); const vcl = await CLIENT.get(ctx.db, em);
+            return send(res, 200, Object.assign({ mode: mode(key), viewing: true }, vout, { member: (vout.players || []).some((p) => p.status !== 'finished'), known: vout.known || !!vcl, people: CLIENT.people(vcl), profile: vcl ? { name: vcl.name || '', phone: vcl.phone || '', photo: vcl.photo || '', quiet: vcl.quiet === true } : null, courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
         }
       }
       const who = await FAMILY.requireFamily(req);
