@@ -147,6 +147,13 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       <div id="brain-open" style="margin-top:18px"></div>
       <div id="brain-learned" style="margin-top:14px"></div>
     </div>
+    <div class="card" id="dictate-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>Dictation.</b> A microphone on every text box of the app: tap, talk, tap again, and the words are written. It uses OpenAI's transcription service on the academy's own account: platform.openai.com → <b>API keys</b> → Create new secret key, then paste it here. It costs well under a cent per minute. The recordings are not kept. Kept for owners only. <span id="dictate-state"></span></div>
+      <form class="addf" id="dictate-form" autocomplete="off">
+        <div class="field" style="flex:2 1 320px"><label for="dictate-key">OpenAI API key</label><input id="dictate-key" type="password" placeholder="sk-…" autocomplete="off" maxlength="300" data-nodictate></div>
+        <button class="btn" type="submit">Save</button>
+      </form>
+    </div>
     <div class="card" id="pushwho-card" hidden style="margin-bottom:14px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><b style="font-size:15px">Who gets notifications</b><small id="pushwho-count" style="color:var(--ink-3,#6b6d66)"></small></div>
       <p style="margin:4px 0 10px;font-size:13px;line-height:1.5;color:var(--ink-2,#3b3c38)">A message or a call in the Locker Room reaches a phone only when notifications are on for ProWorld on that phone. The app asks each person when they open it.</p>
@@ -509,6 +516,14 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
     api("brain").then((j) => { draw(j); box.hidden = false; }).catch(() => {});
     $("brain-save").onclick = async () => { const b = $("brain-save"); b.disabled = true; try { draw(await api("brain", { action: "save", notes: $("brain-notes").value })); state("Saved. The assistants use it from the next question."); } catch (x) { state(x.message || String(x), true); } b.disabled = false; };
   }
+  /* dictation (Nov 22, 2026): the key of the transcription service (settings/dictate, engine and owners only) */
+  function dictateCard() {
+    if (!ctx.owner) return; const box = $("dictate-card"); if (!box || box.dataset.on) return; box.dataset.on = "1"; box.hidden = false;
+    const state = (t, bad) => { $("dictate-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    api("dictate").then((j) => state(j && j.ready ? "Set. The microphone shows on the text boxes." : "Not set yet: no microphone shows.", !(j && j.ready))).catch(() => state(""));
+    $("dictate-form").addEventListener("submit", async (e) => { e.preventDefault(); const key = $("dictate-key").value.trim(); if (!key) { state("Paste the key first.", true); return; }
+      try { await api("dictate", { key }); $("dictate-key").value = ""; try { sessionStorage.removeItem("pw-dictate"); } catch (x) { /* fine */ } state("Set. The microphone shows on the text boxes."); } catch (x) { state(x.message || String(x), true); } });
+  }
   /* who has notifications on (Nov 21, 2026): one line per person on the team, the ones to chase first; the engine reads pushSubs and pushState */
   function pushWhoCard() {
     if (!ctx.owner && !ctx.admin) return; const box = $("pushwho-card"); if (!box || box.dataset.on) return; box.dataset.on = "1";
@@ -569,7 +584,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   }
   function own() {
     if (!ctx.admin) return;
-    mailCard(); brainCard(); aiWeek(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
+    mailCard(); brainCard(); dictateCard(); aiWeek(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';
