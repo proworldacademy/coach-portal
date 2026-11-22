@@ -104,3 +104,19 @@ test('notices: a camp reminds by itself ten and three days before, only the fami
   N._clock(() => at('2026-12-18T08:00:00Z')); const l = await N.list(db, OWNER); assert.equal(l.sent.filter((x) => x.auto).length, 2); assert.equal(l.sent[0].by, '');
   done();
 });
+
+test('events: one that repeats every other week shows its next day, takes sign-ups per day, and reminds the people on the list', async () => {
+  const NEWS = require('../lib/news'); const { db, pushes } = await setup('2026-11-22T15:00:00Z'); NEWS._clock(() => at('2026-11-22T15:00:00Z'));
+  const a = await NEWS.add(db, OWNER, { kind: 'event', title: 'Mental session', body: 'In the clubhouse.', date: '2026-11-25', repeat: 'biweekly', time: '5:00 PM', signup: true, quiet: true });
+  assert.equal(NEWS.nextOf({ date: '2026-11-25', repeat: 'biweekly' }, '2026-11-26'), '2026-12-09'); assert.equal(NEWS.nextOf({ date: '2026-11-25', repeat: 'biweekly', end: '2026-12-01' }, '2026-11-26'), '');
+  const P = [{ id: 'as-ada', name: 'Ada Example', group: 'as' }];
+  let n = await NEWS.forFamily(db, ['as'], '2026-11-22', P); assert.deepEqual([n[0].date, n[0].repeatLabel, n[0].time, n[0].signup, n[0].signed], ['2026-11-25', 'Every other week', '5:00 PM', true, []]);
+  await assert.rejects(() => NEWS.signup(db, { email: 'pat@example.test' }, { id: a.id, player: 'someone-else' }, P), /Which player/);
+  assert.deepEqual(await NEWS.signup(db, { email: 'Pat@example.test' }, { id: a.id, player: 'as-ada' }, P), { ok: true, date: '2026-11-25', on: true, title: 'Mental session' });
+  n = await NEWS.forFamily(db, ['as'], '2026-11-22', P); assert.deepEqual(n[0].signed, ['as-ada']);
+  assert.deepEqual((await NEWS.list(db)).coming[0].going, ['Ada Example']);
+  N._clock(() => at('2026-11-24T23:10:00Z')); const t = await N.tick(db); assert.equal(t.reminders, 1); assert.equal(pushes.length, 1); assert.equal(pushes[0][1].title, 'Tomorrow: Mental session');
+  assert.equal((await N.tick(db)).reminders, 0, 'once'); assert.equal((await N.forFamily(db, 'kim@example.test')).items.length, 0, 'only the people on the list');
+  n = await NEWS.forFamily(db, ['as'], '2026-11-26', P); assert.deepEqual([n[0].date, n[0].signed], ['2026-12-09', []], 'the next day starts with an empty list');
+  await NEWS.signup(db, { email: 'pat@example.test' }, { id: a.id, player: 'as-ada', on: false }, P); NEWS._clock(null); done();
+});
