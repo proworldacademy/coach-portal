@@ -45,6 +45,7 @@ const PAYROLL = require('./lib/payroll');
 const CLIENT = require('./lib/client');
 const ASSISTANT = require('./lib/assistant');
 const BRAIN = require('./lib/brain');
+const DICTATE = require('./lib/dictate');
 /* Who is told what, for the schedule (Nov 20, 2026). Owners: the staff records marked owner and the owner sign-ins. */
 async function ownerEmails(db) { const out = new Set(); try { (await db.collection('staff').where('owner', '==', true).get()).docs.forEach((d) => out.add(String(d.id).toLowerCase())); } catch (e) { /* the sign-ins below */ }
   try { const auth = require('firebase-admin/auth').getAuth(); for (const uid of ADMIN.OWNERS || []) { try { const u = await auth.getUser(uid); if (u.email) out.add(u.email.toLowerCase()); } catch (e) { /* next */ } } } catch (e) { /* none */ } return Array.from(out); }
@@ -139,6 +140,10 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
     if (route === 'GET /brain') { await FEED.requireKey(ctx.db, req); const today = require('./lib/calendar').todayET(); const b = await BRAIN.get(ctx.db); return send(res, 200, { text: BRAIN.text(b, today), at: b.at, today }); }
     if (route === 'POST /brain/log') { await FEED.requireKey(ctx.db, req); const lb = req.body || {}; return send(res, 200, await BRAIN.note(ctx.db, { q: ASSISTANT.scrub(lb.q, []), channel: lb.channel, handed: lb.handed === true })); }
     if (route === 'POST /brain/open') { await FEED.requireKey(ctx.db, req); return send(res, 200, await BRAIN.wonder(ctx.db, ASSISTANT.scrub((req.body || {}).q, []), 'web')); }
+    /* dictation (Nov 22, 2026): anyone signed in, the team or a family; the recording is read and not kept (lib/dictate.js) */
+    if (route === 'GET /dictate/ready' || route === 'POST /dictate') { const w = (await ADMIN.requireStaff(req).catch(() => null)) || await FAMILY.requireFamily(req);
+      if (route === 'GET /dictate/ready') return send(res, 200, { ready: await DICTATE.ready(ctx.db) });
+      const out = await DICTATE.transcribe(ctx.db, w, req.body || {}); logger.info('dictate', { chars: out.text.length }); return send(res, 200, out); }
     if (route === 'GET /roster') {
       // the roster feed for the concierge and the morning digest — read-only, one key, set by an owner on the backend
       await FEED.requireKey(ctx.db, req);
@@ -353,6 +358,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /admin/voice/assign') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.assign(ctx.db, b); logger.info('voice number', { by: who.email }); return send(res, 200, out); }
       if (route === 'GET /admin/turn') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await TEAM.turnReady(ctx.db)); }
       if (route === 'GET /admin/brain/review') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await BRAIN.review(ctx.db)); }
+      if (route === 'GET /admin/dictate' || route === 'POST /admin/dictate') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, route === 'GET /admin/dictate' ? { ready: await DICTATE.ready(ctx.db) } : await DICTATE.saveKey(ctx.db, who, b)); }
       if (route === 'GET /admin/brain' || route === 'POST /admin/brain') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, route === 'GET /admin/brain' ? await BRAIN.view(ctx.db) : await BRAIN.admin(ctx.db, who, b)); }
       if (route === 'GET /admin/push/who') { if (!who.owner && !who.admin) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await PUSH.who(ctx.db, (await TEAM.people(ctx.db)).people)); }
       if (route === 'GET /admin/apns') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await PUSH.apnsReady(ctx.db) }); }

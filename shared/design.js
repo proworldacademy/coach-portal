@@ -459,3 +459,6 @@
   window.PWView = { get, set, clear, open, pill };
   css(); pill();
 })();
+
+/* Dictation on every text box (Nov 22, 2026): shared/dictate.js, once per page */
+(function () { try { if (window.parent !== window || document.querySelector('script[data-dictate-js]')) return; const sc = document.createElement('script'); sc.src = '/shared/dictate.js'; sc.async = true; sc.setAttribute('data-dictate-js', '1'); document.head.appendChild(sc); } catch (e) { /* the page works without it */ } })();
