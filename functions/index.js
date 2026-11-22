@@ -56,6 +56,7 @@ function schedDeps(db) { const many = async (emails, title, text, url) => { for 
     tellOwners: async (text) => many(await ownerEmails(db), 'Time off request', text, '/portal#/calendar'),
     tellStaff: async (text) => { try { await NOTIFY.slack(db, 'desk', '*Rain*', [text]); } catch (e) { /* next */ } await many(Array.from(new Set((await ownerEmails(db)).concat(await directorEmails(db)))), 'Rain', text, '/backend'); } }; }
 const NEWS = require('./lib/news');
+const NOTICES = require('./lib/notices');
 
 const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const REGION = 'us-central1';
@@ -175,6 +176,10 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'GET /family/me') { const out = await FAMILY.me(ctx.db, stripe, who); const cl = await CLIENT.get(ctx.db, who.email);
         /* a profile without a child is known too; `member` says an academy family (courts are free for them), `people` are the adults on the account */
         return send(res, 200, Object.assign({ mode: mode(key) }, acting ? { viewing: true } : {}, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
+      /* notifications for the parents (Nov 22, 2026): the list behind the bell and the switches. An owner looking at the account sees the list; it is not marked read for the family. */
+      if (route === 'GET /family/notices') return send(res, 200, await NOTICES.forFamily(ctx.db, who.email));
+      if (route === 'POST /family/notices/read') return send(res, 200, acting ? { ok: true } : await NOTICES.markRead(ctx.db, who.email));
+      if (route === 'POST /family/notices/prefs') { const out = await NOTICES.setPrefs(ctx.db, who.email, b); logger.info('family notices prefs', { by: acting ? acting.by : who.email }); return send(res, 200, out); }
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
       /* Ask ProWorld (Nov 21, 2026): a question about the one player selected; the answer may carry a card the parent confirms (lib/assistant.js) */
       if (route === 'POST /family/ask/forget') { const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); return send(res, 200, await ASSISTANT.forget(ctx.db, who, (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, who.email))))); }
@@ -409,6 +414,16 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'GET /admin/family-privates') return send(res, 200, await COACHCAL.deskList(ctx.db));
       if (route === 'POST /admin/court-holds') return send(res, 200, await COURTS.dayHolds(ctx.db, S.clean(b.date, 12)));
       if (route === 'POST /admin/family-privates/mark') return send(res, 200, await COACHCAL.deskMark(ctx.db, who, b));
+      /* notifications for the parents (Nov 22, 2026): weather, events, camps, sent now or at a time, with a reminder the evening before */
+      if (route === 'GET /admin/notices') return send(res, 200, await NOTICES.list(ctx.db, who));
+      if (route === 'POST /admin/notices' || route === 'POST /admin/notices/count' || route === 'POST /admin/notices/cancel' || route === 'POST /admin/notices/settings') {
+        if (!(who.owner || who.admin || who.director || who.role === 'desk')) throw S.err(403, 'notices', 'Parent notifications are sent by the owners, the directors and the front desk.');
+        if (route.endsWith('/count')) return send(res, 200, await NOTICES.count(ctx.db, b));
+        if (route.endsWith('/settings')) { if (!who.owner) throw S.err(403, 'owner', 'Owners switch the automatic ones.'); const o = await NOTICES.saveSettings(ctx.db, who, b); logger.info('parent notices settings', Object.assign({ by: who.email }, o)); return send(res, 200, o); }
+        const out = route.endsWith('/cancel') ? await NOTICES.cancel(ctx.db, who, b) : await NOTICES.create(ctx.db, who, b);
+        logger.info('parent notice ' + (route.endsWith('/cancel') ? 'cancelled' : out.scheduled ? 'scheduled' : 'sent'), { by: who.email, id: out.id || S.clean(b.id, 60), stats: out.stats || null });
+        return send(res, 200, out);
+      }
       if (route === 'GET /admin/news') return send(res, 200, await NEWS.list(ctx.db));
       if (route === 'POST /admin/news' || route === 'POST /admin/news/remove') {
         if (!(who.owner || who.admin || who.director || who.role === 'desk')) throw S.err(403, 'news', 'Parent news is posted by the owners, the directors and the front desk.');
@@ -558,6 +573,11 @@ exports.nightlyBackup = onSchedule({ schedule: '40 4 * * *', timeZone: CAL.TZ, r
   catch (e) { logger.error('nightlyBackup failed', { message: e.message }); throw e; }
 });
 
+/* Every ten minutes (Nov 22, 2026): the parent notifications that were given a time, the reminder the evening before an event, the camp reminders that go by themselves, and the texts still in the queue. */
+exports.parentNotices = onSchedule({ schedule: '*/10 * * * *', timeZone: CAL.TZ, region: REGION, retryCount: 0, timeoutSeconds: 180, memory: '256MiB' }, async () => {
+  try { const out = await NOTICES.tick(DB.get()); if (out.sent || out.reminders || out.camps || out.texts || out.error) logger.info('parentNotices', out); }
+  catch (e) { logger.error('parentNotices failed', { message: e.message }); }
+});
 /* Private-lesson reminders: the evening before and one hour before, to the family (opted in) and the coach (lib/lessons.js). */
 // the weekly contact tracker: JustCall's texts and calls become the week's ticks (every two hours, 7 AM to 9 PM Delray Beach time)
 exports.contactSync = onSchedule({ schedule: '17 7-21/2 * * *', timeZone: CAL.TZ, region: REGION, retryCount: 1, timeoutSeconds: 300, memory: '256MiB' }, async () => {

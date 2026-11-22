@@ -152,6 +152,12 @@ html.dark .ch-ppl .ch-i{background:#F4F4F0;color:#0A0A0A}html.dark .ch-ppl .ch-i
 html.dark .ch-chat{background:#0A0A0A;color:#F4F4F0}html.dark .ch-chat header,html.dark .ch-send{background:#161616;border-color:#343434}html.dark .ch-chat header button{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-chat header p,html.dark .ch-lines .n{color:#C9C9C4}
 html.dark .ch-b{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-b.me{background:#E2FE78;color:#0A0A0A;border-color:#E2FE78}html.dark .ch-send textarea{background:#0A0A0A;border-color:#343434;color:#F4F4F0}
 .ch-day{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#5E605A;font-weight:700}
+.ch-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.ch-nb{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;padding:0}
+.ch-nb i{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#0A0A0A;color:#E2FE78;font:normal 700 12px/20px "Aeonik Pro",system-ui,sans-serif;text-align:center}
+.nt-i{gap:8px!important}.nt-i.new{border-color:#0A0A0A}.nt-k{display:flex;justify-content:space-between;gap:12px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#5E605A}.nt-k b{color:#0A0A0A}.nt-i .nt-t{font-size:18px;line-height:1.25;font-weight:700}.nt-i p{margin:0;font-size:15px;line-height:1.4;color:#2F312C}.nt-i .ch-btn{margin-top:6px}
+.nt-set{border:0;background:none;font:inherit;font-size:14px;font-weight:700;text-decoration:underline;color:inherit;padding:10px;cursor:pointer;align-self:center}
+html.dark .ch-nb{background:#161616;border-color:#343434;color:#F4F4F0}html.dark .ch-nb i{background:#E2FE78;color:#0A0A0A}html.dark .nt-k{color:#B5B5B0}html.dark .nt-k b{color:#F4F4F0}html.dark .nt-i p{color:#C9C9C4}html.dark .nt-i.new{border-color:#E2FE78}
 .ch-hello{margin:-10px 0 0;font:italic 800 clamp(52px,15vw,84px)/.88 "Review Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:-.01em;color:#0A0A0A}
 .ch-hello span{display:block}@media(min-width:760px){.ch-hello span{display:inline}}.ch-hello em{font-style:italic;color:#fff;-webkit-text-stroke:2px #0A0A0A}
 .ch-who{display:flex;gap:8px;flex-wrap:wrap}.ch-who button{height:44px;padding:0 18px;border-radius:22px;border:1.5px solid #0A0A0A;background:#fff;color:#0A0A0A;font-weight:700;font-size:14px;font-family:inherit;cursor:pointer}.ch-who button[aria-pressed="true"]{background:#0A0A0A;color:#E2FE78}
@@ -297,7 +303,7 @@ async function api(path,body){
 async function load(){
   app.innerHTML=`<div class="gate"><div class="card"><p class="hint"><span class="spin"></span>&nbsp; Loading your family…</p></div></div>`;
   try{if(!VIEW&&localStorage.getItem('pw-team')!=='1')localStorage.setItem('pw-side','family')}catch(e){}   // not on a device the team signs in on (pw-team, set by shared/pwauth.js): its Dashboard stays the Dashboard
-  try{me=await api('me');render();courtReturn()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
+  try{me=await api('me');render();courtReturn();ntLoad()}catch(e){app.innerHTML=`<div class="gate">${title('One','moment.')}<p class="lead">${esc(e.message)}</p><div class="rowx"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="out">Sign out</button></div></div>${footer()}`;document.getElementById('retry').onclick=load;document.getElementById('out').onclick=()=>auth.signOut()}
 }
 
 /* ── the page ── */
@@ -458,7 +464,7 @@ function chatPaint(){
 async function chatOpen(b){CHAT={player:b.dataset.chatP||'',to:b.dataset.chat,title:b.dataset.chatT,sub:b.dataset.chatS,lines:null,err:''};chatPaint();
   try{const c=await api('chat',{player:CHAT.player,to:CHAT.to});if(CHAT)CHAT.lines=c.lines}catch(x){if(CHAT){CHAT.lines=[];CHAT.err=x.message}}chatPaint()}
 const usd=(c)=>'$'+(Number(c||0)/100).toLocaleString('en-US',{minimumFractionDigits:Number(c||0)%100?2:0,maximumFractionDigits:2});
-const ICO={plus:'<path d="M12 5v14M5 12h14"></path>',court:'<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M12 5v14M3 12h18"></path>',chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path>',card:'<rect x="3" y="6" width="18" height="13" rx="3"></rect><path d="M3 10h18"></path>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"></path>'};
+const ICO={bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path>',plus:'<path d="M12 5v14M5 12h14"></path>',court:'<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M12 5v14M3 12h18"></path>',chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path>',card:'<rect x="3" y="6" width="18" height="13" rx="3"></rect><path d="M3 10h18"></path>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"></path>'};
 const ico=(k)=>`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 /* The account (Nov 19, 2026): who can sign in, the numbers on file, the card. One form adds a parent or a contact: a name with
    an e-mail, a mobile, or both. */
@@ -659,12 +665,12 @@ function mpPaint(){let el=document.getElementById('mp');if(!MP){if(el)el.remove(
   el.innerHTML=`<header><button type="button" id="mp-x" aria-label="Back">${ico('arrow')}</button><div><h2>Your profile</h2><p>${esc(me.email||'')}</p></div></header><div class="ch-bk">
     <section class="sh-card sh-face"><div class="sh-av"${pf.photo?` style="background-image:url(${pf.photo})"`:''}>${pf.photo?'':esc(ini)}</div><div class="sh-row"><button type="button" class="sh-pill dark" id="mp-ph">${pf.photo?'Change picture':'Add a picture'}</button>${pf.photo?'<button type="button" class="sh-pill" id="mp-nph">Remove</button>':''}</div><input type="file" id="mp-file" accept="image/*" hidden></section>
     <section class="sh-card"><h3>Name and phone</h3><form id="mp-f" class="sh-f"><input type="text" id="mp-n" maxlength="80" placeholder="Full name" value="${esc(nm)}" autocomplete="name" required><input type="tel" id="mp-p" maxlength="30" placeholder="Mobile number" value="${esc(pf.phone||'')}" autocomplete="tel"><button type="submit" class="ch-btn" ${MP.busy?'disabled':''}>Save</button></form></section>
-    <section class="sh-card"><h3>Notifications</h3><button type="button" class="sh-tog" id="mp-q" aria-pressed="${pf.quiet?'true':'false'}"><span><b>Quiet at night</b><small>9 pm to 6 am. Nothing buzzes your phone. E-mails still arrive.</small></span><span class="mpsw${pf.quiet?' on':''}" aria-hidden="true"></span></button></section>
+    <section class="sh-card"><h3>Notifications</h3><button type="button" class="sh-tog" id="mp-q" aria-pressed="${pf.quiet?'true':'false'}"><span><b>Quiet at night</b><small>9 pm to 6 am. Nothing buzzes your phone. E-mails still arrive.</small></span><span class="mpsw${pf.quiet?' on':''}" aria-hidden="true"></span></button>${NT?[['weather','Weather and schedule changes','Rain delays, closed courts, time changes.'],['events','Events and news','Sessions, tournaments, academy news.'],['camps','Camps and programs','Sign-up reminders.'],['text','Text me if notifications are off','Weather and schedule changes only.']].map(([k,l,d])=>`<button type="button" class="sh-tog" data-ntp="${k}" aria-pressed="${NT.prefs[k]?'true':'false'}"><span><b>${l}</b><small>${d}</small></span><span class="mpsw${NT.prefs[k]?' on':''}" aria-hidden="true"></span></button>`).join(''):''}</section>
     ${MP.err?`<p class="sh-err">${esc(MP.err)}</p>`:''}</div>`;
   document.getElementById('mp-x').onclick=()=>{MP=null;mpPaint()};
   document.getElementById('mp-ph').onclick=()=>document.getElementById('mp-file').click();
   const rm=document.getElementById('mp-nph');if(rm)rm.onclick=()=>mpSave({photo:''},'Picture removed.');
-  document.getElementById('mp-q').onclick=()=>mpSave({quiet:!pf.quiet});
+  document.getElementById('mp-q').onclick=()=>mpSave({quiet:!pf.quiet});el.querySelectorAll('[data-ntp]').forEach(b=>b.onclick=()=>ntPref(b.dataset.ntp));
   document.getElementById('mp-f').onsubmit=(e)=>{e.preventDefault();mpSave({name:document.getElementById('mp-n').value,phone:document.getElementById('mp-p').value},'Saved.')};
   document.getElementById('mp-file').onchange=(e)=>{const f=e.target.files&&e.target.files[0];if(!f)return;const im=new Image();const u=URL.createObjectURL(f);im.onload=()=>{const n=160,c=document.createElement('canvas');c.width=c.height=n;const z=Math.min(im.naturalWidth,im.naturalHeight);c.getContext('2d').drawImage(im,(im.naturalWidth-z)/2,(im.naturalHeight-z)/2,z,z,0,0,n,n);URL.revokeObjectURL(u);let q=.82,d=c.toDataURL('image/jpeg',q);while(d.length>38000&&q>.4){q-=.1;d=c.toDataURL('image/jpeg',q)}mpSave({photo:d},'Picture saved.')};im.onerror=()=>{URL.revokeObjectURL(u);toast('That picture could not be read. Pick another one.',true)};im.src=u};
 }
@@ -685,11 +691,30 @@ async function bkLoad(){if(!BK)return;BK.load=true;BK.err='';bkPaint();const min
   catch(x){if(BK===mine)BK.err=x.message}
   if(BK===mine){BK.load=false;bkPaint()}}
 function bkOpen(kind,date,who){BK={player:who||SEL,kind:kind||'tennis',date:date||me.today,coach:'',coaches:[],slots:[],start:null,court:'',courts:[],cload:false,load:false,busy:false,err:''};bkLoad()}
+/* Notifications (Nov 22, 2026): a bell next to the day with what is not read yet, the last 30 days behind it, and the switches in
+   Your profile. Engine: functions/lib/notices.js. */
+let NT=null,NTOPEN=false;
+function ntBell(){const n=NT?NT.unread:0;return `<button type="button" class="ch-nb" id="nt-bell" aria-label="Notifications${n?', '+n+' not read':''}">${ico('bell')}${n?`<i>${n>9?'9+':n}</i>`:''}</button>`}
+function ntBadge(){const b=document.getElementById('nt-bell');if(b)b.outerHTML=ntBell()}
+async function ntLoad(){try{NT=await api('notices');ntBadge();if(NTOPEN)ntPaint();if(location.hash==='#notices'){history.replaceState(null,'',location.pathname);ntOpen()}}catch(e){/* the bell stays empty */}}
+function ntAgo(ms){const m=Math.round((Date.now()-ms)/60000);if(m<2)return 'Now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<24)return h+(h===1?' hour ago':' hours ago');const d=new Date(ms);return m<7*1440?d.toLocaleDateString('en-US',{weekday:'long'}):d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+function ntOpen(){NTOPEN=true;ntPaint();if(NT&&NT.unread){api('notices/read',{}).catch(()=>{});NT.unread=0;ntBadge()}}
+function ntPaint(){let el=document.getElementById('nt');if(!NTOPEN){if(el)el.remove();return}if(!el){el=document.createElement('div');el.id='nt';el.className='ch-chat';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Notifications');document.body.appendChild(el)}
+  const items=NT?NT.items:[];
+  el.innerHTML=`<header><button type="button" id="nt-x" aria-label="Back">${ico('arrow')}</button><div><h2>Notifications</h2><p>The last 30 days</p></div></header><div class="ch-bk">
+    ${items.length?items.map(x=>`<section class="sh-card nt-i${x.unread?' new':''}"><div class="nt-k"><b>${esc(x.kindLabel)}</b><span>${esc(ntAgo(x.at))}</span></div><b class="nt-t">${esc(x.title)}</b><p>${esc(x.body)}</p>${x.url?`<a class="ch-btn" href="${esc(x.url)}">${x.kind==='camp'?'Sign up':'Open'}</a>`:''}</section>`).join(''):`<section class="sh-card"><p class="ch-s" style="margin:0">Nothing yet. Weather changes, events and camp reminders show here.</p></section>`}
+    <button type="button" class="nt-set" id="nt-set">Choose what you hear about</button></div>`;
+  document.getElementById('nt-x').onclick=()=>{NTOPEN=false;if(NT)NT.items.forEach(x=>{x.unread=false});ntPaint()};
+  document.getElementById('nt-set').onclick=()=>{NTOPEN=false;ntPaint();MP={busy:false,err:''};mpPaint()}}
+async function ntPref(k){if(!NT)return;const v=!NT.prefs[k];NT.prefs[k]=v;mpPaint();try{const r=await api('notices/prefs',{[k]:v});NT.prefs=r.prefs}catch(x){NT.prefs[k]=!v;toast(x.message,true)}mpPaint()}
+document.addEventListener('click',(e)=>{const b=e.target.closest&&e.target.closest('#nt-bell');if(b&&me)ntOpen()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&me)ntLoad()});
+window.addEventListener('hashchange',()=>{if(location.hash==='#notices'&&me)ntLoad()});
 function homeC(first,active){
   const hello='Hello,';   // Nov 19, 2026 — Antonio: "just put Hello so it is super simple"
   const day=new Date(String(me.today||ymd(new Date()))+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   if(!active.find(p=>p.id===SEL))SEL=active.length?active[0].id:'';const p=active.find(x=>x.id===SEL)||null;
-  const top=`<div class="ch-day">${esc(day)}</div><h1 class="ch-hello"><span>${hello}</span> <em>${esc(first)}.</em></h1>`;
+  const top=`<div class="ch-top"><div class="ch-day">${esc(day)}</div>${ntBell()}</div><h1 class="ch-hello"><span>${hello}</span> <em>${esc(first)}.</em></h1>`;
   /* Who is on the account (Nov 21, 2026): the children, the adults who take privates, and a plus to add someone. */
   const ppl=(me.people||[]);const pf=me.profile||{};const ini=String(me.name||first||'?').split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
   const who=`<div class="ch-who" role="group" aria-label="Who is on this account"><button type="button" class="mep" data-pp="me" aria-label="Your profile"${pf.photo?` style="background-image:url(${pf.photo})"`:''}>${pf.photo?'':esc(ini)}</button>${active.map(x=>`<button type="button" data-sel="${esc(x.id)}" aria-pressed="${x.id===SEL}">${esc(x.shortName||x.name.split(' ')[0])}</button>`).join('')}${ppl.map(x=>`<button type="button" data-pp="person" data-id="${esc(x.id)}" aria-pressed="false">${esc(x.name.split(' ')[0])}</button>`).join('')}<button type="button" class="plus" data-pp="add" aria-label="Add a person">+</button></div>`;
