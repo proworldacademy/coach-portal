@@ -129,6 +129,13 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 
   <section class="sec" id="people-sec" hidden>
     <div class="sec-h"><h2>People &amp; access</h2><small id="people-small"></small></div>
+    <div class="card" id="brain-card" hidden style="margin-bottom:14px">
+      <div class="notice"><b>What the AI knows.</b> One brain for the assistant in the client app and the one on the website. It already has the programs, camps, prices and policies. Write here anything else it should know or say differently; it uses it from the next question on. <span id="brain-state"></span></div>
+      <div class="field" style="margin-top:10px"><label for="brain-notes">Notes for the AI</label><textarea id="brain-notes" rows="6" maxlength="6000" placeholder="One fact per line. Example: The pro shop opens at 8 AM on weekdays." style="width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,.18);border-radius:14px;padding:12px 14px;font:inherit;font-size:15px;line-height:1.45;resize:vertical;background:#fff;color:#0A0A0A"></textarea></div>
+      <button class="btn" type="button" id="brain-save" style="margin-top:10px">Save</button>
+      <div id="brain-open" style="margin-top:18px"></div>
+      <div id="brain-learned" style="margin-top:14px"></div>
+    </div>
     <div class="card" id="pushwho-card" hidden style="margin-bottom:14px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><b style="font-size:15px">Who gets notifications</b><small id="pushwho-count" style="color:var(--ink-3,#6b6d66)"></small></div>
       <p style="margin:4px 0 10px;font-size:13px;line-height:1.5;color:var(--ink-2,#3b3c38)">A message or a call in the Locker Room reaches a phone only when notifications are on for ProWorld on that phone. The app asks each person when they open it.</p>
@@ -454,6 +461,26 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       try { await window.PWAuth.fs().doc("settings/mail").set({ user, pass, at: Date.now(), by: ctx.email }); $("mail-pass").value = ""; state("Saved. Send yourself a test."); } catch (x) { state("Could not save: " + (x.message || x), true); } });
     $("mail-test").addEventListener("click", async () => { state("Sending…"); try { const j = await api("mail/test", {}); state("Sent to " + j.to + ". Check the inbox."); } catch (x) { state(x.message || "Could not send.", true); } });
   }
+  /* What the AI knows (Nov 21, 2026): the one brain of the client app's assistant and the website's (lib/brain.js). Notes management
+     writes, the questions an assistant could not answer (teach it once, every assistant answers from then on), and what it was taught. */
+  function brainCard() {
+    if (!ctx.owner) return; const box = $("brain-card"); if (!box || box.dataset.on) return; box.dataset.on = "1";
+    const state = (t, bad) => { $("brain-state").innerHTML = t ? '<b style="color:' + (bad ? "#B42318" : "inherit") + '">' + esc(t) + "</b>" : ""; };
+    const lab = (t) => '<div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3,#6b6d66);font-weight:700;margin-bottom:6px">' + t + "</div>";
+    const row = 'style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid rgba(0,0,0,.08);font-size:14px"';
+    const inp = 'style="flex:1 1 220px;min-width:0;height:44px;border:1px solid rgba(0,0,0,.18);border-radius:14px;padding:0 12px;font:inherit;font-size:15px;background:#fff;color:#0A0A0A"';
+    const sm = 'style="height:40px;border-radius:20px;border:1px solid #0A0A0A;background:none;color:#0A0A0A;font:inherit;font-weight:700;font-size:13px;padding:0 16px;cursor:pointer;flex:none"';
+    function draw(j) {
+      if (document.activeElement !== $("brain-notes")) $("brain-notes").value = j.notes || "";
+      const open = j.open || [], learned = j.learned || [];
+      $("brain-open").innerHTML = open.length ? lab("Questions it could not answer · " + open.length) + open.map((o) => "<div " + row + '><span style="flex:1 1 100%"><b>' + esc(o.q) + "</b>" + (o.n > 1 ? " · asked " + o.n + " times" : "") + " · " + (o.src === "web" ? "website" : "client app") + '</span><input data-ans="' + esc(o.id) + '" placeholder="Type the answer to teach it" maxlength="600" ' + inp + '><button type="button" data-teach="' + esc(o.id) + '" ' + sm.replace("background:none;color:#0A0A0A", "background:#0A0A0A;color:#fff") + '>Teach</button><button type="button" data-forget="' + esc(o.id) + '" ' + sm + ">Skip</button></div>").join("") : "";
+      $("brain-learned").innerHTML = learned.length ? lab("Answers you taught it · " + learned.length) + learned.map((l) => "<div " + row + '><span style="flex:1 1 260px;min-width:0"><b>' + esc(l.q) + "</b><br>" + esc(l.a) + '</span><button type="button" data-forget="' + esc(l.id) + '" ' + sm + ">Remove</button></div>").join("") : "";
+      box.querySelectorAll("[data-teach]").forEach((b) => b.onclick = async () => { const id = b.dataset.teach; const a = box.querySelector('[data-ans="' + id + '"]').value.trim(); const o = open.find((x) => x.id === id); if (!a) { state("Type the answer first.", true); return; } b.disabled = true; try { draw(await api("brain", { action: "teach", id, q: o.q, a })); state("Taught. Every assistant answers it now."); } catch (x) { state(x.message || String(x), true); b.disabled = false; } });
+      box.querySelectorAll("[data-forget]").forEach((b) => b.onclick = async () => { b.disabled = true; try { draw(await api("brain", { action: "forget", id: b.dataset.forget })); state(""); } catch (x) { state(x.message || String(x), true); b.disabled = false; } });
+    }
+    api("brain").then((j) => { draw(j); box.hidden = false; }).catch(() => {});
+    $("brain-save").onclick = async () => { const b = $("brain-save"); b.disabled = true; try { draw(await api("brain", { action: "save", notes: $("brain-notes").value })); state("Saved. The assistants use it from the next question."); } catch (x) { state(x.message || String(x), true); } b.disabled = false; };
+  }
   /* who has notifications on (Nov 21, 2026): one line per person on the team, the ones to chase first; the engine reads pushSubs and pushState */
   function pushWhoCard() {
     if (!ctx.owner && !ctx.admin) return; const box = $("pushwho-card"); if (!box || box.dataset.on) return; box.dataset.on = "1";
@@ -514,7 +541,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   }
   function own() {
     if (!ctx.admin) return;
-    mailCard(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
+    mailCard(); brainCard(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';

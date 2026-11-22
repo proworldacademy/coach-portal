@@ -22,30 +22,31 @@ const CAL = require('./calendar');
 const CAT = require('./catalog');
 const CC = require('./coachcal');
 const IDEAS = require('./ideas');
+const BRAIN = require('./brain');
 
 const MODEL = 'claude-sonnet-5-5';
 const API = 'https://api.anthropic.com/v1/messages';
 const DAILY = 40;
+/* What it remembers (Nov 21, 2026 — "can the AI keep memory… so it remembers what parents asked"): the last KEEP questions a parent
+   asked about ONE player, for KEEP_DAYS days, with what it answered and what it offered to do. assistantMemory/<hash of the e-mail
+   and the player> { items: [{ at, day, q, a, action }] }, engine only. It is that family's own conversation, so the names stay in;
+   it is never read for another player or another family, and what is older than KEEP_DAYS is dropped the next time they ask.
+   POST /api/family/ask/forget clears it. */
+const KEEP_DAYS = 90, KEEP = 24;
+const memRef = (db, email, pid) => db.doc('assistantMemory/' + crypto.createHash('sha256').update('pw:' + String(email).toLowerCase() + '|' + String(pid)).digest('hex').slice(0, 40));
+async function recall(db, email, pid, now) { try { const s = await memRef(db, email, pid).get(); const items = s.exists ? ((s.data() || {}).items || []) : []; return items.filter((m) => m && now - Number(m.at) < KEEP_DAYS * 864e5).slice(-KEEP); } catch (e) { return []; } }
+async function forget(db, who, players) { for (const p of players || []) { try { await memRef(db, who.email, p.id).delete(); } catch (e) { /* nothing kept */ } } return { ok: true }; }
 const clip = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
 const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''));
 const money = (n) => '$' + Number(n).toLocaleString('en-US');
 let poster = null;                       // tests put a stand-in for Claude here
+let CLOCK = () => Date.now();
 function _useModel(fn) { poster = fn; }
 
 async function ready(db) { try { return /^sk-ant-/.test(String((await IDEAS.settings(db)).anthropicKey || '')); } catch (e) { return false; } }
 
-/* the academy's facts, from the catalog the enrollment page sells from: never typed twice */
-function facts(today) {
-  const progs = CAT.PROGRAMS.filter((p) => !p.hidden).map((p) => {
-    const plans = (p.plans || []).filter((x) => x.monthly).map((x) => `${x.label} ${money(x.monthly)} a month`).join('; ');
-    const extra = [p.dropin ? `one session ${money(p.dropin.price)}` : '', p.trial ? `${p.trial.label} ${money(p.trial.price)}` : ''].filter(Boolean).join('; ');
-    return `· ${String(p.name).split('|')[0].trim()} (${p.ages}; ${p.time}${Array.isArray(p.days) && p.days.length ? '; ' + p.days.join(' ') : ''}): ${[plans, extra].filter(Boolean).join('; ') || 'ask Admin for the plans'}`;
-  });
-  const coming = CAT.campsComing(today); const camps = [];
-  for (const g of coming) for (const id of g.ids) { const c = CAT.CAMPS.find((x) => x.id === id); if (c) camps.push(`· [${c.id}] ${c.name} (${c.ages}; ${c.dates}): ${(c.options || []).map((o) => `${o.label} ${money(o.price)}`).join('; ')}`); }
-  const court = CAT.COURTS && CAT.COURTS.hard ? `Court rental: ${money(CAT.COURTS.hard.price)} an hour for a family that is not in a program; free for academy families.` : '';
-  return { progs, camps, court };
-}
+/* the academy's facts come from the one brain every assistant reads (lib/brain.js) */
+const facts = (today) => BRAIN.catalog(today);
 
 function scrub(text, names) {
   let t = clip(text, 600).replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[e-mail]').replace(/\(?\+?\d[\d\s().-]{7,}\d/g, '[number]');
@@ -53,8 +54,8 @@ function scrub(text, names) {
   return t;
 }
 
-function prompt(today, now, p, ctx, coachNames) {
-  const f = facts(today); const dow = new Date(today + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+function prompt(today, now, p, ctx, coachNames, brain, before) {
+  const dow = new Date(today + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
   const c = ctx || {}; const first = clip(c.name, 30) || clip(String(p.name || '').split(' ')[0], 30) || 'the player';
   const lines = [
     `Name: ${first}. Program: ${clip(c.program, 60) || 'none on file'}.`,
@@ -68,12 +69,10 @@ function prompt(today, now, p, ctx, coachNames) {
     'You are "Ask ProWorld", the assistant inside the ProWorld Academy client app (a tennis, soccer and fitness academy in Delray Beach, Florida). A parent or an adult player writes to you. Be short, warm and plain: one to three sentences, no lists unless asked, no emoji, no em dashes. Answer in the language the person writes in.',
     `TODAY: ${dow}, ${today}, ${CC.fmtT(now.h)} in Florida.`,
     'THE PLAYER THIS CONVERSATION IS ABOUT (the only one you may speak of; never mention any other child or family):\n' + lines.join('\n'),
-    'PROGRAMS AND PRICES:\n' + f.progs.join('\n'),
-    f.camps.length ? 'CAMPS COMING UP (the id is in brackets):\n' + f.camps.join('\n') : 'No camp is on sale right now.',
-    f.court,
-    'POLICIES: A missed session can be made up on another day in the same month; a make-up not used by the end of the month does not carry into the next month; an exception (a week sick, for instance) is decided by Admin, case by case. A private lesson is one hour and is booked at least 24 hours ahead; to change one inside 24 hours, write to Admin. The rate of a private lesson is handled by Admin: never state a price for a private. Academics are not offered. Contact: info@proworldacademy.com, (561) 403-0008, 651 Egret Cir, Delray Beach, FL 33444.',
+    (before || []).length ? `WHAT THIS PARENT ASKED ABOUT THIS PLAYER BEFORE (the last ${KEEP_DAYS} days, oldest first; use it so they do not have to repeat themselves, and do not bring it up unless it helps):\n` + before.map((m) => `· ${m.day}: asked "${clip(m.q, 160)}"${m.action ? ' → ' + m.action : ''}${m.a ? '; you said "' + clip(m.a, 160) + '"' : ''}`).join('\n') : '',
+    brain || BRAIN.text({}, today),
     `PRIVATE LESSON COACHES: tennis ${coachNames.tennis.join(', ') || 'none'}; fitness ${coachNames.fitness.join(', ') || 'none'}; mental ${coachNames.mental.join(', ') || 'none'}.`,
-    'RULES: You never book, cancel, mark or send anything yourself. When the person wants something done, name ONE action and the app shows a card they confirm; say in the reply what the card is for, never that it is already done. Refunds, discounts, exceptions, invoices, billing disputes and anything you are not sure of go to Admin (the action "admin"); say "Admin", never a person\'s name. If you do not know, say so and offer Admin. Never invent a time, a price or a rule that is not above.',
+    'RULES: You never book, cancel, mark or send anything yourself. When the person wants something done, name ONE action and the app shows a card they confirm; say in the reply what the card is for, never that it is already done. Refunds, discounts, exceptions, invoices, billing disputes and anything you are not sure of go to Admin (the action "admin"); say "Admin", never a person\'s name. If you do not know, say so, offer Admin, and set "unknown" to true. Never invent a time, a price or a rule that is not above.',
     'ACTIONS (at most one; null when the answer is only words):\n' +
       '{"type":"private","kind":"tennis|fitness|mental","date":"YYYY-MM-DD","coach":"<first name, or empty for the player\'s own coach>","part":"morning|afternoon|evening|any"} — book a private; pick the date they asked for (resolve "Thursday", "tomorrow" from TODAY; never a past day)\n' +
       '{"type":"away","date":"YYYY-MM-DD"} — the player is not coming to a training day\n' +
@@ -83,7 +82,7 @@ function prompt(today, now, p, ctx, coachNames) {
       '{"type":"program"} — enroll in or add a program\n' +
       '{"type":"admin","subject":"<5 words>","text":"<the request, written for Admin in the parent\'s voice, 1–2 sentences>"} — pass something to Admin\n' +
       '{"type":"open","where":"schedule|billing|messages|reports|account"} — open a part of the app',
-    'Answer with ONE JSON object only: {"reply":"<your words>","action":null or one action}.'
+    'Answer with ONE JSON object only: {"reply":"<your words>","action":null or one action,"unknown":true only when you could not answer from what is above}.'
   ].filter(Boolean).join('\n\n');
 }
 
@@ -91,7 +90,7 @@ function parse(raw) {
   const text = String(raw || ''); const i = text.indexOf('{'); if (i < 0) return { reply: clip(text, 700), action: null };
   let d = 0, q = false, esc = false, end = text.length;
   for (let k = i; k < text.length; k++) { const ch = text[k]; if (q) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') q = false; continue; } if (ch === '"') q = true; else if (ch === '{') d++; else if (ch === '}') { d--; if (!d) { end = k + 1; break; } } }
-  try { const o = JSON.parse(text.slice(i, end)); return { reply: clip(o.reply, 900), action: o.action && typeof o.action === 'object' ? o.action : null }; } catch (e) { return { reply: clip(text.replace(/^\s*\{\s*"reply"\s*:\s*"/, '').replace(/"\s*,\s*"action"[\s\S]*$/, ''), 700), action: null }; }
+  try { const o = JSON.parse(text.slice(i, end)); return Object.assign({ reply: clip(o.reply, 900), action: o.action && typeof o.action === 'object' ? o.action : null }, o.unknown === true ? { unknown: true } : {}); } catch (e) { return { reply: clip(text.replace(/^\s*\{\s*"reply"\s*:\s*"/, '').replace(/"\s*,\s*"action"[\s\S]*$/, ''), 700), action: null }; }
 }
 
 /* the action Claude named → a card with real data, or nothing when it does not hold up */
@@ -127,7 +126,8 @@ async function ask(db, who, body, players) {
   await useRef.set({ n: n + 1, at: Date.now() });
   const names = { tennis: [], fitness: [], mental: [] };
   await Promise.all(Object.keys(names).map(async (k) => { try { names[k] = (await CC.coaches(db, k)).map((c) => c.name); } catch (e) { names[k] = []; } }));
-  const sys = prompt(today, now, p, body.context || {}, names);
+  const nowMs = CLOCK(); const before = await recall(db, who.email, p.id, nowMs); const brain = await BRAIN.get(db);
+  const sys = prompt(today, now, p, body.context || {}, names, BRAIN.text(brain, today), before);
   const history = (Array.isArray(body.history) ? body.history : []).slice(-8).map((h) => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: clip(h && h.text, 700) })).filter((h) => h.content);
   while (history.length && history[0].role !== 'user') history.shift();
   const msgs = history.concat([{ role: 'user', content: message + '\n\n(Answer with the JSON object only.)' }]);
@@ -144,8 +144,11 @@ async function ask(db, who, body, players) {
   let reply = out.reply || (card ? 'Here it is.' : 'I did not get that. Could you say it another way?');
   if (card && card.type === 'none') { reply = card.text; card = null; }
   if (card && card.type === 'private' && !card.slots.length) reply = card.next.length ? `Coach ${card.coachName} has no open time that day. A private is booked at least 24 hours ahead. Here are the next open days.` : `Coach ${card.coachName} has no open time in the next weeks. Admin can help find one.`;
+  const did = card ? ({ private: 'offered times for a ' + (card.kind || 'tennis') + ' private on ' + card.date, away: 'offered to mark ' + card.date + ' as not coming', makeup: 'offered a make-up day on ' + card.date, court: 'offered a court on ' + card.date, camp: 'showed the camp sign-up', program: 'showed the programs', admin: 'offered to send it to Admin', open: 'opened ' + card.where }[card.type] || '') : '';
+  try { await memRef(db, who.email, p.id).set({ items: before.concat([{ at: nowMs, day: today, q: clip(message, 300), a: clip(reply, 300), action: did }]).slice(-KEEP), at: nowMs }); } catch (e) { /* the answer does not wait for the memory */ }
+  if (out.unknown || (card && card.type === 'admin')) { try { const hide0 = [who.name, p.name, (body.context || {}).name].join(' ').split(/\s+/).filter(Boolean); await BRAIN.wonder(db, scrub(message, hide0), 'app'); } catch (e) { /* the weekly review still has the log */ } }
   try { const hide = [who.name, p.name, (body.context || {}).name].join(' ').split(/\s+/).filter(Boolean); await db.collection('assistantLog').add({ at: Date.now(), day: today, q: scrub(message, hide), a: scrub(reply, hide), action: card ? card.type : '', took: Date.now() - t0 }); } catch (e) { /* the answer does not wait for the log */ }
   return { reply, card };
 }
 
-module.exports = { ask, ready, facts, parse, scrub, cardOf, prompt, DAILY, MODEL, _useModel };
+module.exports = { ask, ready, facts, parse, scrub, cardOf, prompt, recall, forget, DAILY, KEEP_DAYS, KEEP, MODEL, _useModel, _clock: (f) => { CLOCK = f || (() => Date.now()); } };

@@ -44,6 +44,7 @@ const SCHED = require('./lib/schedule');
 const PAYROLL = require('./lib/payroll');
 const CLIENT = require('./lib/client');
 const ASSISTANT = require('./lib/assistant');
+const BRAIN = require('./lib/brain');
 /* Who is told what, for the schedule (Nov 20, 2026). Owners: the staff records marked owner and the owner sign-ins. */
 async function ownerEmails(db) { const out = new Set(); try { (await db.collection('staff').where('owner', '==', true).get()).docs.forEach((d) => out.add(String(d.id).toLowerCase())); } catch (e) { /* the sign-ins below */ }
   try { const auth = require('firebase-admin/auth').getAuth(); for (const uid of ADMIN.OWNERS || []) { try { const u = await auth.getUser(uid); if (u.email) out.add(u.email.toLowerCase()); } catch (e) { /* next */ } } } catch (e) { /* none */ } return Array.from(out); }
@@ -134,6 +135,9 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       return send(res, 200, { ok: true, did: out.did });
     }
 
+    /* the one brain, for the website's assistant: the same text Ask ProWorld reads, with the roster key (Nov 21, 2026) */
+    if (route === 'GET /brain') { await FEED.requireKey(ctx.db, req); const today = require('./lib/calendar').todayET(); const b = await BRAIN.get(ctx.db); return send(res, 200, { text: BRAIN.text(b, today), at: b.at, today }); }
+    if (route === 'POST /brain/open') { await FEED.requireKey(ctx.db, req); return send(res, 200, await BRAIN.wonder(ctx.db, ASSISTANT.scrub((req.body || {}).q, []), 'web')); }
     if (route === 'GET /roster') {
       // the roster feed for the concierge and the morning digest — read-only, one key, set by an owner on the backend
       await FEED.requireKey(ctx.db, req);
@@ -168,6 +172,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         return send(res, 200, Object.assign({ mode: mode(key) }, out, { member: (out.players || []).some((p) => p.status !== 'finished'), known: out.known || !!cl, people: CLIENT.people(cl), profile: cl ? { name: cl.name || '', phone: cl.phone || '', photo: cl.photo || '', quiet: cl.quiet === true } : null, name: out.name || (cl && cl.name) || '', courtCents: SCHED.RENT.hourCents, ask: await ASSISTANT.ready(ctx.db) })); }
       if (route === 'POST /family/portal') return send(res, 200, await FAMILY.portal(stripe, who, ctx.db));
       /* Ask ProWorld (Nov 21, 2026): a question about the one player selected; the answer may carry a card the parent confirms (lib/assistant.js) */
+      if (route === 'POST /family/ask/forget') { const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); return send(res, 200, await ASSISTANT.forget(ctx.db, who, (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, who.email))))); }
       if (route === 'POST /family/ask') { const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); const players = (found.players || []).concat(CLIENT.people(await CLIENT.get(ctx.db, who.email)));
         const out = await ASSISTANT.ask(ctx.db, who, b, players); logger.info('family ask', { card: out.card ? out.card.type : '' }); return send(res, 200, out); }
       if (route === 'POST /family/request') {
@@ -347,6 +352,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
       if (route === 'POST /admin/voice/setup') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.setup(ctx.db); logger.info('voice connected', { by: who.email }); return send(res, 200, out); }
       if (route === 'POST /admin/voice/assign') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); const out = await VOICE.assign(ctx.db, b); logger.info('voice number', { by: who.email }); return send(res, 200, out); }
       if (route === 'GET /admin/turn') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await TEAM.turnReady(ctx.db)); }
+      if (route === 'GET /admin/brain' || route === 'POST /admin/brain') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, route === 'GET /admin/brain' ? await BRAIN.view(ctx.db) : await BRAIN.admin(ctx.db, who, b)); }
       if (route === 'GET /admin/push/who') { if (!who.owner && !who.admin) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, await PUSH.who(ctx.db, (await TEAM.people(ctx.db)).people)); }
       if (route === 'GET /admin/apns') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await PUSH.apnsReady(ctx.db) }); }
       if (route === 'GET /admin/mail') { if (!who.owner) throw S.err(403, 'owner', 'Owners only.'); return send(res, 200, { ready: await MAIL.ready(ctx.db) }); }
