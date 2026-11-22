@@ -196,6 +196,7 @@ exports.api = onRequest({ region: REGION, secrets: [STRIPE_SECRET_KEY], minInsta
         if (!out) throw S.err(404, 'route', 'Not found.');
         logger.info('family backup card ' + fn, { by: acting ? acting.by : who.email }); return send(res, 200, out);
       }
+      if (route === 'POST /family/news/signup') { const found = await FAMILY.findPlayers(ctx.db, stripe, who.email); const out = await NEWS.signup(ctx.db, who, b, found.players || []); logger.info('event sign-up', { by: acting ? acting.by : who.email, on: out.on, date: out.date }); return send(res, 200, out); }
       if (route === 'GET /family/notices') return send(res, 200, await NOTICES.forFamily(ctx.db, who.email));
       if (route === 'POST /family/notices/read') return send(res, 200, acting ? { ok: true } : await NOTICES.markRead(ctx.db, who.email));
       if (route === 'POST /family/notices/prefs') { const out = await NOTICES.setPrefs(ctx.db, who.email, b); logger.info('family notices prefs', { by: acting ? acting.by : who.email }); return send(res, 200, out); }

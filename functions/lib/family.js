@@ -559,7 +559,7 @@ async function me(db, stripe, who, opts) {
   const bill = await billing(stripe, customers, today);
   let requests = [];
   try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
-  let news = []; try { news = await require('./news').forFamily(db, players.map((p) => p.group), today); } catch (e) { news = []; }
+  let news = []; try { news = await require('./news').forFamily(db, players.map((p) => p.group), today, players); } catch (e) { news = []; }
   return { news, camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 

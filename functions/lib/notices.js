@@ -71,7 +71,8 @@ async function appEmails(db) { const out = new Set(); try { (await db.collection
 async function reach(db, n, today) {
   const [dir, prefs, apps] = await Promise.all([directory(db), allPrefs(db), appEmails(db)]);
   const pk = PREF_OF[n.kind]; const to = []; const push = []; const texts = []; let families = 0, withApp = 0;
-  for (const f of audience(dir, n, today)) {
+  const only = Array.isArray(n.only) && n.only.length ? new Set(n.only.map(low)) : null;        // a notice for named parents (the people signed up for an event)
+  for (const f of (only ? dir.filter((f) => Array.from(f.emails).some((e) => only.has(e))) : audience(dir, n, today))) {
     const on = Array.from(f.emails).filter((e) => !pk || (prefs[e] || {})[pk] !== false); if (!on.length) continue;
     families++; on.forEach((e) => to.push(e));
     const app = on.filter((e) => apps.has(e)); app.forEach((e) => push.push(e));
@@ -167,6 +168,11 @@ async function tick(db, opts) {
     await db.doc('familyNotices/' + n.id).set({ reminded: true }, { merge: true });
     if (!(await ref.get()).exists) { await ref.set({ title: 'Tomorrow: ' + n.title, body: n.body, kind: n.kind, group: n.group, camp: n.camp, url: n.url, date: n.date, sendAt: now, state: 'scheduled', remind: false, text: false, auto: true, by: 'automatic', at: now }); await deliver(db, rid, opts); out.reminders++; }
   }
+  /* an event parents signed up for is tomorrow: the people on its list, the same evening window */
+  if (hr >= 18 && hr < 21) { let due = []; try { due = await NEWS.dueReminders(db, today); } catch (e) { due = []; }
+    for (const d of due) { const id = 'ev-' + d.id + '-' + d.date; const ref = db.doc('familyNotices/' + id); if ((await ref.get()).exists) continue;
+      await ref.set({ title: 'Tomorrow: ' + d.title, body: (d.time ? d.time + '. ' : '') + 'You are signed up.', kind: 'event', group: '', only: d.emails, url: '', date: d.date, sendAt: now, state: 'scheduled', remind: false, text: false, auto: true, by: 'automatic', at: now });
+      await deliver(db, id, opts); out.reminders++; } }
   /* a camp is coming: ten days and three days before, to the families not signed up, in the daytime */
   if (hr >= 10 && hr < 20 && (await settings(db)).campAuto) for (const c of CAT.campsComing(today)) {
     const d = daysBetween(today, c.from); if (!CAMP_DAYS.includes(d)) continue;
