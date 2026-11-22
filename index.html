@@ -80,6 +80,11 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
 .rn:first-child{border-top:0}
 .rn b{font-weight:700}.rn .d{color:var(--muted);font-size:12.5px}.rn .w{color:var(--ink-2);font-size:12.5px}
 @media(max-width:700px){.rn{grid-template-columns:minmax(0,1fr)}}
+.aiw{gap:0}.aiw-top{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.aiw-n{border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}.aiw-n b{font-family:var(--display);font-style:italic;font-weight:800;font-size:40px;line-height:.9}.aiw-n span{font-size:12.5px;color:var(--ink-3,#6b6d66);line-height:1.25}.aiw-n.w{background:#0A0A0A;border-color:#0A0A0A}.aiw-n.w b{color:#E2FE78}.aiw-n.w span{color:#D8D8D2}
+.aiw-s{margin:12px 0 0;font-size:13.5px;color:var(--ink-3,#6b6d66)}.aiw-l{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3,#6b6d66);font-weight:700;margin:22px 0 8px}
+.aiw-t{padding:10px 0;border-top:1px solid rgba(0,0,0,.08)}.aiw-th{display:flex;justify-content:space-between;gap:12px;font-size:14.5px}.aiw-th span{color:var(--ink-3,#6b6d66);font-size:13px;white-space:nowrap}.aiw-t i{display:block;height:6px;border-radius:3px;background:#E2FE78;margin:8px 0 6px;border:1px solid rgba(0,0,0,.12)}.aiw-t small{display:block;font-size:13px;color:var(--ink-3,#6b6d66);line-height:1.4}
+.aiw-r{padding:10px 0;border-top:1px solid rgba(0,0,0,.08);font-size:14.5px}.aiw-go{display:inline-flex;align-items:center;height:40px;padding:0 18px;border-radius:20px;border:1px solid #0A0A0A;color:#0A0A0A;font-weight:700;font-size:13.5px;text-decoration:none;margin-top:12px;align-self:flex-start}
+@media(max-width:560px){.aiw-top{grid-template-columns:1fr 1fr}.aiw-n b{font-size:34px}}
 </style>
 </head><body class="skin-home">
 <script src="/shared/pages.js"></script>
@@ -107,6 +112,12 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   <section class="sec" id="today-sec">
     <div class="sec-h"><h2>Today</h2><small id="today-small"></small></div>
     <div class="rail" id="rail"></div>
+  </section>
+
+  <section class="sec" id="ai-sec" hidden>
+    <a id="ai-review" class="anchor" aria-hidden="true"></a>
+    <div class="sec-h"><h2>What families asked</h2><small id="ai-small"></small></div>
+    <div class="card aiw" id="ai-card"></div>
   </section>
 
   <section class="sec" id="lib-sec" hidden>
@@ -461,6 +472,23 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
       try { await window.PWAuth.fs().doc("settings/mail").set({ user, pass, at: Date.now(), by: ctx.email }); $("mail-pass").value = ""; state("Saved. Send yourself a test."); } catch (x) { state("Could not save: " + (x.message || x), true); } });
     $("mail-test").addEventListener("click", async () => { state("Sending…"); try { const j = await api("mail/test", {}); state("Sent to " + j.to + ". Check the inbox."); } catch (x) { state(x.message || "Could not send.", true); } });
   }
+  /* What families asked (Nov 22, 2026): the weekly review of the two assistants, for the owners. Read from the engine
+     (/api/admin/brain/review): how many questions, about what, what went to Admin, what it could not answer. */
+  function aiWeek() {
+    if (!ctx.owner) return; const sec = $("ai-sec"); if (!sec || sec.dataset.on) return; sec.dataset.on = "1";
+    api("brain/review").then((r) => {
+      const d = (ms) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" }); const top = r.topics.length ? r.topics[0].n : 1;
+      const num = (n, l, warn) => '<div class="aiw-n' + (warn ? " w" : "") + '"><b>' + n + "</b><span>" + l + "</span></div>";
+      $("ai-small").textContent = d(r.from) + " to " + d(r.to) + " · " + (r.before ? r.before + " the week before" : "first week");
+      $("ai-card").innerHTML = '<div class="aiw-top">' + num(r.total, "Questions") + num(r.booked, "Bookings started") + num(r.toAdmin, "Sent to Admin") + num(r.unansweredAll, "Waiting for your answer", r.unansweredAll > 0) + "</div>" +
+        '<p class="aiw-s">' + r.app + " in the client app · " + r.web + " on the website and in messages" + (r.busiest ? " · busiest day " + esc(r.busiest) : "") + "</p>" +
+        (r.total ? '<div class="aiw-l">What they asked about</div>' + r.topics.map((t) => '<div class="aiw-t"><div class="aiw-th"><b>' + esc(t.topic) + "</b><span>" + t.n + (t.admin ? " · " + t.admin + " to Admin" : "") + '</span></div><i style="width:' + Math.max(6, Math.round(t.n / top * 100)) + '%"></i>' + (t.ex.length ? "<small>" + t.ex.map((q) => "“" + esc(q) + "”").join(" &nbsp; ") + "</small>" : "") + "</div>").join("") : '<p class="aiw-s">Nobody has asked the assistants anything in the last seven days.</p>') +
+        (r.unanswered.length ? '<div class="aiw-l">It could not answer this week</div>' + r.unanswered.map((o) => '<div class="aiw-r"><span>' + esc(o.q) + (o.n > 1 ? " · asked " + o.n + " times" : "") + "</span></div>").join("") + '<a class="aiw-go" href="#people-sec">Teach it the answers</a>' : (r.unansweredAll ? '<a class="aiw-go" href="#people-sec">' + r.unansweredAll + " older question" + (r.unansweredAll === 1 ? "" : "s") + " still waiting for an answer</a>" : "")) +
+        (r.toAdminEx.length ? '<div class="aiw-l">Sent to Admin, most recent</div>' + r.toAdminEx.map((q) => '<div class="aiw-r"><span>' + esc(q) + "</span></div>").join("") : "") +
+        (r.taught ? '<p class="aiw-s" style="margin-top:14px">You taught it ' + r.taught + " new answer" + (r.taught === 1 ? "" : "s") + " this week.</p>" : "");
+      sec.hidden = false;
+    }).catch(() => {});
+  }
   /* What the AI knows (Nov 21, 2026): the one brain of the client app's assistant and the website's (lib/brain.js). Notes management
      writes, the questions an assistant could not answer (teach it once, every assistant answers from then on), and what it was taught. */
   function brainCard() {
@@ -541,7 +569,7 @@ table.acl{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   }
   function own() {
     if (!ctx.admin) return;
-    mailCard(); brainCard(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
+    mailCard(); brainCard(); aiWeek(); pushWhoCard(); apnsCard(); turnCard(); voiceCard(); hookCard();
     const reqs = requests.filter((r) => r.email && !staff.some((s) => s.id === r.email && s.active === true)).length;
     $("own-sec").hidden = false; $("people-sec").hidden = false; $("outside-sec").hidden = false; $("runs-sec").hidden = false;
     $("own").innerHTML = '<a class="op" href="#people-sec"><i class="dot' + (reqs ? " lime" : "") + '"></i><b>People &amp; access</b><span>' + staff.length + (staff.length === 1 ? " person" : " people") + (reqs ? " · " + reqs + " asked to get in" : "") + '</span></a><a class="op" href="#outside-sec"><i class="dot"></i><b>Outside tools</b><span>' + P.OUTSIDE.length + ' logins</span></a><a class="op" href="#runs-sec"><i class="dot"></i><b>Runs</b><span>6 by themselves · every day</span></a>';
