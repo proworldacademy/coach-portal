@@ -12,6 +12,7 @@
   if (window.PWDictate || window.parent !== window) return;
   const can = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
   let READY = null, field = null, btn = null, note = null, rec = null, stream = null, chunks = [], state = 'idle', t0 = 0, tick = 0, noteT = 0;
+  let span = null, liveBusy = false, liveSeq = 0, liveSize = 0, liveOff = false, liveAt = 0;   // span: where the dictated words sit in the box while they are still changing
   const MAX_MS = 120000;
 
   const user = () => { try { const a = (window.PWAuth && window.PWAuth.auth && window.PWAuth.auth()) || (typeof firebase !== 'undefined' && firebase.auth ? firebase.auth() : null); return a && a.currentUser; } catch (e) { return null; } };
@@ -61,7 +62,7 @@
   function say(text) { css(); if (!note) { note = document.createElement('div'); note.id = 'pw-mic-n'; note.setAttribute('role', 'status'); document.body.appendChild(note); } note.textContent = text; note.style.display = 'block'; place(); clearTimeout(noteT); noteT = setTimeout(() => { if (note) note.style.display = 'none'; }, 4200); }
   function paint() {
     if (!btn) return; btn.className = state === 'rec' ? 'on' : state === 'busy' ? 'busy' : '';
-    btn.innerHTML = state === 'rec' ? '<i></i><span>' + clock() + '</span>' : state === 'busy' ? '<span>Writing…</span>' : MIC;
+    btn.innerHTML = state === 'rec' ? '<i></i><span>' + clock() + '</span>' : state === 'busy' ? '<span>Finishing…</span>' : MIC;
     btn.setAttribute('aria-label', state === 'rec' ? 'Stop and write what I said' : state === 'busy' ? 'Writing what you said' : 'Dictate'); btn.disabled = state === 'busy'; place();
   }
   const clock = () => { const s = Math.floor((Date.now() - t0) / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -76,14 +77,31 @@
   }
   function hide() { if (state !== 'idle') return; if (btn) btn.style.display = 'none'; if (note) note.style.display = 'none'; field = null; }
 
-  function put(text) {
-    const el = field; if (!el || !text) return; const add = (before) => (before && !/\s$/.test(before) ? ' ' : '') + text;
-    if (el.isContentEditable) { el.focus(); document.execCommand('insertText', false, add(el.textContent || '')); return; }
-    const a = el.selectionStart == null ? el.value.length : el.selectionStart, b = el.selectionEnd == null ? a : el.selectionEnd; const ins = add(el.value.slice(0, a));
-    const max = Number(el.getAttribute('maxlength')) || 0; const room = max ? Math.max(0, max - (el.value.length - (b - a))) : Infinity; const piece = ins.slice(0, room);
-    try { el.setRangeText(piece, a, b, 'end'); } catch (e) { el.value = el.value.slice(0, a) + piece + el.value.slice(b); }
-    el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
-    if (piece.length < ins.length) say('This box is full. The rest was left out.');
+  /* The box the words go to. A page can redraw its box while you talk (the Locker Room does on a phone): then the same box is found again. */
+  function target() {
+    if (field && field.isConnected) return field; const a = document.activeElement; if (a && wants(a)) { field = a; return a; }
+    if (field) { const same = Array.from(document.querySelectorAll(field.tagName)).find((x) => wants(x) && (x.id && x.id === field.id || x.name && x.name === field.name || (x.getAttribute('placeholder') || '') === (field.getAttribute('placeholder') || ''))); if (same) { field = same; span = null; return same; } }
+    return null;
+  }
+  /* Write the words said so far in place of the ones written a moment ago; `last` leaves them there for good. */
+  function put(text, last) {
+    const el = target(); if (!el) return; text = String(text || '');
+    if (el.isContentEditable) { if (last && text) { el.focus(); document.execCommand('insertText', false, ((el.textContent || '') && !/\s$/.test(el.textContent) ? ' ' : '') + text); } return; }   // a rich box gets the words once, at the end
+    if (!span || span.el !== el || el.value.slice(span.at, span.at + span.len) !== span.text) { const a = el.selectionStart == null ? el.value.length : el.selectionStart, b = el.selectionEnd == null ? a : el.selectionEnd; span = { el, at: a, len: b - a, text: el.value.slice(a, b) }; }
+    if (!text && !span.len) { if (last) span = null; return; }
+    const before = el.value.slice(0, span.at); const ins = text ? (before && !/\s$/.test(before) ? ' ' : '') + text : '';
+    const max = Number(el.getAttribute('maxlength')) || 0; const room = max ? Math.max(0, max - (el.value.length - span.len)) : Infinity; const piece = ins.slice(0, room);
+    if (piece !== span.text) { try { el.setRangeText(piece, span.at, span.at + span.len, 'end'); } catch (e) { el.value = before + piece + el.value.slice(span.at + span.len); }
+      span.len = piece.length; span.text = piece; el.dispatchEvent(new Event('input', { bubbles: true })); if (el.scrollHeight > el.clientHeight) el.scrollTop = el.scrollHeight; }
+    if (last) { el.dispatchEvent(new Event('change', { bubbles: true })); if (piece.length < ins.length) say('This box is full. The rest was left out.'); span = null; }
+  }
+  /* While you talk: every couple of seconds the recording so far is read and the words in the box are brought up to date. */
+  async function look() {
+    if (state !== 'rec' || liveBusy || liveOff || !chunks.length) return; const size = chunks.reduce((n, c) => n + c.size, 0); if (size === liveSize || size < 1500) return;
+    const gap = Date.now() - t0 > 45000 ? 5000 : 2200; if (Date.now() - liveAt < gap) return;
+    liveBusy = true; liveSize = size; liveAt = Date.now(); const seq = ++liveSeq; const mime = (rec && rec.mimeType) || 'audio/mp4';
+    try { const j = await api('dictate', { audio: await b64(new Blob(chunks, { type: mime })), mime, interim: true }); if (j.off) liveOff = true; if (state === 'rec' && seq === liveSeq && j.text) put(j.text, false); } catch (e) { /* the final read still writes it */ }
+    liveBusy = false;
   }
   const b64 = (blob) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = () => rej(new Error('Could not read the recording.')); fr.readAsDataURL(blob); });
   function release() { clearInterval(tick); tick = 0; try { if (stream) stream.getTracks().forEach((t) => t.stop()); } catch (e) { /* off */ } stream = null; rec = null; }
@@ -97,9 +115,10 @@
     rec.onstop = async () => { const mime = (rec && rec.mimeType) || type || 'audio/mp4'; release(); const blob = new Blob(chunks, { type: mime }); chunks = [];
       if (Date.now() - t0 < 700 || blob.size < 800) { state = 'idle'; paint(); say('That was too short. Tap, talk, then tap again.'); return; }
       state = 'busy'; paint();
-      try { const j = await api('dictate', { audio: await b64(blob), mime }); if (j.text) put(j.text); else say('I did not catch any words. Try again.'); } catch (e) { say(e.message || 'That did not work. Try again.'); }
+      liveSeq++; try { const j = await api('dictate', { audio: await b64(blob), mime }); if (j.text) put(j.text, true); else if (span && span.len) put(span.text.trim(), true); else say('I did not catch any words. Try again.'); } catch (e) { if (span && span.len) put(span.text.trim(), true); else say(e.message || 'That did not work. Try again.'); }
+      span = null;
       state = 'idle'; paint(); if (field && document.activeElement !== field && !field.isConnected) hide(); };
-    t0 = Date.now(); state = 'rec'; paint(); rec.start(); tick = setInterval(() => { if (state !== 'rec') return; paint(); if (Date.now() - t0 > MAX_MS) stop(); }, 500);
+    t0 = Date.now(); state = 'rec'; span = null; liveBusy = false; liveSize = 0; liveAt = 0; liveOff = false; paint(); rec.start(1000); tick = setInterval(() => { if (state !== 'rec') return; paint(); look(); if (Date.now() - t0 > MAX_MS) stop(); }, 500);
   }
   function stop() { try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (e) { release(); state = 'idle'; paint(); } }
 

@@ -31,7 +31,7 @@ async function requireFamily(req, opts) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in first.');
   let decoded;
-  try { decoded = opts.verify ? await opts.verify(token) : await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — sign in again.'); }
+  try { decoded = opts.verify ? await opts.verify(token) : await require('./token').verify(token); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — sign in again.'); }
   const email = String(decoded.email || '').trim().toLowerCase();
   if (!email) throw S.err(403, 'email', 'This sign-in has no e-mail address on it.');
   if (decoded.email_verified !== true) throw S.err(403, 'verified', 'Please use Google or the e-mailed link to sign in, so we know the address is yours.');
@@ -140,9 +140,10 @@ async function reports(db, pid) {
 
 /* ── billing: every plan and open invoice of the family's Stripe customers ── */
 async function billing(stripe, customers, today) {
-  const subscriptions = []; const openInvoices = [];
+  const subscriptions = []; const openInvoices = []; const SUBS = {}; const OPEN = {}; const paid = [];
   if (!stripe) return { customers, subscriptions, openInvoices };
-  for (const c of customers) {
+  /* Nov 22, 2026 (speed): the plans, the open invoices and the paid ones are asked for at the same time, per customer; the order of the answer is unchanged */
+  await Promise.all(customers.map(async (c) => { const subscriptions = []; const openInvoices = []; SUBS[c.id] = subscriptions; OPEN[c.id] = openInvoices; await Promise.all([(async () => {
     try {
       for await (const sub of stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 20, expand: ['data.items.data.price', 'data.latest_invoice'] })) {
         if (sub.status === 'canceled' && sub.canceled_at && Date.now() / 1000 - sub.canceled_at > 120 * 86400) continue;
@@ -152,14 +153,13 @@ async function billing(stripe, customers, today) {
         const li = sub.latest_invoice && typeof sub.latest_invoice === 'object' ? sub.latest_invoice : null;
         subscriptions.push({ id: sub.id, customer: c.id, player: m.player || '', program: program ? program.short : (m.program || ''), plan: plan ? plan.label : (m.plan_label || ''), days: String(m.days || '').split(',').filter(Boolean), monthly: plan ? plan.monthly : null, cycle: plan ? CAT.cycleWord(plan) : 'a month', status: sub.status, hold: m.hold === 'true', cancelAtPeriodEnd: !!sub.cancel_at_period_end, paused: !!sub.pause_collection, start: m.start || CAL.dateOfUnixET(sub.created), next: nextDate ? { date: nextDate, cents: nextCents } : null, latestInvoice: li ? { status: li.status, amountDue: li.amount_due, url: li.hosted_invoice_url || null, created: CAL.dateOfUnixET(li.created) } : null });
       }
-    } catch (e) { /* a customer with no plans */ }
+    } catch (e) { /* a customer with no plans */ } })(), (async () => {
     try {
       for await (const inv of stripe.invoices.list({ customer: c.id, status: 'open', limit: 20 })) openInvoices.push({ id: inv.id, customer: c.id, created: CAL.dateOfUnixET(inv.created), amountDue: inv.amount_due, description: inv.description || (inv.lines && inv.lines.data && inv.lines.data[0] && inv.lines.data[0].description) || 'Invoice', url: inv.hosted_invoice_url || null, kind: (inv.metadata || {}).kind || (S.invoiceSubscription(inv) ? 'tuition' : 'one-off') });
-    } catch (e) { /* no invoices */ }
-  }
+    } catch (e) { /* no invoices */ } })(), paidOf(c)]); }));
+  customers.forEach((c) => { subscriptions.push(...(SUBS[c.id] || [])); openInvoices.push(...(OPEN[c.id] || [])); });
   /* the last invoices paid (Nov 19, 2026): parents ask for one for a scholarship or their accountant; Stripe keeps the PDF */
-  const paid = [];
-  for (const c of customers) { try { let n = 0; for await (const inv of stripe.invoices.list({ customer: c.id, status: 'paid', limit: 12 })) { if (n++ >= 12) break; paid.push({ id: inv.id, date: CAL.dateOfUnixET(inv.created), cents: inv.amount_paid, description: inv.description || (inv.lines && inv.lines.data && inv.lines.data[0] && inv.lines.data[0].description) || 'Invoice', pdf: inv.invoice_pdf || inv.hosted_invoice_url || '' }); } } catch (e) { /* none */ } }
+  async function paidOf(c) { try { let n = 0; for await (const inv of stripe.invoices.list({ customer: c.id, status: 'paid', limit: 12 })) { if (n++ >= 12) break; paid.push({ id: inv.id, date: CAL.dateOfUnixET(inv.created), cents: inv.amount_paid, description: inv.description || (inv.lines && inv.lines.data && inv.lines.data[0] && inv.lines.data[0].description) || 'Invoice', pdf: inv.invoice_pdf || inv.hosted_invoice_url || '' }); } } catch (e) { /* none */ } }
   paid.sort((a, b) => CAL.cmp(b.date, a.date));
   return { customers: customers.map((c) => ({ id: c.id, name: c.name, email: c.email, hasCard: !!c.hasCard })), subscriptions, openInvoices, paidInvoices: paid.slice(0, 12) };
 }
@@ -529,20 +529,27 @@ async function me(db, stripe, who, opts) {
   opts = opts || {};
   const today = opts.today || CAL.todayET();
   const { players, customers } = await findPlayers(db, stripe, who.email);
-  const att = await attendance(db, players, today);
+  /* Nov 22, 2026 (speed): everything below used to wait in a line, Stripe included. Each piece now starts at once and is collected
+     where it is used; `held` keeps a failure until then, so what a failure does is unchanged. */
+  const held = (pr) => { const q = Promise.resolve(pr).then((v) => ({ v }), (e) => ({ e })); return async () => { const r = await q; if (r.e) throw r.e; return r.v; }; };
+  const attH = held(attendance(db, players, today)); const stH = held(db.doc('backend/state').get()); const ownH = held(require('./coachcal').familyList(db, players.map((p) => p.id), today));
+  const billH = held(billing(stripe, customers, today)); const reqH = held(db.collection('familyRequests').where('email', '==', who.email).get());
+  const newsH = held(require('./news').forFamily(db, players.map((p) => p.group), today, players)); const accH = held(accountOf(db, who, players, customers)); const waysH = held(waysOf(db, players));
+  const perH = {}; players.forEach((p) => { perH[p.id] = { days: held(daysOf(db, p.id, today)), people: held(peopleOf(db, p.id)), reports: held(reports(db, p.id)) }; });
+  const att = await attH();
   /* the privates booked for these players, from today on (Nov 19, 2026): the calendar marks them, the schedule lists them */
   const tp = CAL.parts(today); const monthEnd = CAL.addDays(`${tp.m === 11 ? tp.y + 1 : tp.y}-${String(((tp.m + 1) % 12) + 1).padStart(2, '0')}-01`, -1);   // the last day a make-up of this month can be used
   let privates = [];
-  try { const st = (await db.doc('backend/state').get()); const list = st.exists ? ((st.data() || {}).privates || []) : []; const mine = new Set(players.map((p) => p.id));
+  try { const st = (await stH()); const list = st.exists ? ((st.data() || {}).privates || []) : []; const mine = new Set(players.map((p) => p.id));
     const hm = (v) => { const h = Math.floor(Number(v)); const m = Math.round((Number(v) - h) * 60); return `${((h + 11) % 12) + 1}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'AM' : 'PM'}`; };
     privates = (Array.isArray(list) ? list : []).filter((x) => x && mine.has(x.pid) && isDate(x.date) && x.date >= today).map((x) => ({ pid: x.pid, date: x.date, start: Number(x.start), time: Number.isFinite(Number(x.start)) ? hm(x.start) : '', coach: firstName(x.coach) })).sort((a, b) => CAL.cmp(a.date, b.date)); } catch (e) { privates = []; }
   const out = [];
-  try { const own = await require('./coachcal').familyList(db, players.map((p) => p.id), today); own.forEach((o) => { if (!privates.some((x) => x.pid === o.pid && x.date === o.date && x.start === o.start)) privates.push(o); }); } catch (e) { /* the desk's privates still show */ }
+  try { const own = await ownH(); own.forEach((o) => { if (!privates.some((x) => x.pid === o.pid && x.date === o.date && x.start === o.start)) privates.push(o); }); } catch (e) { /* the desk's privates still show */ }
   const closed = []; for (let d = today, i = 0; i <= AHEAD; i++, d = CAL.addDays(d, 1)) { const w = CAL.dow(d); if (w && w < 6 && !isOpen(d)) closed.push(d); }   // weekdays with no training (a break): the calendar greys them
   for (const p of players) {
     const en = p.enroll || {};
     const prog = en.program ? CAT.program(en.program) : null;
-    const dz = await daysOf(db, p.id, today);
+    const dz = await perH[p.id].days();
     out.push({
       id: p.id, name: p.name, shortName: ROSTER.shortName(p.name), group: p.group || '', groupLabel: ROSTER.GROUP_LABEL[p.group] || (p.sport === 'soccer' ? 'Soccer' : p.sport === 'fitness' ? 'Fitness' : ''),
       coach: firstName(p.coach), coach2: firstName(p.coach2), coaches: coachesOf(p).map((c) => ({ key: c.key, name: c.name })), status: p.status || 'active', source: p.source || '',
@@ -551,16 +558,16 @@ async function me(db, stripe, who, opts) {
         program: en.program || '', time: (en.pbp && en.pbp.time) || en.time || '', times: require('./coachcal').timesByDay(en), programName: en.programName || (prog ? prog.name : ''), programShort: en.programShort || (prog ? prog.short : ''), plan: en.plan || '', planLabel: en.planLabel || '', days: Array.isArray(en.days) ? en.days : [], start: en.start || '', monthly: en.monthly || null, status: en.status || '', hold: !!en.hold, holdReason: en.holdReason || '', endsOn: en.endsOn || null, next: en.next || null, subscription: en.subscription || '' } : null,
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
-      flex: isFlex(p), sessions: menuOf(p), people: await peopleOf(db, p.id),
+      flex: isFlex(p), sessions: menuOf(p), people: await perH[p.id].people(),
       days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach, id: x.own ? x.id : '', kind: x.kind || '', court: x.court || '' })).sort((a, b) => String(a.date).localeCompare(String(b.date))), openDays: openDays(p), closed,
-      reports: await reports(db, p.id)
+      reports: await perH[p.id].reports()
     });
   }
-  const bill = await billing(stripe, customers, today);
+  const bill = await billH();
   let requests = [];
-  try { requests = (await db.collection('familyRequests').where('email', '==', who.email).get()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
-  let news = []; try { news = await require('./news').forFamily(db, players.map((p) => p.group), today, players); } catch (e) { news = []; }
-  return { news, camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accountOf(db, who, players, customers), ways: await waysOf(db, players), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
+  try { requests = (await reqH()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
+  let news = []; try { news = await newsH(); } catch (e) { news = []; }
+  return { news, camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accH(), ways: await waysH(), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
 /* ── the family's Stripe account page (card, invoices, receipts) ── */

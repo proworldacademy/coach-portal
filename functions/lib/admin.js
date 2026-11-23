@@ -15,7 +15,7 @@ async function requireStaff(req) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in to the backend first.');
   let decoded;
-  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  try { decoded = await require('./token').verify(token); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
   if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
@@ -42,7 +42,7 @@ async function requireCoach(req) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in to the portal first.');
   let decoded;
-  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  try { decoded = await require('./token').verify(token); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
   if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
@@ -90,7 +90,7 @@ async function requireTeam(req) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in first.');
   let decoded;
-  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  try { decoded = await require('./token').verify(token); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);
   if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
@@ -163,7 +163,7 @@ async function requireMarketing(req) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
   if (!token) throw S.err(401, 'signin', 'Sign in first.');
   let decoded;
-  try { decoded = await require('firebase-admin/auth').getAuth().verifyIdToken(token, true); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
+  try { decoded = await require('./token').verify(token); } catch (e) { throw S.err(401, 'token', 'Your sign-in has expired — reload the page.'); }
   const email = String(decoded.email || '').toLowerCase();
   const verified = decoded.email_verified === true && decoded.firebase && ['google.com', 'password'].includes(decoded.firebase.sign_in_provider);   // e-mail + password since Nov 4 (an account an owner set up is verified); Google still works
   if (!verified) throw S.err(403, 'provider', 'Sign in with the e-mail and password the academy set up for you.');
