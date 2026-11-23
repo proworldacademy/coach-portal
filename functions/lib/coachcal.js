@@ -89,13 +89,25 @@ function academyHours(players, key) {
   DOW3.forEach((d) => { by[d] = merge(by[d]); });
   return by;
 }
+/* How a coach's name reads to a family (Nov 22, 2026: "remove the Coach in front, just first name and the initial of the last name"):
+   the name the academy uses, plus the first letter of the last name on the staff list when there is one. Remembered five minutes. */
+let LABELS = null;
+async function labels(db) {
+  if (LABELS && CLOCK() - LABELS.at < 5 * 60 * 1000) return LABELS.list;
+  let list = []; try { list = (await db.collection('staff').get()).docs.map((d) => String((d.data() || {}).name || '').trim()).filter((n) => /\s/.test(n)); } catch (e) { list = []; }
+  LABELS = { at: CLOCK(), list }; return list;
+}
+function labelOf(list, key, name) {
+  const hits = (list || []).filter((full) => sameCoach(key, full)); if (hits.length !== 1) return name;          // nobody, or two people with that first name: the name alone
+  const last = hits[0].trim().split(/\s+/).pop(); return /^[A-Za-zÀ-ÿ]/.test(last) ? name + ' ' + last[0].toUpperCase() + '.' : name;
+}
 /* Every coach a family can book, by kind. Tennis: the names on the active players, less the fitness and mental names and anyone hidden. */
 async function coaches(db, kind) {
-  const cfg = await config(db); const hide = (cfg.hide || []).map(fold);
-  if (kind === 'fitness' || kind === 'mental') return (cfg[kind] || []).map((n) => ({ key: fold(n), name: n }));
+  const cfg = await config(db); const hide = (cfg.hide || []).map(fold); const full = await labels(db);
+  if (kind === 'fitness' || kind === 'mental') return (cfg[kind] || []).map((n) => ({ key: fold(n), name: n, label: labelOf(full, fold(n), n) }));
   const players = await roster(db); const seen = new Map(); const not = (cfg.fitness || []).map(fold);
   for (const p of players) for (const c of [p.coach, p.coach2, p.coach3]) { const n = first(c); const k = fold(n); if (!k || hide.includes(k) || not.includes(k)) continue; if (!seen.has(k)) seen.set(k, { key: k, name: n, n: 0 }); seen.get(k).n++; }
-  return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ key: c.key, name: c.name }));
+  return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ key: c.key, name: c.name, label: labelOf(full, c.key, c.name) }));
 }
 async function calDoc(db, key) { try { const s = await db.doc('coachCal/' + key).get(); return s.exists ? (s.data() || {}) : {}; } catch (e) { return {}; } }
 /* The privates on a coach's name between two dates, from both places; the same lesson is counted once. */
@@ -292,4 +304,4 @@ async function deskList(db) {
 async function deskMark(db, who, body) { const id = S.clean(body.id, 80); const ref = db.doc('familyPrivates/' + id); const s = await ref.get(); if (!s.exists) throw S.err(404, 'private', 'Not found.'); const st = body.status === 'canceled' ? 'canceled' : 'confirmed'; if (st === 'canceled') { try { await COURTS.release(db, id); } catch (e) { /* next time */ } } await ref.set({ status: st, markedBy: who.email, markedAt: CLOCK() }, { merge: true }); return { ok: true, status: st }; }
 
 module.exports = { roster, calDoc, privatesOf, nowET, config, whenText, first, fold, isDate, DOW3, KINDS, ranges, rangesOn, timesByDay, nextOpen, FAMILY_NOTICE, merge, academyHours, dayOf, sameCoach, fmtT, coaches, slotsFor, familySlots, familyCourts, familyBook, familyCancel, familyList, week, setOff, deskList, deskMark, ack, chase, chaseStep, directorsOf,
-  _clock: (f) => { CLOCK = f || (() => Date.now()); ROSTER = null; }, _reset: () => { ROSTER = null; } };
+  _clock: (f) => { CLOCK = f || (() => Date.now()); ROSTER = null; LABELS = null; }, _reset: () => { ROSTER = null; LABELS = null; } };

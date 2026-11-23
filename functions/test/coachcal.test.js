@@ -41,3 +41,10 @@ test('10 & Under: the afternoon on weekdays, the morning on Saturday; every othe
   const players = [{ coach: 'Kim', enroll: en }];
   const h = CC.academyHours(players, 'kim'); assert.deepEqual(h.sat, [[9, 10.5]]); assert.deepEqual(h.mon, [[16.5, 18.5]]);
 });
+
+test('coach calendar: a family reads a coach as the first name and the initial of the last name; no match or two matches, the name alone', async () => {
+  const C = require('../lib/coachcal'); const { fakeDb } = require('./fake-db'); C._reset();
+  const db = fakeDb({ 'players/a': { name: 'Ada Example', status: 'active', coach: 'Lee', coach2: 'Kim' }, 'players/b': { name: 'Bo Sample', status: 'active', coach: 'Sam' },
+    'staff/lee@example.test': { name: 'Lee Stone', active: true }, 'staff/kim1@example.test': { name: 'Kim Hall', active: true }, 'staff/kim2@example.test': { name: 'Kim West', active: true } });
+  assert.deepEqual((await C.coaches(db, 'tennis')).map((c) => c.label), ['Kim', 'Lee S.', 'Sam']); C._reset();
+});
