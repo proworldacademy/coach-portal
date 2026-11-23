@@ -10,6 +10,9 @@ self.addEventListener('fetch', (e) => {
   if (!(e.request.mode === 'navigate' || /\.(css|js|png|webmanifest)$/.test(u.pathname))) return;
   // Nov 16, 2026: the network still comes first, but it gets four seconds. On a weak signal a request can hang for a minute with the page
   // blank behind it; after four seconds the last copy kept on the device is shown, and the fresh one is still stored when it arrives.
+  // Nov 22, 2026 (speed): the fonts file is 121 KB and almost never changes, and nothing is drawn until it is in. The copy on the
+  // device is used at once and a fresh one is fetched behind it for the next open.
+  if (u.pathname === '/shared/brand.css') { e.respondWith((async () => { const kept = await caches.match(e.request); const net = fetch(e.request, { cache: 'no-cache' }).then((r) => { if (r.ok) { const c = r.clone(); caches.open(SHELL).then((x) => x.put(e.request, c)); } return r; }); if (kept) { net.catch(() => {}); return kept; } return net; })()); return; }
   e.respondWith((async () => {
     // Nov 17, 2026: styles and scripts are checked with the site every time (a cheap "has it changed?"), so a change that was just
     // published shows on the next open instead of up to ten minutes later (the browser's own copy of /shared used to answer first).

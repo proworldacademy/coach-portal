@@ -31,3 +31,13 @@ test('dictation: too short, too long, an unknown kind of file and too many a day
     assert.equal((await D.transcribe(db, { email: 'lee@example.test' }, { audio, mime: 'audio/mp4' })).text, 'ok', 'the count is per person');
   } finally { D._useService(null); }
 });
+
+test('dictation: the looks taken while someone is still talking do not use up the day, and a tiny one is simply empty', async () => {
+  const db = fakeDb({ 'settings/dictate': { openaiKey: 'sk-proj-' + 'a'.repeat(40) } }); D._useService(async () => ({ text: 'Court six is wet' }));
+  try {
+    assert.deepEqual(await D.transcribe(db, who, { audio: Buffer.alloc(100).toString('base64'), mime: 'audio/webm', interim: true }), { text: '' });
+    for (let i = 0; i < 3; i++) assert.deepEqual(await D.transcribe(db, who, { audio, mime: 'audio/webm', interim: true }), { text: 'Court six is wet' });
+    await D.transcribe(db, who, { audio, mime: 'audio/webm' });
+    const use = [...db._docs.entries()].find(([k]) => k.startsWith('dictateUse/'))[1]; assert.equal(use.live, 3); assert.equal(use.n, 1);
+  } finally { D._useService(null); }
+});

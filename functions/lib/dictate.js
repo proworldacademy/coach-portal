@@ -18,7 +18,7 @@ const CAL = require('./calendar');
 
 const API = 'https://api.openai.com/v1/audio/transcriptions';
 const MODELS = ['gpt-4o-mini-transcribe', 'gpt-transcribe', 'whisper-1'];
-const MAX_BYTES = 3 * 1024 * 1024, DAILY = 300;
+const MAX_BYTES = 3 * 1024 * 1024, DAILY = 300, LIVE_DAILY = 4000;   // LIVE: the looks taken while someone is still talking (Nov 22, 2026: the words appear as you go)
 /* words the academy uses, so they come out spelled right */
 const HINT = 'ProWorld Academy, Locker Room, 10 & Under, Full Time, Afterschool, private lesson, make-up session, Delray Beach.';
 const EXT = { 'audio/mp4': 'm4a', 'audio/m4a': 'm4a', 'audio/aac': 'm4a', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/wav': 'wav', 'audio/mpeg': 'mp3' };
@@ -57,10 +57,11 @@ async function transcribe(db, who, body) {
   body = body || {}; const st = await settings(db); if (!poster && !keyOk(st.openaiKey)) throw S.err(409, 'nokey', 'Dictation is not switched on yet.');
   const mime = String(body.mime || 'audio/mp4').split(';')[0].trim().toLowerCase(); if (!EXT[mime]) throw S.err(400, 'mime', 'That recording cannot be read.');
   const raw = String(body.audio || ''); if (!raw || raw.length > MAX_BYTES * 1.4) throw S.err(raw ? 413 : 400, 'audio', raw ? 'That is too long for one go. Keep it under two minutes.' : 'Nothing was recorded.');
-  const buf = Buffer.from(raw, 'base64'); if (buf.length < 800) throw S.err(400, 'short', 'That was too short. Hold on a little longer.'); if (buf.length > MAX_BYTES) throw S.err(413, 'audio', 'That is too long for one go. Keep it under two minutes.');
+  const live = body.interim === true; const buf = Buffer.from(raw, 'base64'); if (live && buf.length < 800) return { text: '' }; if (buf.length < 800) throw S.err(400, 'short', 'That was too short. Hold on a little longer.'); if (buf.length > MAX_BYTES) throw S.err(413, 'audio', 'That is too long for one go. Keep it under two minutes.');
   const day = CAL.todayET(); const useRef = db.doc('dictateUse/' + crypto.createHash('sha256').update('pw:' + String(who.email).toLowerCase()).digest('hex').slice(0, 32) + '_' + day);
-  const use = await useRef.get(); const n = use.exists ? Number((use.data() || {}).n) || 0 : 0; if (n >= DAILY) throw S.err(429, 'many', 'That is a lot of dictation for one day. Type the rest.');
-  await useRef.set({ n: n + 1, at: Date.now() });
+  const use = await useRef.get(); const u0 = use.exists ? (use.data() || {}) : {}; const n = Number(u0.n) || 0; const li = Number(u0.live) || 0;
+  if (live) { if (li >= LIVE_DAILY) return { text: '', off: true }; await useRef.set({ live: li + 1, at: Date.now() }, { merge: true }); }
+  else { if (n >= DAILY) throw S.err(429, 'many', 'That is a lot of dictation for one day. Type the rest.'); await useRef.set({ n: n + 1, at: Date.now() }, { merge: true }); }
   const models = [String(st.model || '')].concat(MODELS).filter((m, i, a) => m && a.indexOf(m) === i);
   for (const m of models) {
     let out = await once(st.openaiKey, buf, mime, m, HINT); if (out && out.noHint) out = await once(st.openaiKey, buf, mime, m, '');
