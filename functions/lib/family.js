@@ -202,6 +202,14 @@ function makeupsLeft(days, missed, month) {
   const inM = (d) => !month || String(d.date).slice(0, 7) === month;
   return Math.max(0, days.filter((d) => d.kind === 'away' && inM(d)).length + (missed || 0) - days.filter((d) => d.kind === 'makeup' && inM(d)).length);
 }
+/* Month by month (Nov 22, 2026: "I marked her absent on December 3 and there is no way to add the make-up"): a day away next month
+   gives a make-up for next month, and the family can place it as soon as the day is marked away. This month plus the months ahead
+   that have one: { 'YYYY-MM': { left, until } }. */
+function makeupMonths(days, missed, today) {
+  const out = {}; const now = today.slice(0, 7); const months = new Set([now]); (days || []).forEach((d) => { if (d.kind === 'away' && String(d.date).slice(0, 7) >= now) months.add(String(d.date).slice(0, 7)); });
+  for (const m of months) { const left = makeupsLeft(days, m === now ? missed : 0, m); if (!left && m !== now) continue; const y = Number(m.slice(0, 4)), mo = Number(m.slice(5, 7)); out[m] = { left, until: CAL.addDays(`${mo === 12 ? y + 1 : y}-${String(mo === 12 ? 1 : mo + 1).padStart(2, '0')}-01`, -1) }; }
+  return out;
+}
 const sayDay = (d) => { const p = CAL.parts(d); return `${CAL.MONTHS[p.m].slice(0, 3)} ${p.d}`; };
 /* The director of the player's group hears it at once (Nov 17, 2026 — Antonio: "the moment I hit 'she cannot make it', a notification
    goes to the director of the group"): a line from ProWorld in the director's Locker Room, with the push that goes with it. The
@@ -559,7 +567,7 @@ async function me(db, stripe, who, opts) {
       purchases: (Array.isArray(p.purchases) ? p.purchases : []).slice(-10).reverse().map((x) => ({ at: x.at, label: x.label, cents: x.cents, kind: x.kind, sessions: x.sessions || 0, hours: x.hours || 0 })),
       attendance: att[p.id],
       flex: isFlex(p), sessions: menuOf(p), people: await perH[p.id].people(),
-      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach, id: x.own ? x.id : '', kind: x.kind || '', court: x.court || '' })).sort((a, b) => String(a.date).localeCompare(String(b.date))), openDays: openDays(p), closed,
+      days: dz, makeupsLeft: makeupsLeft(dz, att[p.id] && att[p.id].missed, today.slice(0, 7)), makeupsUntil: monthEnd, makeupsByMonth: makeupMonths(dz, att[p.id] && att[p.id].missed, today), privates: privates.filter((x) => x.pid === p.id).map((x) => ({ date: x.date, time: x.time, coach: x.coach, id: x.own ? x.id : '', kind: x.kind || '', court: x.court || '' })).sort((a, b) => String(a.date).localeCompare(String(b.date))), openDays: openDays(p), closed,
       reports: await perH[p.id].reports()
     });
   }
@@ -596,4 +604,4 @@ async function request(db, who, body, players) {
   return { ok: true, id: ref.id, kind, kindLabel: REQUEST_KINDS[kind] };
 }
 
-module.exports = { account, accountOf, people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, chat, message, coachesOf, REQUEST_KINDS, TITLES };
+module.exports = { account, accountOf, people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, makeupMonths, chat, message, coachesOf, REQUEST_KINDS, TITLES };

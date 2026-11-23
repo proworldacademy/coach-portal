@@ -471,7 +471,7 @@ function scheduleC(p,nm){
     cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${d}${pvOn.has(iso)?'<u class="pv" aria-label="private lesson"></u>':''}</button>`)}
   const monNav=`<div class="ch-mon"><button type="button" data-mon="-1" ${CALMON>minMon?'':'disabled'} aria-label="Previous month">‹</button><b>${esc(first.toLocaleDateString('en-US',{month:'long',year:'numeric'}))}</b><button type="button" data-mon="1" ${CALMON<maxMon?'':'disabled'} aria-label="Next month">›</button></div>`;
   let pick='';
-  if(CALSEL){const x=dayInfo(p,CALSEL);const left=p.makeupsLeft||0;const day=esc(nice(CALSEL));const ptime=timeOn(p,CALSEL)?' · '+esc(timeOn(p,CALSEL)):'';
+  if(CALSEL){const x=dayInfo(p,CALSEL);const left=mkOf(p,CALSEL).left;const other=mkOther(p,CALSEL);const day=esc(nice(CALSEL));const ptime=timeOn(p,CALSEL)?' · '+esc(timeOn(p,CALSEL)):'';
     const row=(what,btn)=>`<div class="ch-pick" role="status"><div><b>${day}</b><span>${what}</span></div>${btn||''}</div>`;
     const bk=(p.days||[]).find(d=>d.date===CALSEL&&d.kind==='book');if(x.flex&&x.pick&&!PICK)PICK=(bk&&bk.sessions||[]).slice();
     const dayPv=pvs.filter(v=>v.date===CALSEL).map(v=>`<div class="ch-pick"><div><b>${v.kind==='fitness'?'Fitness private':v.kind==='mental'?'Mental private':'Private'}${v.coach?' with Coach '+esc(v.coach):''}</b><span>${esc(v.time||'')}${v.court?' · '+esc(v.court):''}</span></div>${v.id?`<button type="button" class="ch-btn line" data-pv-x="${esc(v.id)}">Cancel</button>`:''}</div>`).join('');
@@ -481,6 +481,7 @@ function scheduleC(p,nm){
       :x.kind==='train'?row(`Training day${ptime}. ${nm} is coming.`,`<button type="button" class="ch-btn line" data-day-do="away">Not coming</button>`)
       :x.noDays&&x.pick?row('',`<button type="button" class="ch-btn line" data-day-do="away">Not coming</button>`)
       :left>0&&x.pick&&x.open?row(`Not a training day. ${left} make-up day${left===1?'':'s'} to use.`,`<button type="button" class="ch-btn" data-day-do="makeup">Make up here</button>`)
+      :other&&x.pick&&x.open?row(`The make-up day to use is for ${esc(mkMonth(other))}. Pick a day in ${esc(mkMonth(other))}: a session is made up in the same month.`)
       :'';
     /* Book from the day (Nov 19, 2026): a tennis, fitness or mental private on any day, in or out of the program */
     const book=`<div class="ch-pick col ch-book"><div><b>${core?'Also that day':day}</b><span>Book a private with a coach.</span></div><div class="ch-ses">${[['tennis','Tennis private'],['fitness','Fitness private'],['mental','Mental private']].map(([k,l])=>`<button type="button" data-book="${k}" data-book-day="${esc(CALSEL)}"><b>${l}</b>${k==='tennis'?'With a tennis coach':k==='fitness'?'With Tara':'With Tonio'}</button>`).join('')}</div></div>`;
@@ -492,7 +493,8 @@ function scheduleC(p,nm){
     pvs.filter(v=>v.date===iso).forEach(v=>soon.push({iso,what:'Private'+(v.coach?' with Coach '+v.coach:''),time:v.time,k:'pv'}))}
   const list=soon.length?`<p class="ch-sub">Coming up</p><ul class="ch-soon">${soon.slice(0,6).map(x=>`<li><i class="${x.k}"></i><b>${esc(x.iso===me.today?'Today':new Date(x.iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</b><span>${esc(x.what)}${x.time?' · '+esc(x.time):''}</span></li>`).join('')}</ul>`:'';
   const pvKey='<span><i class="pv"></i>Private</span>';const key=flex?`<div class="ch-key"><span><i></i>Booked</span>${pvKey}</div>`:`<div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span>${pvKey}</div>`;
-  const mk=!flex&&left?`<span class="ch-mk">${left} make-up session${left===1?'':'s'}<small>(expires ${esc(new Date(String(p.makeupsUntil||me.today)+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric'}))})</small></span>`:'';
+  const mkM=p.makeupsByMonth||{[String(me.today).slice(0,7)]:{left,until:p.makeupsUntil||me.today}};
+  const mk=flex?'':Object.keys(mkM).sort().filter(m=>mkM[m].left>0).map(m=>{const n=mkM[m].left;const cur=m===String(me.today).slice(0,7);return `<span class="ch-mk">${n} make-up session${n===1?'':'s'}${cur?'':' for '+esc(mkMonth(m))}<small>(${cur?'expires '+esc(new Date(mkM[m].until+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric'})):'open the schedule and pick a day in '+esc(mkMonth(m))})</small></span>`}).join('');
   /* One bubble (Nov 22, 2026): this sits inside Next session. Closed, it is the make-up line, what is coming and one button; open, the full calendar. */
   const rest=soon.filter((x,k)=>k>0).slice(0,3);const shortList=rest.length?`<ul class="ch-soon">${rest.map(x=>`<li><i class="${x.k}"></i><b>${esc(x.iso===me.today?'Today':new Date(x.iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</b><span>${esc(x.what)}${x.time?' · '+esc(x.time):''}</span></li>`).join('')}</ul>`:'';
   const btn=flex?'':`<button type="button" class="ch-sm ch-so" data-cal-open aria-expanded="${open}">${open?'Close the schedule':'Open the schedule'}</button>`;
@@ -559,10 +561,14 @@ function accountC(){
 }
 /* Cannot make it → where does the session go (Nov 19, 2026): the open days left this month, one tap each; or it waits on the
    account until the month ends. It never rolls into the next month. */
+/* the make-ups of the month a day is in, and the first other month that has one */
+const mkOf=(p,iso)=>{const m=String(iso).slice(0,7);const by=p.makeupsByMonth;if(by)return by[m]||{left:0,until:''};return m===String(me.today).slice(0,7)?{left:p.makeupsLeft||0,until:p.makeupsUntil||''}:{left:0,until:''}};
+const mkOther=(p,iso)=>{const by=p.makeupsByMonth||{};return Object.keys(by).sort().find(m=>m!==String(iso).slice(0,7)&&by[m].left>0)||''};
+const mkMonth=(m)=>new Date(m+'-01T12:00:00').toLocaleDateString('en-US',{month:'long'});
 function moveC(p,nm,date){
-  const made=(p.days||[]).some(d=>d.kind==='makeup'&&d.date.slice(0,7)===date.slice(0,7)&&d.date>date);const left=p.makeupsLeft||0;const until=p.makeupsUntil||'';
+  const made=(p.days||[]).some(d=>d.kind==='makeup'&&d.date.slice(0,7)===date.slice(0,7)&&d.date!==date);const mm=mkOf(p,date);const left=mm.left;const until=mm.until;
   if(!left)return `<span class="ch-n">You told the academy ${nm} cannot make it.${made?' The make-up day is on the schedule.':''}</span>`;
-  const opts=[];const t=new Date(String(me.today)+'T12:00:00');for(let i=0;i<31&&opts.length<6;i++){const dt=new Date(t.getTime()+i*864e5);const iso=ymd(dt);if(until&&iso>until)break;if(iso.slice(0,7)!==String(me.today).slice(0,7))break;const x=dayInfo(p,iso);if(!x.kind&&x.open&&iso>=me.today)opts.push(iso)}
+  const opts=[];const from=String(me.today)>date.slice(0,7)+'-01'?String(me.today):date.slice(0,7)+'-01';const t=new Date(from+'T12:00:00');for(let i=0;i<31&&opts.length<8;i++){const dt=new Date(t.getTime()+i*864e5);const iso=ymd(dt);if(iso.slice(0,7)!==date.slice(0,7))break;const x=dayInfo(p,iso);if(!x.kind&&x.open&&iso>=me.today)opts.push(iso)}
   return `<div class="ch-move"><b>Move this session to another day</b><div>${opts.map(iso=>`<button type="button" data-move="${iso}">${esc(new Date(iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</button>`).join('')||'<span>No other open day is left this month.</span>'}</div>
     <span class="ch-n">Not sure yet? The session stays on ${nm}'s account. Use it by ${esc(nice(until))}; it does not carry into the next month.</span></div>`;
 }
