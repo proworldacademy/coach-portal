@@ -205,6 +205,14 @@ function makeupsLeft(days, missed, month) {
 /* Month by month (Nov 22, 2026: "I marked her absent on December 3 and there is no way to add the make-up"): a day away next month
    gives a make-up for next month, and the family can place it as soon as the day is marked away. This month plus the months ahead
    that have one: { 'YYYY-MM': { left, until } }. */
+/* The breaks ahead, by name, with the camp that runs in them (Nov 23, 2026: "how does a parent know that it is Thanksgiving? That
+   week should be marked"). */
+function breaksAhead(today) {
+  const out = []; const seen = new Set(); let camps = []; try { camps = require('./catalog').campsComing(today); } catch (e) { camps = []; }
+  let { y, m } = CAL.parts(today);
+  for (let i = 0; i < 5; i++) { CAL.breaksIn(y, m).forEach((b) => { if (seen.has(b.from) || b.to < today) return; seen.add(b.from); const c = camps.find((x) => x.from <= b.to && x.to >= b.from); out.push({ from: b.from, to: b.to, label: b.label, camp: c ? { title: c.title, id: c.ids[0] } : null }); }); m++; if (m > 11) { m = 0; y++; } }
+  return out;
+}
 function makeupMonths(days, missed, today) {
   const out = {}; const now = today.slice(0, 7); const months = new Set([now]); (days || []).forEach((d) => { if (d.kind === 'away' && String(d.date).slice(0, 7) >= now) months.add(String(d.date).slice(0, 7)); });
   for (const m of months) { const left = makeupsLeft(days, m === now ? missed : 0, m); if (!left && m !== now) continue; const y = Number(m.slice(0, 4)), mo = Number(m.slice(5, 7)); out[m] = { left, until: CAL.addDays(`${mo === 12 ? y + 1 : y}-${String(mo === 12 ? 1 : mo + 1).padStart(2, '0')}-01`, -1) }; }
@@ -575,7 +583,8 @@ async function me(db, stripe, who, opts) {
   let requests = [];
   try { requests = (await reqH()).docs.map((d) => Object.assign({ id: d.id }, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((r) => ({ id: r.id, kind: r.kind, kindLabel: REQUEST_KINDS[r.kind] || r.kind, player: r.playerName || '', playerId: r.player || '', text: r.text, when: r.when || '', at: r.at, state: r.state || 'open', reply: r.reply || '' })); } catch (e) { requests = []; }
   let news = []; try { news = await newsH(); } catch (e) { news = []; }
-  return { news, camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accH(), ways: await waysH(), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
+  let breaks = []; try { breaks = breaksAhead(today); } catch (e) { breaks = []; }
+  return { news, breaks, camps: CAT.campsComing ? CAT.campsComing(today) : [], account: await accH(), ways: await waysH(), today, email: who.email, name: who.name || (bill.customers[0] && bill.customers[0].name) || '', players: out, billing: bill, requests, frontDesk: NOTIFY.FRONT_DESK, enrollUrl: ROSTER.SITE + '/enroll', known: out.length > 0 || bill.customers.length > 0 };
 }
 
 /* ── the family's Stripe account page (card, invoices, receipts) ── */
@@ -604,4 +613,4 @@ async function request(db, who, body, players) {
   return { ok: true, id: ref.id, kind, kindLabel: REQUEST_KINDS[kind] };
 }
 
-module.exports = { account, accountOf, people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, makeupMonths, chat, message, coachesOf, REQUEST_KINDS, TITLES };
+module.exports = { account, accountOf, people, SESSION_MENU, requireFamily, findPlayers, attendance, reports, reportOf, billing, me, portal, request, days, daysOf, makeupsLeft, makeupMonths, breaksAhead, chat, message, coachesOf, REQUEST_KINDS, TITLES };

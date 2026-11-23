@@ -172,6 +172,14 @@ html.dark .bl-ch button,html.dark .bl-gh{border-color:#F4F4F0;color:#F4F4F0}html
 .ch-hero:not(.out) .ch-sch>.ch-soon li{border-color:rgba(10,10,10,.18)}.ch-hero:not(.out) .ch-sch>.ch-soon span{color:#0A0A0A}.ch-hero:not(.out) .ch-sch>.ch-soon i{background:#fff}.ch-hero:not(.out) .ch-sch>.ch-soon i.pv,.ch-hero:not(.out) .ch-sch>.ch-soon i.makeup{background:#E286E4}
 html.dark .ch-sch .ch-so{background:#0A0A0A;color:#fff;border-color:#0A0A0A}html.dark .ch-hero.out .ch-sch .ch-so{background:#F4F4F0;color:#0A0A0A}html.dark .ch-pan{background:#161616;color:#F4F4F0}
 .ch-askh{display:block;margin:16px 2px 0;font-size:14.5px;line-height:1.35;color:#2F312C}.ch-askh b{color:#0A0A0A}.ch-askh+.ch-askl{margin-top:8px;border:1.5px solid #0A0A0A}html.dark .ch-askh{color:#C9C9C4}html.dark .ch-askh b{color:#F4F4F0}
+.ch-sch .ch-mkb{align-self:stretch;height:48px;background:#fff;color:#0A0A0A;border:1.5px solid #0A0A0A;font-size:15px}
+.ch-mkm{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0A0A0A;color:#fff;border-radius:20px;padding:12px 14px}.ch-mkm b{display:block;font-size:15px}.ch-mkm span{font-size:13px;opacity:.85;line-height:1.3}.ch-mkm .ch-btn.line{background:none;color:#fff;border-color:#fff;flex:none}
+.ch-cal button.can{background:#fff;border:2.5px solid #0A0A0A;box-shadow:0 0 0 3px #E2FE78}.ch-cal button.no,.ch-cal button.no:disabled{opacity:.3;background:none;border-color:transparent;box-shadow:none;text-decoration:none}
+.ch-cal button.brk{background:repeating-linear-gradient(135deg,#E9EAE4 0 5px,#F7F7F3 5px 10px);color:#7A7C75;border-color:transparent}
+.ch-key i.can{background:#fff;border:2px solid #0A0A0A}
+.ch-mkm .ch-btn{width:auto;height:40px;border-radius:20px;padding:0 16px}.ch-sch .ch-mk{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.ch-brk{display:flex;gap:8px;align-items:flex-start;margin:0;font-size:13.5px;line-height:1.4;color:#2F312C}.ch-brk i{flex:none;width:14px;height:14px;border-radius:4px;margin-top:2px;background:repeating-linear-gradient(135deg,#D5D7CF 0 3px,#F7F7F3 3px 6px)}.ch-brk a{color:inherit;text-decoration:underline;font-weight:700}
+html.dark .ch-cal button.can{background:#161616;border-color:#E2FE78;box-shadow:none;color:#F4F4F0}html.dark .ch-cal button.brk{background:repeating-linear-gradient(135deg,#222 0 5px,#161616 5px 10px);color:#8A8A85}html.dark .ch-brk{color:#C9C9C4}html.dark .ch-sch .ch-mkb{background:#F4F4F0;color:#0A0A0A}html.dark .ch-mkm{background:#F4F4F0;color:#0A0A0A}html.dark .ch-mkm .ch-btn.line{color:#0A0A0A;border-color:#0A0A0A}
 .ch-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
 .ch-nb{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid #DADCD5;background:#fff;color:#0A0A0A;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;padding:0}
 .ch-nb i{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#0A0A0A;color:#E2FE78;font:normal 700 12px/20px "Aeonik Pro",system-ui,sans-serif;text-align:center}
@@ -460,6 +468,8 @@ function trainSet(p){return ((p.enroll&&p.enroll.days)||[]).map(d=>String(d).sli
 function dayInfo(p,iso){const dt=new Date(iso+'T12:00:00');const w=d3(dt);const closed=(p.closed||[]).includes(iso);const tr=trainSet(p);const k=dayKind(p,iso);
   const kind=k||(tr.includes(w)&&!closed?'train':'');const open=(p.openDays||[]).map(x=>String(x).toLowerCase()).includes(w)&&!closed;
   return{iso,dt,kind,past:iso<me.today,open,pick:iso>=me.today&&(!!kind||open),noDays:!tr.length,flex:!!p.flex&&(p.sessions||[]).length>0}}
+let MKMODE=false;   // Nov 23, 2026: "Make up a session" first, then the calendar shows only the days that can take it
+const brkOf=(iso)=>(me.breaks||[]).find(b=>iso>=b.from&&iso<=b.to)||null;
 let CALMON='';   // the month on screen, YYYY-MM (Nov 19, 2026: "make sure the calendar has more months")
 function scheduleC(p,nm){
   const pvs=p.privates||[];const pvOn=new Set(pvs.map(x=>x.date));
@@ -467,8 +477,8 @@ function scheduleC(p,nm){
   const [my,mm]=CALMON.split('-').map(Number);const first=new Date(my,mm-1,1,12);const lead=(first.getDay()+6)%7;const nDays=new Date(my,mm,0).getDate();
   const maxMon=ymd(new Date(t.getFullYear(),t.getMonth()+12,1,12)).slice(0,7);const minMon=String(me.today).slice(0,7);
   const cells=[];for(let i=0;i<lead;i++)cells.push('<span></span>');
-  for(let d=1;d<=nDays;d++){const dt=new Date(my,mm-1,d,12);const iso=ymd(dt);const x=dayInfo(p,iso);const pick=iso>=me.today;   // any day from today can be tapped: a training day, a day off, or a day to book a private
-    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${pick?'':'disabled'} aria-label="${esc(nice(iso))}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${d}${pvOn.has(iso)?'<u class="pv" aria-label="private lesson"></u>':''}</button>`)}
+  for(let d=1;d<=nDays;d++){const dt=new Date(my,mm-1,d,12);const iso=ymd(dt);const x=dayInfo(p,iso);const can=mkCan(p,iso,x);const brk=!x.kind&&brkOf(iso);const pick=MKMODE?can:iso>=me.today;   // any day from today can be tapped: a training day, a day off, or a day to book a private. Placing a make-up: only the days that can take it
+    cells.push(`<button type="button" data-day="${iso}" class="${[x.kind,x.past?'past':'',iso===me.today?'today':'',MKMODE?(can?'can':'no'):'',brk?'brk':''].filter(Boolean).join(' ')}" aria-pressed="${CALSEL===iso}" ${pick?'':'disabled'} aria-label="${esc(nice(iso))}${MKMODE&&can?', open for a make-up':''}${brk?', '+esc(brk.label):''}${x.kind==='train'?', training day':x.kind==='away'?', away':x.kind==='makeup'?', make-up day':x.kind==='book'?', booked':''}">${d}${pvOn.has(iso)?'<u class="pv" aria-label="private lesson"></u>':''}</button>`)}
   const monNav=`<div class="ch-mon"><button type="button" data-mon="-1" ${CALMON>minMon?'':'disabled'} aria-label="Previous month">‹</button><b>${esc(first.toLocaleDateString('en-US',{month:'long',year:'numeric'}))}</b><button type="button" data-mon="1" ${CALMON<maxMon?'':'disabled'} aria-label="Next month">›</button></div>`;
   let pick='';
   if(CALSEL){const x=dayInfo(p,CALSEL);const left=mkOf(p,CALSEL).left;const other=mkOther(p,CALSEL);const day=esc(nice(CALSEL));const ptime=timeOn(p,CALSEL)?' · '+esc(timeOn(p,CALSEL)):'';
@@ -494,12 +504,15 @@ function scheduleC(p,nm){
   const list=soon.length?`<p class="ch-sub">Coming up</p><ul class="ch-soon">${soon.slice(0,6).map(x=>`<li><i class="${x.k}"></i><b>${esc(x.iso===me.today?'Today':new Date(x.iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</b><span>${esc(x.what)}${x.time?' · '+esc(x.time):''}</span></li>`).join('')}</ul>`:'';
   const pvKey='<span><i class="pv"></i>Private</span>';const key=flex?`<div class="ch-key"><span><i></i>Booked</span>${pvKey}</div>`:`<div class="ch-key"><span><i></i>Training</span><span><i class="away"></i>Away</span><span><i class="makeup"></i>Make-up</span>${pvKey}</div>`;
   const mkM=p.makeupsByMonth||{[String(me.today).slice(0,7)]:{left,until:p.makeupsUntil||me.today}};
-  const mk=flex?'':Object.keys(mkM).sort().filter(m=>mkM[m].left>0).map(m=>{const n=mkM[m].left;const cur=m===String(me.today).slice(0,7);return `<span class="ch-mk">${n} make-up session${n===1?'':'s'}${cur?'':' for '+esc(mkMonth(m))}<small>(${cur?'expires '+esc(new Date(mkM[m].until+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric'})):'open the schedule and pick a day in '+esc(mkMonth(m))})</small></span>`}).join('');
+  const mk=flex?'':Object.keys(mkM).sort().filter(m=>mkM[m].left>0).map(m=>{const n=mkM[m].left;const cur=m===String(me.today).slice(0,7);return `<span class="ch-mk">${n} make-up session${n===1?'':'s'}${cur?'':' for '+esc(mkMonth(m))}<small>(${cur?'expires '+esc(new Date(mkM[m].until+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric'})):'use it on any open day in '+esc(mkMonth(m))})</small></span>`}).join('');
   /* One bubble (Nov 22, 2026): this sits inside Next session. Closed, it is the make-up line, what is coming and one button; open, the full calendar. */
   const rest=soon.filter((x,k)=>k>0).slice(0,3);const shortList=rest.length?`<ul class="ch-soon">${rest.map(x=>`<li><i class="${x.k}"></i><b>${esc(x.iso===me.today?'Today':new Date(x.iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))}</b><span>${esc(x.what)}${x.time?' · '+esc(x.time):''}</span></li>`).join('')}</ul>`:'';
+  const mkAny=!flex&&Object.values(p.makeupsByMonth||{}).some(v=>v.left>0);const canHere=MKMODE?cells.filter(c=>/class="[^"]*\bcan\b/.test(c)).length:0;
+  const mkBtn=!mkAny?'':MKMODE&&open?`<div class="ch-mkm" role="status"><div><b>Pick the make-up day</b><span>${canHere?`Tap one of the outlined days. Those are the days ${String(nm).split(" ")[0]} can come.`:`No open day in this month. ${esc(mkOther(p,CALMON+'-01')?'The make-up is for '+mkMonth(mkOther(p,CALMON+'-01'))+'.':'')}`}</span></div><button type="button" class="ch-btn line" data-mk-x>Cancel</button></div>`:`<button type="button" class="ch-sm ch-mkb" data-mk-go>Make up a session</button>`;
+  const brks=(me.breaks||[]).filter(b=>b.from.slice(0,7)<=CALMON&&b.to.slice(0,7)>=CALMON);const brkNote=brks.map(b=>`<p class="ch-brk"><i></i><span><b>${esc(new Date(b.from+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))} to ${esc(new Date(b.to+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))} · ${esc(b.label)}.</b> No program sessions.${b.camp?` <a href="/enroll?camp=${esc(b.camp.id)}">${esc(b.camp.title)} runs then</a>.`:''}</span></p>`).join('');
   const btn=flex?'':`<button type="button" class="ch-sm ch-so" data-cal-open aria-expanded="${open}">${open?'Close the schedule':'Open the schedule'}</button>`;
-  if(!open)return `<div class="ch-sch" id="schedule">${mk}${shortList}${btn}</div>`;
-  return `<div class="ch-sch" id="schedule">${mk}<div class="ch-pan">${flex?`<p class="ch-s">Tap a day and pick the sessions ${nm} is coming to, or book a private. The academy sees it right away.</p>`:''}${monNav}<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${key}${pick}${list}</div>${btn}</div>`;
+  if(!open)return `<div class="ch-sch" id="schedule">${mk}${mkBtn}${shortList}${btn}</div>`;
+  return `<div class="ch-sch" id="schedule">${mk}<div class="ch-pan">${flex?`<p class="ch-s">Tap a day and pick the sessions ${nm} is coming to, or book a private. The academy sees it right away.</p>`:''}${monNav}<div class="ch-cal">${['M','T','W','T','F','S','S'].map(x=>`<b aria-hidden="true">${x}</b>`).join('')}${cells.join('')}</div>${MKMODE?'<div class="ch-key"><span><i class="can"></i>Open for the make-up</span><span><i></i>Training</span></div>':key}${brkNote}${pick}${MKMODE?'':list}</div>${btn}</div>`.replace('<div class="ch-pan">',mkBtn+'<div class="ch-pan">');
 }
 /* Messages (Nov 17, 2026): the coaches linked to each player, and Admin for registration, billing and the account. */
 function messagesC(active,sel){
@@ -565,6 +578,8 @@ function accountC(){
 const mkOf=(p,iso)=>{const m=String(iso).slice(0,7);const by=p.makeupsByMonth;if(by)return by[m]||{left:0,until:''};return m===String(me.today).slice(0,7)?{left:p.makeupsLeft||0,until:p.makeupsUntil||''}:{left:0,until:''}};
 const mkOther=(p,iso)=>{const by=p.makeupsByMonth||{};return Object.keys(by).sort().find(m=>m!==String(iso).slice(0,7)&&by[m].left>0)||''};
 const mkMonth=(m)=>new Date(m+'-01T12:00:00').toLocaleDateString('en-US',{month:'long'});
+/* a day that can take a make-up: from today, in a month that has one to use, a day the program runs, with nothing on it yet */
+const mkCan=(p,iso,x)=>MKMODE&&iso>=me.today&&mkOf(p,iso).left>0&&x.open&&!x.kind;
 function moveC(p,nm,date){
   const made=(p.days||[]).some(d=>d.kind==='makeup'&&d.date.slice(0,7)===date.slice(0,7)&&d.date!==date);const mm=mkOf(p,date);const left=mm.left;const until=mm.until;
   if(!left)return `<span class="ch-n">You told the academy ${nm} cannot make it.${made?' The make-up day is on the schedule.':''}</span>`;
@@ -878,15 +893,17 @@ function render(){
   app.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{b.disabled=true;daysDo({action:'makeup',date:b.dataset.move},'Moved. The academy knows.')});
   app.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{b.disabled=true;daysDo({action:'back',date:b.dataset.back},'Counted in again.')});
   app.querySelectorAll('a[href="#schedule"]').forEach(a=>a.onclick=()=>{if(CALOPEN[SEL]!==true){CALOPEN[SEL]=true;render();const el=document.getElementById('schedule');if(el)el.scrollIntoView({behavior:'smooth'})}});
-  app.querySelectorAll('[data-cal-open]').forEach(b=>b.onclick=()=>{CALOPEN[SEL]=CALOPEN[SEL]!==true;CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
+  app.querySelectorAll('[data-cal-open]').forEach(b=>b.onclick=()=>{CALOPEN[SEL]=CALOPEN[SEL]!==true;CALSEL='';MKMODE=false;const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-ses]').forEach(b=>b.onclick=()=>{PICK=PICK||[];const id=b.dataset.ses;PICK=PICK.includes(id)?PICK.filter(x=>x!==id):PICK.concat(id);const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-people-add]').forEach(b=>b.onclick=()=>{ADDP=true;const y=window.scrollY;render();window.scrollTo(0,y);const n=document.getElementById('ap-name');if(n)n.focus()});
   const peopleDo=async(body,ok)=>{if(busy)return;busy=true;const y=window.scrollY;try{await api('people',Object.assign({player:SEL},body));toast(ok);ADDP=false;me=await api('me')}catch(x){toast(x.message,true)}busy=false;render();window.scrollTo(0,y)};
   const addp=document.getElementById('addp');if(addp)addp.onsubmit=(e)=>{e.preventDefault();peopleDo({name:document.getElementById('ap-name').value,phone:document.getElementById('ap-phone').value},'Added. They get one text to say so.')};
   app.querySelectorAll('[data-people-x]').forEach(b=>b.onclick=()=>peopleDo({remove:b.dataset.peopleX,name:b.dataset.peopleN},'Removed.'));
   app.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{PICK=null;CALSEL=CALSEL===b.dataset.day?'':b.dataset.day;const y=window.scrollY;render();window.scrollTo(0,y)});
-  app.querySelectorAll('[data-day-do]').forEach(b=>b.onclick=()=>{const a=b.dataset.dayDo;const d=CALSEL;b.disabled=true;const y=window.scrollY;
+  app.querySelectorAll('[data-day-do]').forEach(b=>b.onclick=()=>{const a=b.dataset.dayDo;const d=CALSEL;b.disabled=true;if(a==='makeup')MKMODE=false;const y=window.scrollY;
     daysDo(a==='book'?{action:a,date:d,sessions:PICK||[]}:{action:a,date:d},a==='book'?((PICK||[]).length?'Booked. The academy knows.':'Taken off.'):a==='away'?'Marked away. The academy knows.':a==='back'?'Counted in again.':a==='makeup'?'Make-up day added.':'Make-up day removed.').then(()=>window.scrollTo(0,y))});
+  app.querySelectorAll('[data-mk-go]').forEach(b=>b.onclick=()=>{const p=(me.players||[]).find(q=>q.id===SEL);if(!p)return;MKMODE=true;CALOPEN[SEL]=true;CALSEL='';PICK=null;const by=p.makeupsByMonth||{};if(!CALMON)CALMON=String(me.today).slice(0,7);if(!(by[CALMON]&&by[CALMON].left>0)){const m=Object.keys(by).sort().find(k=>by[k].left>0);if(m)CALMON=m}render();const el=document.getElementById('schedule');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})});
+  app.querySelectorAll('[data-mk-x]').forEach(b=>b.onclick=()=>{MKMODE=false;CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-mon]').forEach(b=>b.onclick=()=>{const [y0,m0]=CALMON.split('-').map(Number);const d=new Date(y0,m0-1+Number(b.dataset.mon),1,12);CALMON=ymd(d).slice(0,7);CALSEL='';const y=window.scrollY;render();window.scrollTo(0,y)});
   app.querySelectorAll('[data-book]').forEach(b=>b.onclick=()=>bkOpen(b.dataset.book,b.dataset.bookDay));
   {const f=document.getElementById('askl');if(f)f.onsubmit=(e)=>{e.preventDefault();const i=document.getElementById('askq');const q=i.value.trim();i.value='';i.blur();askOpen(q)}}

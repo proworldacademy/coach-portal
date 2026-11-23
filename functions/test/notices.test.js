@@ -128,3 +128,9 @@ test('make-ups: a day away next month gives a make-up for next month, to place a
   assert.deepEqual(F.makeupMonths(days.concat([{ date: '2026-12-02', kind: 'makeup' }]), 1, '2026-11-22'), { '2026-11': { left: 1, until: '2026-11-30' } });
   assert.deepEqual(F.makeupMonths([{ date: '2027-01-05', kind: 'away' }], 0, '2026-12-20'), { '2026-12': { left: 0, until: '2026-12-31' }, '2027-01': { left: 1, until: '2027-01-31' } });
 });
+
+test('breaks: the family calendar gets the breaks ahead by name, with the camp that runs in them', () => {
+  const b = require('../lib/family').breaksAhead('2026-11-23');
+  assert.deepEqual(b[0], { from: '2026-11-23', to: '2026-11-27', label: 'Thanksgiving break', camp: { title: 'Thanksgiving Camp 2026', id: 'tg13' } });
+  assert.equal(b[1].label, 'Winter break'); assert.equal(require('../lib/family').breaksAhead('2026-11-28')[0].label, 'Winter break');
+});
