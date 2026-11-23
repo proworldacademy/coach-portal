@@ -120,3 +120,11 @@ test('events: one that repeats every other week shows its next day, takes sign-u
   n = await NEWS.forFamily(db, ['as'], '2026-11-26', P); assert.deepEqual([n[0].date, n[0].signed], ['2026-12-09', []], 'the next day starts with an empty list');
   await NEWS.signup(db, { email: 'pat@example.test' }, { id: a.id, player: 'as-ada', on: false }, P); NEWS._clock(null); done();
 });
+
+test('make-ups: a day away next month gives a make-up for next month, to place as soon as it is marked', () => {
+  const F = require('../lib/family');
+  const days = [{ date: '2026-12-03', kind: 'away' }];
+  assert.deepEqual(F.makeupMonths(days, 0, '2026-11-22'), { '2026-11': { left: 0, until: '2026-11-30' }, '2026-12': { left: 1, until: '2026-12-31' } });
+  assert.deepEqual(F.makeupMonths(days.concat([{ date: '2026-12-02', kind: 'makeup' }]), 1, '2026-11-22'), { '2026-11': { left: 1, until: '2026-11-30' } });
+  assert.deepEqual(F.makeupMonths([{ date: '2027-01-05', kind: 'away' }], 0, '2026-12-20'), { '2026-12': { left: 0, until: '2026-12-31' }, '2027-01': { left: 1, until: '2027-01-31' } });
+});
