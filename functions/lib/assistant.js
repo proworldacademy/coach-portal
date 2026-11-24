@@ -120,7 +120,7 @@ async function ask(db, who, body, players) {
   const message = clip(body.message, 600); if (!message) throw S.err(400, 'message', 'Type your question.');
   const st = await IDEAS.settings(db); const key = String(st.anthropicKey || '');
   if (!poster && !/^sk-ant-/.test(key)) throw S.err(409, 'nokey', 'The assistant is not switched on yet.');
-  const today = CAL.todayET(); const now = CC.nowET();
+  const now = CC.nowET(); const today = now.date;   // one clock for both (the tests set it), so a dated action is judged against the same day
   const useRef = db.doc('assistantUse/' + crypto.createHash('sha256').update('pw:' + String(who.email).toLowerCase()).digest('hex').slice(0, 32) + '_' + today);
   const use = await useRef.get(); const n = use.exists ? Number((use.data() || {}).n) || 0 : 0;
   if (n >= DAILY) throw S.err(429, 'many', 'That is a lot of questions for one day. For anything else, write to Admin in Messages.');
