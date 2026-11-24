@@ -9,14 +9,20 @@ const PROGRAMS = [
     /* Full-Time Academy 2027 (in force Nov 23, 2026). What the two assistants say. The billing lines below are still the Fall 2026 ones:
        they change only after the new prices exist in the Stripe Dashboard (a price is never created from here). */
     say: 'Full-Time Academy (tennis, ages 13 and over; Mon Tue Wed Thu Fri; one coach and a coaching unit of two to four players at the same level; tennis, fitness, mental training and competition on one campus): Half Day $725 a week, $2,450 a month (2 hours of tennis and 1 hour of fitness a day, mornings, 1 tournament entry a month); Full Day $1,095 a week, $3,650 a month (4 hours of tennis and 1 to 1.5 hours of fitness a day, mornings and afternoons, video analysis, 2 tournament entries a month); Full Day + Privates $1,345 a week, $4,600 a month (Full Day plus 8 private lessons a month, 2 tournament entries a month); flex sessions for local players without a plan, when there is space: tennis $150, fitness $50, up to 10 tennis sessions a month; every plan is built from an individual assessment of the player, redone every 3 months, and the coach sends the family an update every week',
+    /* The 2027 plans are what a new family can enroll in. CORE and INTENSIVE stay as `legacy`: families already on them keep their price and
+       their subscription is still recognised everywhere (admin, renewals, break credits), but the enrollment page no longer offers them. */
     plans: [
-      { id: 'core', label: 'CORE Program (Half Day – 5 Days/week)', sub: 'Monthly · half day, 5 days a week', days: 5, monthly: 2950, lookup: 'fulltime_fall26_core_monthly' },
-      { id: 'intensive', label: 'INTENSIVE Program 9 (Full Day)', sub: 'Monthly · full day, 5 days a week', days: 5, monthly: 3950, lookup: 'fulltime_fall26_intensive_monthly' }],
+      { id: 'halfday', label: 'Half Day', sub: 'Monthly · 2 hours tennis + 1 hour fitness a day, mornings', days: 5, monthly: 2450, lookup: 'fulltime_2027_halfday_monthly' },
+      { id: 'fullday', label: 'Full Day', sub: 'Monthly · 4 hours tennis + fitness a day, mornings and afternoons', days: 5, monthly: 3650, lookup: 'fulltime_2027_fullday_monthly' },
+      { id: 'fulldayprivates', label: 'Full Day + Privates', sub: 'Monthly · Full Day plus 8 private lessons a month', days: 5, monthly: 4600, lookup: 'fulltime_2027_fulldayprivates_monthly' },
+      { id: 'core', label: 'CORE Program (Half Day – 5 Days/week)', sub: 'Monthly · half day, 5 days a week', days: 5, monthly: 2950, lookup: 'fulltime_fall26_core_monthly', legacy: true },
+      { id: 'intensive', label: 'INTENSIVE Program 9 (Full Day)', sub: 'Monthly · full day, 5 days a week', days: 5, monthly: 3950, lookup: 'fulltime_fall26_intensive_monthly', legacy: true }],
     weekly: [
-      { id: 'core_w', label: 'CORE Program | Weekly', price: 725, lookup: 'fulltime_fall26_core_weekly' },
-      { id: 'intensive_w', label: 'INTENSIVE Program | Weekly', price: 1100, lookup: 'fulltime_fall26_intensive_weekly' }],
-    packs: [{ id: 'flex10', sessions: 10, label: '10 FLEX Sessions | Tennis Only', price: 995, lookup: 'fulltime_fall26_flex10' }],
-    dropin: { label: 'Drop in (Tennis Only)', price: 115, lookup: 'fulltime_fall26_dropin' } },
+      { id: 'halfday_w', label: 'Half Day | Weekly', price: 725, lookup: 'fulltime_fall26_core_weekly' },   // same $725 price as before, so the same Stripe price
+      { id: 'fullday_w', label: 'Full Day | Weekly', price: 1095, lookup: 'fulltime_2027_fullday_weekly' },
+      { id: 'fulldayprivates_w', label: 'Full Day + Privates | Weekly', price: 1345, lookup: 'fulltime_2027_fulldayprivates_weekly' }],
+    packs: null,
+    dropin: { label: 'Flex session (Tennis)', price: 150, lookup: 'fulltime_2027_flex_tennis' } },
   { id: 'afterschool', name: 'Afterschool | Fall 2026', short: 'Afterschool', product: 'prod_VSweKxrlHVGGqf', firstMonth: 'pw_firstmonth_afterschool', qbo: 'Afterschool', sport: 'Tennis + Fitness', ages: 'Ages 10–18', time: '4:00–7:00 PM',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], blurb: 'Three hours a day: technical training, athletic fitness and match play.',
     plans: [
@@ -160,7 +166,7 @@ function plan(programId, planId) { const p = program(programId); return p ? p.pl
 /* What the public page and the backend need, without Stripe ids. */
 function publicCatalog() {
   return { programs: PROGRAMS.map((p) => ({ id: p.id, name: p.name, short: p.short, sport: p.sport, ages: p.ages, time: p.time, days: p.days, blurb: p.blurb, hidden: p.hidden === true,
-    plans: p.plans.map(({ id, label, sub, days, monthly, every }) => Object.assign({ id, label, sub, days, monthly }, every ? { every } : {})), weekly: (p.weekly || []).map(({ id, label, price, lookup }) => ({ id, label, price, lookup })),
+    plans: p.plans.filter((x) => !x.legacy).map(({ id, label, sub, days, monthly, every }) => Object.assign({ id, label, sub, days, monthly }, every ? { every } : {})), weekly: (p.weekly || []).map(({ id, label, price, lookup }) => ({ id, label, price, lookup })),
     packs: (p.packs || []).map(({ id, sessions, label, price, lookup }) => ({ id, sessions, label, price, lookup })), dropin: p.dropin ? { label: p.dropin.label, price: p.dropin.price, lookup: p.dropin.lookup } : null, trial: p.trial ? { label: p.trial.label, price: p.trial.price, lookup: p.trial.lookup } : null })),
     camps: CAMPS.map((c) => ({ id: c.id, name: c.name, dates: c.dates, ages: c.ages, blurb: c.blurb, options: c.options.map(({ id, label, price, lookup }) => ({ id, label, price, lookup })) })),
     lessonPackages: LESSON_PACKAGES.map(({ id, label, hours, price }) => ({ id, label, hours, price })), pros: PROS, tiers: Object.fromEntries(Object.entries(LESSON_TIERS).map(([k, v]) => [k, { 1: v[1], 2: v[2], 3: v[3], 4: v[4] }])) };
