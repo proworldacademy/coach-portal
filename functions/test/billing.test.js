@@ -327,9 +327,9 @@ function liveLikeProducts() {
   for (const e of SYNC.expectedProducts()) if (!e.create) out[e.id] = { id: e.id, object: 'product', active: true, name: e.name, description: e.description + ' Mirrors the Play by Point program line for line.', default_price: e.id === 'prod_VSwrEVcItQBJ4t' ? PRODUCTS.prod_VSwrEVcItQBJ4t.default_price : null };
   return out;
 }
-test('catalog check: 31 products and 132 prices are expected (26 + 112 Play by Point, the staff test, the three winter camps); the sync creates the start-month products and rewrites descriptions, never prices', async () => {
+test('catalog check: 31 products and 135 prices are expected (26 + 112 Play by Point, the staff test, the three winter camps, the Full-Time 2027 lines); the sync creates the start-month products and rewrites descriptions, never prices', async () => {
   assert.equal(SYNC.expectedProducts().length, 31);
-  assert.equal(SYNC.expectedPrices().length, 132);
+  assert.equal(SYNC.expectedPrices().length, 135);
   const wi = SYNC.expectedPrices().filter((x) => /^wi26_/.test(x.lookup));
   assert.equal(wi.length, 18); assert.ok(wi.every((x) => !x.recurring && /^prod_VUk/.test(x.product)));
   assert.equal(wi.find((x) => x.lookup === 'wi26_u10_week').cents, 51500);
@@ -337,7 +337,7 @@ test('catalog check: 31 products and 132 prices are expected (26 + 112 Play by P
   const before = await SYNC.checkCatalog(stripe);
   assert.equal(before.products.missing.length, 6); assert.ok(before.products.missing.every((m) => m.create && /^pw_firstmonth_/.test(m.id)));
   assert.equal(before.products.stale.length, 25); assert.equal(before.products.ok, 0);
-  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [132, 132, 0, 0]);
+  assert.deepEqual([before.prices.expected, before.prices.ok, before.prices.missing.length, before.prices.mismatched.length], [135, 135, 0, 0]);
   assert.equal(before.fixable, 31); assert.equal(before.blocking, 0); assert.equal(before.ready, false);
   const lines = [];
   const out = await SYNC.syncCatalog(stripe, (l) => lines.push(l));
@@ -347,7 +347,7 @@ test('catalog check: 31 products and 132 prices are expected (26 + 112 Play by P
   assert.equal(made.statement_descriptor, 'PROWORLD AFTERSCHOOL'); assert.equal(made.metadata.kind, 'first_month');
   assert.equal(stripe._db.products.prod_VSweKxrlHVGGqf.description, 'Afterschool program · Aug 10 – Dec 18, 2026.');
   assert.ok(!stripe._calls.some((c) => /^prices\.(create|update)/.test(c.name)), 'prices are never written');
-  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 31); assert.equal(out.after.prices.ok, 132);
+  assert.equal(out.after.ready, true); assert.equal(out.after.products.ok, 31); assert.equal(out.after.prices.ok, 135);
   // a second sync changes nothing
   const again = await SYNC.syncCatalog(stripe);
   assert.deepEqual([again.done.created.length, again.done.updated.length], [0, 0]);
@@ -412,4 +412,14 @@ test('switch links: program and plan when set, the family details, billing from 
   assert.deepEqual(Object.fromEntries(u.searchParams), { switch: '1', p: 'afterschool', plan: '3', start: '2026-11-01', first: 'Bradley', parent: 'Jane Doe', email: 'jane@example.com', phone: '5615550101', by: 'switch' });
   const bare = new URL(SWITCH.linkFor({ program: '', plan: 'x', first: 'Ava', last: 'Torres' }, '2026-11-01'));
   assert.equal(bare.searchParams.get('p'), null); assert.equal(bare.searchParams.get('last'), 'Torres');
+});
+
+test('Full Time 2027: new families see Half Day, Full Day and Full Day + Privates; CORE and INTENSIVE stay recognised for the families already on them', () => {
+  const pub = CAT.publicCatalog().programs.find((p) => p.id === 'fulltime');
+  assert.deepEqual(pub.plans.map((p) => [p.id, p.monthly]), [['halfday', 2450], ['fullday', 3650], ['fulldayprivates', 4600]]);
+  assert.deepEqual(pub.weekly.map((w) => [w.id, w.price]), [['halfday_w', 725], ['fullday_w', 1095], ['fulldayprivates_w', 1345]]);
+  assert.equal(pub.dropin.price, 150); assert.equal(pub.packs.length, 0);
+  assert.equal(CAT.plan('fulltime', 'core').monthly, 2950); assert.equal(CAT.plan('fulltime', 'intensive').monthly, 3950);
+  const looks = SYNC.expectedPrices().map((x) => x.lookup);
+  for (const k of ['fulltime_2027_halfday_monthly', 'fulltime_2027_fullday_monthly', 'fulltime_2027_fulldayprivates_monthly', 'fulltime_2027_fullday_weekly', 'fulltime_2027_fulldayprivates_weekly', 'fulltime_2027_flex_tennis', 'fulltime_fall26_core_monthly', 'fulltime_fall26_intensive_monthly', 'fulltime_fall26_core_weekly']) assert.ok(looks.includes(k), k);
 });
