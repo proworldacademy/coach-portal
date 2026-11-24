@@ -37,6 +37,7 @@ const put = async (db, data, who) => { const out = { notes: data.notes, learned:
 /* the academy's facts, from the catalog the enrollment page sells from */
 function catalog(today) {
   const progs = CAT.PROGRAMS.filter((p) => !p.hidden).map((p) => {
+    if (p.say) return `· ${p.say}`;   // the academy's own wording for a program whose published plans moved ahead of the billing lines
     const plans = (p.plans || []).filter((x) => x.monthly).map((x) => `${x.label} ${money(x.monthly)} a month`).join('; ');
     const extra = [p.dropin ? `one session ${money(p.dropin.price)}` : '', p.trial ? `${p.trial.label} ${money(p.trial.price)}` : ''].filter(Boolean).join('; ');
     return `· ${String(p.name).split('|')[0].trim()} (${p.ages}; ${p.time}${Array.isArray(p.days) && p.days.length ? '; ' + p.days.join(' ') : ''}): ${[plans, extra].filter(Boolean).join('; ') || 'ask Admin for the plans'}`;
